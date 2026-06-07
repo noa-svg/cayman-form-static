@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners CI subscription</title>
+  <link rel="icon" href="https://sign.legacyvpartners.com/favicon.png">
+  <link rel="apple-touch-icon" href="https://sign.legacyvpartners.com/apple-touch-icon.png">
+
+  <!--
+    CaymanForm.html - the ONE unified Cayman onboarding form (English, LTR).
+
+    Project Ju, Cayman lane. Single adaptive process: page 1 branches
+    individual vs entity (applicantType), every later page shows only the
+    sections that apply, and the entity branch expands to N controlling-person
+    sub-forms. Source of copy/fields: ci-spec-easysend.md + the EasySend visual
+    chrome lifted from EntityFormShell.html (the Israeli lane's Phase 3 shell).
+
+    HOSTING: Wix-embeddable. This page is served by the ju-cayman GAS web app's
+    doGet (so the resume token + prefill inject server-side via the GATEWAY_CFG
+    scriptlet), and the LP reaches it inside a Wix <iframe> at a branded custom
+    URL. All state-changing actions POST JSON to the SAME web app's doPost with
+    ?source=lp, the Foundation gateway envelope: { action, token, lane, payload }.
+    The form NEVER writes the state log; the gateway does, once, per action.
+
+    SECURITY: KYC uploads are collected as base64 and routed to a token-gated
+    Drive folder by the server (see CaymanGateway uploadFile_). No file is ever
+    public-shared. Wire instructions are DISPLAY ONLY (no payment is taken here).
+
+    No em-dashes in LP-visible copy. ISO 8601 for stored dates (the date inputs
+    submit YYYY-MM-DD natively); DD/MM/YYYY is display-only helper text.
+  -->
+
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
+
+    :root {
+      --lvp-navy: #0D3F6A;
+      --lvp-navy-700: #0a3257;
+      --lvp-yellow: #FFB42C;
+      --lvp-yellow-700: #e09e1f;
+      --lvp-text: #1d1d1d;
+      --lvp-text-muted: #545454;
+      --lvp-input-line: #C2C2C2;
+      --lvp-input-line-active: #0D3F6A;
+      --lvp-card-bg: #FFFFFF;
+      --lvp-error: #c0392b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+      color: var(--lvp-text);
+      line-height: 1.5;
+      background: #ffffff;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Skyline: fixed full-bleed at 0.5 opacity over white. CFG.brandBgUrl preferred; EasySend CDN as fallback. */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: url("https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png") no-repeat center center;
+      background-size: 100% 100%; opacity: 0.5;
+    }
+    .lvp-app {
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 48px;
+    }
+    .lvp-header { width: 100%; max-width: 760px; margin-bottom: 28px; display: flex; justify-content: flex-start; }
+    .lvp-header__logo { height: 56px; width: auto; display: block; }
+    .lvp-card {
+      background: var(--lvp-card-bg); width: 100%; max-width: 760px;
+      border-radius: 6px;
+      box-shadow: 0 8px 32px rgba(13, 63, 106, 0.18), 0 2px 6px rgba(0,0,0,0.06);
+      padding: 28px 28px 24px;
+    }
+    .lvp-progress {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; gap: 12px;
+    }
+    .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; }
+    .lvp-progress__bar { flex: 1; height: 4px; background: #EFEFEF; border-radius: 2px; overflow: hidden; }
+    .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
+
+    .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 14px; }
+    .lvp-page__title::after { content: ""; display: block; height: 4px; width: 90px; margin-top: 8px;
+      background: linear-gradient(to right, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 16px; margin: 0 0 24px; }
+    .lvp-emph { font-weight: 700; color: var(--lvp-navy); }
+    /* Welcome (page 1): larger, centered, warm. EasySend parity. */
+    .lvp-page[data-page="welcome"] { text-align: center; padding: 20px 0 8px; }
+    .lvp-page[data-page="welcome"] .lvp-page__title { font-size: 30px; margin-bottom: 22px; }
+    .lvp-page[data-page="welcome"] .lvp-page__title::after { margin-left: auto; margin-right: auto; }
+    .lvp-page[data-page="welcome"] .lvp-page__hint { font-size: 19px; line-height: 1.75; color: var(--lvp-text-muted); max-width: 560px; margin: 0 auto; }
+    @media (max-width: 560px) { .lvp-page[data-page="welcome"] .lvp-page__title { font-size: 24px; } .lvp-page[data-page="welcome"] .lvp-page__hint { font-size: 17px; } }
+
+    .lvp-field { display: block; margin-bottom: 24px; }
+    .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 15px; margin-bottom: 6px; font-weight: 500; }
+    .lvp-input, .lvp-input--select {
+      width: 100%; padding: 8px 0; border: none;
+      border-bottom: 1px solid var(--lvp-input-line);
+      background: transparent; font: inherit; color: var(--lvp-text);
+      outline: none; transition: border-color 150ms ease;
+    }
+    .lvp-input:focus, .lvp-input--select:focus { border-bottom-color: var(--lvp-input-line-active); border-bottom-width: 2px; padding-bottom: 7px; }
+
+    .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+    .lvp-actions--solo { justify-content: center; }       /* welcome page: only Continue, center it */
+    .lvp-actions--solo > span { display: none; }          /* drop the flex spacer so centering takes */
+    .lvp-actions--solo .lvp-btn--primary { min-width: 200px; }
+    .lvp-btn {
+      font: inherit; font-weight: 700; padding: 13px 36px;
+      border-radius: 999px; cursor: pointer; border: none;
+      transition: background 120ms ease, transform 60ms ease;
+    }
+    .lvp-btn:active { transform: translateY(1px); }
+    .lvp-btn--primary { background: var(--lvp-navy); color: #fff; }
+    .lvp-btn--primary:hover { background: var(--lvp-navy-700); }
+    .lvp-btn--secondary { background: rgba(255,255,255,0.85); color: var(--lvp-navy); border: 1px solid var(--lvp-input-line); }
+    .lvp-btn--secondary:hover { background: #fff; }
+    .lvp-btn--small { padding: 11px 14px; font-size: 13px; margin: 8px 0 16px; }
+    .lvp-btn--link { background: none; border: none; color: var(--lvp-navy); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 10px 6px; }
+    .lvp-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    .lvp-status { margin-top: 12px; font-size: 13px; color: var(--lvp-text-muted); min-height: 18px; }
+    .lvp-status--error { color: var(--lvp-error); }
+    .lvp-toast { position: fixed; left: 50%; top: 18px; transform: translateX(-50%) translateY(-14px); z-index: 9999; max-width: 90%; padding: 12px 18px; border-radius: 10px; background: var(--lvp-navy); color: #fff; font-size: 17px; line-height: 1.4; box-shadow: 0 6px 24px rgba(13,64,107,.28); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+    .lvp-toast--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .lvp-saving { display: inline-flex; align-items: center; gap: 6px; }
+    .lvp-saving::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--lvp-input-line); border-top-color: var(--lvp-navy); animation: lvp-spin 700ms linear infinite; }
+    @keyframes lvp-spin { to { transform: rotate(360deg); } }
+
+    .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
+    .lvp-hint-small { color: var(--lvp-text-muted); font-size: 13px; margin: 4px 0 12px; }
+
+    .lvp-fieldset { border: none; padding: 0; margin: 0 0 20px; }
+    .lvp-fieldset__legend { color: var(--lvp-text-muted); font-size: 15px; margin-bottom: 8px; font-weight: 500; padding: 0; }
+    .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; cursor: pointer; font-size: 16px; line-height: 1.5; }
+    .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; }
+
+    .lvp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 480px) { .lvp-grid-2 { grid-template-columns: 1fr; gap: 0; } }
+    .lvp-input--textarea { padding: 8px; border: 1px solid var(--lvp-input-line); border-radius: 4px; resize: vertical; width: 100%; font: inherit; }
+    .lvp-or-separator { text-align: center; margin: 16px 0; color: var(--lvp-text-muted); font-size: 13px; }
+
+    .lvp-repeating-row { background: #F8F9FB; border: 1px solid #E4E8EE; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+    .lvp-repeating-row__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .lvp-repeating-row__title { color: var(--lvp-navy); font-size: 14px; }
+    .lvp-email-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; margin-bottom: 8px; }
+    .lvp-email-row .lvp-input { flex: 1; margin: 0; }
+
+    .lvp-note { background: #F6F8FB; border-left: 3px solid var(--lvp-navy); border-radius: 4px; padding: 12px 16px; color: var(--lvp-text-muted); font-size: 13px; line-height: 1.6; margin: 0 0 20px; }
+    .lvp-note strong { color: var(--lvp-navy); }
+
+    /* Wire instructions: display-only card */
+    .lvp-wire { background: #FFFBEB; border: 1px solid #F0CB47; border-radius: 8px; padding: 20px 22px; margin-bottom: 20px; }
+    .lvp-wire h4 { color: var(--lvp-navy); margin: 0 0 12px; font-size: 15px; }
+    .lvp-wire dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+    .lvp-wire dt { color: var(--lvp-text-muted); font-size: 13px; }
+    .lvp-wire dd { color: var(--lvp-text); font-size: 14px; margin: 0; font-weight: 600; word-break: break-word; }
+
+    [data-show-when][hidden] { display: none !important; }
+    .lvp-page[hidden] { display: none !important; }
+
+    .lvp-field--error .lvp-input, .lvp-field--error .lvp-input--select { border-bottom-color: var(--lvp-error); border-bottom-width: 2px; padding-bottom: 7px; }
+    .lvp-field--error .lvp-field__label { color: var(--lvp-error); }
+    .lvp-fieldset--error .lvp-fieldset__legend { color: var(--lvp-error); }
+    .lvp-fieldset--error .lvp-fieldset__legend::after, .lvp-field--error .lvp-field__label::after { content: " required"; font-weight: 400; opacity: 0.85; }
+
+    /* Submit: full-card loading + branded confirmation states (fix 5/UX). */
+    .lvp-result { text-align: center; padding: 24px 8px 12px; }
+    .lvp-result__spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #EFEFEF; border-top-color: var(--lvp-navy); animation: lvp-spin 800ms linear infinite; margin: 8px auto 20px; }
+    .lvp-result__check { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--lvp-yellow); margin-bottom: 16px; }
+    .lvp-result__check svg { width: 28px; height: 28px; }
+    .lvp-result__divider { width: 64px; height: 3px; background: var(--lvp-yellow); margin: 0 auto 20px; border-radius: 2px; }
+    .lvp-result h2 { color: var(--lvp-navy); font-size: 22px; font-weight: 700; margin: 0 0 10px; }
+    .lvp-result p { color: var(--lvp-text-muted); font-size: 16px; line-height: 1.6; margin: 6px 0; }
+
+    @media (max-width: 480px) {
+      .lvp-card { padding: 20px 18px; border-radius: 4px; }
+      .lvp-header__logo { height: 44px; }
+      .lvp-page__title { font-size: 19px; }
+    }
+
+    /* Language toggle: fixed top corner, simple EN | HE segmented control. */
+    .lvp-lang {
+      position: fixed; top: 14px; right: 16px; z-index: 50;
+      display: inline-flex; align-items: stretch;
+      background: #fff; border: 1px solid var(--lvp-input-line);
+      border-radius: 999px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(13, 63, 106, 0.12);
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+    }
+    .lvp-lang__btn {
+      font: inherit; font-size: 13px; font-weight: 700;
+      border: none; background: transparent; color: var(--lvp-navy);
+      padding: 7px 16px; cursor: pointer; line-height: 1.2;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .lvp-lang__btn[aria-pressed="true"] { background: var(--lvp-navy); color: #fff; }
+    .lvp-lang__btn:not([aria-pressed="true"]):hover { background: #f0f3f7; }
+    /* RTL: when the form container is rtl, flip alignment but keep inputs LTR so
+       numbers, emails, dates and account fields stay readable left-to-right. */
+    .lvp-card[dir="rtl"] { text-align: right; }
+    .lvp-card[dir="rtl"] .lvp-input,
+    .lvp-card[dir="rtl"] .lvp-input--select,
+    .lvp-card[dir="rtl"] .lvp-input--textarea { direction: ltr; text-align: left; }
+    .lvp-card[dir="rtl"] .lvp-input[name="fullNameHebrew"] { direction: rtl; text-align: right; }
+    /* RTL: dir=rtl alone places Back at the right and Continue at the left (Hebrew convention); do NOT row-reverse. */
+    .lvp-card[dir="rtl"] .lvp-note { border-left: none; border-right: 3px solid var(--lvp-navy); }
+    .lvp-card[dir="rtl"] .lvp-wire dl { direction: rtl; }
+    .lvp-card[dir="rtl"] .lvp-page__title::after { margin-left: auto; margin-right: 0; }
+    .lvp-card[dir="rtl"] .lvp-field--short { margin-left: auto; margin-right: 0; }
+    .lvp-card[dir="rtl"] .lvp-field--narrow { margin-left: auto; margin-right: 0; }
+    @media (max-width: 480px) {
+      .lvp-lang { top: 8px; right: 8px; }
+      .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
+    }
+    /* intl-tel-input: make the phone widget span the field width and read LTR */
+    .iti { width: 100%; }
+    .iti input[type="tel"] { direction: ltr; }
+    .lvp-helplink { margin: 4px 2px 24px; }
+    .lvp-link { color: var(--lvp-navy); text-decoration: underline; }
+    /* Custom file upload block */
+    .lvp-upload { position: relative; display: block; margin: 0 0 14px; }
+    .lvp-upload__btn { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #E5E7EB; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); pointer-events: none; user-select: none; transition: border-color 0.15s, background 0.15s; }
+    .lvp-upload__icon-wrap { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #F3F4F6; color: #9CA3AF; transition: background 0.15s, color 0.15s; }
+    .lvp-upload__icon-ok { display: none; }
+    .lvp-upload__content { flex: 1; min-width: 0; }
+    .lvp-upload__action { display: block; font-size: 14px; font-weight: 600; color: var(--lvp-text); }
+    .lvp-upload__formats { display: block; font-size: 13px; color: var(--lvp-text-muted); margin-top: 2px; }
+    .lvp-upload__name { display: none; font-size: 13px; color: var(--lvp-navy); font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lvp-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+    @media (hover: hover) { .lvp-upload:hover .lvp-upload__btn { border-color: #9CA3AF; } }
+    /* Filled state. :has() drives the swap with no JS class write needed. */
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) { border-color: var(--lvp-navy); background: #EFF6FF; }
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-wrap { background: #DBEAFE; color: var(--lvp-navy); }
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-up { display: none; }
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-ok { display: block; }
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__action,
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__formats { display: none; }
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__name { display: block; }
+    /* Focus ring for keyboard navigation */
+    .lvp-upload:focus-within .lvp-upload__btn { outline: 2px solid var(--lvp-navy); outline-offset: 2px; border-radius: 12px; }
+    /* RTL: mirror icon to the right */
+    .lvp-card[dir="rtl"] .lvp-upload__btn { flex-direction: row-reverse; }
+    /* Field width constraints for short inputs (ID, SWIFT, dates) */
+    .lvp-field--short { max-width: 280px; }
+    .lvp-field--narrow { max-width: 200px; }
+    /* BlinkID scan button (shown above KYC upload when license is available) */
+    .lvp-upload-scan { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--lvp-input-line); border-radius: 12px; background: #fff; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--lvp-navy); margin-bottom: 8px; width: 100%; transition: border-color 0.15s; text-align: start; }
+    .lvp-upload-scan:hover { border-color: var(--lvp-navy); }
+    .lvp-upload-scan svg { flex-shrink: 0; color: var(--lvp-navy); }
+    /* BlinkID camera overlay */
+    .lvp-scan-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+    .lvp-scan-overlay.is-open { display: flex; }
+    .lvp-scan-video-wrap { position: relative; width: 100%; max-width: 480px; display: flex; align-items: center; justify-content: center; }
+    .lvp-scan-video { width: 100%; border-radius: 8px; display: block; background: #000; }
+    .lvp-scan-guide { position: absolute; inset: 0; border: 2px solid var(--lvp-yellow); border-radius: 8px; pointer-events: none; }
+    .lvp-scan-hint { color: #fff; font-size: 15px; margin: 16px 0 0; text-align: center; opacity: 0.9; }
+    .lvp-scan-close { margin-top: 20px; background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 8px; padding: 8px 24px; font-size: 14px; font-family: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <!-- BlinkID camera overlay (hidden by default; shown when LP taps Scan) -->
+  <div class="lvp-scan-overlay" id="lvpScanOverlay" role="dialog" aria-modal="true" aria-label="Scan ID">
+    <div class="lvp-scan-video-wrap">
+      <video class="lvp-scan-video" id="lvpScanVideo" autoplay playsinline muted></video>
+      <div class="lvp-scan-guide" aria-hidden="true"></div>
+    </div>
+    <p class="lvp-scan-hint" id="lvpScanHint">Hold your ID in front of the camera</p>
+    <button type="button" class="lvp-scan-close" id="lvpScanClose">Cancel</button>
+  </div>
+  <div class="lvp-lang" role="group" aria-label="Language">
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
+  </div>
+  <div class="lvp-app">
+    <header class="lvp-header">
+      <img class="lvp-header__logo" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" data-brand-logo alt="Legacy Value Partners">
+    </header>
+
+    <main class="lvp-card">
+      <div class="lvp-progress" aria-label="Progress" data-progress hidden>
+        <span class="lvp-progress__indicator" data-progress-indicator></span>
+        <div class="lvp-progress__bar"><span data-progress-bar role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width: 0%"></span></div>
+      </div>
+
+      <div class="lvp-toast" data-toast role="status" aria-live="polite"></div>
+      <form id="lvp-form" autocomplete="on" novalidate aria-label="Legacy Value Partners subscription">
+
+        <!-- ========================= PAGE 1: WELCOME (greeting only, no fields - EasySend parity) ========================= -->
+        <section class="lvp-page" data-page="welcome">
+          <h2 class="lvp-page__title">Welcome to Legacy Value Partners</h2>
+          <p class="lvp-page__hint">In this process you can complete, sign, and submit your forms directly from your computer or phone. Note: when the process is complete, a signed copy is sent to your email.</p>
+        </section>
+
+        <!-- ========================= PAGE 2: DOCUMENTS (front-loaded, EasySend-style) ========================= -->
+        <section class="lvp-page" data-page="documents">
+          <h2 class="lvp-page__title">Documents</h2>
+          <p class="lvp-page__hint">Photos (JPG, PNG, HEIC) and PDFs accepted.</p>
+
+          <!-- INDIVIDUAL documents -->
+          <div data-applicant="individual">
+            <label class="lvp-field"><span class="lvp-field__label">Passport *</span><input class="lvp-input" type="file" data-upload="passportPrimary" accept="image/*,application/pdf"></label>
+
+            <label class="lvp-field"><span class="lvp-field__label">Israeli ID (teudat zehut)</span><input class="lvp-input" type="file" data-upload="nationalId" accept="image/*,application/pdf" multiple><p class="lvp-hint-small" data-id-status="nationalId">Attach both sides of the card (if biometric) and the appendix (ספח). You can add more than one photo.</p></label>
+            <p class="lvp-helplink"><a class="lvp-link" href="https://www.gov.il/he/service/renew_id_appendix" target="_blank" rel="noopener">Download your ID appendix from the Population Authority</a></p>
+
+            <label class="lvp-field"><span class="lvp-field__label">Proof of residential address *</span><input class="lvp-input" type="file" data-upload="proofOfAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Utility bill or bank statement dated within the last 3 months.</p></label>
+            <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Date on proof of address *</span><input class="lvp-input" type="date" name="uploads.proofOfAddress.documentDate"></label>
+          </div>
+
+          <!-- ENTITY documents -->
+          <div data-applicant="entity">
+            <!-- Entity type asked here so doc conditionals fire immediately -->
+            <label class="lvp-field"><span class="lvp-field__label">Entity type *</span>
+              <select class="lvp-input--select" name="entity.type" data-show-when-trigger="entity.type">
+                <option value="">Select</option>
+                <option value="Corporation">Corporation</option>
+                <option value="LLC">Limited Liability Company</option>
+                <option value="Partnership">Limited Partnership</option>
+                <option value="Trust">Trust</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
+            <label class="lvp-field"><span class="lvp-field__label">Certificate of Incorporation / government registration *</span><input class="lvp-input" type="file" data-upload="certificateOfIncorporation" accept="application/pdf,image/*"></label>
+            <label class="lvp-field"><span class="lvp-field__label">List of authorized signatories *</span><input class="lvp-input" type="file" data-upload="listOfAuthorizedSignatories" accept="application/pdf,image/*"></label>
+
+            <div data-show-when="entity.type=Corporation;entity.type=LLC">
+              <label class="lvp-field"><span class="lvp-field__label">Articles of Incorporation *</span><input class="lvp-input" type="file" data-upload="articlesOfIncorporation" accept="application/pdf,image/*"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Corporate resolution / authorization *</span><input class="lvp-input" type="file" data-upload="corporateResolution" accept="application/pdf,image/*"></label>
+            </div>
+            <label class="lvp-field" data-show-when="entity.type=Partnership"><span class="lvp-field__label">Partnership agreement *</span><input class="lvp-input" type="file" data-upload="partnershipAgreement" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-show-when="entity.type=Trust"><span class="lvp-field__label">Trust agreement (relevant pages) *</span><input class="lvp-input" type="file" data-upload="trustAgreement" accept="application/pdf,image/*"></label>
+
+            <label class="lvp-field"><span class="lvp-field__label">Corporate seal or stamp</span><input class="lvp-input" type="file" data-upload="corporateSeal" accept="application/pdf,image/*"><p class="lvp-hint-small">Upload an image of the seal at original size, without a background, so it prints clearly on the documents.</p></label>
+
+            <label class="lvp-field"><span class="lvp-field__label">Proof of registered address *</span><input class="lvp-input" type="file" data-upload="proofOfRegisteredAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Bank statement or utility bill dated within the last 3 months.</p></label>
+            <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Date on proof of address *</span><input class="lvp-input" type="date" name="uploads.proofOfRegisteredAddress.documentDate"></label>
+          </div>
+        </section>
+
+        <!-- ========================= PAGE: INDIVIDUAL SUBSCRIBER (ci-spec Page 10-11) ========================= -->
+        <!-- INDIVIDUAL: paginated into short pages (no scroll, EasySend-style) -->
+        <section class="lvp-page" data-page="individual.subscriber" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Subscriber details</h2>
+          <p class="lvp-page__hint" data-emph="English|באנגלית">Enter your details in English, exactly as they appear on your passport or official ID.</p>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">First name *</span><input class="lvp-input" type="text" name="individual.firstName" data-help="In English, as on your passport or official ID"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="individual.lastName"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">Full name in Hebrew *</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep your name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
+          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number *</span><input class="lvp-input" type="text" name="individual.idNumber" data-help="National ID or passport number"></label>
+        </section>
+
+        <section class="lvp-page" data-page="individual.address" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Residential address</h2>
+          <label class="lvp-field"><span class="lvp-field__label">Number and street *</span><input class="lvp-input" type="text" name="individual.address.street" data-places="individual.address"></label>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">City *</span><input class="lvp-input" type="text" name="individual.address.city"></label>
+            <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="individual.address.state"></label>
+          </div>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">Post code *</span><input class="lvp-input" type="text" name="individual.address.postCode"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Country *</span><select class="lvp-input--select" name="individual.address.country" data-country></select></label>
+          </div>
+        </section>
+
+        <section class="lvp-page" data-page="individual.personal" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Personal details</h2>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">Date of birth *</span><input class="lvp-input" type="date" name="individual.birthDate"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Country of birth *</span><select class="lvp-input--select" name="individual.birthCountry" data-country></select></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">Nationality *</span><select class="lvp-input--select" name="individual.citizenship" data-country data-show-when-trigger="individual.citizenship"><option value="">Select</option></select></label>
+          <label class="lvp-checkbox"><input type="checkbox" name="individual.isAdditionalCitizenship" value="true" data-show-when-trigger="individual.isAdditionalCitizenship"> I hold an additional citizenship</label>
+          <label class="lvp-field" data-show-when="individual.isAdditionalCitizenship=true"><span class="lvp-field__label">Additional citizenship</span><select class="lvp-input--select" name="individual.additionalCitizenship" data-country></select></label>
+        </section>
+
+        <section class="lvp-page" data-page="individual.background" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Source of funds and occupation</h2>
+          <label class="lvp-field"><span class="lvp-field__label">Source of funds *</span>
+            <select class="lvp-input--select" name="individual.sourceOfFunds.category" data-show-when-trigger="individual.sourceOfFunds.category" data-help="How and where the funds were accumulated">
+              <option value="">Select</option>
+              <option value="salary">Salary or employment income</option>
+              <option value="savings">Savings</option>
+              <option value="saleOfAssets">Sale of assets (property, business, etc.)</option>
+              <option value="inheritance">Inheritance</option>
+              <option value="investmentReturns">Investment returns</option>
+              <option value="gift">Gift</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="lvp-field" data-show-when="individual.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify *</span><input class="lvp-input" type="text" name="individual.sourceOfFunds.otherDescription"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Occupation *</span><input class="lvp-input" type="text" name="individual.occupation" placeholder="e.g., attorney, physician, business owner"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Purpose of investment *</span><input class="lvp-input" type="text" name="individual.purposeOfInvestment" placeholder="e.g., long-term capital appreciation, portfolio diversification"></label>
+        </section>
+
+        <section class="lvp-page" data-page="individual.pep" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Politically exposed person</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Are you a Politically Exposed Person (PEP) or senior political figure? *</legend>
+            <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
+            <label class="lvp-radio"><input type="radio" name="individual.isPep" value="true" data-show-when-trigger="individual.isPep"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="individual.isPep" value="false"> No</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="individual.isPep=true"><span class="lvp-field__label">Please provide details *</span><textarea class="lvp-input--textarea" name="individual.pepDetails" rows="2"></textarea></label>
+        </section>
+
+        <section class="lvp-page" data-page="individual.contact" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Contact details</h2>
+          <label class="lvp-field"><span class="lvp-field__label">Phone number *</span><input class="lvp-input" type="tel" name="individual.phone" placeholder="+972 ..." data-help="Include country code"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Email address *</span><input class="lvp-input" type="email" name="individual.email" data-help="Primary email for regular communication, including monthly yield updates"></label>
+        </section>
+
+        <!-- ========================= PAGE: ENTITY DETAILS (ci-spec Page 10-11 entity) ========================= -->
+        <!-- ENTITY: paginated into short pages (no scroll) -->
+        <section class="lvp-page" data-page="entity.details" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Entity details</h2>
+          <p class="lvp-page__hint">Tell us about the entity making this subscription.</p>
+          <label class="lvp-field"><span class="lvp-field__label">Legal entity name *</span><input class="lvp-input" type="text" name="entity.legalName" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Entity name in Hebrew *</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
+          <label class="lvp-field" data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify) *</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
+          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">Registration number *</span><input class="lvp-input" type="text" name="entity.registrationNumber"></label>
+        </section>
+
+        <section class="lvp-page" data-page="entity.address" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Registered address</h2>
+          <label class="lvp-field"><span class="lvp-field__label">Number and street *</span><input class="lvp-input" type="text" name="entity.address.street" data-places="entity.address"></label>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">City *</span><input class="lvp-input" type="text" name="entity.address.city"></label>
+            <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="entity.address.state"></label>
+          </div>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">Post code *</span><input class="lvp-input" type="text" name="entity.address.postCode"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Country *</span><select class="lvp-input--select" name="entity.address.country" data-country></select></label>
+          </div>
+          <label class="lvp-checkbox"><input type="checkbox" name="entity.hasMailingAddress" value="true" data-show-when-trigger="entity.hasMailingAddress"> The mailing address differs from the registered address</label>
+          <fieldset class="lvp-fieldset" data-show-when="entity.hasMailingAddress=true">
+            <legend class="lvp-fieldset__legend">Mailing address</legend>
+            <label class="lvp-field"><span class="lvp-field__label">Number and street *</span><input class="lvp-input" type="text" name="entity.mailingAddress.street" data-places="entity.mailingAddress"></label>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">City *</span><input class="lvp-input" type="text" name="entity.mailingAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="entity.mailingAddress.state"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">Post code *</span><input class="lvp-input" type="text" name="entity.mailingAddress.postCode"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Country *</span><select class="lvp-input--select" name="entity.mailingAddress.country" data-country></select></label>
+            </div>
+          </fieldset>
+        </section>
+
+        <section class="lvp-page" data-page="entity.incorporation" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Incorporation and business</h2>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">Country of incorporation *</span><select class="lvp-input--select" name="entity.formationCountry" data-country></select></label>
+            <label class="lvp-field"><span class="lvp-field__label">Date of incorporation *</span><input class="lvp-input" type="date" name="entity.formationDate"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">Source of funds *</span>
+            <select class="lvp-input--select" name="entity.sourceOfFunds.category" data-show-when-trigger="entity.sourceOfFunds.category">
+              <option value="">Select</option>
+              <option value="operatingRevenues">Operating or business revenues</option>
+              <option value="saleOfAssets">Sale of assets</option>
+              <option value="investmentReturns">Investment returns</option>
+              <option value="capitalContributions">Capital contributions from shareholders or partners</option>
+              <option value="loanProceeds">Loan proceeds</option>
+              <option value="inheritance">Inheritance or estate</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="lvp-field" data-show-when="entity.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify *</span><input class="lvp-input" type="text" name="entity.sourceOfFunds.otherDescription"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Principal business activity *</span><input class="lvp-input" type="text" name="entity.principalActivity" placeholder="e.g., real estate investment, asset management"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Purpose of investment *</span><input class="lvp-input" type="text" name="entity.purposeOfInvestment"></label>
+        </section>
+
+        <section class="lvp-page" data-page="entity.pep" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Politically exposed person</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Is the entity a Politically Exposed Person (PEP) or controlled by one? *</legend>
+            <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
+            <label class="lvp-radio"><input type="radio" name="entity.isPep" value="true" data-show-when-trigger="entity.isPep"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="entity.isPep" value="false"> No</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="entity.isPep=true"><span class="lvp-field__label">Please provide details *</span><textarea class="lvp-input--textarea" name="entity.pepDetails" rows="2"></textarea></label>
+        </section>
+
+        <section class="lvp-page" data-page="entity.contact" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Contact details</h2>
+          <label class="lvp-field"><span class="lvp-field__label">Phone number *</span><input class="lvp-input" type="tel" name="entity.phone" placeholder="+972 ..."></label>
+          <label class="lvp-field"><span class="lvp-field__label">Primary entity email *</span><input class="lvp-input" type="email" name="entity.email"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Contact person *</span><input class="lvp-input" type="text" name="entity.contactPerson"></label>
+        </section>
+
+        <!-- ========================= PAGE: ENTITY AUTHORIZED SIGNATORIES (ci-spec Pages 13-14) ========================= -->
+        <section class="lvp-page" data-page="entity.signatories" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">Authorized signatories</h2>
+          <p class="lvp-page__hint">Identify who will sign on behalf of the entity. Each signatory receives their own signature link by email.</p>
+          <h3 class="lvp-subhead">First authorized signatory</h3>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">First name *</span><input class="lvp-input" type="text" name="signatories.primary.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="signatories.primary.lastName"></label>
+          </div>
+          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number *</span><input class="lvp-input" type="text" name="signatories.primary.idNumber"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Email *</span><input class="lvp-input" type="email" name="signatories.primary.email"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Title or position *</span><input class="lvp-input" type="text" name="signatories.primary.title" placeholder="Director, Managing Member, CEO"></label>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Is this person a controlling shareholder of the entity? *</legend>
+            <label class="lvp-radio"><input type="radio" name="signatories.primary.isControlling" value="true"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="signatories.primary.isControlling" value="false"> No</label>
+          </fieldset>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Is there an additional required signatory? *</legend>
+            <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="true" data-show-when-trigger="isSecondAuthorized"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="false"> No</label>
+          </fieldset>
+          <div data-show-when="isSecondAuthorized=true">
+            <h3 class="lvp-subhead">Second authorized signatory</h3>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">First name *</span><input class="lvp-input" type="text" name="signatories.secondary.firstName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="signatories.secondary.lastName"></label>
+            </div>
+            <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number *</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Email *</span><input class="lvp-input" type="email" name="signatories.secondary.email"></label>
+            <label class="lvp-field"><span class="lvp-field__label">Title or position *</span><input class="lvp-input" type="text" name="signatories.secondary.title"></label>
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">Is this person a controlling shareholder of the entity? *</legend>
+              <label class="lvp-radio"><input type="radio" name="signatories.secondary.isControlling" value="true"> Yes</label>
+              <label class="lvp-radio"><input type="radio" name="signatories.secondary.isControlling" value="false"> No</label>
+            </fieldset>
+          </div>
+        </section>
+
+        <!-- ========================= PAGE: INVESTMENT AMOUNT + LP BANK (shared, ci-spec Page 12) ========================= -->
+        <section class="lvp-page" data-page="investment">
+          <h2 class="lvp-page__title">Your investment</h2>
+          <p class="lvp-page__hint">Your subscription amount and currency.</p>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">Currency *</span>
+              <select class="lvp-input--select" name="investment.currency"><option value="ILS">ILS (shekel)</option><option value="USD">USD ($)</option><option value="EUR">EUR (euro)</option></select>
+            </label>
+            <label class="lvp-field"><span class="lvp-field__label">Requested investment amount (Class A) *</span><input class="lvp-input" type="text" name="investment.amount" inputmode="numeric" data-amount data-help="Whole amount, no cents. We will format it for you." placeholder="e.g., 500,000"></label>
+          </div>
+        </section>
+
+        <section class="lvp-page" data-page="investment.bank">
+          <h2 class="lvp-page__title">Your bank details</h2>
+          <p class="lvp-page__hint">The account you will wire from. Redemption payments return to this same account.</p>
+          <label class="lvp-field"><span class="lvp-field__label">Name and address of your bank *</span><input class="lvp-input" type="text" name="investment.lpBank.nameAndAddress" data-help="Full legal name of bank plus full branch address including city and country"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Bank contact information</span><input class="lvp-input" type="text" name="investment.lpBank.contactInfo" data-help="Phone or email for the bank, if available"></label>
+          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">SWIFT or ABA *</span><input class="lvp-input" type="text" name="investment.lpBank.swift" data-help="8 or 11 characters (SWIFT), or 9 digits (ABA)"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Bank account number *</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber"></label>
+          <label class="lvp-field"><span class="lvp-field__label">Account holder name *</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-help="Must match the subscriber name exactly: the entity's legal name (for an entity), or the individual LP's name (for an individual)."></label>
+          <label class="lvp-field"><span class="lvp-field__label">Further credit instructions</span><textarea class="lvp-input--textarea" name="investment.lpBank.furtherCredit" rows="2" placeholder="Optional"></textarea></label>
+        </section>
+
+        <!-- ========================= PAGE: ADDITIONAL INVESTORS (individual joint holders) ========================= -->
+        <section class="lvp-page" data-page="individual.additional" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">Additional investors</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Will there be additional investors in this subscription (including spouse)? *</legend>
+            <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="true" data-show-when-trigger="hasAdditionalInvestors"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="false"> No</label>
+          </fieldset>
+          <div data-show-when="hasAdditionalInvestors=true">
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">Joint holder authorization</legend>
+              <label class="lvp-radio"><input type="radio" name="jointHolderAuth" value="any"> Any of the joint holders may give instructions on behalf of all</label>
+              <label class="lvp-radio"><input type="radio" name="jointHolderAuth" value="all"> All joint holders must sign any instruction</label>
+            </fieldset>
+            <p class="lvp-hint-small">Each additional investor signs their own copy and completes their own Self-Certification.</p>
+            <div data-repeating-typed-path="additionalInvestors" data-repeating-min="1" data-repeating-template="addinv"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="additionalInvestors">+ Add another investor</button>
+          </div>
+          <template data-row-template="addinv">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Additional investor ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">First name *</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastName"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">ID or passport number *</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Email *</span><input class="lvp-input" type="email" name="additionalInvestors[${i}].email"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">Date of birth *</span><input class="lvp-input" type="date" name="additionalInvestors[${i}].birthDate"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Nationality *</span><select class="lvp-input--select" name="additionalInvestors[${i}].citizenship" data-country></select></label>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- ========================= PAGE: SCHEDULE 2 QUALIFICATION (shared, branches on applicant type) ========================= -->
+        <section class="lvp-page" data-page="qualification">
+          <h2 class="lvp-page__title">Accredited investor qualification</h2>
+          <p class="lvp-page__hint">Select every qualifying condition that applies. At least one is required, or select "None of the above".</p>
+
+          <!-- Individual conditions -->
+          <div data-applicant="individual">
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ind_liquid" data-qual> Liquid assets exceed ILS 9,411,809</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ind_income" data-qual> Earned income exceeded ILS 1,411,772 (or ILS 2,117,657 with spouse) in each of the prior two years</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ind_combined" data-qual> Liquid assets exceed ILS 5,882,380 AND income exceeded ILS 705,885 (or ILS 1,058,827 with spouse) in each of the prior two years</label>
+          </div>
+          <!-- Entity conditions -->
+          <div data-applicant="entity">
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_equity" data-qual> The entity has equity exceeding ILS 50 million and was not incorporated solely to purchase securities in a specific offering</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_jointfund" data-qual> Joint investment fund or its managing company</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_provident" data-qual> Provident fund or its managing company</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_insurance" data-qual> Insurance company</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_bank" data-qual> Banking corporation</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_portfolio" data-qual> Portfolio manager purchasing for itself or qualifying clients</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_advisor" data-qual> Investment advisor purchasing for itself</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_exchange" data-qual> Corporate stock-exchange member purchasing for itself or qualifying clients</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_underwriter" data-qual> Underwriter purchasing for itself</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_vc" data-qual> Venture capital fund investing in R&D-stage corporations</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="ent_wholly" data-qual> Entity wholly owned by qualifying shareholders</label>
+          </div>
+
+          <p class="lvp-or-separator"><strong>OR</strong></p>
+          <label class="lvp-checkbox"><input type="checkbox" name="qualification.noneOfTheAbove" value="true" data-show-when-trigger="qualification.noneOfTheAbove" data-qual-none> None of the above</label>
+          <p class="lvp-hint-small" data-show-when="qualification.noneOfTheAbove=true">I am joining as a non-qualified investor with the knowledge of the fund manager Omri Velvart.</p>
+
+          <div data-show-when="qualification.noneOfTheAbove=false">
+            <h3 class="lvp-subhead">Lawyer or CPA verification</h3>
+            <p class="lvp-page__hint">A lawyer or CPA must independently confirm the accredited-investor qualification. We will send them a signing link after your documents are completed. Please let them know their assistance is required.</p>
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">Do you already have a signed qualification form from the past 12 months?</legend>
+              <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="true" data-show-when-trigger="qualification.preSignedAvailable"> Yes, I will upload it</label>
+              <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="false" checked data-show-when-trigger="qualification.preSignedAvailable"> No, I will provide lawyer details</label>
+            </fieldset>
+            <div data-show-when="qualification.preSignedAvailable=true">
+              <label class="lvp-field"><span class="lvp-field__label">Upload signed qualification form *</span><input class="lvp-input" type="file" data-upload="qualification.preSignedUpload" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB. Must be dated within the last 12 months.</p></label>
+              <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Document date *</span><input class="lvp-input" type="date" name="qualification.preSignedUpload.documentDate"></label>
+            </div>
+            <div data-show-when="qualification.preSignedAvailable=false">
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">Lawyer or CPA first name *</span><input class="lvp-input" type="text" name="qualification.lawyer.firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="qualification.lawyer.lastName"></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">Email *</span><input class="lvp-input" type="email" name="qualification.lawyer.email" data-help="We will send the signing link here"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Phone</span><input class="lvp-input" type="tel" name="qualification.lawyer.phone" placeholder="Optional"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Firm</span><input class="lvp-input" type="text" name="qualification.lawyer.firm" placeholder="Optional"></label>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================= PAGE: SCHEDULE 3 TAX STATUS (shared, branches) ========================= -->
+        <section class="lvp-page" data-page="tax">
+          <h2 class="lvp-page__title">Israeli tax status</h2>
+          <p class="lvp-note">I hereby declare that I consent to and accept the provisions of the Tax Ruling the Fund received from the tax authorities in Israel, as amended from time to time. I declare that the following tax status applies:</p>
+          <label class="lvp-field"><span class="lvp-field__label">Country of tax residence *</span><select class="lvp-input--select" name="tax.residencyCountry" data-country></select></label>
+          <label class="lvp-checkbox" data-applicant="entity"><input type="checkbox" name="tax.isFamilyCompany" value="true"> The entity is a family company for tax purposes</label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Tax status *</legend>
+            <label class="lvp-radio"><input type="radio" name="tax.incomeType" value="nonBusiness"> Non-business income. Will be taxed as capital gain per the Tax Ruling.</label>
+            <label class="lvp-radio"><input type="radio" name="tax.incomeType" value="business"> Business income. Will be taxed marginally per the Tax Ruling.</label>
+            <label class="lvp-radio" data-applicant="entity"><input type="radio" name="tax.incomeType" value="exempted"> Exempted income under section 9(2) of the Ordinance (institutional entities only).</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="tax.isRelatedPerson" value="true"> I am a Related Person to the General Partner under section 88 of the Israeli Tax Ordinance.</label>
+          </fieldset>
+          <div data-applicant="entity">
+            <label class="lvp-checkbox"><input type="checkbox" name="tax.hasExemption" value="true" data-show-when-trigger="tax.hasExemption"> The entity holds a valid withholding-tax exemption it would like applied to Fund income.</label>
+            <label class="lvp-field" data-show-when="tax.hasExemption=true"><span class="lvp-field__label">Upload tax exemption certificate *</span><input class="lvp-input" type="file" data-upload="tax.exemptionCertificate" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB.</p></label>
+          </div>
+        </section>
+
+        <!-- ========================= PAGE: SCHEDULE 4 BENEFICIARY (shared, branches) ========================= -->
+        <section class="lvp-page" data-page="beneficial">
+          <h2 class="lvp-page__title">Beneficiary declaration</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">On whose behalf is this subscription made? *</legend>
+            <label class="lvp-radio"><input type="radio" name="beneficial.statement" value="self" data-show-when-trigger="beneficial.statement"> On my own behalf only (individual) / the entity acts on its own behalf only</label>
+            <label class="lvp-radio"><input type="radio" name="beneficial.statement" value="others" data-show-when-trigger="beneficial.statement"> There are beneficiaries</label>
+          </fieldset>
+          <div data-show-when="beneficial.statement=others">
+            <p class="lvp-hint-small">List each beneficiary below.</p>
+            <div data-repeating-typed-path="beneficial.beneficiaries" data-repeating-min="1" data-repeating-template="bnf"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="beneficial.beneficiaries">+ Add another beneficiary</button>
+            <label class="lvp-field"><span class="lvp-field__label">Relationship between you and the beneficiaries *</span><textarea class="lvp-input--textarea" name="beneficial.relationshipDescription" rows="2"></textarea></label>
+          </div>
+          <template data-row-template="bnf">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Beneficiary ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">Full name *</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].fullName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">ID / passport / registration number *</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].idOrCompanyNumber"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">Date of birth or formation *</span><input class="lvp-input" type="date" name="beneficial.beneficiaries[${i}].birthOrIncorporationDate"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Gender *</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].gender"><option value="">Select</option><option value="F">Female</option><option value="M">Male</option><option value="Other">Other</option></select></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">Country of citizenship or incorporation *</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].country" data-country></select></label>
+            </div>
+          </template>
+        </section>
+
+        <!-- ========================= PAGE: SCHEDULE 6 SELF-CERTIFICATION (FATCA/CRS) ========================= -->
+        <!-- Individual variant: Section 2 only (US person status). Entity variant: full FATCA + CRS branching. -->
+        <section class="lvp-page" data-page="fatcaCrs">
+          <h2 class="lvp-page__title">U.S. status and tax residency</h2>
+          <p class="lvp-page__hint">This confirms your U.S. tax status and where you are tax-resident.</p>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">Are you a U.S. person for tax purposes? *</legend>
+            <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="specified" data-show-when-trigger="fatcaCrs.usPersonStatus"> <span data-applicant="individual">Yes. I am a U.S. citizen or resident for tax purposes.</span><span data-applicant="entity">Yes. The entity is a Specified U.S. Person.</span></label>
+            <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="notSpecified" data-show-when-trigger="fatcaCrs.usPersonStatus"> <span data-applicant="individual">I was born in the U.S. but have surrendered my citizenship.</span><span data-applicant="entity">Yes. The entity is a U.S. Person but not a Specified U.S. Person.</span></label>
+            <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="notUs" data-show-when-trigger="fatcaCrs.usPersonStatus"> No. Not a U.S. person.</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="fatcaCrs.usPersonStatus=specified"><span class="lvp-field__label">U.S. TIN *</span><input class="lvp-input" type="text" name="fatcaCrs.usTin" placeholder="SSN, ITIN, or EIN"></label>
+          <div data-show-when="fatcaCrs.usPersonStatus=notSpecified">
+            <label class="lvp-field" data-applicant="individual"><span class="lvp-field__label">Upload your CLN or surrender documentation *</span><input class="lvp-input" type="file" data-upload="clnUpload" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-applicant="entity"><span class="lvp-field__label">Indicate exemption *</span><input class="lvp-input" type="text" name="fatcaCrs.usExemptionCategory"></label>
+          </div>
+
+          <!-- Tax residency (always shown) -->
+          <h3 class="lvp-subhead">Tax residency</h3>
+          <p class="lvp-hint-small">Every jurisdiction where you are tax-resident. Up to 3.</p>
+          <div data-repeating-typed-path="fatcaCrs.entityTaxResidency" data-repeating-min="1" data-repeating-template="taxres"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="fatcaCrs.entityTaxResidency">+ Add another jurisdiction</button>
+          <template data-row-template="taxres">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Jurisdiction ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">Jurisdiction *</span><select class="lvp-input--select" name="fatcaCrs.entityTaxResidency[${i}].jurisdiction" data-country></select></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">Tax reference type *</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefType" placeholder="e.g., TIN"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Tax reference number *</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefNumber"></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">If no tax reference number, the reason</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].reasonNoTaxRef" data-help="Required only if no tax reference number is available for this jurisdiction."></label>
+            </div>
+          </template>
+
+        </section>
+
+        <!-- ========================= PAGE: FATCA CLASSIFICATION (entity, not a U.S. person) ========================= -->
+        <section class="lvp-page" data-page="fatcaCrs.classification" data-applicant="entity" data-page-when="fatcaCrs.usPersonStatus=notUs" hidden>
+          <h2 class="lvp-page__title">Entity FATCA and CRS classification</h2>
+          <p class="lvp-page__hint">How the entity is classified for tax reporting. For almost every entity FATCA and CRS match, so we ask once.</p>
+
+          <!-- Default: one classification drives BOTH FATCA and CRS (sanitizer maps it) -->
+          <div data-show-when="fatcaCrs.fatcaCrsDiffer=false">
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">Entity classification *</legend>
+              <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="passiveNfe" data-show-when-trigger="fatcaCrs.entityClassification"> Passive holding entity. It holds investments or assets (most family and holding companies).</label>
+              <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="activeNfe" data-show-when-trigger="fatcaCrs.entityClassification"> Active business. An operating company that mainly trades or produces.</label>
+              <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="financialInstitution" data-show-when-trigger="fatcaCrs.entityClassification"> Financial Institution. A fund, bank, insurer, or similar regulated entity.</label>
+            </fieldset>
+            <label class="lvp-field" data-show-when="fatcaCrs.entityClassification=financialInstitution"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.mergedGiin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If the entity has one. We will confirm the exact Financial Institution sub-type with you.</p></label>
+          </div>
+
+          <label class="lvp-checkbox"><input type="checkbox" name="fatcaCrs.fatcaCrsDiffer" value="true" data-show-when-trigger="fatcaCrs.fatcaCrsDiffer"> Advanced: the entity's FATCA and CRS classifications differ</label>
+
+          <!-- Escape hatch: the full FATCA + CRS trees, only for the rare divergent case -->
+          <div data-show-when="fatcaCrs.fatcaCrsDiffer=true">
+            <h3 class="lvp-subhead">FATCA classification</h3>
+            <p class="lvp-hint-small">Choose exactly one.</p>
+              <fieldset class="lvp-fieldset">
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.1" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.1 Registered Foreign Financial Institution (has a GIIN)</label>
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.2" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.2 Financial Institution unable to provide a GIIN</label>
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.3" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.3 Not a Foreign Financial Institution</label>
+              </fieldset>
+              <label class="lvp-field" data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">3.1 sub-type *</span>
+                <select class="lvp-input--select" name="fatcaCrs.fatca.subType31">
+                  <option value="">Select</option>
+                  <option value="(a)">(a) Reporting Model 1 FFI</option>
+                  <option value="(b)">(b) Registered Deemed Compliant FFI</option>
+                  <option value="(c)">(c) Reporting Model 2 FFI</option>
+                  <option value="(d)">(d) Participating FFI</option>
+                </select></label>
+              <label class="lvp-field" data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN) *</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If registration is in progress, indicate so.</p></label>
+              <div data-show-when="fatcaCrs.fatca.branch=3.2">
+                <label class="lvp-field"><span class="lvp-field__label">3.2 sub-type *</span>
+                  <select class="lvp-input--select" name="fatcaCrs.fatca.subType32">
+                    <option value="">Select</option>
+                    <option value="(a)">(a) Sponsored FFI (relies on sponsor GIIN)</option>
+                    <option value="(b)">(b) Trustee Documented Trust</option>
+                    <option value="(c)">(c) Certified Deemed Compliant FFI</option>
+                    <option value="(d)">(d) Non-Participating FFI</option>
+                  </select></label>
+                <label class="lvp-field"><span class="lvp-field__label">Sponsor or trustee GIIN</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin32" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">The sponsoring entity's or trustee's GIIN, if applicable.</p></label>
+              </div>
+              <div data-show-when="fatcaCrs.fatca.branch=3.3">
+                <label class="lvp-field"><span class="lvp-field__label">3.3 sub-status *</span>
+                  <select class="lvp-input--select" name="fatcaCrs.fatca.subType" data-show-when-trigger="fatcaCrs.fatca.subType">
+                    <option value="">Select</option>
+                    <option value="(a)">(a) Exempt Beneficial Owner</option>
+                    <option value="(b)">(b) Active NFFE</option>
+                    <option value="(c)">(c) Direct Reporting NFFE</option>
+                    <option value="(d)">(d) Sponsored Direct Reporting NFFE</option>
+                    <option value="(e)">(e) Passive NFFE</option>
+                  </select>
+                </label>
+                <fieldset class="lvp-fieldset" data-show-when="fatcaCrs.fatca.subType=(e)">
+                  <legend class="lvp-fieldset__legend">Passive NFFE controlling-persons reporting method *</legend>
+                  <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="substantialUsOwners"> Using the "Substantial U.S. Owner" definition</label>
+                  <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="controllingPersons"> Using the "Controlling Person" definition per CRS</label>
+                </fieldset>
+                <div data-show-when="fatcaCrs.fatca.passive.method=substantialUsOwners">
+                  <p class="lvp-hint-small">List each substantial U.S. owner.</p>
+                  <div data-repeating-typed-path="fatcaCrs.fatca.passive.substantialUsOwners" data-repeating-min="1" data-repeating-template="susown"></div>
+                  <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="fatcaCrs.fatca.passive.substantialUsOwners">+ Add a substantial U.S. owner</button>
+                  <template data-row-template="susown">
+                    <div class="lvp-repeating-row" data-row-index="${i}">
+                      <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Substantial U.S. owner ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+                      <label class="lvp-field"><span class="lvp-field__label">Full name *</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].fullName"></label>
+                      <label class="lvp-field"><span class="lvp-field__label">Full residence address *</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].address"></label>
+                      <label class="lvp-field"><span class="lvp-field__label">Tax reference type and number *</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].taxRefTypeAndNumber"></label>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            <h3 class="lvp-subhead">CRS classification</h3>
+            <p class="lvp-hint-small">Choose exactly one. CRS classification need not match FATCA.</p>
+              <fieldset class="lvp-fieldset">
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.crs.branch" value="5.1" data-show-when-trigger="fatcaCrs.crs.branch"> 5.1 Financial Institution</label>
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.crs.branch" value="5.2" data-show-when-trigger="fatcaCrs.crs.branch"> 5.2 Active Non-Financial Entity</label>
+                <label class="lvp-radio"><input type="radio" name="fatcaCrs.crs.branch" value="5.3" data-show-when-trigger="fatcaCrs.crs.branch"> 5.3 Passive Non-Financial Entity</label>
+              </fieldset>
+              <label class="lvp-field" data-show-when="fatcaCrs.crs.branch=5.1"><span class="lvp-field__label">5.1 sub-type *</span>
+                <select class="lvp-input--select" name="fatcaCrs.crs.subType51">
+                  <option value="">Select</option>
+                  <option value="(a)">(a) Reporting Financial Institution</option>
+                  <option value="(b)">(b) Non-Reporting Financial Institution</option>
+                  <option value="(c)">(c) Investment Entity in a Non-Participating Jurisdiction (controlling-person look-through)</option>
+                </select></label>
+              <label class="lvp-field" data-show-when="fatcaCrs.crs.branch=5.2"><span class="lvp-field__label">5.2 sub-type *</span>
+                <select class="lvp-input--select" name="fatcaCrs.crs.subType52">
+                  <option value="">Select</option>
+                  <option value="(a)">(a) Corporation regularly traded, or a related entity</option>
+                  <option value="(b)">(b) Governmental Entity, International Organization, or Central Bank</option>
+                  <option value="(c)">(c) Other Active NFE</option>
+                </select></label>
+          </div>
+        </section>
+
+        <!-- ========================= PAGE: CONTROLLING PERSONS (entity, N expansion) ========================= -->
+        <section class="lvp-page" data-page="entity.controllingPersons" data-applicant="entity" data-page-when="fatcaCrs.crs.branch=5.3;fatcaCrs.fatca.subType=(e);fatcaCrs.entityClassification=passiveNfe" hidden>
+          <h2 class="lvp-page__title">Controlling persons</h2>
+          <p class="lvp-page__hint">Because the entity is a Passive NFE, list each person who controls it. Each one receives their own link to complete details and sign, after you.</p>
+          <div data-repeating-typed-path="controllingPersons" data-repeating-min="1" data-repeating-template="cp"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="controllingPersons">+ Add a controlling person</button>
+          <template data-row-template="cp">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Controlling person ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">First name *</span><input class="lvp-input" type="text" name="controllingPersons[${i}].firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">Last name *</span><input class="lvp-input" type="text" name="controllingPersons[${i}].lastName"></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">Email *</span><input class="lvp-input" type="email" name="controllingPersons[${i}].email" data-help="They receive their own link to complete details and sign"></label>
+              <label class="lvp-field"><span class="lvp-field__label">Type of controlling person *</span>
+                <select class="lvp-input--select" name="controllingPersons[${i}].details.type">
+                  <option value="">Select</option>
+                  <option value="legal_ownership">Legal person, control by ownership</option>
+                  <option value="legal_other">Legal person, control by other means</option>
+                  <option value="legal_senior">Legal person, senior managing official</option>
+                  <option value="trust_settlor">Trust, settlor</option>
+                  <option value="trust_trustee">Trust, trustee</option>
+                  <option value="trust_protector">Trust, protector</option>
+                  <option value="trust_beneficiary">Trust, beneficiary</option>
+                  <option value="trust_other">Trust, other</option>
+                  <option value="arrangement_settlor">Legal arrangement (non-trust), settlor-equivalent</option>
+                  <option value="arrangement_trustee">Legal arrangement (non-trust), trustee-equivalent</option>
+                  <option value="arrangement_protector">Legal arrangement (non-trust), protector-equivalent</option>
+                  <option value="arrangement_beneficiary">Legal arrangement (non-trust), beneficiary-equivalent</option>
+                  <option value="arrangement_other">Legal arrangement (non-trust), other-equivalent</option>
+                </select>
+              </label>
+            </div>
+          </template>
+        </section>
+
+        <!-- ========================= PAGE: COMMS (additional emails) ========================= -->
+        <section class="lvp-page" data-page="comms">
+          <h2 class="lvp-page__title">Communication contacts</h2>
+          <p class="lvp-page__hint">Add any additional email addresses for regular communication, including monthly yield updates. These are copied on the completion email to Legacy Value Partners.</p>
+          <div data-repeating-typed-path="comms.additionalEmails" data-repeating-min="0" data-repeating-template="email"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="comms.additionalEmails">+ Add an email</button>
+          <template data-row-template="email">
+            <div class="lvp-email-row" data-row-index="${i}">
+              <input class="lvp-input" type="email" name="comms.additionalEmails[${i}]" placeholder="name@example.com">
+              <button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button>
+            </div>
+          </template>
+        </section>
+
+        <!-- ========================= PAGE: REVIEW + SUBMIT ========================= -->
+        <section class="lvp-page" data-page="review">
+          <h2 class="lvp-page__title">Review and submit</h2>
+          <p class="lvp-page__hint">When you submit, we assemble your subscription pack and send you a signing link by email. Every signer (you, your lawyer or CPA if applicable, and each controlling person) signs in turn.</p>
+          <div data-review-summary></div>
+        </section>
+
+        <div class="lvp-actions">
+          <button type="button" class="lvp-btn lvp-btn--secondary" data-action="prev" hidden>Back</button>
+          <span style="flex:1"></span>
+          <button type="button" class="lvp-btn lvp-btn--primary" data-action="next">Continue</button>
+          <button type="button" class="lvp-btn lvp-btn--primary" data-action="submit" hidden>Submit subscription</button>
+        </div>
+        <div class="lvp-status" data-status aria-live="polite"></div>
+      </form>
+    </main>
+  </div>
+
+  <!-- Server-injected config: gateway URL, resume token, prefill, wire, countries.
+       The raw-print scriptlet (printing-bang form) emits JSON un-escaped, not the
+       escaping form, so the JSON is not HTML-mangled (GAS gotcha). NOTE: never put
+       a literal scriptlet open/close pair in a comment here. GAS compiles scriptlets
+       even inside HTML comments, so an empty one becomes invalid JS and the whole
+       template throws SyntaxError. -->
+  <script>
+    // Static-page bootstrap: load CFG synchronously from GAS ?api=config.
+    // Sync XHR is intentional: CFG must be set before form init reads it.
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET',
+          gasUrl + '?api=config' +
+          '&t='    + encodeURIComponent(p.get('t')    || '') +
+          '&type=' + encodeURIComponent(p.get('type') || '') +
+          '&lane=' + encodeURIComponent(p.get('lane') || '') +
+          '&fp='   + encodeURIComponent(p.get('fp')   || ''),
+          false // synchronous
+        );
+        xhr.send(null);
+        if (xhr.status === 200) {
+          window.CAYMAN_CFG = JSON.parse(xhr.responseText);
+          var cfg = window.CAYMAN_CFG;
+          // Apply brand assets now that CFG is available.
+          if (cfg.brandLogoUrl) {
+            var logo = document.querySelector('[data-brand-logo]');
+            if (logo) logo.src = cfg.brandLogoUrl;
+          }
+          if (cfg.brandBgUrl) {
+            var s = document.createElement('style');
+            s.textContent = 'body::before{background-image:url("' + cfg.brandBgUrl + '")}';
+            document.head.appendChild(s);
+          }
+        }
+      } catch (err) {
+        if (window.console) console.warn('[CaymanForm] CFG load failed:', err);
+      }
+    })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var CFG = window.CAYMAN_CFG || {};
+    var form = document.getElementById('lvp-form');
+    var statusEl = form.querySelector('[data-status]');
+    var prevBtn = form.querySelector('[data-action="prev"]');
+    var nextBtn = form.querySelector('[data-action="next"]');
+    var submitBtn = form.querySelector('[data-action="submit"]');
+    var progWrap = document.querySelector('[data-progress]');
+    var progIndicator = document.querySelector('[data-progress-indicator]');
+    var progBar = document.querySelector('[data-progress-bar]');
+
+    // Pending file uploads, keyed by upload slot. base64 collected client-side,
+    // routed to a token-gated Drive folder by the server (never public-shared).
+    // Exposed on window.CAYMAN_UPLOADS so the BlinkID IIFE (outer scope) can
+    // inject a scanned image without re-entering this IIFE.
+    var pendingUploads = {};
+    window.CAYMAN_UPLOADS = pendingUploads;
+
+    // ===================================================================
+    // Bilingual EN/HE toggle.
+    //
+    // The page is authored in English. HE_MAP is the approved English-string to
+    // Hebrew map (embedded inline so the static page needs no extra fetch).
+    // applyLang walks the translatable surfaces and swaps text via the map,
+    // caching the original English in el.dataset.en (or a parallel dataset key
+    // for attributes) on first run so toggling back to EN restores exactly.
+    //
+    // DEFAULT = Hebrew (most LPs are Israeli; English is the foreign exception).
+    // window.CAYMAN_CFG.language === 'en' starts English; otherwise Hebrew.
+    //
+    // Untranslated strings are LEFT in English (never blanked). The English-only
+    // data-entry handlers (Hebrew-stripping input listener plus the validatePage
+    // Hebrew backstop) are untouched and keep working in both display languages;
+    // they key off field name / dir="rtl", not the visible UI language.
+    // One Hebrew legal value carries a real punctuation dash; it is written as a
+    // unicode escape so the rendered string stays byte-identical to the source.
+    // ===================================================================
+    var HE_MAP = {"Scan with camera":"סרקו עם המצלמה","Hold your ID in front of the camera":"קרבו את התעודה למצלמה","Cancel":"ביטול","ID scanned":"תעודה סרוקה","Could not auto-save. Your progress may not be preserved.":"לא ניתן לשמור אוטומטית. ייתכן שהנתונים לא נשמרו.","We could not complete your subscription pack. Legacy Value Partners has been notified and will be in touch.":"לא ניתן להשלים את חבילת ההצטרפות שלך. Legacy Value Partners קיבלה הודעה ותחזור אליך.","A file is larger than 10 MB. Please upload smaller files.":"קובץ גדול מ-10MB. יש להעלות קבצים קטנים יותר.","Please complete the required fields.":"יש למלא את כל השדות הנדרשים.","We could not submit your subscription just now. Your entries are saved on this page. Please try again, or contact Legacy Value Partners.":"לא ניתן לשלוח את הבקשה כעת. הפרטים שהזנת שמורים. נסה/י שוב או פנה/י ל-Legacy Value Partners.","Applicant":"מגיש/ה","Investment":"השקעה","Documents uploaded":"מסמכים שהועלו","Preparing your documents":"מכינים את המסמכים","We are assembling your subscription pack. This can take a moment. Please keep this window open.":"אנו מרכיבים את חבילת ההצטרפות שלך. זה עשוי לקחת רגע. נא להשאיר את החלון פתוח.","Thank you":"תודה","Your subscription has been received. We are preparing your documents and will email your signing link shortly.":"קיבלנו את בקשת ההצטרפות שלך. אנו מכינים את המסמכים ונשלח אליך קישור לחתימה בקרוב.","We hit a snag":"נתקלנו בבעיה","Photos (JPG, PNG, HEIC) and PDFs accepted.":"תמונות (JPG, PNG, HEIC) וקבצי PDF מתקבלים.","Utility bill or bank statement dated within the last 3 months.":"חשבון שירות או דף בנק מהשלושה חודשים האחרונים.","Bank statement or utility bill dated within the last 3 months.":"חשבון בנק או חשבון שירות מהשלושה חודשים האחרונים.","Upload a photo or PDF":"העלו תמונה או קובץ PDF","Upload a file":"העלו קובץ","Attach both sides of the card (if biometric) and the appendix (ספח). You can add more than one photo.":"צרפו את שני צידי התעודה (אם היא ביומטרית) ואת הספח. אפשר לצרף כמה תמונות.","Corporate seal or stamp":"חותמת תאגיד","Upload an image of the seal at original size, without a background, so it prints clearly on the documents.":"העלו תמונה של החותמת בגודל מקורי וללא עמוד רקע, כדי שתיראה ברורה במסמכים.","Download your ID appendix from the Population Authority":"להורדת הספח מאתר רשות האוכלוסין","Tap to upload or photograph":"העלו תמונה או קובץ PDF","Tap to upload":"העלו קובץ","Israeli ID (teudat zehut) *":"תעודת זהות *","Israeli ID (teudat zehut)":"תעודת זהות","Attach both sides of the card (if it is biometric) and the appendix (ספח). You can add more than one photo. Make sure the text is clear.":"צרפו את שני צידי התעודה (אם היא ביומטרית) ואת הספח. אפשר לצרף כמה תמונות. נא לוודא שהטקסט ברור.","Passport *":"דרכון *","Make sure all the text is clear and readable.":"נא לוודא שכל הטקסט ברור וקריא.","Israeli ID (teudat zehut), including the appendix (ספח) *":"תעודת זהות (כולל ספח) *","Photograph the ID card and its appendix (ספח). Make sure the text is clear and readable.":"צלמו את תעודת הזהות ואת הספח. נא לוודא שהטקסט ברור וקריא.","I am joining as a non-qualified investor with the knowledge of the fund manager Omri Velvart.":"אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.","I am joining as a non-qualified investor; the fund manager is aware.":"הצטרפותי כמשקיע/ה לא כשיר/ה ידועה למנהל הקרן.","I am joining as a non-qualified investor.":"אני מצטרפ/ת כמשקיע/ה לא כשיר/ה.","I am joining as a non-qualified investor, with the fund manager's knowledge.":"אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן.","I am joining as a non-qualified investor, with the knowledge of the fund's General Partner. No lawyer or CPA confirmation is needed.":"אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן. לא נדרש אישור עו״ד או רו״ח.","Entity FATCA and CRS classification":"סיווג היישות לצורכי FATCA ו-CRS","How the entity is classified for tax reporting. For almost every entity FATCA and CRS match, so we ask once.":"כיצד היישות מסווגת לצורכי דיווח מס. כמעט בכל יישות סיווגי FATCA ו-CRS זהים ולכן שואלים פעם אחת.","Entity classification *":"סיווג היישות *","Passive holding entity. It holds investments or assets (most family and holding companies).":"יישות מחזיקה פסיבית. מחזיקה בהשקעות או בנכסים (רוב חברות המשפחה והאחזקה).","Active business. An operating company that mainly trades or produces.":"עסק פעיל. חברה תפעולית שעיקר פעילותה מסחר או ייצור.","Financial Institution. A fund, bank, insurer, or similar regulated entity.":"מוסד פיננסי. קרן, בנק, מבטח או גוף מפוקח דומה.","Global Intermediary Identification Number (GIIN)":"מספר זיהוי בין-לאומי (GIIN)","If the entity has one. We will confirm the exact Financial Institution sub-type with you.":"אם יש ליישות. נאמת איתך את תת-הסיווג המדויק של המוסד הפיננסי.","Advanced: the entity's FATCA and CRS classifications differ":"מתקדם: סיווגי ה-FATCA וה-CRS של היישות שונים זה מזה","No lawyer or CPA confirmation is needed here. Legacy Value Partners will review your eligibility for this offering and follow up with you.":"כאן לא נדרש אישור עו״ד או רו״ח. לגאסי ואליו פרטנרס תבחן את זכאותך להשקעה ותחזור אליך.","Your subscription amount and currency.":"סכום ההשקעה והמטבע.","In a few minutes you can complete, sign, and submit your subscription forms right here, from your computer or phone. When you are done we email you that your forms are in process, and once every signature is in you receive a signed copy.":"בתוך מספר דקות תוכל/י למלא, לחתום ולשלוח את טופסי ההצטרפות ישירות מהמחשב או מהנייד. בסיום נשלח אליך אישור במייל שהטפסים בטיפול. עם השלמת כל החתימות יתקבל עותק חתום.","Please note: the Fund's documents are in English. This form reads in Hebrew or English (switch at the top), but please enter names and details in English letters, exactly as they appear on your passport.":"לתשומת ליבך: מסמכי הקרן מנוהלים באנגלית. הטופס זמין בעברית ובאנגלית (ניתן להחליף שפה למעלה), אך נא להזין שמות ופרטים באותיות באנגלית, בדיוק כפי שהם מופיעים בדרכון.","These details go into English-language documents, so please use English letters here.":"הפרטים נכנסים למסמכים באנגלית, אז נא להזין באותיות באנגלית.","In this process you can complete, sign, and submit your forms directly from your computer or phone. Note: when the process is complete, a signed copy is sent to your email.":"בתהליך זה באפשרותך למלא, לחתום ולשלוח טפסים ישירות מהמחשב או מהנייד. לתשומת ליבך, בסיום התהליך יישלח אליך למייל עותק חתום.","Who is subscribing?":"מי המשקיע/ה?","Please enter details in English only.":"נא להזין פרטים באנגלית בלבד.","Entity name in Hebrew":"שם התאגיד בעברית","We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew.":"אנו שומרים את שם התאגיד באנגלית ובעברית לרישומים שלנו ולדיווח לבנק בישראל. זהו השדה היחיד שבו כותבים בעברית.","We keep your name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew.":"אנו שומרים את שמך באנגלית ובעברית לרישומים שלנו ולדיווח לבנק בישראל. זהו השדה היחיד שבו כותבים בעברית.","Welcome to Legacy Value Partners":"ברוכים הבאים לקרן לגאסי","This form collects the information required for your subscription to Legacy Value Partners CI, LP. Upon completion and signature, signed copies of the subscription documents will be sent to your email.":"טופס זה אוסף את המידע הדרוש להצטרפותך לקרן לגאסי. \nלאחר מילוי וחתימה, יישלחו למייל עותקים חתומים של טפסי ההצטרפות.","You can pause and return to this link at any time. If a family office is helping you, they can fill in the details and forward you the link to sign.":"אם פמילי אופיס מסייע במילוי הפרטים, ניתן להיכנס לטופס דרך הקישור, למלא את הפרטים ולאחר מכן לשלוח את אותו קישור למשקיע לצורך חתימה.","Who is subscribing? *":"מי המשקיע/ה?","An individual (or joint individuals)":"יחיד/ה (או יחידים בהשקעה משותפת)","A legal entity (company, partnership, trust, or other)":"תאגיד (חברה, שותפות, נאמנות או אחר)","Subscriber details":"פרטי המשקיע/ה","Personal details":"פרטים אישיים","Source of funds and occupation":"מקור הכספים ועיסוק","Politically exposed person":"חשיפה פוליטית","Contact details":"פרטי קשר","Enter your details in English, exactly as they appear on your passport or official ID.":"יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.","First name *":"שם פרטי","In English, as on your passport or official ID":"באנגלית, כפי שמופיע בתעודה המזהה","Last name *":"שם משפחה","ID or passport number *":"מספר תעודת זהות או דרכון","National ID or passport number":"מספר תעודה מזהה","Residential address":"כתובת מגורים","Number and street *":"מספר בית ורחוב","City *":"עיר","State / province / county":"מדינה / מחוז","Post code *":"מיקוד","Country *":"מדינה","Date of birth *":"תאריך לידה","Country of birth *":"ארץ לידה","Nationality *":"מדינת אזרחות","Select":"נא לבחור","I hold an additional citizenship":"יש לי אזרחות נוספת","Additional citizenship":"מדינת אזרחות","Source of funds *":"מקור הכספים","How and where the funds were accumulated":"כיצד והיכן נצברו הכספים","Salary or employment income":"משכורת או הכנסה מעבודה","Savings":"חיסכון","Sale of assets (property, business, etc.)":"מכירת זכויות ו/או נכסים","Inheritance":"ירושה","Investment returns":"תשואות מהשקעות","Gift":"מתנה","Other":"אחר","Please specify *":"נא פרט/י","Occupation *":"עיסוק","e.g., attorney, physician, business owner":"לדוגמה: עורך/ת דין, רופא/ה, בעל/ת עסק","Purpose of investment *":"מטרת ההשקעה","e.g., long-term capital appreciation, portfolio diversification":"לדוגמה: השבחת הון לטווח ארוך, פיזור תיק ההשקעות","Are you a Politically Exposed Person (PEP) or senior political figure? *":"האם יש לך או לבן/בת זוגך קשר לפעילות ציבורית או פוליטית?","A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.":"איש/ת ציבור בכיר/ה הוא/היא נושא/ת משרה בכירה בממשל, בצבא או במערכת המשפט, נושא/ת תפקיד בכיר במפלגה, מנהל/ת בכיר/ה בתאגיד ממשלתי, או בן/בת משפחה קרוב/ה או מקורב/ת של אדם כזה.","Yes":"כן","No":"לא","Please provide details *":"הסיבה לכך","Phone number *":"טלפון נייד","Include country code":"יש להזין כולל קידומת בינלאומית","Email address *":"מייל","Primary email for regular communication, including monthly yield updates":"כתובת המייל העיקרית לתקשורת שוטפת מול הקרן, כולל אישורי תשואה חודשיים","Entity details":"פרטי התאגיד","Registered address":"כתובת רשומה","Incorporation and business":"התאגדות ופעילות","Tell us about the entity making this subscription.":"פרטים על התאגיד המבצע את ההצטרפות.","Legal entity name *":"שם התאגיד","Full registered name as it appears in the Certificate of Incorporation":"השם הרשום המלא כפי שמופיע בתעודת ההתאגדות","Entity type *":"סוג התאגיד","Corporation":"חברה","Limited Liability Company":"חברה בערבון מוגבל (LLC)","Limited Partnership":"שותפות","Trust":"נאמנות","Registration number *":"מספר תאגיד/ח.פ.","Registered address":"כתובת התאגיד","Country of incorporation *":"מדינת התאגדות","Date of incorporation *":"תאריך רישום","Operating or business revenues":"פעילות עסקית","Sale of assets":"מכירת זכויות ו/או נכסים","Capital contributions from shareholders or partners":"הון עצמי","Loan proceeds":"תמורת הלוואה","Inheritance or estate":"ירושה","Principal business activity *":"פעילות התאגיד","e.g., real estate investment, asset management":"לדוגמה: השקעות נדל\"ן, ניהול נכסים","Is the entity a Politically Exposed Person (PEP) or controlled by one? *":"האם התאגיד הוא איש/ת ציבור בכיר/ה (PEP) או נשלט/ת על ידי כזה?","Primary entity email *":"מייל","Contact person *":"איש/ת קשר","Authorized signatories":"פרטי נציגים מורשים","Identify who will sign on behalf of the entity. Each signatory receives their own signature link by email.":"יש לציין מי יחתום בשם התאגיד. כל חותם/ת יקבל קישור חתימה אישי במייל.","First authorized signatory":"פרטי הנציג המורשה","Email *":"מייל","Title or position *":"תפקיד","Director, Managing Member, CEO":"דירקטור/ית, שותף/ה מנהל/ת, מנכ\"ל/ית","Is this person a controlling shareholder of the entity? *":"האם הינך בעל/ת שליטה?","Is there an additional required signatory? *":"האם לפי פרוטוקול מורשי החתימה יש נציג נוסף שמחוייב בחתימה?","Second authorized signatory":"פרטי הנציג המורשה הנוסף","Your investment":"כספים המושקעים בקרן","Your subscription amount and the bank account you will wire from. Redemption payments are sent back to this same account.":"סכום ההשקעה וחשבון הבנק שממנו תועבר. תשלומי פדיון יוחזרו לאותו חשבון.","Investment amount":"מטבע השקעה","Currency *":"מטבע השקעה","ILS (shekel)":"שקל","USD ($)":"דולר","EUR (euro)":"יורו","Requested investment amount (Class A) *":"סכום השקעה מוצע","Whole amount, no cents. We will format it for you.":"יש להזין סכום שלם בלבד, ללא אגורות. אנו נעצב אותו עבורכם.","e.g., 500,000":"לדוגמה: 500,000","Your bank details":"המוסד ממנו יועברו הכספים","The account you will wire from. Redemption payments return to this same account.":"החשבון שממנו יועברו הכספים. תשלומי פדיון יוחזרו לאותו חשבון.","Name and address of your bank *":"בנק","Full legal name of bank plus full branch address including city and country":"השם המשפטי המלא של הבנק וכתובת הסניף המלאה לרבות עיר ומדינה.","Bank contact information":"פרטי הקשר של הבנק","Optional. Bank phone number":"רשות. מספר טלפון של הבנק","SWIFT or ABA *":"SWIFT או ABA","8 or 11 characters (SWIFT), or 9 digits (ABA)":"8 או 11 תווים (SWIFT) או 9 ספרות (ABA)","Bank account number *":"מספר חשבון","Account holder name *":"שם בעל/ת החשבון","Must match the subscriber name exactly: the entity's legal name (for an entity), or the individual LP's name (for an individual).":"השם חייב להיות זהה לשם המשקיע/ה: השם המשפטי של התאגיד (עבור תאגיד) או שם המשקיע/ה (עבור יחיד).","Further credit instructions":"הוראות זיכוי נוספות","Optional":"רשות","No payment is taken through this form. The Fund's receiving-account details are in the email we sent you. Please wire your subscription after your documents are signed.":"לא נגבה כל תשלום באמצעות טופס זה. פרטי חשבון הקרן לקבלת הכספים מופיעים במייל ששלחנו אליך. יש להעביר את סכום ההשקעה לאחר חתימת המסמכים.","Additional investors":"משקיעים נוספים","Will there be additional investors in this subscription (including spouse)? *":"האם יהיו שותפים להשקעתך בקרן (כולל בן/בת זוג)?","Joint holder authorization":"הרשאת שותפים בחשבון","Any of the joint holders may give instructions on behalf of all":"כל אחד מהשותפים רשאי לתת הוראות בשם כולם","All joint holders must sign any instruction":"כל השותפים נדרשים לחתום על כל הוראה","Each additional investor signs their own copy and completes their own Self-Certification.":"מסמכי ההצטרפות יועברו למשקיעים הנוספים בשותפות למילוי וחתימה לאחר חתימתך.","+ Add another investor":"הוספת משקיע/ה +","Additional investor":"משקיעים נוספים","Accredited investor qualification":"כשירות המשקיע/ה","Select every qualifying condition that applies. At least one is required, or select \"None of the above\".":"יש לסמן כל תנאי כשירות החל עליך. נדרש לפחות תנאי אחד או לבחור \"אף אחד מהאמור לעיל\".","Liquid assets exceed ILS 9,411,809":"השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.","Earned income exceeded ILS 1,411,772 (or ILS 2,117,657 with spouse) in each of the prior two years":"גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.","Liquid assets exceed ILS 5,882,380 AND income exceeded ILS 705,885 (or ILS 1,058,827 with spouse) in each of the prior two years":"השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.","The entity has equity exceeding ILS 50 million and was not incorporated solely to purchase securities in a specific offering":"הננו תאגיד, למעט תאגיד שהתאגד למטרת רכישת ניירות ערך בהצעה נוכחית זו, שההון העצמי שלו עולה על 50 מיליון שקלים חדשים. בפסקה זו, \"הון עצמי\" – לרבות לפי כללי חשבונאות זרים, תקני חשבונאות בין-לאומיים, וכללי חשבונאות מקובלים בארצות הברית כהגדרתם לפי סעיפים 17(ב)(1) ו-36 לחוק ניירות ערך;","Joint investment fund or its managing company":"קרן להשקעות משותפות או חברה המנהלת אותה","Provident fund or its managing company":"קופת גמל או חברה המנהלת אותה","Insurance company":"חברת ביטוח","Banking corporation":"תאגיד בנקאי","Portfolio manager purchasing for itself or qualifying clients":"מנהל תיקי השקעות הרוכש עבור עצמו או עבור לקוחות כשירים","Investment advisor purchasing for itself":"יועץ השקעות הרוכש עבור עצמו","Corporate stock-exchange member purchasing for itself or qualifying clients":"חבר בורסה שהוא תאגיד הרוכש עבור עצמו או עבור לקוחות כשירים","Underwriter purchasing for itself":"חתם הרוכש עבור עצמו","Venture capital fund investing in R&D-stage corporations":"קרן הון סיכון","Entity wholly owned by qualifying shareholders":"הננו תאגיד הנמצא בבעלות מלאה של משקיעים המנויים בסעיף 15א(ב) לחוק ניירות ערך, תשכ\"ח-1968*","None of the above":"אף אחד מהאמור לעיל","No independent lawyer or CPA confirmation is needed in this case.":"במקרה זה אין צורך באישור עו״ד או רו״ח בלתי תלוי/ה.","Lawyer or CPA verification":"אישור עו\"ד / רו\"ח","A lawyer or CPA must independently confirm the accredited-investor qualification. We will send them a signing link after your documents are completed. Please let them know their assistance is required.":"עו\"ד או רו\"ח בלתי תלוי/ה נדרש/ת לאשר את כשירות המשקיע/ה. קישור החתימה יישלח אליו/ה לאחר השלמת המסמכים שלך. נא ליידע אותו/ה שנדרשת מעורבותו/ה.","Do you already have a signed qualification form from the past 12 months?":"האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?","Yes, I will upload it":"כן, אעלה אותו","No, I will provide lawyer details":"לא, אמסור את פרטי עורך/ת הדין","Upload signed qualification form *":"העלאת קבצים","PDF, up to 10 MB. Must be dated within the last 12 months.":"קובץ PDF, עד 10MB. על המסמך להיות בתוקף מ-12 החודשים האחרונים.","Document date *":"תאריך אסמכתאות","Lawyer or CPA first name *":"שם פרטי","Firm":"שם המשרד","We will send the signing link here":"לכתובת זו יישלח הקישור לחתימה","Phone":"טלפון נייד","Israeli tax status":"הצהרה על מעמד מס","I hereby declare that I consent to and accept the provisions of the Tax Ruling the Fund received from the tax authorities in Israel, as amended from time to time. I declare that the following tax status applies:":"אני הח\"מ , ת.ז.  תושב/ת מדינת , שותף/ה מוגבל/ת בשותפות, מצהיר/ה בזאת כי הנני מקבל/ת עליי את תנאי הפרה-רולינג (\"האישור המקדמי\") שקיבלה השותפות ממס הכנסה, המצורף להסכם השותפות.\n\nכמו-כן, הריני להצהיר בזאת כי מעמד המס ושיעור המס החלים עליי בהתאם לאישור המקדמי הינם כדלקמן:","Country of tax residence *":"מדינת תושבות","Tax status *":"מעמד מס","Non-business income. Will be taxed as capital gain per the Tax Ruling.":"הכנסה שלא מעסק (תחויב במס רווח הון בהתאם לתנאי האישור המקדמי)","Business income. Will be taxed marginally per the Tax Ruling.":"הכנסה מעסק (תחויב במס בשיעור הקבוע בסעיף 121 או בסעיף 126(א) לפקודה בהתאם לתנאי האישור המקדמי)","Exempted income under section 9(2) of the Ordinance (institutional entities only).":"הכנסה פטורה מכח סעיף 9(2) לפקודה (גופים מוסדיים בלבד)","I am a Related Person to the General Partner under section 88 of the Israeli Tax Ordinance.":"הנני עומד/ת בהגדרת \"קרוב\" של השותף הכללי (לפי סעיף 88 לפקודת מס הכנסה)","The entity holds a valid withholding-tax exemption it would like applied to Fund income.":"בידי אישור ספציפי מפ\"ש לגבי שיעור ניכוי המס אותו יש לנכות במקור מהכנסותיי בשותפות (רצ\"ב אישור תקף)","Upload tax exemption certificate *":"העלאת קבצים","PDF, up to 10 MB.":"קובץ PDF עד 10MB.","Beneficiary declaration":"הצהרה על נהנים","On whose behalf is this subscription made? *":"המשקיע/ה מצהיר/ה בזאת:","On my own behalf only (individual) / the entity acts on its own behalf only":"אני פועל/ת עבור עצמי בלבד","There are beneficiaries":"הנהנים בפעולה הם:","List each beneficiary below.":"יש לפרט להלן כל אחד מהנהנים.","Relationship between you and the beneficiaries *":"הזיקה ביני לבין הנהנה / ים המצוין / ים לעיל","+ Add another beneficiary":"הוספת נהנה/ית +","Beneficiary":"נהנה/ית","Full name *":"שם מלא","ID / passport / registration number *":"מספר תעודה מזהה/ח.פ.","Date of birth or formation *":"תאריך לידה/תאריך התאגדות","Gender *":"מין","Female":"נקבה","Male":"זכר","Country of citizenship or incorporation *":"מדינת אזרחות/מדינת הנפקת הדרכון/מדינת התאגדות","FATCA and CRS self-certification":"סיווג היישות","This determines your U.S. tax reporting status. For entities, FATCA and CRS are independent classifications and can differ.":"קביעה זו קובעת את מעמד הדיווח שלך לרשויות המס בארצות הברית. עבור תאגידים, הסיווג לפי FATCA והסיווג לפי CRS הם סיווגים נפרדים ועשויים להיות שונים זה מזה.","U.S. person status":"מעמד כ-U.S. Person","U.S. status and tax residency":"מעמד כ-U.S. Person ותושבות מס","Are you a U.S. person for tax purposes? *":"האם הינך U.S. Person לצרכי מס?","Yes. I am a U.S. citizen or resident for tax purposes.":"כן. אני אזרח/ית או תושב/ת ארצות הברית לצרכי מס.","Yes. The entity is a Specified U.S. Person.":"כן. הישות היא Specified U.S. Person.","I was born in the U.S. but have surrendered my citizenship.":"נולדתי בארצות הברית אך ויתרתי על אזרחותי.","Yes. The entity is a U.S. Person but not a Specified U.S. Person.":"כן. הישות היא U.S. Person אך אינה Specified U.S. Person.","No. Not a U.S. person.":"לא, איני U.S. Person.","U.S. TIN *":"מספר זיהוי לצרכי מס בארצות הברית (U.S. TIN)","SSN, ITIN, or EIN":"SSN, ITIN או EIN","Upload your CLN or surrender documentation *":"יש להעלות אסמכתא לויתור על האזרחות (CLN)","Indicate exemption *":"יש לציין את הפטור","Tax residency":"תושבות מס","Every jurisdiction where you are tax-resident. Up to 3.":"כל מדינה שבה הינך תושב/ת לצרכי מס. עד 3 מדינות.","Jurisdiction":"מדינה","Jurisdiction *":"מדינה","Tax reference type *":"סוג מספר הזיהוי לצרכי מס","e.g., TIN":"לדוגמה: TIN","Tax reference number *":"מדינה מספר משלם מס מקומי (TIN)","+ Add another jurisdiction":"הוספת מדינה +","This confirms your U.S. tax status and where you are tax-resident.":"כאן מאשרים את מעמד המס שלך בארה\"ב ואת תחומי השיפוט שבהם את/ה תושב/ת מס.","FATCA classification":"סיווג FATCA","Choose exactly one.":"יש לבחור אפשרות אחת בלבד.","3.1 Registered Foreign Financial Institution (has a GIIN)":"מוסד פיננסי","3.2 Financial Institution unable to provide a GIIN":"3.2 מוסד פיננסי שאינו יכול למסור GIIN","3.3 Not a Foreign Financial Institution":"3.3 אינו מוסד פיננסי זר","Global Intermediary Identification Number (GIIN) *":"מספר זיהוי מתווך גלובלי (GIIN)","If registration is in progress, indicate so.":"אם תהליך הרישום בעיצומו יש לציין זאת.","3.3 sub-status *":"3.3 תת-סיווג","(a) Exempt Beneficial Owner":"(a) בעל זכות שביושר פטור (Exempt Beneficial Owner)","(b) Active NFFE":"יישות אקטיבית שאינה פיננסית","(c) Direct Reporting NFFE":"(c) ישות זרה שאינה פיננסית המדווחת ישירות (Direct Reporting NFFE)","(d) Sponsored Direct Reporting NFFE":"(d) ישות זרה שאינה פיננסית המדווחת ישירות בחסות גורם אחר (Sponsored Direct Reporting NFFE)","(e) Passive NFFE":"(e) ישות זרה שאינה פיננסית פסיבית (Passive NFFE)","Passive NFFE controlling-persons reporting method *":"שיטת דיווח בעלי השליטה בישות זרה שאינה פיננסית פסיבית","Using the \"Substantial U.S. Owner\" definition":"לפי הגדרת \"Substantial U.S. Owner\" (בעל זכות מהותי אמריקאי)","Using the \"Controlling Person\" definition per CRS":"לפי הגדרת \"בעל/ת שליטה\" לפי CRS","CRS classification":"סיווג CRS","Choose exactly one. CRS classification need not match FATCA.":"יש לבחור באפשרות אחת בלבד. הסיווג לפי CRS אינו חייב להיות זהה לסיווג לפי FATCA.","5.1 Financial Institution":"מוסד פיננסי","5.2 Active Non-Financial Entity":"יישות אקטיבית שאינה פיננסית","5.3 Passive Non-Financial Entity":"5.3 ישות לא פיננסית פסיבית","FI sub-type":"תת-סוג של מוסד פיננסי","e.g., 5.1(c)(ii)":"לדוגמה: 5.1(c)(ii)","If you are an investment entity managed by another FI in a non-participating jurisdiction with no exemption, you will complete the controlling persons step.":"אם הינך ישות השקעה המנוהלת על ידי מוסד פיננסי אחר במדינה שאינה משתתפת וללא פטור, יהיה עליך להשלים את שלב בעלי השליטה.","Controlling persons":"בעלי שליטה","List each person who controls the entity. The subscription documents will be sent to each controlling person for completion and signature after your signature. Required when the entity is a Passive NFFE or Passive NFE.":"יש לפרט כל אדם השולט בתאגיד. מסמכי ההצטרפות יישלחו לכל בעל/ת שליטה למילוי וחתימה לאחר חתימתך. נדרש כאשר התאגיד הוא Passive NFFE או Passive NFE.","+ Add a controlling person":"הוספת בעל/ת שליטה +","Controlling person":"פרטי בעל/ת השליטה","They receive their own link to complete details and sign":"יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה","Type of controlling person *":"סוג בעל/ת השליטה","Legal person, control by ownership":"ישות משפטית, שליטה באמצעות בעלות","Legal person, control by other means":"ישות משפטית, שליטה באמצעים אחרים","Legal person, senior managing official":"ישות משפטית, נושא/ת משרה ניהולית בכיר/ה","Trust, settlor":"נאמנות, יוצר/ת הנאמנות","Trust, trustee":"נאמנות, נאמן/ה","Trust, protector":"נאמנות, מגן/ת הנאמנות","Trust, beneficiary":"נאמנות, נהנה/ית","Trust, other":"נאמנות, אחר","Legal arrangement (non-trust), settlor-equivalent":"הסדר משפטי (שאינו נאמנות), מקביל ליוצר/ת הנאמנות","Legal arrangement (non-trust), trustee-equivalent":"הסדר משפטי (שאינו נאמנות), מקביל לנאמן/ה","Legal arrangement (non-trust), protector-equivalent":"הסדר משפטי (שאינו נאמנות), מקביל למגן/ת הנאמנות","Legal arrangement (non-trust), beneficiary-equivalent":"הסדר משפטי (שאינו נאמנות), מקביל לנהנה/ית","Legal arrangement (non-trust), other-equivalent":"הסדר משפטי (שאינו נאמנות), מקביל לאחר","Document uploads":"העלאת קבצים","We collect these documents to satisfy Cayman Islands AML and KYC requirements. They are stored securely and are never shared publicly.":"אנו אוספים מסמכים אלה כדי לעמוד בדרישות איסור הלבנת הון (AML) והכר את הלקוח (KYC). המסמכים נשמרים באופן מאובטח ואינם נמסרים לגורם חיצוני.","Passport copy *":"צילום דרכון","Second passport (joint holder)":"דרכון שני (שותף/ה בחשבון)","Certificate of Incorporation / government registration *":"תעודת התאגדות / רישום ממשלתי","List of authorized signatories *":"רשימת מורשי החתימה","Passport / ID of each authorized signatory *":"תעודה מזהה של כל אחד ממורשי החתימה","Corporate seal or stamp":"חותמת תאגיד","Articles of Incorporation *":"תקנון התאגיד","Corporate resolution / authorization *":"החלטת התאגיד / הרשאה","Partnership agreement *":"הסכם השותפות","Trust agreement (relevant pages) *":"הסכם הנאמנות (העמודים הרלוונטיים)","Proof of residential address *":"אסמכתא לכתובת מגורים","A utility bill (water, electricity, gas, or property tax) or bank statement dated within the last 3 months, showing the residential address entered in your subscription agreement. Accepted: utility bill, property tax bill, bank letter, credit card statement, or government-issued letter.":"יש לפרט כולל תאריך מ-3 החודשים האחרונים","Date on proof of address *":"התאריך המופיע באסמכתא לכתובת","Communication contacts":"פרטי התקשרות","Full name in Hebrew":"שם מלא","For our internal records and Israeli bank reporting. Leave blank if not applicable.":"לרישומים הפנימיים שלנו ולדיווח לבנק בישראל. אם אינו רלוונטי, ניתן להשאיר ריק.","Add any additional email addresses for regular communication, including monthly yield updates. These are copied on the completion email to Legacy Value Partners.":"אנא הוסיפו את כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.","+ Add an email":"ברצוני להוסיף מייל לא מהרשימה","name@example.com":"name@example.com","Review and submit":"סיום ושליחה","When you submit, we assemble your subscription pack and send you a signing link by email. Every signer (you, your lawyer or CPA if applicable, and each controlling person) signs in turn.":"עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור לחתימה במייל. כל אחד מהחותמים (את/ה, עו״ד או רו״ח במידת הצורך, כל אחד מבעלי השליטה) חותמים בתורם.","Back":"הקודם","Continue":"הבא","Submit subscription":"סיום ושליחה","Remove":"מחיקה","At least one entry is required here.":"יש להזין לפחות רשומה אחת.","That file is larger than 10 MB. Please upload a smaller file.":"הקובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.","Please use English letters for this field.":"יש להזין שדה זה באנגלית.","Please use English letters (the documents are in English).":"יש להזין באותיות באנגלית (המסמכים מנוהלים באנגלית).","The entity is a family company for tax purposes":"התאגיד נחשב חברה משפחתית לצורכי מס","3.1 sub-type *":"3.1 תת-סיווג","(a) Reporting Model 1 FFI":"(a) מוסד פיננסי מדווח לפי מודל 1 (Reporting Model 1 FFI)","(b) Registered Deemed Compliant FFI":"(b) מוסד פיננסי רשום הנחשב כציית (Registered Deemed Compliant FFI)","(c) Reporting Model 2 FFI":"(c) מוסד פיננסי מדווח לפי מודל 2 (Reporting Model 2 FFI)","(d) Participating FFI":"(d) מוסד פיננסי משתתף (Participating FFI)","3.2 sub-type *":"3.2 תת-סיווג","(a) Sponsored FFI (relies on sponsor GIIN)":"(a) מוסד פיננסי בחסות (Sponsored FFI) המסתמך על ה-GIIN של נותן החסות","(b) Trustee Documented Trust":"(b) נאמנות המתועדת על ידי נאמן (Trustee Documented Trust)","(c) Certified Deemed Compliant FFI":"(c) מוסד פיננסי מאושר הנחשב כציית (Certified Deemed Compliant FFI)","(d) Non-Participating FFI":"(d) מוסד פיננסי שאינו משתתף (Non-Participating FFI)","Sponsor or trustee GIIN":"מספר GIIN של נותן החסות או הנאמן","The sponsoring entity's or trustee's GIIN, if applicable.":"ה-GIIN של ישות נותנת החסות או של הנאמן אם רלוונטי.","5.1 sub-type *":"5.1 תת-סיווג","(a) Reporting Financial Institution":"(a) מוסד פיננסי מדווח (Reporting Financial Institution)","(b) Non-Reporting Financial Institution":"(b) מוסד פיננסי שאינו מדווח (Non-Reporting Financial Institution)","(c) Investment Entity in a Non-Participating Jurisdiction (controlling-person look-through)":"(c) ישות השקעה במדינה שאינה משתתפת (Investment Entity in a Non-Participating Jurisdiction) המחייבת בדיקת בעלי שליטה","5.2 sub-type *":"5.2 תת-סיווג","(a) Corporation regularly traded, or a related entity":"(a) תאגיד הנסחר באופן סדיר או ישות קשורה אליו (Regularly Traded Corporation)","(b) Governmental Entity, International Organization, or Central Bank":"(b) ישות ממשלתית, ארגון בינלאומי או בנק מרכזי (Governmental Entity / International Organization / Central Bank)","(c) Other Active NFE":"(c) ישות אקטיבית אחרת שאינה פיננסית (Other Active NFE)","If no tax reference number, the reason":"אם אין מספר זיהוי לצורכי מס (TIN) יש לציין את הסיבה","Required only if no tax reference number is available for this jurisdiction.":"נדרש רק אם אין מספר זיהוי לצורכי מס (TIN) עבור מדינה זו.","List each substantial U.S. owner.":"יש לפרט כל בעל זכות מהותי אמריקאי (Substantial U.S. Owner).","Full residence address *":"כתובת מגורים מלאה","Tax reference type and number *":"סוג ומספר הזיהוי לצורכי מס (TIN)","+ Add a substantial U.S. owner":"הוספת בעל זכות מהותי אמריקאי +","The mailing address differs from the registered address":"כתובת למשלוח דואר שונה מהכתובת הרשומה","Mailing address":"כתובת למשלוח דואר","Documents":"מסמכים","Photos and PDF files accepted.":"ניתן להעלות תמונות או קבצי PDF.","Proof of registered address *":"אסמכתא לכתובת הרשומה *","A bank statement or utility bill dated within the last 3 months, showing the entity's registered address.":"דף חשבון בנק או חשבון שירות מ-3 החודשים האחרונים המציג את כתובת התאגיד הרשומה.","Entity type (please specify) *":"סוג תאגיד (פרטו) *"};
+
+    var curLang = 'he';
+    var langCard = document.querySelector('.lvp-card');
+
+    // Trailing required marker. Map keys carry it on some entries and not others;
+    // we normalize the lookup and re-apply the marker so validatePage (which keys
+    // off a '*' in the label text) keeps detecting required fields after a swap.
+    function splitStar(s) {
+      var m = /^([\s\S]*?)(\s*\*)\s*$/.exec(s);
+      return m ? { core: m[1], star: true } : { core: s, star: false };
+    }
+    // Look up a Hebrew translation for an English string, tolerant of the trailing
+    // asterisk on either side. Returns null if there is no map entry.
+    function lookupHe(en) {
+      if (en == null) return null;
+      var raw = String(en);
+      if (Object.prototype.hasOwnProperty.call(HE_MAP, raw)) return HE_MAP[raw];
+      var sp = splitStar(raw);
+      var trimmedCore = sp.core.replace(/\s+$/, '').replace(/^\s+/, '');
+      if (Object.prototype.hasOwnProperty.call(HE_MAP, trimmedCore)) return HE_MAP[trimmedCore];
+      if (Object.prototype.hasOwnProperty.call(HE_MAP, trimmedCore + ' *')) return HE_MAP[trimmedCore + ' *'];
+      return null;
+    }
+
+    // Resolve the display string for cached English origEn at the given lang.
+    // For required-marked English (trailing ' *'), the asterisk is preserved on
+    // the Hebrew so the required-field detector still sees it.
+    function displayFor(origEn, lang) {
+      if (lang === 'en') return origEn;
+      var he = lookupHe(origEn);
+      if (he == null) return origEn; // no entry: leave English (never blank)
+      var sp = splitStar(origEn);
+      if (sp.star && !/\*\s*$/.test(he)) return he + ' *';
+      return he;
+    }
+
+    // Swap ONLY the trailing text node of a label (radio/checkbox) so the form
+    // control element and any nested applicant-variant span are never touched.
+    function swapTrailingTextNode(el, lang) {
+      var node = null;
+      for (var i = el.childNodes.length - 1; i >= 0; i--) {
+        var c = el.childNodes[i];
+        if (c.nodeType === 3 && c.nodeValue && c.nodeValue.trim()) { node = c; break; }
+      }
+      if (!node) return;
+      if (el.dataset.enText == null) el.dataset.enText = node.nodeValue;
+      var lead = /^\s*/.exec(el.dataset.enText)[0]; // keep the space after the control
+      node.nodeValue = lead + displayFor(el.dataset.enText.trim(), lang);
+    }
+
+    // Swap a block element's full textContent (title/subhead/legend/label/hint).
+    function swapTextContent(el, lang) {
+      if (el.dataset.en == null) el.dataset.en = el.textContent;
+      var txt = displayFor(el.dataset.en, lang);
+      if (el.dataset.emph) {
+        var parts = el.dataset.emph.split('|');
+        var kw = (lang === 'he' && parts[1]) ? parts[1] : parts[0];
+        var i = kw ? txt.indexOf(kw) : -1;
+        if (i !== -1) {
+          el.textContent = '';
+          el.appendChild(document.createTextNode(txt.slice(0, i)));
+          var st = document.createElement('strong'); st.className = 'lvp-emph'; st.textContent = kw;
+          el.appendChild(st);
+          el.appendChild(document.createTextNode(txt.slice(i + kw.length)));
+          return;
+        }
+      }
+      el.textContent = txt;
+    }
+
+    // Swap an attribute value (placeholder / data-help), caching the English.
+    function swapAttr(el, attr, cacheKey, lang) {
+      if (!el.hasAttribute(attr)) return;
+      if (el.dataset[cacheKey] == null) el.dataset[cacheKey] = el.getAttribute(attr);
+      el.setAttribute(attr, displayFor(el.dataset[cacheKey], lang));
+    }
+
+    function swapScopeText(root, lang) {
+      var blockSel = '.lvp-page__title, .lvp-subhead, .lvp-field__label, ' +
+        '.lvp-fieldset__legend, .lvp-page__hint, .lvp-hint-small, .lvp-note, ' +
+        '.lvp-repeating-row__title, span[data-upload-label]';
+      root.querySelectorAll(blockSel).forEach(function (el) { swapTextContent(el, lang); });
+      root.querySelectorAll('option').forEach(function (op) { swapTextContent(op, lang); });
+      root.querySelectorAll('label.lvp-radio, label.lvp-checkbox').forEach(function (lbl) { swapTrailingTextNode(lbl, lang); });
+      root.querySelectorAll('label.lvp-radio span[data-applicant], label.lvp-checkbox span[data-applicant]').forEach(function (sp) { swapTextContent(sp, lang); });
+      root.querySelectorAll('button[data-action]').forEach(function (b) { swapTextContent(b, lang); });
+      root.querySelectorAll('a.lvp-link').forEach(function (a) { swapTextContent(a, lang); }); // translate link text, keep href
+      root.querySelectorAll('[placeholder]').forEach(function (el) { swapAttr(el, 'placeholder', 'enPlaceholder', lang); });
+      root.querySelectorAll('[data-help]').forEach(function (el) { swapAttr(el, 'data-help', 'enHelp', lang); });
+    }
+
+    function applyLang(lang) {
+      lang = (lang === 'en') ? 'en' : 'he';
+      curLang = lang;
+      swapScopeText(langCard || document, lang);
+
+      // direction: rtl for Hebrew, ltr for English. Inputs forced LTR via CSS.
+      if (langCard) langCard.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+
+      // reflect on the toggle buttons.
+      document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+      });
+    }
+
+    // Re-translate a freshly cloned repeating row (template HTML is English) so
+    // added rows match the current language. Called from addRow.
+    function translateScope(node) {
+      if (node && curLang === 'he') swapScopeText(node, 'he');
+    }
+
+    document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+      b.addEventListener('click', function () { applyLang(b.getAttribute('data-lang-set')); });
+    });
+
+    // ---- page sequence (visible pages filtered by applicant type) ----
+    var ALL_PAGES = Array.prototype.slice.call(form.querySelectorAll('.lvp-page'));
+    var state = (CFG.prefill && JSON.parse(JSON.stringify(CFG.prefill))) || {};
+    // Operator defines the type via the link (?type=) or the Monday row; the LP NEVER chooses.
+    state.applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
+
+    // EasySend model: the operator chooses individual vs entity when sending the
+    // link (separate flows), so the LP never self-classifies and cannot pick the
+    // wrong one. When the type is preset, check the matching radio (so validation
+    // and the saved submission stay consistent) and hide the chooser. The welcome
+    // page then reads as a simple greeting.
+    var TYPE_PRESET = (CFG.applicantType === 'individual' || CFG.applicantType === 'entity');
+    if (TYPE_PRESET) {
+      var __preRadio = form.querySelector('input[name="applicantType"][value="' + CFG.applicantType + '"]');
+      if (__preRadio) __preRadio.checked = true;
+      var __chooser = document.getElementById('applicant-chooser');
+      if (__chooser) __chooser.hidden = true;
+    }
+
+    function applicant() { return state.applicantType || readRadio('applicantType') || ''; }
+
+    function visiblePages() {
+      var ap = applicant();
+      return ALL_PAGES.filter(function (p) {
+        if (p.hasAttribute('data-chooser') && TYPE_PRESET) return false; // operator preset the type: skip the chooser, welcome goes straight to fields
+        var only = p.getAttribute('data-applicant');
+        if (only) {                       // typed page (individual/entity only)
+          if (!ap || only !== ap) return false;
+        }                                  // shared page (no data-applicant): always passes the type gate
+        // Page-level conditional: a whole page can be gated on an answer given on
+        // an earlier page (e.g. the FATCA/CRS pages exist only when the entity is
+        // not a U.S. person). currentValueFor reads the live DOM by field name, so
+        // the trigger may sit on any earlier page.
+        var when = p.getAttribute('data-page-when');
+        if (when) {
+          // OR semantics: the page shows if ANY ';'-separated clause (path=value)
+          // matches. Lets a page depend on more than one earlier answer (e.g. the
+          // controlling-persons page appears for CRS Passive NFE OR FATCA Passive NFFE).
+          var anyMatch = when.split(';').some(function (clause) {
+            var eq = clause.indexOf('=');
+            return eq > -1 && String(currentValueFor(clause.slice(0, eq).trim())) === String(clause.slice(eq + 1).trim());
+          });
+          if (!anyMatch) return false;
+        }
+        return true;
+      });
+    }
+
+    var idx = 0;
+
+    function populateCountries() {
+      var list = CFG.countries || ['Israel', 'United States', 'Cayman Islands', 'United Kingdom', 'Switzerland', 'Germany', 'France', 'Cyprus', 'Luxembourg', 'Ireland', 'Canada', 'Australia', 'Singapore', 'Hong Kong', 'United Arab Emirates', 'British Virgin Islands', 'Bermuda', 'Jersey', 'Guernsey'];
+      form.querySelectorAll('select[data-country]').forEach(function (sel) {
+        if (sel.options.length > 1) return;
+        if (!sel.options.length) sel.appendChild(new Option('Select', ''));
+        list.forEach(function (c) { sel.appendChild(new Option(c, c)); });
+      });
+    }
+
+    function readRadio(name) {
+      var el = form.querySelector('input[name="' + cssEsc(name) + '"]:checked');
+      return el ? el.value : '';
+    }
+    function cssEsc(s) { return String(s).replace(/(["\\\]\[])/g, '\\$1'); }
+
+    // ---- conditional show/hide (data-show-when="path=value" or "p=v1;p=v2" OR semantics) ----
+    function applyConditionals(scope) {
+      (scope || form).querySelectorAll('[data-show-when]').forEach(function (el) {
+        var cond = el.getAttribute('data-show-when');
+        // Semicolon-separated alternatives: any clause matching shows the element.
+        var show = cond.split(';').some(function (clause) {
+          var eq = clause.indexOf('=');
+          if (eq < 0) return false;
+          var path = clause.slice(0, eq), want = clause.slice(eq + 1);
+          return String(currentValueFor(path)) === String(want);
+        });
+        el.hidden = !show;
+      });
+      // applicant-type inline spans / sub-blocks
+      var ap = applicant();
+      (scope || form).querySelectorAll('[data-applicant]').forEach(function (el) {
+        if (el.classList.contains('lvp-page')) return; // page-level handled by sequence
+        if (el.tagName === 'SPAN' || el.tagName === 'DIV' || el.tagName === 'LABEL') {
+          el.style.display = (el.getAttribute('data-applicant') === ap) ? '' : 'none';
+        }
+      });
+    }
+    function currentValueFor(path) {
+      var byName = form.querySelector('[name="' + cssEsc(path) + '"]');
+      if (byName && (byName.type === 'radio')) return readRadio(path);
+      if (byName && byName.type === 'checkbox') return byName.checked ? (byName.value || 'true') : 'false';
+      if (byName) return byName.value;
+      // radio group not matched above
+      return readRadio(path);
+    }
+
+    form.addEventListener('change', function (e) {
+      if (e.target.hasAttribute('data-branch')) { state.applicantType = e.target.value; rebuild(); return; }
+      applyConditionals();
+    });
+    form.addEventListener('input', function () { clearError(currentPageEl()); });
+
+    // ---- repeating rows ----
+    function templateFor(name) {
+      var t = form.querySelector('template[data-row-template="' + name + '"]');
+      return t ? t.innerHTML : '';
+    }
+    form.addEventListener('click', function (e) {
+      var add = e.target.closest('[data-action="add-row"]');
+      if (add) { addRow(add.getAttribute('data-target')); return; }
+      var rm = e.target.closest('[data-action="remove-row"]');
+      if (rm) {
+        var row = rm.closest('[data-row-index]');
+        var host = row.parentNode;
+        // Guard the stated minimum: never let Remove drop below data-repeating-min
+        // (e.g. the tax-residency min of 1), which would leave zero rows with no
+        // re-add prompt. Keep the last required row and tell the LP why.
+        var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+        var count = host.querySelectorAll('[data-row-index]').length;
+        if (count <= min) {
+          setStatus(min === 1 ? 'At least one entry is required here.' : (curLang === 'he' ? 'יש להזין לפחות ' + min + ' רשומות.' : 'At least ' + min + ' entries are required here.'), true);
+          return;
+        }
+        row.remove(); reindex(host); return;
+      }
+    });
+    function repeatHost(path) { return form.querySelector('[data-repeating-typed-path="' + path + '"]'); }
+    function addRow(path) {
+      var host = repeatHost(path);
+      var tmplName = host.getAttribute('data-repeating-template');
+      var i = host.querySelectorAll('[data-row-index]').length;
+      var html = templateFor(tmplName).replace(/\$\{i1\}/g, i + 1).replace(/\$\{i\}/g, i);
+      var wrap = document.createElement('div'); wrap.innerHTML = html;
+      var node = wrap.firstElementChild;
+      host.appendChild(node);
+      populateCountries();
+      translateScope(node); // match the current language for this freshly added row
+      applyConditionals(node);
+    }
+    function reindex(host) {
+      Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
+        row.setAttribute('data-row-index', i);
+        row.querySelectorAll('[name]').forEach(function (inp) {
+          inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
+        });
+        var title = row.querySelector('.lvp-repeating-row__title');
+        if (title) title.textContent = title.textContent.replace(/\d+$/, i + 1);
+      });
+    }
+    function ensureMinRows() {
+      form.querySelectorAll('[data-repeating-typed-path]').forEach(function (host) {
+        var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+        while (host.querySelectorAll('[data-row-index]').length < min) addRow(host.getAttribute('data-repeating-typed-path'));
+      });
+    }
+
+    // ---- file uploads ----
+    form.addEventListener('change', function (e) {
+      var inp = e.target;
+      if (!inp.hasAttribute('data-upload')) return;
+      var slot = inp.getAttribute('data-upload');
+      var files = inp.files;
+      // Update the styled upload block's filename display immediately (synchronous).
+      (function () {
+        var wrap = inp.parentElement && inp.parentElement.classList.contains('lvp-upload') ? inp.parentElement : null;
+        if (!wrap) return;
+        var nm = wrap.querySelector('[data-upload-name]');
+        if (!nm) return;
+        if (!files || !files.length) { nm.textContent = ''; nm.removeAttribute('data-has-file'); }
+        else {
+          nm.textContent = files.length > 1
+            ? (curLang === 'he' ? files.length + ' קבצים נבחרו' : files.length + ' files selected')
+            : files[0].name;
+          nm.setAttribute('data-has-file', '1');
+        }
+      })();
+      // A slot may take MULTIPLE files (e.g. the ID: front, back, ספח). The first file
+      // keeps the bare slot so required-checks + autofill still work; extras get slot_2,
+      // slot_3, each stored to the KYC folder by the generic server router.
+      if (!files || !files.length) { Object.keys(pendingUploads).forEach(function (k) { if (k === slot || k.indexOf(slot + '_') === 0) delete pendingUploads[k]; }); return; }
+      Array.prototype.forEach.call(files, function (f, i) {
+        if (f.size > 10 * 1024 * 1024) { setStatus('A file is larger than 10 MB. Please upload smaller files.', true); return; }
+        var key = i === 0 ? slot : slot + '_' + (i + 1);
+        var reader = new FileReader();
+        reader.onload = function () {
+          var b64 = String(reader.result).split(',')[1];
+          pendingUploads[key] = { slot: key, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+          // The ID uploads ARE the scan: uploading the passport / ת"ז fills the form (no
+          // separate scan step). Autofill from the first image only, when a key is set.
+          if (i === 0 && (slot === 'passportPrimary' || slot === 'nationalId') && CFG.kycScanEnabled) autofillFromIdDoc(slot, b64, f.type || 'image/jpeg');
+        };
+        reader.readAsDataURL(f);
+      });
+    });
+
+    // ---- collect the full submission object from all fields ----
+    function collectAll() {
+      var data = { applicantType: applicant(), isExistingLp: !!CFG.isExistingLp };
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
+        if (inp.type === 'radio' && !inp.checked) return;
+        if (inp.type === 'checkbox') {
+          if (inp.name === 'qualification.conditions') {
+            if (inp.checked) { setPath(data, 'qualification.conditions[]', inp.value); }
+            return;
+          }
+          setPath(data, inp.name, inp.checked ? (inp.value === 'true' ? true : inp.value) : false);
+          return;
+        }
+        if (inp.value === '' || inp.value == null) return;
+        setPath(data, inp.name, coerce(inp.value));
+      });
+      // uploads attach as { slot: {fileName,...} } so the server routes + stores
+      data.__uploads = pendingUploads;
+      return data;
+    }
+    function coerce(v) { if (v === 'true') return true; if (v === 'false') return false; return v; }
+    function setPath(obj, path, value) {
+      if (/\[\]$/.test(path)) { var base = path.slice(0, -2); var arr = getPath(obj, base) || []; arr.push(value); return assign(obj, base, arr); }
+      assign(obj, path, value);
+    }
+    function getPath(obj, path) {
+      var parts = tokenize(path), cur = obj;
+      for (var i = 0; i < parts.length; i++) { if (cur == null) return undefined; cur = cur[parts[i]]; }
+      return cur;
+    }
+    function assign(obj, path, value) {
+      var parts = tokenize(path), cur = obj;
+      for (var i = 0; i < parts.length - 1; i++) {
+        var k = parts[i], nextIsIdx = /^\d+$/.test(parts[i + 1]);
+        if (cur[k] == null) cur[k] = nextIsIdx ? [] : {};
+        cur = cur[k];
+      }
+      cur[parts[parts.length - 1]] = value;
+    }
+    function tokenize(path) {
+      return path.replace(/\[(\d+)\]/g, '.$1').split('.').filter(function (s) { return s !== ''; });
+    }
+
+    // English-only data entry: strip Hebrew the moment it is typed/pasted into any
+    // field EXCEPT the explicit Hebrew-name field. The delivered docs are English.
+    form.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+      var t = el.type || 'text';
+      if (t !== 'text' && t !== 'email' && t !== 'tel' && t !== 'search') return;
+      if (el.name === 'fullNameHebrew' || el.getAttribute('dir') === 'rtl') return;
+      var cleaned = el.value.replace(/[֐-׿ﬠ-ﭏ]/g, '');
+      if (cleaned !== el.value) {
+        var pos = el.selectionStart;
+        el.value = cleaned;
+        try { el.setSelectionRange(pos - 1, pos - 1); } catch (_) {}
+        showToast('Please enter details in English only.');
+      }
+    }, true);
+
+    // ---- validation: required visible fields on the current page ----
+    function validatePage(pageEl) {
+      var ok = true;
+      var firstError = null;
+      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); });
+      var labels = pageEl.querySelectorAll('.lvp-field__label, .lvp-fieldset__legend');
+      labels.forEach(function (lbl) {
+        if (lbl.textContent.indexOf('*') === -1) return;
+        var holder = lbl.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder)) return;
+        var inputs = holder.querySelectorAll('input, select, textarea');
+        var filled = false, hasRadio = false;
+        inputs.forEach(function (i) {
+          if (i.type === 'radio' || i.type === 'checkbox') { hasRadio = true; if (i.checked) filled = true; }
+          else if (i.hasAttribute('data-upload')) { if (pendingUploads[i.getAttribute('data-upload')]) filled = true; }
+          else if (i.value && i.value.trim()) filled = true;
+        });
+        if (!filled) { ok = false; holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--error' : 'lvp-field--error'); if (!firstError) firstError = holder; }
+      });
+      // English-only data backstop: no field may contain Hebrew except the explicit
+      // Hebrew-name field. Flag any that slip through (paste, autofill, etc.).
+      pageEl.querySelectorAll('input[type="text"], input[type="email"], textarea').forEach(function (i) {
+        if (i.name === 'fullNameHebrew' || i.getAttribute('dir') === 'rtl') return;
+        var holder = i.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder)) return;
+        if (/[֐-׿]/.test(i.value)) {
+          ok = false; holder.classList.add('lvp-field--error'); if (!firstError) firstError = holder;
+          setStatus('Please use English letters (the documents are in English).', true);
+        }
+      });
+      // Scroll the first errored field into view (long pages can show red above the
+      // fold with the status message far below; auto-scroll removes the hunt).
+      if (firstError) {
+        try { firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        catch (_) { firstError.scrollIntoView(); }
+        var focusable = firstError.querySelector('input, select, textarea');
+        if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (_) {} }
+      }
+      return ok;
+    }
+    function isHidden(el) {
+      while (el && el !== form) { if (el.hidden || el.style.display === 'none') return true; el = el.parentElement; }
+      return false;
+    }
+    function clearError(pageEl) { if (pageEl) pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); }); }
+
+    // ---- navigation ----
+    function currentPageEl() { return visiblePages()[idx]; }
+    function rebuild() {
+      ALL_PAGES.forEach(function (p) { p.hidden = true; });
+      var pages = visiblePages();
+      if (idx >= pages.length) idx = pages.length - 1;
+      showPage(idx);
+    }
+    function showPage(n) {
+      var pages = visiblePages();
+      idx = Math.min(Math.max(n, 0), pages.length - 1);
+      ALL_PAGES.forEach(function (p) { p.hidden = true; });
+      var page = pages[idx];
+      page.hidden = false;
+      applyConditionals(page);
+      prevBtn.hidden = idx === 0;
+      var actionsEl = form.querySelector('.lvp-actions');
+      if (actionsEl) actionsEl.classList.toggle('lvp-actions--solo', idx === 0); // welcome: center the lone Continue
+      var last = idx === pages.length - 1;
+      nextBtn.hidden = last;
+      submitBtn.hidden = !last;
+      // Progress: fill bar only, no "X / Y" number. The page count moves mid-flow
+      // (conditional pages appear/disappear by answer), so a visible denominator
+      // would grow underfoot and read as "it's getting longer." The bar conveys
+      // progress without a moving or daunting number. Hidden on the welcome page.
+      var onWelcome = page.getAttribute('data-page') === 'welcome';
+      if (progWrap) progWrap.hidden = onWelcome;
+      if (!onWelcome) {
+        if (progIndicator) progIndicator.textContent = '';
+        var pct = Math.round(((idx + 1) / pages.length) * 100);
+        progBar.style.width = pct + '%';
+        progBar.setAttribute('aria-valuenow', pct);
+      }
+      if (page.getAttribute('data-page') === 'review') renderReview();
+      setStatus('');
+      window.scrollTo(0, 0);
+    }
+    prevBtn.addEventListener('click', function () { showPage(idx - 1); });
+    nextBtn.addEventListener('click', function () {
+      var page = currentPageEl();
+      if (!validatePage(page)) { setStatus('Please complete the required fields.', true); return; }
+      showPage(idx + 1); savePage().catch(function () { setStatus('Could not auto-save. Your progress may not be preserved.', true); });
+    });
+    submitBtn.addEventListener('click', function () {
+      var page = currentPageEl();
+      if (!validatePage(page)) { setStatus('Please complete the required fields.', true); return; }
+      doSubmit();
+    });
+
+    function renderReview() {
+      var data = collectAll();
+      var host = form.querySelector('[data-review-summary]');
+      var rows = [];
+      rows.push([displayFor('Applicant', curLang), data.applicantType === 'entity' ? (getPath(data, 'entity.legalName') || 'Entity') : ((getPath(data, 'individual.firstName') || '') + ' ' + (getPath(data, 'individual.lastName') || '')).trim()]);
+      rows.push([displayFor('Investment', curLang), (getPath(data, 'investment.currency') || '') + ' ' + (getPath(data, 'investment.amount') || '')]);
+      var cps = getPath(data, 'controllingPersons') || [];
+      if (data.applicantType === 'entity') rows.push([displayFor('Controlling persons', curLang), String(cps.length)]);
+      var uploadCount = Object.keys(pendingUploads).length;
+      rows.push([displayFor('Documents uploaded', curLang), String(uploadCount)]);
+      host.innerHTML = '<dl class="lvp-wire" style="background:#F6F8FB;border-color:#E4E8EE">' +
+        rows.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl>';
+    }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
+
+    // ---- gateway calls (Foundation source=lp envelope) ----
+    function gateway(action, payload) {
+      var body = { action: action, token: CFG.token, lane: 'cayman', payload: payload || {} };
+      return fetch(CFG.gatewayUrl + '?source=lp', {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res || res.ok === false) throw new Error((res && res.error) || 'Something went wrong. Please try again.');
+        return res;
+      });
+    }
+    // Strip file base64 out of a snapshot's __uploads, keeping only the metadata
+    // (filename / size / type). The session snapshot is persisted server-side in a
+    // Script Property capped at 9 KB; a single base64 file would blow that cap and
+    // break save-and-resume. The actual base64 is sent ONLY on final submit.
+    function snapshotWithoutFileBytes(data) {
+      if (!data || !data.__uploads) return data;
+      var meta = {};
+      Object.keys(data.__uploads).forEach(function (slot) {
+        var u = data.__uploads[slot] || {};
+        meta[slot] = { slot: u.slot || slot, fileName: u.fileName, mimeType: u.mimeType, fileSizeBytes: u.fileSizeBytes };
+      });
+      // shallow clone so we never mutate the live pendingUploads-backed object
+      var copy = {}; Object.keys(data).forEach(function (k) { copy[k] = data[k]; });
+      copy.__uploads = meta;
+      return copy;
+    }
+    function savePage() {
+      // partial save-and-resume: send the snapshot WITHOUT file base64 (upload
+      // metadata only); server merges. Base64 rides only on the final submit.
+      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) })
+        .then(function (res) { return res; })
+        .catch(function (err) { return null; }); // best-effort save; entries persist in-session, no alarming message to the LP
+    }
+    var submitting = false;
+    function doSubmit() {
+      if (submitting) return;          // synchronous guard: no duplicate pack on a double-tap
+      submitting = true;
+      normalizePhones();               // write each phone as full E.164 before capture
+      var snapshot = collectAll();
+      // Full-card loading state: assembling a roughly 30-page pack takes several
+      // seconds, so show a clear "we are preparing your documents" card (spinner +
+      // reassuring line) rather than a thin status line, so the LP does not think it
+      // hung. The form pages are hidden (not destroyed), so on an error we restore
+      // them and the LP can retry without losing entries.
+      showResultCard(
+        '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
+        '<h2>' + esc(displayFor('Preparing your documents', curLang)) + '</h2>' +
+        '<p>' + esc(displayFor('We are assembling your subscription pack. This can take a moment. Please keep this window open.', curLang)) + '</p>');
+      gateway('submit', { submission: snapshot }).then(function (res) {
+        // Immediate link (inline-render fallback path): go straight to signing.
+        if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
+        // Async path: the heavy ~30-page render + signing run was DEFERRED to a
+        // trigger so this request returned fast (the inline render exceeds the
+        // proxy timeout). Poll ?api=signstatus until the signer-1 link is ready,
+        // then redirect. The loading card stays up while we poll.
+        if (res.polling && res.processId) { pollSignStatus(res.processId, 0); return; }
+        // No link and not polling (e.g. pending_signers): confirmation card.
+        showSubmittedCard();
+      }).catch(function (err) {
+        submitting = false;
+        hideResultCard();
+        // Never print a raw/technical server string to an investor. Fixed, calm line.
+        if (window.console) console.log('submit error:', err && err.message || err);
+        setStatus('We could not submit your subscription just now. Your entries are saved on this page. Please try again, or contact Legacy Value Partners.', true);
+      });
+    }
+    function showSubmittedCard() {
+      showResultCard(
+        '<div class="lvp-result__check" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</div>' +
+        '<div class="lvp-result__divider"></div>' +
+        '<h2>' + esc(displayFor('Thank you', curLang)) + '</h2>' +
+        '<p>' + esc(displayFor('Your subscription has been received. We are preparing your documents and will email your signing link shortly.', curLang)) + '</p>',
+        true);
+    }
+    // Poll the deferred-submit status. The render+sign run takes ~30-60s; the
+    // time trigger fires after ~1 minute, so we poll patiently (3s interval, up
+    // to ~3 minutes). If the link arrives we redirect into signing. If it does
+    // not arrive in time, we still show the confirmation card (the signer-1
+    // email carries the same link, so the LP is never stranded).
+    function pollSignStatus(processId, attempt) {
+      if (attempt > 60) { showSubmittedCard(); return; }
+      fetch(CFG.gatewayUrl + '?api=signstatus&processId=' + encodeURIComponent(processId), {
+        method: 'GET', headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      }).then(function (r) { return r.json(); }).then(function (st) {
+        if (st && st.ready && st.nextUrl) { window.top.location.href = st.nextUrl; return; }
+        if (st && st.status === 'needs_attention') {
+          showResultCard(
+            '<h2>' + esc(displayFor('We hit a snag', curLang)) + '</h2>' +
+            '<p>' + esc(st.reason || displayFor('We could not complete your subscription pack. Legacy Value Partners has been notified and will be in touch.', curLang)) + '</p>',
+            true);
+          return;
+        }
+        setTimeout(function () { pollSignStatus(processId, attempt + 1); }, 3000);
+      }).catch(function () {
+        // Transient network/proxy hiccup: keep polling.
+        setTimeout(function () { pollSignStatus(processId, attempt + 1); }, 3000);
+      });
+    }
+    // Result card: a full-card overlay replacing the form pages (loading +
+    // confirmation), without destroying the form so an error can restore it.
+    var resultEl = null;
+    function showResultCard(innerHtml, isConfirmation) {
+      if (progWrap) progWrap.hidden = true;
+      form.style.display = 'none';
+      if (!resultEl) {
+        resultEl = document.createElement('div');
+        resultEl.className = 'lvp-result';
+        form.parentNode.insertBefore(resultEl, form);
+      }
+      if (isConfirmation) { resultEl.setAttribute('role', 'status'); resultEl.setAttribute('aria-live', 'polite'); }
+      resultEl.innerHTML = innerHtml;
+      try { window.scrollTo(0, 0); } catch (_) {}
+    }
+    function hideResultCard() {
+      if (resultEl) { resultEl.parentNode.removeChild(resultEl); resultEl = null; }
+      form.style.display = '';
+      if (progWrap) progWrap.hidden = currentPageEl().getAttribute('data-page') === 'welcome';
+    }
+
+    function setStatus(msg, isError) {
+      statusEl.textContent = (msg && displayFor(msg, curLang)) || msg || '';
+      statusEl.classList.toggle('lvp-status--error', !!isError);
+    }
+
+    // Gentle, visible nudge (e.g. when Hebrew is stripped from an English-only field).
+    // A muted status line alone reads as "nothing happened"; this floats a brief toast,
+    // translated like everything else, and self-dismisses.
+    var toastEl = form.parentNode.querySelector('[data-toast]');
+    var toastTimer = null;
+    function showToast(msg) {
+      if (!toastEl) return setStatus(msg, true);
+      toastEl.textContent = displayFor(msg, curLang);
+      toastEl.classList.add('lvp-toast--show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.classList.remove('lvp-toast--show'); }, 3200);
+    }
+
+    // Default the residence / tax-residence country selects to Israel (the dominant
+    // LP case) so the LP confirms rather than hunts. Identity fields (birth country,
+    // nationality) are left blank on purpose, they vary. Never overrides a value the
+    // LP (or a prefill) already set.
+    function applyCountryDefaults() {
+      var DEF = CFG.defaultCountry || 'Israel';
+      ['individual.address.country', 'entity.address.country', 'tax.residencyCountry',
+       'fatcaCrs.entityTaxResidency[0].jurisdiction'].forEach(function (n) {
+        var sel = form.querySelector('select[name="' + cssEsc(n) + '"]');
+        if (sel && !sel.value) sel.value = DEF;
+      });
+    }
+
+    // ---- Google Places address autocomplete (optional, flag-gated) ----
+    // Loads the Maps JS SDK only when MAPS_PLACES_API_KEY is set. On place_changed it
+    // fills the sibling city / state / post code / country fields from the chosen
+    // address. Degrades silently to manual entry if the key is absent or the SDK
+    // fails to load (the address fields stay editable either way).
+    function fillAddressFromPlace(prefix, components) {
+      var get = function (type) {
+        for (var i = 0; i < components.length; i++) {
+          if (components[i].types.indexOf(type) !== -1) return components[i].long_name;
+        }
+        return '';
+      };
+      var streetNo = get('street_number'), route = get('route');
+      var vals = {
+        street: (streetNo ? streetNo + ' ' : '') + route,
+        city: get('locality') || get('postal_town') || get('sublocality') || '',
+        state: get('administrative_area_level_1'),
+        postCode: get('postal_code'),
+        country: get('country')
+      };
+      Object.keys(vals).forEach(function (suffix) {
+        var val = vals[suffix];
+        if (!val) return;
+        var el = form.querySelector('[name="' + cssEsc(prefix + '.' + suffix) + '"]');
+        if (!el) return;
+        if (el.tagName === 'SELECT' && !Array.prototype.some.call(el.options, function (o) { return o.value === val; })) {
+          el.appendChild(new Option(val, val)); // country not in our short list: add it
+        }
+        el.value = val;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+    function initPlacesAutocomplete() {
+      var inputs = form.querySelectorAll('input[data-places]');
+      if (!CFG.placesApiKey || !inputs.length) return;
+      window.__lvpInitPlaces = function () {
+        if (!(window.google && google.maps && google.maps.places)) return;
+        Array.prototype.forEach.call(inputs, function (input) {
+          var prefix = input.getAttribute('data-places');
+          var ac = new google.maps.places.Autocomplete(input, { types: ['address'], fields: ['address_components'] });
+          ac.addListener('place_changed', function () {
+            var place = ac.getPlace();
+            if (place && place.address_components) fillAddressFromPlace(prefix, place.address_components);
+          });
+        });
+      };
+      var sc = document.createElement('script');
+      sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(CFG.placesApiKey) +
+               '&libraries=places&language=en&callback=__lvpInitPlaces';
+      sc.async = true; sc.defer = true;
+      document.head.appendChild(sc);
+    }
+
+    // ---- International phone input (intl-tel-input, flag + auto dial code) ----
+    // Loaded from CDN; on submit the field is normalized to the full E.164 number
+    // (getNumber, needs the utils script). Degrades silently to a plain tel input if
+    // the CDN is blocked or the script fails, so phone entry never breaks.
+    var itiInstances = [];
+    function initPhoneInputs() {
+      if (!window.intlTelInput) return;
+      Array.prototype.forEach.call(form.querySelectorAll('input[type="tel"]'), function (input) {
+        try {
+          var iti = window.intlTelInput(input, {
+            initialCountry: (CFG.defaultCountry === 'Israel' || !CFG.defaultCountry) ? 'il' : 'auto',
+            separateDialCode: true,
+            utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/utils.min.js'
+          });
+          itiInstances.push({ input: input, iti: iti });
+        } catch (e) {}
+      });
+    }
+    function normalizePhones() {
+      itiInstances.forEach(function (rec) {
+        try { var n = rec.iti.getNumber(); if (n) rec.input.value = n; } catch (e) {}
+      });
+    }
+    function loadPhoneInputs() {
+      if (!form.querySelector('input[type="tel"]')) return;
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/css/intlTelInput.min.css';
+      document.head.appendChild(css);
+      var sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/intlTelInput.min.js';
+      sc.async = true;
+      sc.onload = initPhoneInputs;
+      document.head.appendChild(sc);
+    }
+
+    // ---- KYC autopilot: scan/photo an ID -> Gemini -> prefill (optional, flag-gated) ----
+    // On file pick, send the image to the gateway (kyc_extract), then prefill the
+    // name / ID / DOB / nationality fields as SUGGESTIONS the LP reviews. Only the
+    // empty fields are filled (never overwrites what the LP typed). Fully degrades:
+    // if disabled or it errors, the LP just types manually.
+    function applyKycFields(f) {
+      var setText = function (name, val) {
+        if (!val) return;
+        var el = form.querySelector('[name="' + cssEsc(name) + '"]');
+        if (el && !el.value) el.value = val;
+      };
+      var setSelect = function (name, val) {
+        if (!val) return;
+        var sel = form.querySelector('select[name="' + cssEsc(name) + '"]');
+        if (!sel || (sel.value && sel.value !== (CFG.defaultCountry || 'Israel'))) return;
+        if (!Array.prototype.some.call(sel.options, function (o) { return o.value === val; })) sel.appendChild(new Option(val, val));
+        sel.value = val;
+      };
+      setText('individual.firstName', f.firstName);
+      setText('individual.lastName', f.lastName);
+      // ID number: for a foreign passport-holder the passport number IS the ID number.
+      // For an Israeli the bank requires the teudat-zehut number (entered with the ת"ז),
+      // so a passport scan must NOT put the passport number there. (grounded: the FIBI
+      // CRS bounce was a missing ת.ז number.)
+      if (f.nationality && f.nationality.toLowerCase().indexOf('israel') === -1) setText('individual.idNumber', f.idNumber);
+      setText('individual.birthDate', f.birthDate);   // type=date wants YYYY-MM-DD (the prompt enforces ISO)
+      setSelect('individual.birthCountry', f.birthCountry);
+      setSelect('individual.citizenship', f.nationality);
+    }
+    function applyIdCardFields(f) {   // teudat zehut: the ID number only (Hebrew name + address are NOT taken from it: stale ספח address, Hebrew->English risk - per Omri)
+      if (!f.idNumber) return;
+      var el = form.querySelector('[name="' + cssEsc('individual.idNumber') + '"]');
+      if (el && !el.value) el.value = f.idNumber;
+    }
+    // Expose KYC apply functions to the BlinkID IIFE (outer scope).
+    window.CAYMAN_KYC_APPLY = {
+      passport: function (f) { applyKycFields(f); applyConditionals(); },
+      idCard:   function (f) { applyIdCardFields(f); applyConditionals(); }
+    };
+    function idDocStatus(slot, en) {
+      var box = form.querySelector('[data-id-status="' + slot + '"]');
+      if (box) box.textContent = displayFor(en, curLang) || en;
+    }
+    // The passport / ת"ז upload doubles as the scan: read the form fields from the image,
+    // and the same file is the stored KYC document. One action, no separate scan step.
+    // Degrades to a plain upload on any error.
+    // SILENT KYC (Noa rule): the LP must never know AI/OCR touched their ID.
+    // The scan fires on upload, runs non-blocking, fills EMPTY fields only
+    // (applyKycFields guards every set), and is ready by the time the LP reaches
+    // the fields page. No status text, no spinner, no error on failure: a miss
+    // just leaves the fields blank for the LP to type. We never announce the read.
+    function autofillFromIdDoc(slot, b64, mime) {
+      gateway('kyc_extract', { imageBase64: b64, mimeType: mime })
+        .then(function (res) {
+          if (!res || !res.fields) return;
+          if (slot === 'passportPrimary') applyKycFields(res.fields); else applyIdCardFields(res.fields);
+          applyConditionals();   // a newly-filled nationality can reveal the ת"ז upload
+        })
+        .catch(function () { /* silent: the LP fills manually, none the wiser */ });
+    }
+
+    // ---- styled upload blocks ----
+    // Wraps every input[data-upload] in a .lvp-upload div that shows a styled dashed
+    // button over the invisible native file input. The native input stays in the DOM
+    // so the existing change handler (pendingUploads + autofill) fires unchanged.
+    function initUploadBlocks() {
+      // Upload icon (empty state) and checkmark (filled state).
+      var UP_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+      var OK_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      var KYC = ['passportPrimary', 'nationalId'];
+      form.querySelectorAll('input[type="file"][data-upload]').forEach(function (inp) {
+        if (inp.parentElement.classList.contains('lvp-upload')) return;
+        var slot  = inp.getAttribute('data-upload');
+        var isKyc = KYC.indexOf(slot) > -1;
+        var label = isKyc ? 'Upload a photo or PDF' : 'Upload a file';
+        var fmts  = isKyc ? 'JPG · PNG · HEIC · PDF' : 'PDF · JPG · PNG';
+        var wrap = document.createElement('div');
+        wrap.className = 'lvp-upload';
+        var btn = document.createElement('div');
+        btn.className = 'lvp-upload__btn';
+        // Seeded in English; swapScopeText handles the action label on lang toggle.
+        // __name lives inside btn so CSS :has([data-has-file]) drives the filled state.
+        // The change handler finds __name via wrap.querySelector('[data-upload-name]').
+        btn.innerHTML =
+          '<span class="lvp-upload__icon-wrap">' +
+            '<span class="lvp-upload__icon-up">' + UP_SVG + '</span>' +
+            '<span class="lvp-upload__icon-ok">' + OK_SVG + '</span>' +
+          '</span>' +
+          '<span class="lvp-upload__content">' +
+            '<span data-upload-label class="lvp-upload__action">' + label + '</span>' +
+            '<span class="lvp-upload__formats">' + fmts + '</span>' +
+            '<span class="lvp-upload__name" data-upload-name="' + slot + '"></span>' +
+          '</span>';
+        inp.parentNode.insertBefore(wrap, inp);
+        inp.classList.remove('lvp-input');
+        wrap.appendChild(btn);
+        wrap.appendChild(inp);
+        // Scan button: shown above the upload block for passport + nationalId when
+        // BlinkID license is available (sign.legacyvpartners.com static origin only).
+        if (isKyc && CFG.blinkIdLicense) {
+          var CAM_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+          var scanBtn = document.createElement('button');
+          scanBtn.type = 'button';
+          scanBtn.className = 'lvp-upload-scan';
+          scanBtn.innerHTML = CAM_SVG + '<span data-upload-label>Scan with camera</span>';
+          (function (key) {
+            scanBtn.addEventListener('click', function () { caymanBlinkScan_(key); });
+          }(slot));
+          wrap.parentNode.insertBefore(scanBtn, wrap);
+        }
+      });
+    }
+
+    // ---- init ----
+    populateCountries();
+    ensureMinRows();
+    applyCountryDefaults();
+    initPlacesAutocomplete();
+    loadPhoneInputs();
+    initUploadBlocks();
+    applyConditionals();
+    // Amount: whole-number, grouped with thousands separators on blur, so the LP
+    // sees exactly what is submitted and no decimal/locale ambiguity reaches the doc.
+    (function () {
+      var a = form.querySelector('[data-amount]');
+      if (a) a.addEventListener('blur', function () {
+        var n = (a.value || '').replace(/[^0-9]/g, '');
+        a.value = n ? Number(n).toLocaleString('en-US') : '';
+      });
+    })();
+    // resume to the last saved page if the server supplied one
+    if (CFG.resumePage) {
+      var pages = visiblePages();
+      for (var i = 0; i < pages.length; i++) { if (pages[i].getAttribute('data-page') === CFG.resumePage) { idx = i; break; } }
+    }
+    // Language: default Hebrew (most LPs are Israeli). Start English only when the
+    // server config explicitly carries language === 'en'. Run AFTER countries and
+    // min-rows are populated so their option/row text is translated too. The cache
+    // of original English happens on this first pass, so EN restores exactly.
+    applyLang(CFG.language === 'en' ? 'en' : 'he');
+    showPage(idx);
+  })();
+
+  // ---- BlinkID on-device scan (Stage B) ------------------------------------
+  // Lazy-loads the BlinkID WASM SDK on first use. Degrades silently if:
+  //   - no license in CFG (GAS sandbox, wrong origin)
+  //   - SDK load fails (network, CDN outage)
+  //   - camera is denied
+  //   - recognition fails (bad lighting, damaged doc, timeout)
+  // In every failure case the LP falls back to the file upload. No error is
+  // surfaced (SILENT KYC rule: the LP never knows scanning ran or failed).
+  //
+  // caymanBlinkScan_(slot) is called by the scan button click handler wired
+  // in initUploadBlocks(). It is defined here at module scope so the upload
+  // block wiring (inside the form IIFE) can reference it.
+  (function () {
+    if (!window.CAYMAN_CFG || !window.CAYMAN_CFG.blinkIdLicense) return;
+    var LICENSE   = window.CAYMAN_CFG.blinkIdLicense;
+    var SDK_URL   = 'https://cdn.jsdelivr.net/npm/@microblink/blinkid-in-browser@6.9.0/bundles/blinkid-sdk.umd.min.js';
+    var ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@microblink/blinkid-in-browser@6.9.0/resources/';
+    var overlayEl = document.getElementById('lvpScanOverlay');
+    var videoEl   = document.getElementById('lvpScanVideo');
+    var hintEl    = document.getElementById('lvpScanHint');
+    var closeEl   = document.getElementById('lvpScanClose');
+    var sdkPromise = null;  // singleton WASM module
+    var activeVr   = null;  // current VideoRecognizer (to release on cancel)
+
+    // ---- lazy SDK loader ----
+    function loadSdk() {
+      if (sdkPromise) return sdkPromise;
+      sdkPromise = new Promise(function (res, rej) {
+        var s = document.createElement('script');
+        s.src = SDK_URL;
+        s.onload = function () {
+          var SDK = window.BlinkIDSDK;
+          if (!SDK) { rej(new Error('BlinkIDSDK not on window')); return; }
+          var st = new SDK.WasmSDKLoadSettings(LICENSE);
+          st.engineLocation = ENGINE_URL;
+          st.allowHelloMessage = false;
+          SDK.loadWasmModule(st).then(res, rej);
+        };
+        s.onerror = function () { rej(new Error('SDK script load failed')); };
+        document.head.appendChild(s);
+      }).catch(function (err) {
+        // Reset promise so a retry on next tap has a chance.
+        sdkPromise = null;
+        throw err;
+      });
+      return sdkPromise;
+    }
+
+    // ---- map BlinkID result -> our KYC fields format ----
+    function blinkToFields(r) {
+      function str(v) { return (v && typeof v === 'object') ? (v.latin || v.unicode || '') : (v || ''); }
+      function dateStr(d) {
+        if (!d) return '';
+        if (d.year && d.month && d.day) return d.year + '-' + pad(d.month) + '-' + pad(d.day);
+        return '';
+      }
+      function pad(n) { return n < 10 ? '0' + n : '' + n; }
+      return {
+        firstName:   str(r.firstName),
+        lastName:    str(r.lastName),
+        idNumber:    str(r.documentNumber),
+        birthDate:   dateStr(r.dateOfBirth),
+        birthCountry: str(r.placeOfBirth),
+        nationality: str(r.nationality)
+      };
+    }
+
+    // ---- convert BlinkID ImageResult (RGBA pixels) -> base64 JPEG ----
+    function imageToB64(img) {
+      try {
+        var c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        c.getContext('2d').putImageData(
+          new ImageData(new Uint8ClampedArray(img.rawImage), img.width, img.height), 0, 0
+        );
+        return c.toDataURL('image/jpeg', 0.88).split(',')[1];
+      } catch (e) { return null; }
+    }
+
+    // ---- inject scan result into the upload slot (mirrors file-upload path) ----
+    function injectResult(slot, b64, fields) {
+      if (!b64) return;
+      var byteLen = Math.round(b64.length * 0.75);
+      // Write into pendingUploads exactly as the FileReader path does.
+      window._caymanPendingUploads = window._caymanPendingUploads || {};
+      // pendingUploads is declared inside the form IIFE; reach it via the
+      // change-event handler trick: fire a synthetic 'blinkid' event on the
+      // hidden file input so the form's own logic picks it up.
+      // Simpler: the form exposes pendingUploads via window.CAYMAN_UPLOADS.
+      var pu = window.CAYMAN_UPLOADS;
+      if (pu) pu[slot] = { slot: slot, fileName: 'scan_' + slot + '.jpg', mimeType: 'image/jpeg', fileSizeBytes: byteLen, base64: b64 };
+      // Update the styled upload block display (filename + filled-state CSS).
+      var form = document.getElementById('lvp-form');
+      if (form) {
+        var inp = form.querySelector('input[data-upload="' + slot + '"]');
+        var wrap = inp && inp.closest('.lvp-upload');
+        var nm = wrap && wrap.querySelector('[data-upload-name]');
+        if (nm) {
+          var label = (document.documentElement.lang === 'he') ? 'תעודה סרוקה' : 'ID scanned';
+          nm.textContent = label;
+          nm.setAttribute('data-has-file', '1');
+        }
+      }
+      // Apply recognized fields (fills EMPTY fields only -- applyKycFields guards).
+      if (fields && window.CAYMAN_KYC_APPLY) {
+        if (slot === 'passportPrimary') window.CAYMAN_KYC_APPLY.passport(fields);
+        else window.CAYMAN_KYC_APPLY.idCard(fields);
+      }
+    }
+
+    // ---- open scan overlay and run recognition ----
+    window.caymanBlinkScan_ = function (slot) {
+      var cancelled = false;
+      // Set overlay text for current language.
+      var isHe = document.documentElement.lang === 'he';
+      if (hintEl) hintEl.textContent = isHe ? 'קרבו את התעודה למצלמה' : 'Hold your ID in front of the camera';
+      if (closeEl) closeEl.textContent = isHe ? 'ביטול' : 'Cancel';
+      overlayEl.classList.add('is-open');
+
+      function close() {
+        cancelled = true;
+        overlayEl.classList.remove('is-open');
+        if (activeVr) { try { activeVr.releaseVideoFeed(); } catch (e) {} activeVr = null; }
+      }
+      closeEl.onclick = close;
+
+      loadSdk()
+        .then(function (sdk) {
+          if (cancelled) return;
+          var SDK = window.BlinkIDSDK;
+          return SDK.createBlinkIdSingleSideRecognizer(sdk).then(function (rec) {
+            if (cancelled) { rec.delete(); return; }
+            return rec.currentSettings().then(function (s) {
+              s.returnFullDocumentImage = true;
+              s.returnFaceImage = false;
+              return rec.updateSettings(s);
+            }).then(function () {
+              return SDK.createRecognizerRunner(sdk, [rec], false);
+            }).then(function (runner) {
+              if (cancelled) { runner.delete(); rec.delete(); return; }
+              return SDK.VideoRecognizer.createVideoRecognizerFromCameraStream(videoEl, runner)
+                .then(function (vr) {
+                  activeVr = vr;
+                  closeEl.onclick = function () { close(); runner.delete(); rec.delete(); };
+                  return vr.recognize();
+                })
+                .then(function (state) {
+                  if (cancelled) return;
+                  var EMPTY = SDK.RecognizerResultState ? SDK.RecognizerResultState.Empty : 0;
+                  return rec.getResult().then(function (result) {
+                    close();
+                    runner.delete();
+                    if (result.state === EMPTY) { rec.delete(); return; }
+                    var img  = result.fullDocumentFrontImage;
+                    var b64  = img ? imageToB64(img) : null;
+                    var flds = blinkToFields(result);
+                    rec.delete();
+                    injectResult(slot, b64, flds);
+                  });
+                });
+            });
+          });
+        })
+        .catch(function (err) {
+          close();
+          if (window.console) console.warn('[BlinkID] scan error:', err);
+        });
+    };
+  })();
+  </script>
+</body>
+</html>
