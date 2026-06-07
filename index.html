@@ -251,26 +251,9 @@
     /* Field width constraints for short inputs (ID, SWIFT, dates) */
     .lvp-field--short { max-width: 280px; }
     .lvp-field--narrow { max-width: 200px; }
-    /* BlinkID scan button (shown above KYC upload when license is available) */
-    .lvp-upload-scan { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--lvp-input-line); border-radius: 12px; background: #fff; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--lvp-navy); margin-bottom: 8px; width: 100%; transition: border-color 0.15s; text-align: start; }
-    .lvp-upload-scan:hover { border-color: var(--lvp-navy); }
-    .lvp-upload-scan svg { flex-shrink: 0; color: var(--lvp-navy); }
-    /* BlinkID camera overlay */
-    .lvp-scan-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
-    .lvp-scan-overlay.is-open { display: flex; }
-    .lvp-scan-video-wrap { position: relative; width: 100%; max-width: 480px; display: flex; align-items: center; justify-content: center; }
-    .lvp-scan-video { width: 100%; border-radius: 8px; display: block; background: #000; }
-    .lvp-scan-guide { position: absolute; inset: 0; border: 2px solid var(--lvp-yellow); border-radius: 8px; pointer-events: none; }
-    .lvp-scan-hint { color: #fff; font-size: 15px; margin: 16px 0 0; text-align: center; opacity: 0.9; }
-    .lvp-scan-close { margin-top: 20px; background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff; border-radius: 8px; padding: 8px 24px; font-size: 14px; font-family: inherit; cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- BlinkID camera overlay (hidden by default; shown when LP taps Scan) -->
-  <div class="lvp-scan-overlay" id="lvpScanOverlay" role="dialog" aria-modal="true" aria-label="Scan ID">
-    <div class="lvp-scan-video-wrap">
-      <video class="lvp-scan-video" id="lvpScanVideo" autoplay playsinline muted></video>
-      <div class="lvp-scan-guide" aria-hidden="true"></div>
     </div>
     <p class="lvp-scan-hint" id="lvpScanHint">Hold your ID in front of the camera</p>
     <button type="button" class="lvp-scan-close" id="lvpScanClose">Cancel</button>
@@ -963,10 +946,7 @@
 
     // Pending file uploads, keyed by upload slot. base64 collected client-side,
     // routed to a token-gated Drive folder by the server (never public-shared).
-    // Exposed on window.CAYMAN_UPLOADS so the BlinkID IIFE (outer scope) can
-    // inject a scanned image without re-entering this IIFE.
     var pendingUploads = {};
-    window.CAYMAN_UPLOADS = pendingUploads;
 
     // ===================================================================
     // Bilingual EN/HE toggle.
@@ -1746,11 +1726,6 @@
       var el = form.querySelector('[name="' + cssEsc('individual.idNumber') + '"]');
       if (el && !el.value) el.value = f.idNumber;
     }
-    // Expose KYC apply functions to the BlinkID IIFE (outer scope).
-    window.CAYMAN_KYC_APPLY = {
-      passport: function (f) { applyKycFields(f); applyConditionals(); },
-      idCard:   function (f) { applyIdCardFields(f); applyConditionals(); }
-    };
     function idDocStatus(slot, en) {
       var box = form.querySelector('[data-id-status="' + slot + '"]');
       if (box) box.textContent = displayFor(en, curLang) || en;
@@ -1809,19 +1784,6 @@
         inp.classList.remove('lvp-input');
         wrap.appendChild(btn);
         wrap.appendChild(inp);
-        // Scan button: shown above the upload block for passport + nationalId when
-        // BlinkID license is available (sign.legacyvpartners.com static origin only).
-        if (isKyc && CFG.blinkIdLicense) {
-          var CAM_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
-          var scanBtn = document.createElement('button');
-          scanBtn.type = 'button';
-          scanBtn.className = 'lvp-upload-scan';
-          scanBtn.innerHTML = CAM_SVG + '<span data-upload-label>Scan with camera</span>';
-          (function (key) {
-            scanBtn.addEventListener('click', function () { caymanBlinkScan_(key); });
-          }(slot));
-          wrap.parentNode.insertBefore(scanBtn, wrap);
-        }
       });
     }
 
@@ -1855,175 +1817,6 @@
     showPage(idx);
   })();
 
-  // ---- BlinkID on-device scan (Stage B) ------------------------------------
-  // Lazy-loads the BlinkID WASM SDK on first use. Degrades silently if:
-  //   - no license in CFG (GAS sandbox, wrong origin)
-  //   - SDK load fails (network, CDN outage)
-  //   - camera is denied
-  //   - recognition fails (bad lighting, damaged doc, timeout)
-  // In every failure case the LP falls back to the file upload. No error is
-  // surfaced (SILENT KYC rule: the LP never knows scanning ran or failed).
-  //
-  // caymanBlinkScan_(slot) is called by the scan button click handler wired
-  // in initUploadBlocks(). It is defined here at module scope so the upload
-  // block wiring (inside the form IIFE) can reference it.
-  (function () {
-    if (!window.CAYMAN_CFG || !window.CAYMAN_CFG.blinkIdLicense) return;
-    var LICENSE   = window.CAYMAN_CFG.blinkIdLicense;
-    var SDK_URL   = 'https://cdn.jsdelivr.net/npm/@microblink/blinkid-in-browser@6.9.0/bundles/blinkid-sdk.umd.min.js';
-    var ENGINE_URL = 'https://cdn.jsdelivr.net/npm/@microblink/blinkid-in-browser@6.9.0/resources/';
-    var overlayEl = document.getElementById('lvpScanOverlay');
-    var videoEl   = document.getElementById('lvpScanVideo');
-    var hintEl    = document.getElementById('lvpScanHint');
-    var closeEl   = document.getElementById('lvpScanClose');
-    var sdkPromise = null;  // singleton WASM module
-    var activeVr   = null;  // current VideoRecognizer (to release on cancel)
-
-    // ---- lazy SDK loader ----
-    function loadSdk() {
-      if (sdkPromise) return sdkPromise;
-      sdkPromise = new Promise(function (res, rej) {
-        var s = document.createElement('script');
-        s.src = SDK_URL;
-        s.onload = function () {
-          var SDK = window.BlinkIDSDK;
-          if (!SDK) { rej(new Error('BlinkIDSDK not on window')); return; }
-          var st = new SDK.WasmSDKLoadSettings(LICENSE);
-          st.engineLocation = ENGINE_URL;
-          st.allowHelloMessage = false;
-          SDK.loadWasmModule(st).then(res, rej);
-        };
-        s.onerror = function () { rej(new Error('SDK script load failed')); };
-        document.head.appendChild(s);
-      }).catch(function (err) {
-        // Reset promise so a retry on next tap has a chance.
-        sdkPromise = null;
-        throw err;
-      });
-      return sdkPromise;
-    }
-
-    // ---- map BlinkID result -> our KYC fields format ----
-    function blinkToFields(r) {
-      function str(v) { return (v && typeof v === 'object') ? (v.latin || v.unicode || '') : (v || ''); }
-      function dateStr(d) {
-        if (!d) return '';
-        if (d.year && d.month && d.day) return d.year + '-' + pad(d.month) + '-' + pad(d.day);
-        return '';
-      }
-      function pad(n) { return n < 10 ? '0' + n : '' + n; }
-      return {
-        firstName:   str(r.firstName),
-        lastName:    str(r.lastName),
-        idNumber:    str(r.documentNumber),
-        birthDate:   dateStr(r.dateOfBirth),
-        birthCountry: str(r.placeOfBirth),
-        nationality: str(r.nationality)
-      };
-    }
-
-    // ---- convert BlinkID ImageResult (RGBA pixels) -> base64 JPEG ----
-    function imageToB64(img) {
-      try {
-        var c = document.createElement('canvas');
-        c.width = img.width; c.height = img.height;
-        c.getContext('2d').putImageData(
-          new ImageData(new Uint8ClampedArray(img.rawImage), img.width, img.height), 0, 0
-        );
-        return c.toDataURL('image/jpeg', 0.88).split(',')[1];
-      } catch (e) { return null; }
-    }
-
-    // ---- inject scan result into the upload slot (mirrors file-upload path) ----
-    function injectResult(slot, b64, fields) {
-      if (!b64) return;
-      var byteLen = Math.round(b64.length * 0.75);
-      // Write into pendingUploads exactly as the FileReader path does.
-      window._caymanPendingUploads = window._caymanPendingUploads || {};
-      // pendingUploads is declared inside the form IIFE; reach it via the
-      // change-event handler trick: fire a synthetic 'blinkid' event on the
-      // hidden file input so the form's own logic picks it up.
-      // Simpler: the form exposes pendingUploads via window.CAYMAN_UPLOADS.
-      var pu = window.CAYMAN_UPLOADS;
-      if (pu) pu[slot] = { slot: slot, fileName: 'scan_' + slot + '.jpg', mimeType: 'image/jpeg', fileSizeBytes: byteLen, base64: b64 };
-      // Update the styled upload block display (filename + filled-state CSS).
-      var form = document.getElementById('lvp-form');
-      if (form) {
-        var inp = form.querySelector('input[data-upload="' + slot + '"]');
-        var wrap = inp && inp.closest('.lvp-upload');
-        var nm = wrap && wrap.querySelector('[data-upload-name]');
-        if (nm) {
-          var label = (document.documentElement.lang === 'he') ? 'תעודה סרוקה' : 'ID scanned';
-          nm.textContent = label;
-          nm.setAttribute('data-has-file', '1');
-        }
-      }
-      // Apply recognized fields (fills EMPTY fields only -- applyKycFields guards).
-      if (fields && window.CAYMAN_KYC_APPLY) {
-        if (slot === 'passportPrimary') window.CAYMAN_KYC_APPLY.passport(fields);
-        else window.CAYMAN_KYC_APPLY.idCard(fields);
-      }
-    }
-
-    // ---- open scan overlay and run recognition ----
-    window.caymanBlinkScan_ = function (slot) {
-      var cancelled = false;
-      // Set overlay text for current language.
-      var isHe = document.documentElement.lang === 'he';
-      if (hintEl) hintEl.textContent = isHe ? 'קרבו את התעודה למצלמה' : 'Hold your ID in front of the camera';
-      if (closeEl) closeEl.textContent = isHe ? 'ביטול' : 'Cancel';
-      overlayEl.classList.add('is-open');
-
-      function close() {
-        cancelled = true;
-        overlayEl.classList.remove('is-open');
-        if (activeVr) { try { activeVr.releaseVideoFeed(); } catch (e) {} activeVr = null; }
-      }
-      closeEl.onclick = close;
-
-      loadSdk()
-        .then(function (sdk) {
-          if (cancelled) return;
-          var SDK = window.BlinkIDSDK;
-          return SDK.createBlinkIdSingleSideRecognizer(sdk).then(function (rec) {
-            if (cancelled) { rec.delete(); return; }
-            return rec.currentSettings().then(function (s) {
-              s.returnFullDocumentImage = true;
-              s.returnFaceImage = false;
-              return rec.updateSettings(s);
-            }).then(function () {
-              return SDK.createRecognizerRunner(sdk, [rec], false);
-            }).then(function (runner) {
-              if (cancelled) { runner.delete(); rec.delete(); return; }
-              return SDK.VideoRecognizer.createVideoRecognizerFromCameraStream(videoEl, runner)
-                .then(function (vr) {
-                  activeVr = vr;
-                  closeEl.onclick = function () { close(); runner.delete(); rec.delete(); };
-                  return vr.recognize();
-                })
-                .then(function (state) {
-                  if (cancelled) return;
-                  var EMPTY = SDK.RecognizerResultState ? SDK.RecognizerResultState.Empty : 0;
-                  return rec.getResult().then(function (result) {
-                    close();
-                    runner.delete();
-                    if (result.state === EMPTY) { rec.delete(); return; }
-                    var img  = result.fullDocumentFrontImage;
-                    var b64  = img ? imageToB64(img) : null;
-                    var flds = blinkToFields(result);
-                    rec.delete();
-                    injectResult(slot, b64, flds);
-                  });
-                });
-            });
-          });
-        })
-        .catch(function (err) {
-          close();
-          if (window.console) console.warn('[BlinkID] scan error:', err);
-        });
-    };
-  })();
   </script>
 </body>
 </html>
