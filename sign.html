@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners CI - signature</title>
+  <!--
+    Off-Google per-signer signature page. Served from our own origin (no Google
+    banner). Reads the ?t (or ?sign) signer token, fetches signer context and
+    posts the drawn signature through the Netlify proxy (/api/gw) to the GAS
+    signature engine. EasySend skin: Assistant font, skyline, logo, navy pill,
+    gold/navy title underline. The signer token is the only authority.
+
+    Bilingual EN/HE. The machinery is cloned verbatim from the proven Cayman SPA
+    (public/index.html): HE_MAP English->Hebrew, applyLang('he'|'en') swapping
+    text/data-help/placeholder/options with the English cached in dataset, RTL
+    flip on the card, default Hebrew, EN | HE toggle for foreign LPs. Data entry
+    is English only (no free-text inputs here except the drawn signature, which
+    is image data), so the Hebrew-stripping listener is carried for parity. No
+    em-dashes or en-dashes in LP-visible copy.
+  -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
+    :root { --navy:#0D3F6A; --navy-700:#0a3257; --gold:#FFB42C; --text:#1d1d1d; --muted:#545454; --line:#C2C2C2; --error:#c0392b; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; min-height:100%; }
+    body { font-family:"Assistant","Arimo",Arial,sans-serif; color:var(--text); line-height:1.5; background:#fff; min-height:100vh; }
+    body::before { content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background:url('https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png') no-repeat center center;
+      background-size:100% 100%; opacity:0.5; }
+    .app { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px 48px; }
+    .header { width:100%; max-width:620px; margin-bottom:28px; }
+    .header img { height:56px; width:auto; display:block; }
+    .card { background:#fff; width:100%; max-width:620px; border-radius:12px;
+      box-shadow:0 6px 24px rgba(13,63,106,0.12); padding:32px 32px 28px; }
+    .pill { display:inline-block; padding:4px 12px; background:var(--navy); color:#fff; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:0.03em; margin-bottom:14px; }
+    h1 { color:var(--navy); font-size:24px; font-weight:700; margin:0 0 14px; }
+    h1::after { content:""; display:block; height:4px; width:90px; margin-top:8px; background:linear-gradient(to right, var(--gold) 0 45px, var(--navy) 45px 90px); }
+    .hint { color:var(--muted); font-size:15px; margin:0 0 20px; line-height:1.6; }
+    .signbox { background:#F4F7FB; border:1px solid #DCE5EF; border-radius:10px; padding:14px 16px; margin:0 0 18px; }
+    .signbox__t { font-weight:700; color:var(--navy); font-size:16px; }
+    .signbox__f { color:var(--text); font-size:14px; margin-top:2px; }
+    .signbox__a { font-weight:700; color:var(--navy); font-size:18px; margin-top:8px; }
+    .signbox__s { color:var(--muted); font-size:13px; margin-top:8px; }
+    .consent { color:var(--muted); font-size:12px; line-height:1.5; margin:12px 2px 0; }
+    .lockline { display:flex; align-items:center; justify-content:center; gap:6px; color:var(--muted); font-size:12px; margin-top:14px; }
+    .pad-shell { border:1px solid #d0d4d8; border-radius:8px; padding:14px; background:#fff; }
+    canvas { width:100%; height:200px; border:1px dashed #b9c2cb; border-radius:8px; touch-action:none; background:#fff; display:block; }
+    .row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+    .btn { font:inherit; font-weight:700; font-size:15px; padding:13px 32px; border-radius:999px; border:none; cursor:pointer; transition:background 120ms ease; }
+    .btn--primary { background:var(--navy); color:#fff; }
+    .btn--primary:hover { background:var(--navy-700); }
+    .btn--primary[disabled] { opacity:0.5; cursor:not-allowed; }
+    .btn--secondary { background:rgba(255,255,255,0.85); color:var(--navy); border:1px solid var(--line); }
+    .err { color:var(--error); font-size:13px; margin-top:12px; min-height:18px; }
+    .state { text-align:center; padding:16px 4px; }
+    .check { width:56px; height:56px; border-radius:50%; background:var(--navy); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:12px; }
+    .state h1 { display:inline-block; }
+    .state h1::after { margin-left:auto; margin-right:auto; }
+    .state p { color:var(--muted); font-size:15px; margin:6px 0; line-height:1.6; }
+    [hidden] { display:none !important; }
+    @media (max-width:480px){ .card{ padding:22px 18px; } .header img{ height:44px; } }
+
+    /* Language toggle: fixed top corner, EN | HE segmented control. Cloned from
+       the Cayman SPA so the look matches across the LP's two pages. */
+    .lvp-lang {
+      position: fixed; top: 14px; right: 16px; z-index: 50;
+      display: inline-flex; align-items: stretch;
+      background: #fff; border: 1px solid var(--line);
+      border-radius: 999px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(13, 63, 106, 0.12);
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+    }
+    .lvp-lang__btn {
+      font: inherit; font-size: 13px; font-weight: 700;
+      border: none; background: transparent; color: var(--navy);
+      padding: 7px 16px; cursor: pointer; line-height: 1.2;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .lvp-lang__btn[aria-pressed="true"] { background: var(--navy); color: #fff; }
+    .lvp-lang__btn:not([aria-pressed="true"]):hover { background: #f0f3f7; }
+    /* RTL: when the card is rtl, flip alignment but keep the canvas + buttons in
+       a sensible order. The signbox stays right-aligned in Hebrew. */
+    .card[dir="rtl"] { text-align: right; }
+    .card[dir="rtl"] .lockline { justify-content: center; }
+    .card[dir="rtl"] .state { text-align: center; }
+    @media (max-width: 480px) {
+      .lvp-lang { top: 8px; right: 8px; }
+      .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="lvp-lang" role="group" aria-label="Language">
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
+  </div>
+  <div class="app">
+    <header class="header">
+      <img src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
+    </header>
+    <main class="card" id="wrap">
+
+      <!-- loading -->
+      <div class="state" data-state="loading">
+        <p class="hint">Loading...</p>
+      </div>
+
+      <!-- invalid / expired -->
+      <div class="state" data-state="invalid" hidden>
+        <h1>This link has expired</h1>
+        <p class="hint" id="invalid-msg">This signing link is no longer valid. Please use the most recent link from your email, or contact Legacy Value Partners.</p>
+      </div>
+
+      <!-- already signed -->
+      <div class="state" data-state="signed" hidden>
+        <div class="check">&#10003;</div>
+        <h1>Thank you</h1>
+        <p class="hint">Your signature has already been recorded. You can close this window.</p>
+      </div>
+
+      <!-- not your turn -->
+      <div class="state" data-state="notyet" hidden>
+        <h1>Not your turn yet</h1>
+        <p class="hint">The previous signer has not finished yet. We will email you the moment it is your turn. You can close this window.</p>
+      </div>
+
+      <!-- sign pad -->
+      <div data-state="sign" hidden>
+        <h1>Review and sign</h1>
+        <div class="signbox" id="signbox"></div>
+        <p class="hint">Please sign in the box below and confirm. Your signature will be placed on the documents above.</p>
+        <div class="pad-shell">
+          <canvas id="pad"></canvas>
+          <div class="row">
+            <button class="btn btn--primary" id="done" disabled>Confirm signature</button>
+            <button class="btn btn--secondary" id="clear">Clear</button>
+          </div>
+          <div class="err" id="err"></div>
+        </div>
+        <p class="consent">By tapping Confirm, I agree that my electronic signature above is the legal equivalent of my handwritten signature and is binding on these documents.</p>
+        <div class="lockline">Secure, encrypted signing for Legacy Value Partners</div>
+      </div>
+
+      <!-- done (after submit) -->
+      <div class="state" data-state="done" hidden>
+        <div class="check">&#10003;</div>
+        <h1>Thank you</h1>
+        <p class="hint" id="done-msg"></p>
+        <p class="hint">You can close this window.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+  (function () {
+    var GW = '/api/gw';
+    var q = new URLSearchParams(location.search);
+    var TOKEN = q.get('t') || q.get('sign') || q.get('token') || '';
+    var LANGQ = (q.get('lang') === 'en') ? 'en' : 'he';
+
+    // ===================================================================
+    // Bilingual EN/HE toggle. Machinery cloned verbatim from the Cayman SPA
+    // (public/index.html). HE_MAP is the approved English-string to Hebrew map;
+    // applyLang walks the translatable surfaces and swaps text/placeholder/
+    // data-help via the map, caching the original English in dataset on first
+    // run so toggling back to EN restores exactly. Untranslated strings are left
+    // in English (never blanked). DEFAULT = Hebrew (most LPs are Israeli).
+    //
+    // SOURCE NOTE: the Cayman EasySend capture (cayman-form-he-map.json) is the
+    // SUBSCRIPTION FORM copy and contains no signing-page strings. This page is
+    // our own off-Google signing surface that never existed in EasySend, so its
+    // Hebrew has no EasySend source string to quote verbatim. Each entry below
+    // is marked heVerbatim:false in the build note returned to the operator and
+    // is house-translated, consistent in register with the Cayman form. Shared
+    // tokens (Continue/Back, firm name, Velvert GP entity) reuse the Cayman copy.
+    // ===================================================================
+    var HE_MAP = {
+      "Loading...": "טוען...",
+      "This link has expired": "תוקף הקישור פג",
+      "This signing link is no longer valid. Please use the most recent link from your email, or contact Legacy Value Partners.":
+        "קישור החתימה אינו תקף עוד. יש להשתמש בקישור העדכני ביותר מהדוא\"ל, או לפנות לקרן לגאסי.",
+      "Thank you": "תודה",
+      "Your signature has already been recorded. You can close this window.":
+        "חתימתך כבר נקלטה. ניתן לסגור חלון זה.",
+      "Not your turn yet": "טרם הגיע תורך לחתום",
+      "The previous signer has not finished yet. We will email you the moment it is your turn. You can close this window.":
+        "החותם/ת הקודם/ת טרם סיים/ה. נעדכן אותך בדוא\"ל ברגע שיגיע תורך. ניתן לסגור חלון זה.",
+      "Review and sign": "עיון וחתימה",
+      "Please sign in the box below and confirm. Your signature will be placed on the documents above.":
+        "יש לחתום בתיבה שלהלן ולאשר. חתימתך תוטבע על המסמכים שלמעלה.",
+      "Confirm signature": "אישור חתימה",
+      "Clear": "מחיקה",
+      "By tapping Confirm, I agree that my electronic signature above is the legal equivalent of my handwritten signature and is binding on these documents.":
+        "בלחיצה על אישור, אני מסכים/ה שחתימתי האלקטרונית שלמעלה שקולה מבחינה משפטית לחתימת ידי ומחייבת על מסמכים אלה.",
+      "Secure, encrypted signing for Legacy Value Partners":
+        "חתימה מאובטחת ומוצפנת עבור קרן לגאסי",
+      "You can close this window.": "ניתן לסגור חלון זה.",
+      // dynamic signbox + status strings (built in JS, translated via tHe)
+      "Subscription Agreement": "הסכם הצטרפות",
+      "Legacy Value Partners CI, LP": "Legacy Value Partners CI, LP",
+      "authorized signatory": "נציג/ה מורשה/ית",
+      "second authorized signatory": "נציג/ה מורשה/ית נוסף/ת",
+      "verifying attorney": "עורך/ת דין מאמת/ת",
+      "investor": "משקיע/ה",
+      "controlling person": "בעל/ת שליטה",
+      "Recording...": "מתעד...",
+      "All signatures are in. We will assemble the documents and email a confirmation.":
+        "כל החתימות התקבלו. נרכיב את המסמכים ונשלח אישור בדוא\"ל.",
+      "Your signature has been recorded. We will notify the next signer.":
+        "חתימתך נקלטה. נעדכן את החותם/ת הבא/ה.",
+      "We could not record your signature. Please try again.":
+        "לא הצלחנו לתעד את חתימתך. יש לנסות שוב."
+    };
+
+    var curLang = 'he';
+    var langCard = document.querySelector('.card');
+
+    // Look up a Hebrew translation for an English string. Returns null if there
+    // is no map entry (caller leaves English).
+    function lookupHe(en) {
+      if (en == null) return null;
+      var raw = String(en);
+      return Object.prototype.hasOwnProperty.call(HE_MAP, raw) ? HE_MAP[raw] : null;
+    }
+    function displayFor(origEn, lang) {
+      if (lang === 'en') return origEn;
+      var he = lookupHe(origEn);
+      return he == null ? origEn : he; // no entry: leave English (never blank)
+    }
+    // Translate a single English fragment to the current language (for JS-built
+    // strings such as the signbox and status lines).
+    function tHe(en) { return displayFor(en, curLang); }
+
+    // Swap a block element's full textContent, caching the English on first run.
+    function swapTextContent(el, lang) {
+      if (el.dataset.en == null) el.dataset.en = el.textContent;
+      el.textContent = displayFor(el.dataset.en, lang);
+    }
+
+    function swapScopeText(root, lang) {
+      var blockSel = 'h1, .hint, .consent, .lockline';
+      root.querySelectorAll(blockSel).forEach(function (el) {
+        // Skip nodes filled dynamically (signbox/done-msg) so we never clobber
+        // server-built content; those are translated at build time via tHe.
+        if (el.id === 'done-msg' || el.id === 'invalid-msg') return;
+        swapTextContent(el, lang);
+      });
+      // buttons (Confirm / Clear)
+      root.querySelectorAll('#done, #clear').forEach(function (b) {
+        // #done text is restored to its English base before caching so the
+        // "Recording..." transient never gets cached as the English baseline.
+        swapTextContent(b, lang);
+      });
+    }
+
+    function applyLang(lang) {
+      lang = (lang === 'en') ? 'en' : 'he';
+      curLang = lang;
+      swapScopeText(langCard || document, lang);
+      if (langCard) langCard.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+      document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+      });
+      // Re-render the dynamic signbox + invalid message in the new language if
+      // the context has already loaded.
+      if (window.__renderSignbox) window.__renderSignbox();
+      if (window.__renderInvalidMsg) window.__renderInvalidMsg();
+    }
+
+    document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+      b.addEventListener('click', function () { applyLang(b.getAttribute('data-lang-set')); });
+    });
+
+    function show(name) {
+      var els = document.querySelectorAll('[data-state]');
+      for (var i = 0; i < els.length; i++) els[i].hidden = (els[i].getAttribute('data-state') !== name);
+    }
+
+    // 1. fetch signer context through the proxy
+    if (!TOKEN) { applyLang(LANGQ); show('invalid'); return; }
+    var x = new XMLHttpRequest();
+    x.open('GET', GW + '?api=signcontext&t=' + encodeURIComponent(TOKEN), true);
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      var ctx = {};
+      try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
+      if (!ctx.ok) {
+        // Server error strings arrive in English. Render through the map so a
+        // known message localizes; an unknown one stays in the server's English.
+        window.__renderInvalidMsg = function () {
+          if (ctx.error) document.getElementById('invalid-msg').textContent = ctx.error;
+        };
+        window.__renderInvalidMsg();
+        applyLang(LANGQ);
+        show('invalid'); return;
+      }
+      applyLang(LANGQ);
+      if (ctx.alreadySigned) { show('signed'); return; }
+      if (!ctx.isCurrent) { show('notyet'); return; }
+      // Trust block: tell the signer exactly what they are binding to. The role
+      // label and field captions translate through the same HE_MAP.
+      var roleMap = { subscriber: 'authorized signatory', subscriber2: 'second authorized signatory',
+        lawyer: 'verifying attorney', lp: 'investor' };
+      var roleKey = roleMap[ctx.role] || (/^cp\d+$/.test(ctx.role || '') ? 'controlling person' : '');
+      var esc2 = function (s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); };
+      window.__renderSignbox = function () {
+        var roleLabel = roleKey ? tHe(roleKey) : '';
+        var amt = (ctx.amountDisplay && ctx.currency)
+          ? '<div class="signbox__a">' + esc2(ctx.currency) + ' ' + esc2(ctx.amountDisplay) + '</div>' : '';
+        // "Signing as <name> (<role>)" assembled in the current language. The
+        // signer name itself is data and is never translated.
+        var signingAs = (curLang === 'he') ? 'חותם/ת בתור' : 'Signing as';
+        var who = ctx.signerName ? (signingAs + ' ' + esc2(ctx.signerName) + (roleLabel ? ' (' + roleLabel + ')' : '')) : '';
+        document.getElementById('signbox').innerHTML =
+          '<div class="signbox__t">' + esc2(tHe(ctx.docTitle || 'Subscription Agreement')) + '</div>' +
+          '<div class="signbox__f">' + esc2(ctx.fundLegalName || 'Legacy Value Partners CI, LP') + '</div>' +
+          amt + (who ? '<div class="signbox__s">' + who + '</div>' : '');
+      };
+      window.__renderSignbox();
+      show('sign');
+      initPad();
+    };
+    x.send(null);
+
+    // 2. signature pad (faithful to the proven Israeli/Cayman pad)
+    function initPad() {
+      var canvas = document.getElementById('pad');
+      var done = document.getElementById('done');
+      var clearBtn = document.getElementById('clear');
+      var errEl = document.getElementById('err');
+      var ctx2 = canvas.getContext('2d');
+      var ratio = window.devicePixelRatio || 1;
+      function size() {
+        var r = canvas.getBoundingClientRect();
+        canvas.width = r.width * ratio; canvas.height = r.height * ratio;
+        ctx2.scale(ratio, ratio); ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
+      }
+      size();
+      var drawing = false, dirty = false, last = { x: 0, y: 0 };
+      // Require a real signature, not a single dot: count drawn segments and only
+      // enable Confirm past a minimum stroke. A tap/dot produces 0-2 segments.
+      var points = 0;
+      var MIN_POINTS = 8;
+      function pos(e) {
+        var r = canvas.getBoundingClientRect();
+        var t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      }
+      function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+      function move(e) {
+        if (!drawing) return;
+        var p = pos(e);
+        ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
+        last = p; dirty = true; points++;
+        if (points >= MIN_POINTS) done.disabled = false;
+        e.preventDefault();
+      }
+      function endDraw() { drawing = false; }
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', endDraw);
+
+      clearBtn.addEventListener('click', function () {
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        dirty = false; points = 0; done.disabled = true; errEl.textContent = '';
+      });
+
+      done.addEventListener('click', function () {
+        if (!dirty || done.disabled) return;
+        done.disabled = true; clearBtn.disabled = true; errEl.textContent = '';
+        done.textContent = tHe('Recording...');
+        var png = canvas.toDataURL('image/png');
+        var p = new XMLHttpRequest();
+        p.open('POST', GW + '?source=sign', true);
+        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        p.onreadystatechange = function () {
+          if (p.readyState !== 4) return;
+          var res = {};
+          try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
+          if (res && res.ok) {
+            document.getElementById('done-msg').textContent = res.completed
+              ? tHe('All signatures are in. We will assemble the documents and email a confirmation.')
+              : tHe('Your signature has been recorded. We will notify the next signer.');
+            show('done');
+          } else {
+            errEl.textContent = tHe('We could not record your signature. Please try again.');
+            // Restore the English baseline before re-translating so the cached
+            // dataset.en for #done stays the real label, not "Recording...".
+            done.dataset.en = 'Confirm signature';
+            done.textContent = tHe('Confirm signature');
+            done.disabled = false; clearBtn.disabled = false;
+          }
+        };
+        p.send(JSON.stringify({ token: TOKEN, png: png }));
+      });
+    }
+  })();
+  </script>
+</body>
+</html>
