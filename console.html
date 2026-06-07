@@ -8,15 +8,10 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="icon" href="/favicon.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script src="https://accounts.google.com/gsi/client" async></script>
   <!--
-    Operator Console v1 (internal: Noa + Omri). Single page, no navigation.
-    Reads the GAS feeds through the Netlify proxy (/api/gw): ?api=list for the
-    board, ?api=process for the drawer. No datastore. EasySend skin. Mobile-first.
-    Login: fetches ?api=consoleconfig -> 'google' (Sign in with Google, gateway
-    verifies the token + admin allowlist), 'passphrase' (CONSOLE_OP_SECRET), or
-    'open' (build phase, nothing configured yet). The signed-in token/passphrase
-    is sent as &idToken= / &op= on every call; the gateway is the enforcer.
+    Operator Console v2. Single page, no navigation, no login wall.
+    Reads the GAS backend directly: ?api=list for the board, ?api=process
+    for the drawer. The AKfycb deployment URL is the credential.
   -->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
@@ -93,15 +88,6 @@
     .flag{background:#FFF6E6;border-left:3px solid var(--gold);padding:8px 10px;font-size:12px;border-radius:4px;margin-top:6px}
     .warn{background:#FBEAEA;color:#9c2622;font-size:12px;border-radius:8px;padding:8px 10px;margin-bottom:14px;font-weight:600}
     .hist{font-size:12px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--line)}
-    /* light login */
-    .login{position:fixed;inset:0;z-index:50;background:var(--navy);display:flex;align-items:center;justify-content:center;padding:24px}
-    .login__card{background:#fff;border-radius:16px;padding:30px 26px;width:100%;max-width:360px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-    .login__t{font-weight:700;font-size:18px;color:var(--navy);margin:0 0 4px}
-    .login__s{font-size:13px;color:var(--muted);margin:0 0 20px}
-    .login input{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font:inherit;font-size:15px;margin-bottom:12px}
-    .login button{width:100%;background:var(--navy);color:#fff;border:none;border-radius:999px;padding:12px;font:inherit;font-weight:700;font-size:15px;cursor:pointer}
-    .login__err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px}
-    .login__hd{height:48px;margin-bottom:14px}
     /* actions */
     .fab{position:fixed;right:16px;bottom:18px;z-index:8;background:var(--gold);color:var(--navy);border:none;border-radius:999px;padding:14px 20px;font:inherit;font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(13,63,106,.28);cursor:pointer}
     .acts{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
@@ -120,18 +106,6 @@
     .btnp{background:var(--navy);color:#fff}.btns{background:#fff;color:var(--muted);border:1px solid var(--line)}
     .copybox{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;word-break:break-all;margin-top:12px}
     .note{font-size:12px;color:var(--muted);margin-top:8px}
-    /* demo tour */
-    .demobadge{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:60;background:var(--gold);color:var(--navy);font-weight:700;font-size:12px;padding:4px 14px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
-    .tourbd{position:fixed;inset:0;background:rgba(13,35,55,.55);z-index:55}
-    .tour-hi{position:relative;z-index:58 !important;box-shadow:0 0 0 3px var(--gold),0 0 0 10px rgba(255,180,44,.35) !important;border-radius:12px}
-    .drawer--tour{z-index:57 !important}
-    .tourtip{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:59;background:#fff;border-radius:16px;padding:18px;width:calc(100% - 28px);max-width:360px;box-shadow:0 12px 44px rgba(0,0,0,.32)}
-    .tourtip h4{margin:0 0 6px;color:var(--navy);font-size:17px}
-    .tourtip p{margin:0 0 14px;font-size:14px;line-height:1.5;color:var(--ink)}
-    .tourtip__row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .tourtip__n{font-size:12px;color:var(--muted)}
-    .tbtn{border:none;border-radius:999px;padding:9px 18px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;background:var(--navy);color:#fff}
-    .tbtn--ghost{background:#fff;color:var(--muted);border:1px solid var(--line)}
   </style>
 </head>
 <body>
@@ -169,27 +143,9 @@
     </form>
   </div>
 
-  <div class="login" id="login" style="display:none">
-    <div class="login__card">
-      <img class="login__hd" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
-      <h1 class="login__t">Onboarding console</h1>
-      <div id="gmode" style="display:none">
-        <p class="login__s">Sign in with your approved Google account.</p>
-        <div id="gbtn" style="display:flex;justify-content:center"></div>
-      </div>
-      <form id="pwmode" style="display:none">
-        <p class="login__s">Enter the operator passphrase to continue.</p>
-        <input type="password" id="loginPw" autocomplete="current-password" placeholder="Passphrase" autofocus>
-        <button type="submit">Enter</button>
-      </form>
-      <div class="login__err" id="loginErr"></div>
-    </div>
-  </div>
-
 <script>
 (function(){
   var GW='https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-  var DEMO=(new URLSearchParams(location.search).get('demo')==='1');
   var LANES=[
     {key:'alert',label:'Needs you',stages:['needs_attention'],alert:true},
     {key:'signing',label:'Signing',stages:['signing','all_signed']},
@@ -210,36 +166,16 @@
   var drawer=document.getElementById('drawer'), scrim=document.getElementById('scrim');
 
   document.getElementById('search').addEventListener('input',function(e){state.q=e.target.value.toLowerCase();render();});
-  document.getElementById('showdone').addEventListener('change',function(e){state.showDone=e.target.checked;if(DEMO){render();return;}loadList();});
+  document.getElementById('showdone').addEventListener('change',function(e){state.showDone=e.target.checked;loadList();});
   scrim.addEventListener('click',closeDrawer);
 
-  var AUTH=sessionStorage.getItem('lvp_auth')||'';
-  var AUTHPARAM='op';   // becomes 'idToken' in google mode
-  var MODE='open', booted=false;
   function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;'})[c];});}
-  function jget(qs){return fetch(GW+qs+(AUTH?('&'+AUTHPARAM+'='+encodeURIComponent(AUTH)):''),{headers:{'Content-Type':'text/plain;charset=utf-8'}}).then(function(r){return r.json();});}
-  function isUnauth(d){return d&&d.ok===false&&/unauth/i.test(d.error||'');}
-
-  // ---- login (Google identity, or passphrase fallback) ----
-  var loginEl=document.getElementById('login');
-  function showLogin(msg){loginEl.style.display='flex';document.getElementById('loginErr').textContent=msg||'';}
-  function hideLogin(){loginEl.style.display='none';}
-  function bootBoard(d){if(booted)return;booted=true;state.list=(d&&d.processes)||[];elCount.textContent=state.list.length+' active';render();setInterval(tick,1000);document.getElementById('fab').style.display='block';}
-  function commitAuth(val){
-    AUTH=val;sessionStorage.setItem('lvp_auth',val);
-    jget('?api=list').then(function(d){
-      if(isUnauth(d)){sessionStorage.removeItem('lvp_auth');AUTH='';showLogin(MODE==='google'?'That Google account is not approved.':'Wrong passphrase.');return;}
-      hideLogin();bootBoard(d);
-    }).catch(function(){showLogin('Could not reach the server.');});
-  }
-  document.getElementById('pwmode').addEventListener('submit',function(e){e.preventDefault();commitAuth(document.getElementById('loginPw').value||'');});
-  window.lvpGoogleCb=function(resp){if(resp&&resp.credential)commitAuth(resp.credential);};
+  function jget(qs){return fetch(GW+qs,{headers:{'Content-Type':'text/plain;charset=utf-8'}}).then(function(r){return r.json();});}
 
   var lastLoadOk=true;
-  function pad2(n){return(n<10?'0':'')+n;}
+  function bootBoard(d){state.list=(d&&d.processes)||[];elCount.textContent=state.list.length+' active';render();setInterval(tick,1000);document.getElementById('fab').style.display='block';}
   function loadList(){
     jget('?api=list'+(state.showDone?'&includeDone=1':'')).then(function(d){
-      if(isUnauth(d)){sessionStorage.removeItem('lvp_auth');AUTH='';showLogin('Session expired. Sign in again.');return;}
       if(d&&d.ok){lastLoadOk=true;state.list=d.processes||[];elCount.textContent=(state.list.length)+' active';render();}
       else{lastLoadOk=false;}
     }).catch(function(){lastLoadOk=false;});
@@ -271,7 +207,7 @@
       if(!items.length)return;
       var col=(state.collapsed[lane.key]!=null)?state.collapsed[lane.key]:!!lane.collapsed;
       html+='<div class="lane"><div class="lane__hd'+(lane.alert?' lane__hd--alert':'')+'" data-lane="'+lane.key+'">'+
-        '<span>'+(col?'▸':'▾')+' '+esc(lane.label)+'</span><span class="lane__badge">'+items.length+'</span></div>';
+        '<span>'+(col?'&#9656;':'&#9662;')+' '+esc(lane.label)+'</span><span class="lane__badge">'+items.length+'</span></div>';
       if(!col)items.forEach(function(p){html+=card(p);});
       html+='</div>';
     });
@@ -285,8 +221,7 @@
   function closeDrawer(){state.open=null;scrim.classList.remove('scrim--on');drawer.classList.remove('drawer--on');drawer.setAttribute('aria-hidden','true');}
   function loadProcess(id){
     if(state.open!==id)return;
-    if(DEMO){drawDrawer(DEMO_PROCESS[id]||DEMO_PROCESS.__default);return;}
-    jget('?api=process&processId='+encodeURIComponent(id)).then(function(d){if(isUnauth(d)){sessionStorage.removeItem('lvp_auth');AUTH='';closeDrawer();showLogin('Session expired. Sign in again.');return;}if(state.open===id&&d&&d.ok)drawDrawer(d);if(state.open===id)setTimeout(function(){loadProcess(id);},DRAWER_MS);}).catch(function(){});
+    jget('?api=process&processId='+encodeURIComponent(id)).then(function(d){if(state.open===id&&d&&d.ok)drawDrawer(d);if(state.open===id)setTimeout(function(){loadProcess(id);},DRAWER_MS);}).catch(function(){});
   }
   function bannerFor(d){
     if(d.currentStage==='needs_attention')return['banner--alert','Needs you: '+esc(d.failReason||'a step needs checking.')];
@@ -369,11 +304,9 @@
   }
 
   function runAction(act,pid,btn){
-    if(DEMO){window.alert('Demo mode: nothing is actually sent or changed.');return;}
     if(act==='void'&&!window.confirm('Void this process? Held signer links will stop working.'))return;
     var t=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='Working...';}
     jget('?admin='+act+'&processId='+encodeURIComponent(pid)).then(function(r){
-      if(isUnauth(r)){sessionStorage.removeItem('lvp_auth');AUTH='';closeDrawer();showLogin('Sign in again.');return;}
       if(btn){btn.disabled=false;btn.textContent=t;}
       window.alert(r&&r.ok?('Done'+(r.role?' ('+r.role+')':'')):('Could not complete: '+((r&&r.error)||'error')));
       loadList();if(state.open===pid)loadProcess(pid);
@@ -389,7 +322,6 @@
     var nEn=document.getElementById('mName').value.trim();
     var nHe=document.getElementById('mNameHe').value.trim();
     if(!nEn&&!nHe){document.getElementById('mResult').innerHTML='<div class="note" style="color:var(--red)">Please enter a name in English or Hebrew.</div>';return;}
-    if(DEMO){document.getElementById('mResult').innerHTML='<div class="copybox">https://sign.legacyvpartners.com/?t=UNIQUE-LINK-PER-LP&type='+esc(document.getElementById('mType').value)+'</div><div class="note">Demo only. In real use this emails the investor and shows you their unique link to copy.</div>';return;}
     var go=document.getElementById('mGo');go.disabled=true;go.textContent='Working...';
     var qs='?admin=mintLink&type='+encodeURIComponent(document.getElementById('mType').value)+
       '&email='+encodeURIComponent(document.getElementById('mEmail').value)+
@@ -397,7 +329,6 @@
       '&nameHebrew='+encodeURIComponent(nHe);
     jget(qs).then(function(r){
       go.disabled=false;go.textContent='Create + email';
-      if(isUnauth(r)){mintModal.classList.remove('modal--on');sessionStorage.removeItem('lvp_auth');AUTH='';showLogin('Sign in again.');return;}
       if(r&&r.ok){
         document.getElementById('mResult').innerHTML='<div class="copybox" id="cbox">'+esc(r.url)+'</div><div class="note">'+(r.emailed?'Emailed to the investor. ':'')+'Tap the link to copy.</div>';
         var cb=document.getElementById('cbox');cb.addEventListener('click',function(){
@@ -408,111 +339,6 @@
     }).catch(function(){go.disabled=false;go.textContent='Create + email';document.getElementById('mResult').innerHTML='<div class="note" style="color:var(--red)">Network error.</div>';});
   });
 
-  // ===== DEMO MODE (?demo=1): sample data + guided tour for showing Omri. =====
-  // Every name carries the [test] marker; all emails are Noa's own. No backend
-  // calls, no real emails, never touches live data.
-  var DEMO_LIST=[
-    {processId:'demo-1',displayName:'Buzzer Beater Capital ELP [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'needs_attention',ageDays:6,stageIndex:-1,nextActionPhrase:"One document did not finalize. Re-drive the seal.",lastActor:'system',stale:true},
-    {processId:'demo-2',displayName:'Triple-Double Capital ELP [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'signing',ageDays:2,stageIndex:3,nextActionPhrase:'Waiting for controlling person 1 to sign (3 of 5)',currentSigner:{role:'cp1',xOfY:'3 of 5'},lastActor:'system'},
-    {processId:'demo-3',displayName:'Luka Doncic [test]',flowType:'cayman_subscription',applicantType:'individual',currentStage:'signing',ageDays:1,stageIndex:3,nextActionPhrase:'Waiting for the investor to sign (1 of 1)',currentSigner:{role:'subscriber',xOfY:'1 of 1'},lastActor:'investor'},
-    {processId:'demo-4',displayName:'Full Court Holdings LP [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'submitted',ageDays:0,stageIndex:2,nextActionPhrase:'Preparing their documents',lastActor:'system'},
-    {processId:'demo-5',displayName:'Kevin Durant [test]',flowType:'cayman_subscription',applicantType:'individual',currentStage:'link_sent',ageDays:3,stageIndex:0,nextActionPhrase:'Invited, waiting for them to start',lastActor:'Noa'},
-    {processId:'demo-6',displayName:'Hall of Fame Holdings Ltd [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'complete',ageDays:0,stageIndex:5,nextActionPhrase:'Done',lastActor:'system'},
-    {processId:'demo-7',displayName:'Kareem Abdul-Jabbar [test]',flowType:'cayman_increase',applicantType:'individual',currentStage:'signing',ageDays:1,stageIndex:3,nextActionPhrase:'Waiting for the investor to sign (1 of 1)',currentSigner:{role:'subscriber',xOfY:'1 of 1'},lastActor:'investor'},
-    {processId:'demo-8',displayName:'Pick & Roll Partners LP [test]',flowType:'cayman_withdrawal',applicantType:'entity',currentStage:'complete',ageDays:0,stageIndex:5,nextActionPhrase:'Done',lastActor:'system'}
-  ];
-  var DEMO_PROCESS={
-    'demo-2':{ok:true,processId:'demo-2',displayName:'Triple-Double Capital ELP [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'signing',
-      signers:[{role:'subscriber',roleLabel:'authorized signatory',name:'Triple-Double Capital ELP [test]',state:'done'},
-        {role:'subscriber2',roleLabel:'second signatory',name:'Magic Johnson [test]',state:'done'},
-        {role:'cp1',roleLabel:'controlling person 1',name:'LeBron James [test]',state:'current'},
-        {role:'cp2',roleLabel:'controlling person 2',name:'Stephen Curry [test]',state:'waiting'},
-        {role:'lawyer',roleLabel:'verifying lawyer',name:'Gregg Popovich [test]',state:'waiting'}],
-      signersPlanned:5,signersDone:2,
-      docs:[{key:'subscription',label:'Subscription Agreement',sealed:false,pending:false,delivered:false,recipients:['trustee','bank','fund','lp']},
-        {key:'schedule6_selfcert',label:'CRS self-certification',sealed:false,pending:false,delivered:false,recipients:['trustee','bank']},
-        {key:'w8_bene',label:'W-8BEN-E',sealed:false,pending:false,delivered:false,recipients:['trustee','bank']}],
-      docsSummary:{total:11,sealed:0,delivered:0},
-      classification:{w8Variant:'W-8BEN-E',chapter4Status:'Passive NFFE',cpRequired:true,cpCount:2,counselFlags:[]},
-      submission:{sections:[
-        {name:'Entity',fields:[{label:'Legal name',value:'Triple-Double Capital ELP [test]'},{label:'Type',value:'Partnership'},{label:'Email',value:'noa@legacyvpartners.com'}]},
-        {name:'Investment & banking',fields:[{label:'Currency',value:'USD'},{label:'Amount',value:'1,000,000'}]},
-        {name:'Communication',fields:[{label:'Additional emails',value:'noasea.g@gmail.com'}]}],kycDocs:[]},
-      events:[{ts:'2026-06-01T10:00',stage:'submitted',actor:'lp'},{ts:'2026-06-01T10:02',stage:'signing',actor:'system'}]},
-    'demo-1':{ok:true,processId:'demo-1',displayName:'Buzzer Beater Capital ELP [test]',flowType:'cayman_subscription',applicantType:'entity',currentStage:'needs_attention',
-      failReason:'One document could not be finalized. Re-drive the seal to retry.',
-      signers:[{role:'subscriber',roleLabel:'authorized signatory',name:'Buzzer Beater Capital [test]',state:'done'},
-        {role:'cp1',roleLabel:'controlling person 1',name:'Nikola Jokic [test]',state:'done'},
-        {role:'lawyer',roleLabel:'verifying lawyer',name:'Gregg Popovich [test]',state:'done'}],
-      signersPlanned:3,signersDone:3,
-      docs:[{key:'subscription',label:'Subscription Agreement',sealed:true,delivered:false,recipients:['trustee','bank']},
-        {key:'w8_imy',label:'W-8IMY',sealed:false,delivered:false,recipients:['trustee','bank']}],
-      docsSummary:{total:11,sealed:10,delivered:0},
-      classification:{w8Variant:'W-8IMY',chapter4Status:'Passive NFFE',cpRequired:true,cpCount:1,counselFlags:[{message:'Flow-through entity: confirm the partner schedule before sending.'}]},
-      submission:{sections:[{name:'Entity',fields:[{label:'Legal name',value:'Buzzer Beater Capital ELP [test]'},{label:'Email',value:'noa@legacyvpartners.com'}]}],kycDocs:[]},
-      events:[{ts:'2026-05-28T09:00',stage:'all_signed',actor:'system'},{ts:'2026-05-28T09:01',stage:'needs_attention',actor:'system'}]},
-    'demo-7':{ok:true,processId:'demo-7',displayName:'Kareem Abdul-Jabbar [test]',flowType:'cayman_increase',applicantType:'individual',currentStage:'signing',
-      signers:[{role:'subscriber',roleLabel:'investor',name:'Kareem Abdul-Jabbar [test]',state:'current'}],signersPlanned:1,signersDone:0,
-      docs:[{key:'increase',label:'Increase of Investment',sealed:false,pending:false,delivered:false,recipients:['trustee','bank']}],
-      docsSummary:{total:1,sealed:0,delivered:0},
-      submission:{sections:[{name:'Investor',fields:[{label:'Name',value:'Kareem Abdul-Jabbar [test]'},{label:'Email',value:'noa@legacyvpartners.com'}]},{name:'Increase',fields:[{label:'Currency',value:'USD'},{label:'Added amount',value:'250,000'}]}],kycDocs:[]},
-      events:[{ts:'2026-06-02T11:00',stage:'submitted',actor:'lp'},{ts:'2026-06-02T11:01',stage:'signing',actor:'system'}]},
-    'demo-8':{ok:true,processId:'demo-8',displayName:'Pick & Roll Partners LP [test]',flowType:'cayman_withdrawal',applicantType:'entity',currentStage:'complete',
-      signers:[{role:'subscriber',roleLabel:'authorized signatory',name:'Pick & Roll Partners LP [test]',state:'done'}],signersPlanned:1,signersDone:1,
-      docs:[{key:'withdrawal',label:'Withdrawal Request',sealed:true,delivered:true,recipients:['trustee','bank']}],
-      docsSummary:{total:1,sealed:1,delivered:1},
-      submission:{sections:[{name:'Entity',fields:[{label:'Legal name',value:'Pick & Roll Partners LP [test]'},{label:'Email',value:'noa@legacyvpartners.com'}]},{name:'Withdrawal',fields:[{label:'Currency',value:'USD'},{label:'Amount',value:'100,000'}]}],kycDocs:[]},
-      events:[{ts:'2026-06-01T09:00',stage:'submitted',actor:'lp'},{ts:'2026-06-01T09:30',stage:'complete',actor:'system'}]},
-    __default:{ok:true,currentStage:'complete',displayName:'Hall of Fame Holdings Ltd [test]',applicantType:'entity',
-      signers:[{role:'subscriber',roleLabel:'authorized signatory',name:'Hall of Fame Holdings [test]',state:'done'}],signersPlanned:1,signersDone:1,
-      docsSummary:{total:11,sealed:11,delivered:11},docs:[],classification:{w8Variant:'W-8BEN-E',chapter4Status:'Active NFFE',cpRequired:false,cpCount:0,counselFlags:[]},
-      submission:{sections:[{name:'Entity',fields:[{label:'Email',value:'noa@legacyvpartners.com'}]}],kycDocs:[]},events:[]}
-  };
-  function drawerSectionByTitle(t){
-    var secs=document.querySelectorAll('.drawer .sec');
-    for(var i=0;i<secs.length;i++){var h=secs[i].querySelector('.sec__h');if(h&&h.textContent.indexOf(t)>=0)return secs[i];}
-    return null;
-  }
-  var TOUR=[
-    {t:'This is your whole board',b:'Every investor in flight, in one place. No menus. The ones that need you sit at the top.',el:function(){return document.querySelector('.hd');}},
-    {t:'Needs you',b:'Anything stuck shows here in red, oldest first. This one had a document that did not finalize.',el:function(){return document.querySelector('.card--alert')||document.querySelector('.card');}},
-    {t:'Open anyone',b:'Tap any investor to see everything about them. Next opens one for you.',el:function(){return document.querySelectorAll('.card')[1]||document.querySelector('.card');}},
-    {t:'Who has signed',b:'The signing order. Green means signed. The blue ring is whose turn it is right now.',drawer:true,pre:function(){if(state.open!=='demo-2')openDrawer('demo-2');},el:function(){return document.querySelector('.drawer .st-current')||document.querySelector('.drawer .step');}},
-    {t:'Reminders happen on their own',b:'If a signer goes quiet, they are reminded automatically every 48 hours, twice. You can also nudge them instantly with these buttons.',drawer:true,pre:function(){if(state.open!=='demo-2')openDrawer('demo-2');},el:function(){return document.querySelector('.drawer .acts');}},
-    {t:'Every document',b:'Each form with its signed, sealed and sent status at a glance.',drawer:true,pre:function(){if(state.open!=='demo-2')openDrawer('demo-2');},el:function(){return drawerSectionByTitle('Documents');}},
-    {t:'This is how we start a process',b:'Tap here to send an investor their own unique link. This one button is the trigger for the whole flow.',pre:function(){closeDrawer();},el:function(){return document.getElementById('fab');}},
-    {t:'And you can trigger it',b:'On the live console, tap "Send LP a link" and put in your own email. You will get a real process and can sign it yourself, exactly as an investor would. That is the full flow, end to end. (This demo uses [test] names and sends nothing.)',el:function(){return document.getElementById('fab');}}
-  ];
-  var tour={bd:null,tip:null,hi:null};
-  function startTour(){
-    var badge=document.createElement('div');badge.className='demobadge';badge.textContent='DEMO';document.body.appendChild(badge);
-    tour.bd=document.createElement('div');tour.bd.className='tourbd';document.body.appendChild(tour.bd);
-    tour.tip=document.createElement('div');tour.tip.className='tourtip';document.body.appendChild(tour.tip);
-    tourGo(0);
-  }
-  function clearHi(){if(tour.hi){tour.hi.classList.remove('tour-hi');tour.hi=null;}document.getElementById('drawer').classList.remove('drawer--tour');}
-  function endTour(){clearHi();[tour.bd,tour.tip].forEach(function(e){if(e&&e.parentNode)e.parentNode.removeChild(e);});tour.bd=tour.tip=null;}
-  function tourGo(i){
-    var step=TOUR[i];if(!step){endTour();return;}
-    if(step.pre)step.pre();
-    setTimeout(function(){
-      clearHi();
-      if(step.drawer)document.getElementById('drawer').classList.add('drawer--tour');
-      var el=step.el&&step.el();
-      if(el){el.classList.add('tour-hi');tour.hi=el;try{el.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}
-      var last=(i===TOUR.length-1);
-      tour.tip.innerHTML='<h4>'+esc(step.t)+'</h4><p>'+esc(step.b)+'</p><div class="tourtip__row"><span class="tourtip__n">'+(i+1)+' / '+TOUR.length+'</span><span>'+(i>0?'<button class="tbtn tbtn--ghost" id="tback">Back</button> ':'')+'<button class="tbtn" id="tnext">'+(last?'Done':'Next')+'</button></span></div>';
-      document.getElementById('tnext').addEventListener('click',function(){last?endTour():tourGo(i+1);});
-      var bk=document.getElementById('tback');if(bk)bk.addEventListener('click',function(){tourGo(i-1);});
-    },step.pre?280:60);
-  }
-  function runDemo(){
-    hideLogin();booted=true;
-    state.list=DEMO_LIST;elCount.textContent=DEMO_LIST.length+' active';
-    render();document.getElementById('fab').style.display='block';
-    startTour();
-  }
-
   // ---- poll loop ----
   var left=POLL_MS/1000;
   function tick(){left--;if(left<=0){left=POLL_MS/1000;loadList();}
@@ -520,41 +346,9 @@
     else{elTick.style.color='#FFD9A0';elTick.textContent='offline, tap to retry';}}
   elTick.style.cursor='pointer';elTick.addEventListener('click',function(){left=0;loadList();});
 
-  // ---- boot: ask the gateway how to log in (google vs passphrase vs open) ----
-  function initGoogle(clientId){
-    if(!(window.google&&google.accounts&&google.accounts.id)){return setTimeout(function(){initGoogle(clientId);},150);}
-    google.accounts.id.initialize({client_id:clientId,callback:window.lvpGoogleCb,auto_select:true});
-    google.accounts.id.renderButton(document.getElementById('gbtn'),{theme:'filled_blue',size:'large',shape:'pill',width:280});
-  }
-  if(DEMO){ runDemo(); return; }
-  fetch(GW+'?api=consoleconfig',{headers:{'Content-Type':'text/plain;charset=utf-8'}}).then(function(r){return r.json();}).then(function(cfg){
-    MODE=(cfg&&cfg.mode)||'open';
-    if(MODE==='google'){
-      AUTHPARAM='idToken';
-      document.getElementById('gmode').style.display='block';
-      initGoogle(cfg.googleClientId);
-      if(AUTH){commitAuth(AUTH);} else {showLogin();}
-    } else if(MODE==='passphrase'){
-      AUTHPARAM='op';
-      document.getElementById('pwmode').style.display='block';
-      if(AUTH){commitAuth(AUTH);} else {showLogin();var pw=document.getElementById('loginPw');if(pw)pw.focus();}
-    } else { // 'open' or any unrecognized mode: fail CLOSED.
-      // The no-auth board must never boot on a public URL. Only allow the
-      // open-grant when running on localhost (build/dev). Everywhere else,
-      // fall back to the passphrase login screen.
-      var host=location.hostname;
-      var isLocal=(host==='localhost'||host==='127.0.0.1'||host==='[::1]'||host==='');
-      if(MODE==='open'&&isLocal){
-        jget('?api=list').then(function(d){bootBoard(d);}).catch(function(){
-          document.getElementById('pwmode').style.display='block';showLogin('Could not load the board.');
-        });
-      } else {
-        document.getElementById('pwmode').style.display='block';
-        showLogin('Login required.');
-      }
-    }
-  }).catch(function(){
-    document.getElementById('pwmode').style.display='block';showLogin('Could not load login config.');
+  // ---- boot: load the board directly ----
+  jget('?api=list').then(function(d){bootBoard(d);}).catch(function(){
+    board.innerHTML='<div class="empty">Could not reach the server.</div>';
   });
 })();
 </script>
