@@ -24,6 +24,8 @@
   .fundsw button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
   nav{padding:12px 10px;display:flex;flex-direction:column;gap:1px;flex:1}
   .side-foot{padding:14px 22px;border-top:1px solid var(--side-line);font-size:11px;color:#475569;line-height:1.6}
+  .auth-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .auth-row button{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
   .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:var(--side-muted);cursor:pointer;font-weight:500;transition:all .15s}
   .nav:hover{background:#1E293B;color:#fff}
   .nav.on{background:#1E3A8A;color:#93C5FD;font-weight:700}
@@ -137,7 +139,9 @@
       <div class="nav" data-view="w8">W-8 renewals</div>
       <div class="nav" data-view="settings">Settings</div>
     </nav>
-    <div class="side-foot" id="side-foot">GAS @156</div>
+    <div class="side-foot" id="side-foot">GAS @156
+      <div class="auth-row"><span id="auth-status">🔒 not signed in</span><button id="auth-btn">Sign in</button></div>
+    </div>
   </aside>
   <div class="main">
     <div class="view" id="v-board">
@@ -210,7 +214,11 @@
 
 <script>
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-  function apiFetch(qs){ return fetch(GW+qs).then(function(r){return r.json();}); }
+  var OP = (new URLSearchParams(location.search)).get('op') || sessionStorage.getItem('lvp_op') || '';
+  function apiFetch(qs){ return fetch(GW+qs+(OP?'&op='+encodeURIComponent(OP):'')).then(function(r){return r.json();}); }
+  function setAuth(secret){ OP=secret; sessionStorage.setItem('lvp_op',secret); document.getElementById('auth-status').textContent='🔓 signed in'; document.getElementById('auth-btn').textContent='Clear'; }
+  function clearAuth(){ OP=''; sessionStorage.removeItem('lvp_op'); document.getElementById('auth-status').textContent='🔒 not signed in'; document.getElementById('auth-btn').textContent='Sign in'; }
+  if(OP) setAuth(OP);
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
   var STAGES = [["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
@@ -291,6 +299,7 @@
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
+  document.getElementById('auth-btn').onclick=function(){if(OP){clearAuth();}else{var s=prompt('Operator secret:');if(s)setAuth(s);}};
   // create
   document.getElementById("createBtn").onclick=function(){
     var msg=document.getElementById("msg");
