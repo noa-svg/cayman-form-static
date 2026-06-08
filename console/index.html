@@ -139,7 +139,7 @@
       <div class="nav" data-view="w8">W-8 renewals</div>
       <div class="nav" data-view="settings">Settings</div>
     </nav>
-    <div class="side-foot" id="side-foot">GAS @156
+    <div class="side-foot" id="side-foot"><span id="ver-line">GAS @156</span>
       <div class="auth-row"><span id="auth-status">🔒 not signed in</span><button id="auth-btn">Sign in</button></div>
     </div>
   </aside>
@@ -246,7 +246,7 @@
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows.length?rows:SAMPLE);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);document.getElementById('side-foot').innerHTML='GAS @156<br><span style="color:#64748b">synced '+t+'</span>';}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @156<br><span style="color:#64748b">synced '+t+'</span>';}
     }).catch(function(){render(SAMPLE);});
   }
   load();
