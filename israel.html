@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<!--
+  israel.html - Israel individual onboarding form (onboarding_individual)
+  Static HTML/JS form hosted on GitHub Pages (sign.legacyvpartners.com).
+  POSTs to the GAS unified gateway (?source=lp) with Foundation LP envelope.
+  Lane: israeli, flowType: onboarding_individual.
+  Spec: onboarding-individual-logic.md
+
+  Entry points:
+    New LP:   ?item=<mondayItemId>          (operator sends link with item id)
+    Resume:   ?t=<resumeToken>              (gateway returns token on submit)
+    Entity:   ?type=entity                 (routes to entity form, reserved)
+
+  On submit: POSTs {action:'submit', lane:'israeli', flowType:'onboarding_individual',
+             payload:{submission, files}} to the GAS exec URL.
+  On success: redirects to sign.legacyvpartners.com/sign.html?sign=<firstSignerToken>.
+
+  Section 15A qualification labels: PARK_VERBATIM_QUALIFICATION_15A - descriptive
+  labels only. Verbatim clause text is a Noa/counsel decision; placeholder text is
+  clearly marked in comments below.
+
+  Single investor only (MVP - additional investors PARKED, can be added in v2).
+-->
+<html dir="rtl" lang="he">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners - הצטרפות לקרן</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --navy: #0D3F6A;
+      --navy-body: rgb(17, 61, 105);
+      --gold: #FFB42C;
+      --error: #c0392b;
+      --line: #c7d2dc;
+      --line-active: #0D3F6A;
+      --muted: #6b7c8a;
+      --card-shadow: 0 6px 24px rgba(13, 63, 106, 0.12);
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      direction: rtl;
+      font-family: 'Assistant', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--navy-body);
+      text-align: right;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background: url('https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png') no-repeat center center;
+      background-size: 100% 100%;
+      opacity: 0.5;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Greeting page (page-0) */
+    #page-greeting {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 40px 11vw;
+    }
+    .greeting-inner { max-width: 760px; width: 100%; text-align: right; }
+    .greeting-inner .logo { width: 200px; max-width: 60vw; display: block; margin: 0 0 24px; }
+    .greeting-inner h1 { font-size: 32px; font-weight: 700; color: var(--navy); margin: 0 0 20px; }
+    .greeting-inner p { font-size: 22px; color: var(--navy); line-height: 1.4; margin: 0 0 16px; }
+    .gold-bar { height: 8px; width: 150px; background: var(--gold); margin: 28px 0 0; border-radius: 2px; }
+    .greeting-actions { margin-top: 36px; }
+
+    /* Shell (pages 1+) */
+    #shell {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 0;
+    }
+    .shell-inner { width: 100%; max-width: 760px; display: flex; flex-direction: column; flex: 1; }
+    .shell-header { padding: 8px 4px 18px; }
+    .shell-header .logo { width: 160px; display: block; }
+    .title-area { margin-bottom: 14px; }
+    .title-area h2 { font-size: 24px; font-weight: 700; color: var(--navy); margin: 0 0 8px; }
+    .title-line {
+      height: 4px; width: 90px;
+      background: linear-gradient(to left, var(--gold) 0 45px, var(--navy) 45px 90px);
+    }
+    .card {
+      background: #fff; border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      padding: 32px 36px;
+      flex: 1;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .progress-label { font-size: 13px; color: var(--muted); white-space: nowrap; font-weight: 600; }
+    .progress-bar-outer { flex: 1; height: 4px; background: #e9eef3; border-radius: 2px; }
+    .progress-bar-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 250ms ease; }
+
+    /* Section structure */
+    .section { margin-bottom: 28px; }
+    .section-title { font-size: 18px; font-weight: 700; color: var(--navy); margin: 0 0 16px; }
+    .legal-text { font-size: 15px; color: var(--navy-body); margin: 0 0 18px; line-height: 1.6; }
+
+    /* Floating-label fields */
+    .field { position: relative; margin: 0 0 22px; }
+    .field label {
+      position: absolute; right: 0; top: 14px;
+      font-size: 16px; color: var(--muted); pointer-events: none;
+      transition: transform 0.15s, font-size 0.15s, color 0.15s;
+      transform-origin: right top;
+    }
+    .field.has-value label,
+    .field input:focus ~ label,
+    .field select:focus ~ label,
+    .field textarea:focus ~ label {
+      transform: translateY(-22px) scale(0.78);
+      color: var(--navy);
+      font-size: 16px;
+    }
+    .field input[type="text"],
+    .field input[type="email"],
+    .field input[type="tel"],
+    .field input[type="date"],
+    .field input[type="number"],
+    .field select,
+    .field textarea {
+      width: 100%; padding: 14px 0 8px; border: none;
+      border-bottom: 2px solid var(--line);
+      font-size: 16px; font-family: inherit; color: var(--navy-body);
+      background: transparent; outline: none;
+      transition: border-color 0.15s;
+      direction: rtl;
+      text-align: right;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-bottom-color: var(--line-active);
+    }
+    .field select { appearance: none; cursor: pointer; }
+    .field textarea { resize: vertical; min-height: 72px; padding-top: 16px; }
+    .field-error { font-size: 13px; color: var(--error); margin-top: 4px; display: none; }
+    .field.invalid .field-error { display: block; }
+    .field.invalid input, .field.invalid select, .field.invalid textarea {
+      border-bottom-color: var(--error);
+    }
+
+    /* Radio + checkbox groups */
+    .radio-group, .checkbox-group { margin: 0 0 22px; }
+    .group-label { font-size: 14px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+    .radio-opts, .checkbox-opts { display: flex; flex-direction: column; gap: 10px; }
+    .radio-opts.horizontal, .checkbox-opts.horizontal { flex-direction: row; flex-wrap: wrap; gap: 12px 24px; }
+    .radio-opt, .checkbox-opt {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      font-size: 16px; color: var(--navy-body);
+    }
+    .radio-opt input, .checkbox-opt input {
+      width: 18px; height: 18px; cursor: pointer; accent-color: var(--navy); flex-shrink: 0;
+    }
+    .group-error { font-size: 13px; color: var(--error); margin-top: 4px; display: none; }
+    .group-error.visible { display: block; }
+
+    /* File upload cards */
+    .upload-card {
+      border: 2px dashed var(--line);
+      border-radius: 8px; padding: 18px 16px;
+      margin: 0 0 16px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .upload-card:hover { border-color: var(--navy); }
+    .upload-card.has-file { border-style: solid; border-color: var(--navy); background: rgba(13,63,106,0.04); }
+    .upload-card-icon { font-size: 22px; flex-shrink: 0; }
+    .upload-card-body { flex: 1; }
+    .upload-card-title { font-size: 15px; font-weight: 600; color: var(--navy); margin: 0; }
+    .upload-card-hint { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+    .upload-card-filename { font-size: 13px; color: var(--navy); font-weight: 600; margin: 4px 0 0; display: none; }
+    .upload-card.has-file .upload-card-filename { display: block; }
+    .upload-card.has-file .upload-card-hint { display: none; }
+    .upload-card input[type="file"] { display: none; }
+    .upload-error { font-size: 13px; color: var(--error); margin-bottom: 8px; display: none; }
+    .upload-error.visible { display: block; }
+
+    /* Conditional visibility */
+    .cond { display: none; }
+    .cond.show { display: block; }
+
+    /* Review table */
+    .review-section { margin-bottom: 20px; }
+    .review-section h3 { font-size: 16px; font-weight: 700; color: var(--navy); margin: 0 0 10px; border-bottom: 1px solid #e4eaf0; padding-bottom: 6px; }
+    .review-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; }
+    .review-key { font-size: 13px; color: var(--muted); }
+    .review-val { font-size: 14px; color: var(--navy-body); font-weight: 600; word-break: break-word; }
+
+    /* Footer (nav buttons) */
+    .footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 4px 28px;
+    }
+    .footer.single { justify-content: flex-start; }
+
+    /* Buttons */
+    .pill {
+      background: var(--navy); color: #fff; border: none;
+      padding: 13px 40px; border-radius: 25px;
+      font-size: 16px; font-family: inherit; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .pill:hover { background: #0a3157; }
+    .btn {
+      border: none; border-radius: 25px; cursor: pointer;
+      font-size: 15px; font-family: inherit; font-weight: 700;
+      padding: 11px 32px; transition: background 0.15s;
+    }
+    .btn-primary { background: var(--navy); color: #fff; }
+    .btn-primary:hover { background: #0a3157; }
+    .btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--navy); }
+    .btn-secondary:hover { background: rgba(13,63,106,0.06); }
+    .btn:disabled, .pill:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status line */
+    .status-line {
+      font-size: 13px; color: var(--muted); min-height: 18px;
+      margin-top: 8px; text-align: center;
+    }
+    .status-line.error { color: var(--error); }
+    .status-line.saving::before {
+      content: ""; display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; border: 2px solid var(--line);
+      border-top-color: var(--navy);
+      animation: spin 700ms linear infinite; vertical-align: middle; margin-left: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Misc */
+    .section-hint { font-size: 14px; color: var(--muted); margin: -8px 0 16px; }
+
+    @media (max-width: 520px) {
+      .card { padding: 24px 18px; }
+      .greeting-inner h1 { font-size: 26px; }
+      .greeting-inner p { font-size: 18px; }
+      #page-greeting { padding: 32px 6vw; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- GREETING (page 0) -->
+<div id="page-greeting">
+  <div class="greeting-inner">
+    <img class="logo" data-brand-logo src="" alt="Legacy Value Partners" id="logo-greeting">
+    <h1>ברוכים הבאים לקרן לגאסי</h1>
+    <p>תהליך הצטרפות למשקיעים חדשים.</p>
+    <p>השלמת הטופס אורכת כ-10 דקות. אנא הכינו את תעודת הזהות, הדרכון ופרטי חשבון הבנק.</p>
+    <div class="gold-bar"></div>
+    <div class="greeting-actions">
+      <button class="pill" id="btn-start">התחל</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHELL (pages 1+) -->
+<div id="shell" hidden>
+  <div class="shell-inner">
+
+    <!-- Header -->
+    <div class="shell-header">
+      <img class="logo" data-brand-logo src="" alt="Legacy Value Partners" id="logo-shell">
+    </div>
+
+    <!-- Title -->
+    <div class="title-area">
+      <h2 id="page-title">פרטים אישיים</h2>
+      <div class="title-line"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <span class="progress-label" id="prog-label">1 / 9</span>
+      <div class="progress-bar-outer"><div class="progress-bar-fill" id="prog-bar" style="width:11%"></div></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+
+      <!-- Page 1: Personal details (Hebrew) -->
+      <div id="page-1" data-page="1">
+
+        <div class="section">
+          <div class="section-title">פרטי זהות</div>
+
+          <div class="field" id="f-firstName">
+            <input type="text" id="firstName" name="firstName" autocomplete="given-name">
+            <label for="firstName">שם פרטי (עברית)</label>
+            <div class="field-error">שם פרטי נדרש (אותיות עברית בלבד, 2-20 תווים)</div>
+          </div>
+
+          <div class="field" id="f-lastName">
+            <input type="text" id="lastName" name="lastName" autocomplete="family-name">
+            <label for="lastName">שם משפחה (עברית)</label>
+            <div class="field-error">שם משפחה נדרש (אותיות עברית בלבד, 2-20 תווים)</div>
+          </div>
+
+          <div class="radio-group" id="rg-gender">
+            <div class="group-label">מגדר *</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="gender" value="זכר"> זכר</label>
+              <label class="radio-opt"><input type="radio" name="gender" value="נקבה"> נקבה</label>
+            </div>
+            <div class="group-error" id="err-gender">נא לבחור מגדר</div>
+          </div>
+
+          <div class="field" id="f-idNumber">
+            <input type="text" id="idNumber" name="idNumber" inputmode="numeric" maxlength="9">
+            <label for="idNumber">מספר תעודת זהות</label>
+            <div class="field-error">נא להזין מספר תעודת זהות ישראלי תקין (9 ספרות)</div>
+          </div>
+
+          <div class="field" id="f-birthCountry">
+            <select id="birthCountry" name="birthCountry">
+              <option value=""></option>
+            </select>
+            <label for="birthCountry">ארץ לידה</label>
+            <div class="field-error">נא לבחור ארץ לידה</div>
+          </div>
+
+          <div class="field" id="f-birthDate">
+            <input type="text" id="birthDate" name="birthDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <label for="birthDate">תאריך לידה (dd/mm/yyyy)</label>
+            <div class="field-error">נא להזין תאריך לידה תקין (גיל מינימלי 18)</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">אזרחות ועלייה</div>
+
+          <div class="field" id="f-citizenship">
+            <select id="citizenship" name="citizenship">
+              <option value=""></option>
+            </select>
+            <label for="citizenship">אזרחות</label>
+            <div class="field-error">נא לבחור אזרחות</div>
+          </div>
+
+          <div class="radio-group">
+            <div class="group-label">אזרחות נוספת?</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="isAdditionalCitizenship" value="true"> כן</label>
+              <label class="radio-opt"><input type="radio" name="isAdditionalCitizenship" value="false" checked> לא</label>
+            </div>
+          </div>
+
+          <div class="cond" id="cond-additionalCitizenship">
+            <div class="field" id="f-additionalCitizenship">
+              <select id="additionalCitizenship" name="additionalCitizenship">
+                <option value=""></option>
+              </select>
+              <label for="additionalCitizenship">אזרחות נוספת</label>
+              <div class="field-error">נא לבחור אזרחות נוספת (שונה מהאזרחות הראשית)</div>
+            </div>
+          </div>
+
+          <!-- aliyaDate: shown if birthCountry != ישראל -->
+          <div class="cond" id="cond-aliyaDate">
+            <div class="field" id="f-aliyaDate">
+              <input type="text" id="aliyaDate" name="aliyaDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <label for="aliyaDate">תאריך עלייה (dd/mm/yyyy)</label>
+              <div class="field-error">נא להזין תאריך עלייה תקין</div>
+            </div>
+          </div>
+
+          <!-- SSN: shown if citizenship = USA -->
+          <div class="cond" id="cond-ssn">
+            <div class="field" id="f-ssn">
+              <input type="text" id="ssn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11">
+              <label for="ssn">מספר ביטוח לאומי אמריקאי (SSN)</label>
+              <div class="field-error">נא להזין מספר SSN תקני</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="section">
+          <div class="section-title">מקצוע ומגורים</div>
+
+          <div class="field" id="f-occupation">
+            <input type="text" id="occupation" name="occupation" maxlength="20">
+            <label for="occupation">עיסוק</label>
+            <div class="field-error">נא להזין עיסוק (2-20 תווים)</div>
+          </div>
+
+          <div class="field" id="f-residencyCountry">
+            <select id="residencyCountry" name="residencyCountry">
+              <option value=""></option>
+            </select>
+            <label for="residencyCountry">ארץ מגורים</label>
+            <div class="field-error">נא לבחור ארץ מגורים</div>
+          </div>
+        </div>
+
+      </div><!-- /page-1 -->
+
+      <!-- Page 2: Contact + addresses -->
+      <div id="page-2" data-page="2" hidden>
+
+        <div class="section">
+          <div class="section-title">פרטי קשר</div>
+
+          <div class="field" id="f-email">
+            <input type="email" id="email" name="email" autocomplete="email">
+            <label for="email">כתובת דוא"ל</label>
+            <div class="field-error">נא להזין כתובת דוא"ל תקינה</div>
+          </div>
+
+          <div class="field" id="f-phoneNumber">
+            <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="05X-XXXXXXX" maxlength="12">
+            <label for="phoneNumber">טלפון נייד ישראלי</label>
+            <div class="field-error">נא להזין מספר טלפון נייד ישראלי תקין (05X)</div>
+          </div>
+        </div>
+
+        <!-- Israel address: shown if residencyCountry = ישראל -->
+        <div class="cond section" id="cond-israelAddress">
+          <div class="section-title">כתובת מגורים בישראל</div>
+
+          <div class="field" id="f-city">
+            <input type="text" id="city" name="israelAddress.city" autocomplete="address-level2">
+            <label for="city">עיר</label>
+            <div class="field-error">נא להזין עיר</div>
+          </div>
+
+          <div class="field" id="f-street">
+            <input type="text" id="street" name="israelAddress.street" autocomplete="street-address">
+            <label for="street">רחוב</label>
+            <div class="field-error">נא להזין רחוב</div>
+          </div>
+
+          <div class="field" id="f-houseNumber">
+            <input type="text" id="houseNumber" name="israelAddress.houseNumber" maxlength="10">
+            <label for="houseNumber">מספר בית</label>
+            <div class="field-error">נא להזין מספר בית</div>
+          </div>
+
+          <div class="field" id="f-postalCode">
+            <input type="text" id="postalCode" name="israelAddress.postalCode" inputmode="numeric" maxlength="7">
+            <label for="postalCode">מיקוד (אופציונלי)</label>
+          </div>
+        </div>
+
+        <!-- Non-Israel address hint -->
+        <div class="cond section" id="cond-nonIsraelAddress">
+          <div class="section-title">כתובת מגורים</div>
+          <div class="section-hint">הכתובת בחו"ל תוזן בפורמט אנגלי בהמשך</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">פרטים באנגלית</div>
+          <div class="section-hint">שם ממסמכי הדרכון</div>
+
+          <div class="field" id="f-enFirstName">
+            <input type="text" id="enFirstName" name="englishDetails.firstName" autocomplete="given-name" dir="ltr" style="text-align:left">
+            <label for="enFirstName" style="right:auto;left:0;transform-origin:left top">First name (English)</label>
+            <div class="field-error">נא להזין שם פרטי באנגלית (2-20 תווים)</div>
+          </div>
+
+          <div class="field" id="f-enLastName">
+            <input type="text" id="enLastName" name="englishDetails.lastName" autocomplete="family-name" dir="ltr" style="text-align:left">
+            <label for="enLastName" style="right:auto;left:0;transform-origin:left top">Last name (English)</label>
+            <div class="field-error">נא להזין שם משפחה באנגלית (2-20 תווים)</div>
+          </div>
+
+          <div class="field" id="f-enCity">
+            <input type="text" id="enCity" name="englishDetails.englishAddress.city" dir="ltr" style="text-align:left">
+            <label for="enCity" style="right:auto;left:0;transform-origin:left top">City (English)</label>
+            <div class="field-error">נא להזין עיר באנגלית</div>
+          </div>
+
+          <div class="field" id="f-enStreet">
+            <input type="text" id="enStreet" name="englishDetails.englishAddress.street" dir="ltr" style="text-align:left">
+            <label for="enStreet" style="right:auto;left:0;transform-origin:left top">Street (English)</label>
+            <div class="field-error">נא להזין רחוב באנגלית</div>
+          </div>
+        </div>
+
+      </div><!-- /page-2 -->
+
+      <!-- Page 3: Section 15A Qualification -->
+      <div id="page-3" data-page="3" hidden>
+
+        <div class="section">
+          <div class="section-title">כשירות משקיע (סעיף 15א)</div>
+          <!--
+            PARK_VERBATIM_QUALIFICATION_15A: the three labels below are
+            structural descriptors only. The verbatim 15A clause text
+            (thresholds, amounts) is a Noa/counsel decision.
+            Do NOT ship to LPs without Noa sign-off on exact wording.
+          -->
+          <div class="legal-text">
+            אנא בחרו את הקטגוריה המתאימה לכם מסעיף 15א לחוק ניירות ערך.
+          </div>
+
+          <div class="radio-group" id="rg-qualification">
+            <div class="group-label">בחרו אחת מהאפשרויות הבאות *</div>
+            <div class="radio-opts">
+              <label class="radio-opt">
+                <input type="radio" name="qualificationType" value="isLiquidAssets">
+                <!-- PARK: verbatim 15A(1) liquid assets threshold text here -->
+                <span>נכסים נזילים (סעיף 15א(1)) - רף נכסים נזילים כנדרש בחוק</span>
+              </label>
+              <label class="radio-opt">
+                <input type="radio" name="qualificationType" value="isIncomeLevel">
+                <!-- PARK: verbatim 15A(2) income level text here -->
+                <span>רמת הכנסה (סעיף 15א(2)) - רף הכנסה שנתית כנדרש בחוק</span>
+              </label>
+              <label class="radio-opt">
+                <input type="radio" name="qualificationType" value="isBoth">
+                <!-- PARK: verbatim 15A(1)+(2) combined text here -->
+                <span>שני הקריטריונים - נכסים נזילים ורמת הכנסה</span>
+              </label>
+              <label class="radio-opt">
+                <input type="radio" name="qualificationType" value="isNotQualified">
+                <span>אינני משקיע כשיר</span>
+              </label>
+            </div>
+            <div class="group-error" id="err-qualification">נא לבחור לפחות אפשרות אחת</div>
+          </div>
+
+          <!-- isSignedQualification: shown if isLiquidAssets / isIncomeLevel / isBoth -->
+          <div class="cond" id="cond-signedQualification">
+            <div class="radio-group" id="rg-signedQualification">
+              <div class="group-label">האם ברשותך טופס הצהרת כשירות חתום? *</div>
+              <div class="radio-opts horizontal">
+                <label class="radio-opt"><input type="radio" name="isSignedQualification" value="כן"> כן, יש לי טופס חתום</label>
+                <label class="radio-opt"><input type="radio" name="isSignedQualification" value="לא"> לא, אפנה לעורך דין</label>
+              </div>
+              <div class="group-error" id="err-signedQualification">נא לבחור</div>
+            </div>
+          </div>
+
+          <!-- liquidDate: shown if isLiquidAssets -->
+          <div class="cond" id="cond-liquidDate">
+            <div class="field" id="f-liquidDate">
+              <input type="text" id="liquidDate" name="qualification.lawyerApprove.liquidDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <label for="liquidDate">תאריך אישור נכסים (3 חודשים אחרונים)</label>
+              <div class="field-error">נא להזין תאריך תקין בטווח 3 החודשים האחרונים</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-3 -->
+
+      <!-- Page 4: Investment details -->
+      <div id="page-4" data-page="4" hidden>
+
+        <div class="section">
+          <div class="section-title">פרטי השקעה</div>
+
+          <div class="field" id="f-investedAmount">
+            <input type="text" id="investedAmount" name="investedAmount" inputmode="numeric" placeholder="מעל 50,000">
+            <label for="investedAmount">סכום השקעה (מעל 50,000)</label>
+            <div class="field-error">סכום ההשקעה חייב לעלות על 50,000</div>
+          </div>
+
+          <div class="radio-group" id="rg-currency">
+            <div class="group-label">מטבע *</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="investedCurrency" value="שקל"> שקל</label>
+              <label class="radio-opt"><input type="radio" name="investedCurrency" value="דולר"> דולר</label>
+              <label class="radio-opt"><input type="radio" name="investedCurrency" value="יורו"> יורו</label>
+            </div>
+            <div class="group-error" id="err-currency">נא לבחור מטבע</div>
+          </div>
+
+          <div class="field" id="f-investmentDate">
+            <input type="text" id="investmentDate" name="investmentDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <label for="investmentDate">תאריך השקעה</label>
+            <div class="field-error">נא להזין תאריך עתידי תקין</div>
+          </div>
+
+        </div>
+
+        <div class="section">
+          <div class="section-title">פרטי חשבון בנק</div>
+
+          <!-- Israel bank dropdown: shown if residencyCountry = ישראל -->
+          <div class="cond" id="cond-bankIsrael">
+            <div class="field" id="f-bankNameIsrael">
+              <select id="bankNameIsrael" name="bankDetails.bankNameIsrael">
+                <option value=""></option>
+                <option value="בנק לאומי">בנק לאומי</option>
+                <option value="בנק הפועלים">בנק הפועלים</option>
+                <option value="בנק דיסקונט">בנק דיסקונט</option>
+                <option value="בנק מזרחי-טפחות">בנק מזרחי-טפחות</option>
+                <option value="הבנק הבינלאומי הראשון לישראל">הבנק הבינלאומי הראשון לישראל</option>
+                <option value="בנק אוצר החייל">בנק אוצר החייל</option>
+                <option value="בנק יהב">בנק יהב</option>
+                <option value="בנק מרכנתיל דיסקונט">בנק מרכנתיל דיסקונט</option>
+                <option value="בנק ירושלים">בנק ירושלים</option>
+                <option value="בנק פועלי אגודת ישראל">בנק פועלי אגודת ישראל</option>
+                <option value="One Zero Digital Bank">One Zero Digital Bank</option>
+                <option value="בנק אחר">בנק אחר</option>
+              </select>
+              <label for="bankNameIsrael">שם בנק</label>
+              <div class="field-error">נא לבחור בנק</div>
+            </div>
+            <div class="field" id="f-branchNumberIsrael">
+              <input type="text" id="branchNumberIsrael" name="bankDetails.branchNumberIsrael" inputmode="numeric" maxlength="6">
+              <label for="branchNumberIsrael">מספר סניף</label>
+              <div class="field-error">נא להזין מספר סניף</div>
+            </div>
+          </div>
+
+          <!-- Non-Israel bank: shown if residencyCountry != ישראל -->
+          <div class="cond" id="cond-bankForeign">
+            <div class="field" id="f-bankName">
+              <input type="text" id="bankName" name="bankDetails.bankName" dir="ltr" style="text-align:left">
+              <label for="bankName" style="right:auto;left:0;transform-origin:left top">Bank name</label>
+              <div class="field-error">נא להזין שם בנק</div>
+            </div>
+            <div class="field" id="f-branchNumber">
+              <input type="text" id="branchNumber" name="bankDetails.branchNumber" dir="ltr" style="text-align:left">
+              <label for="branchNumber" style="right:auto;left:0;transform-origin:left top">Branch / Sort code</label>
+              <div class="field-error">נא להזין מספר סניף</div>
+            </div>
+          </div>
+
+          <div class="field" id="f-accountNumber">
+            <input type="text" id="accountNumber" name="bankDetails.accountNumber" inputmode="numeric" maxlength="15">
+            <label for="accountNumber">מספר חשבון</label>
+            <div class="field-error">נא להזין מספר חשבון (ספרות בלבד)</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">מקור הכסף</div>
+
+          <div class="radio-group" id="rg-moneySource">
+            <div class="group-label">מקור כספי ההשקעה *</div>
+            <div class="radio-opts">
+              <label class="radio-opt"><input type="radio" name="moneySource" value="שכר עבודה"> שכר עבודה</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="הכנסה עסקית"> הכנסה עסקית</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="חיסכונות"> חיסכונות</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="ירושה"> ירושה</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="מכירת נכסים"> מכירת נכסים</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="השקעות"> הכנסות מהשקעות</label>
+              <label class="radio-opt"><input type="radio" name="moneySource" value="אחר"> אחר</label>
+            </div>
+            <div class="group-error" id="err-moneySource">נא לבחור מקור הכסף</div>
+          </div>
+
+          <div class="cond" id="cond-otherSource">
+            <div class="field" id="f-otherSource">
+              <textarea id="otherSource" name="otherSource" rows="2"></textarea>
+              <label for="otherSource">פרטו את מקור הכסף</label>
+              <div class="field-error">נא לפרט את מקור הכסף</div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="section">
+          <div class="section-title">פעילות ציבורית ומשפטית</div>
+
+          <div class="radio-group" id="rg-pep">
+            <div class="group-label">האם אתם פעיל/ת פוליטי/ת או בעל/ת תפקיד ציבורי בכיר? *</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="publicOrPoliticalActivity" value="כן"> כן</label>
+              <label class="radio-opt"><input type="radio" name="publicOrPoliticalActivity" value="לא"> לא</label>
+            </div>
+            <div class="group-error" id="err-pep">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-pepDesc">
+            <div class="field" id="f-pepDesc">
+              <textarea id="pepDesc" name="publicOrPoliticalActivityDescription" rows="2"></textarea>
+              <label for="pepDesc">פרטים על הפעילות</label>
+              <div class="field-error">נא לפרט</div>
+            </div>
+          </div>
+
+          <div class="radio-group" id="rg-legal">
+            <div class="group-label">האם אתם מעורב/ת בהליכים משפטיים או מנהליים? *</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="legalOrAdministrativeProceedings" value="כן"> כן</label>
+              <label class="radio-opt"><input type="radio" name="legalOrAdministrativeProceedings" value="לא"> לא</label>
+            </div>
+            <div class="group-error" id="err-legal">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-legalDesc">
+            <div class="field" id="f-legalDesc">
+              <textarea id="legalDesc" name="legalOrAdministrativeProceedingsDescription" rows="2"></textarea>
+              <label for="legalDesc">פרטים על ההליכים</label>
+              <div class="field-error">נא לפרט</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-4 -->
+
+      <!-- Page 5: Beneficiary -->
+      <div id="page-5" data-page="5" hidden>
+
+        <div class="section">
+          <div class="section-title">הצהרת נהנה</div>
+          <div class="legal-text">ההשקעה בקרן מבוצעת עבור:</div>
+
+          <div class="radio-group" id="rg-beneficiary">
+            <div class="radio-opts">
+              <label class="radio-opt"><input type="radio" name="beneficiaryType" value="isForMyself"> בעבור עצמי בלבד</label>
+              <label class="radio-opt"><input type="radio" name="beneficiaryType" value="isUnknownBeneficies"> בעבור נהנה שאינו ידוע לי</label>
+              <label class="radio-opt"><input type="radio" name="beneficiaryType" value="isBeneficiaries"> בעבור נהנה ספציפי</label>
+            </div>
+            <div class="group-error" id="err-beneficiary">שדה חובה - נא לבחור</div>
+          </div>
+
+          <!-- Unknown beneficiary reason -->
+          <div class="cond" id="cond-reasonUnknown">
+            <div class="field" id="f-reasonUnknown">
+              <textarea id="reasonUnknown" name="reasonUnknown" rows="2"></textarea>
+              <label for="reasonUnknown">סיבה לאי-ידיעת זהות הנהנה</label>
+              <div class="field-error">נא לפרט את הסיבה</div>
+            </div>
+          </div>
+
+          <!-- Named beneficiary -->
+          <div class="cond" id="cond-beneficiariesDetails">
+            <div class="field" id="f-benFullName">
+              <input type="text" id="benFullName" name="beneficiariesDetails.beneficiariesArray.0.fullName">
+              <label for="benFullName">שם מלא של הנהנה (עברית)</label>
+              <div class="field-error">נא להזין שם מלא (2-35 תווים)</div>
+            </div>
+            <div class="field" id="f-benIdOrCompany">
+              <input type="text" id="benIdOrCompany" name="beneficiariesDetails.beneficiariesArray.0.idOrCompanyNumber">
+              <label for="benIdOrCompany">מספר תעודת זהות / ח.פ.</label>
+              <div class="field-error">נא להזין מספר זיהוי</div>
+            </div>
+            <div class="field" id="f-benBirthDate">
+              <input type="text" id="benBirthDate" name="beneficiariesDetails.beneficiariesArray.0.birthOrIncorporationDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <label for="benBirthDate">תאריך לידה / התאגדות</label>
+              <div class="field-error">נא להזין תאריך תקין</div>
+            </div>
+            <div class="field" id="f-benCountry">
+              <select id="benCountry" name="beneficiariesDetails.beneficiariesArray.0.country">
+                <option value=""></option>
+              </select>
+              <label for="benCountry">מדינת אזרחות / התאגדות</label>
+              <div class="field-error">נא לבחור מדינה</div>
+            </div>
+            <div class="field" id="f-connectionBetweenBeneficiaries">
+              <textarea id="connectionBetweenBeneficiaries" name="beneficiariesDetails.connectionBetweenBeneficiaries" rows="2"></textarea>
+              <label for="connectionBetweenBeneficiaries">קשר בין הנהנה לבין המשקיע</label>
+              <div class="field-error">נא לתאר את הקשר</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-5 -->
+
+      <!-- Page 6: Tax residency (CRS) -->
+      <div id="page-6" data-page="6" hidden>
+
+        <div class="section">
+          <div class="section-title">הצהרת תושבות לצרכי מס (CRS)</div>
+
+          <div class="radio-group" id="rg-taxCountry">
+            <div class="group-label">מדינת תושבות לצרכי מס *</div>
+            <div class="radio-opts">
+              <label class="radio-opt"><input type="radio" name="taxCountry" value="ישראל בלבד"> ישראל בלבד</label>
+              <label class="radio-opt"><input type="radio" name="taxCountry" value="ישראל ומדינה אחרת"> ישראל ומדינה נוספת</label>
+              <label class="radio-opt"><input type="radio" name="taxCountry" value="מדינה אחרת"> מדינה אחרת (לא ישראל)</label>
+            </div>
+            <div class="group-error" id="err-taxCountry">נא לבחור</div>
+          </div>
+
+          <!-- Israel + other countries array -->
+          <div class="cond" id="cond-taxIsraelAndOther">
+            <div class="section-hint">פרטי מדינת התושבות הנוספת</div>
+            <div class="field" id="f-taxOtherCountry1">
+              <select id="taxOtherCountry1" name="taxResidency.israelAndOtherCountries.countriesArray.0.country">
+                <option value=""></option>
+              </select>
+              <label for="taxOtherCountry1">מדינה נוספת</label>
+              <div class="field-error">נא לבחור מדינה</div>
+            </div>
+            <div class="field" id="f-taxOtherTin1">
+              <input type="text" id="taxOtherTin1" name="taxResidency.israelAndOtherCountries.countriesArray.0.tin" inputmode="numeric">
+              <label for="taxOtherTin1">מספר זיהוי לצרכי מס (TIN)</label>
+              <div class="field-error">נא להזין מספר TIN (ספרות בלבד)</div>
+            </div>
+          </div>
+
+          <!-- Other countries only (not Israel) -->
+          <div class="cond" id="cond-taxOtherOnly">
+            <div class="section-hint">פרטי מדינת התושבות לצרכי מס</div>
+            <div class="field" id="f-taxOtherOnlyCountry1">
+              <select id="taxOtherOnlyCountry1" name="taxResidency.otherCountries.countriesArray.0.country">
+                <option value=""></option>
+              </select>
+              <label for="taxOtherOnlyCountry1">מדינת תושבות</label>
+              <div class="field-error">נא לבחור מדינה</div>
+            </div>
+            <div class="field" id="f-taxOtherOnlyTin1">
+              <input type="text" id="taxOtherOnlyTin1" name="taxResidency.otherCountries.countriesArray.0.tin" inputmode="numeric">
+              <label for="taxOtherOnlyTin1">מספר זיהוי לצרכי מס (TIN)</label>
+              <div class="field-error">נא להזין מספר TIN (ספרות בלבד)</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-6 -->
+
+      <!-- Page 7: Declarations + File uploads -->
+      <div id="page-7" data-page="7" hidden>
+
+        <div class="section">
+          <div class="section-title">הצהרות</div>
+
+          <div class="checkbox-group">
+            <label class="checkbox-opt" id="chk-nonBusinessIncome">
+              <input type="checkbox" name="taxDeclaration.isNonBusinessIncome" id="isNonBusinessIncome">
+              <span>אני מצהיר/ה שהכנסותיי אינן מהכנסות עסק (הכנסה פסיבית בלבד לצרכי מס)</span>
+            </label>
+            <div class="group-error" id="err-nonBusiness" style="margin-right:28px">נדרשת הצהרה</div>
+          </div>
+
+          <div class="checkbox-group" style="margin-top:16px">
+            <label class="checkbox-opt" id="chk-readClaims">
+              <input type="checkbox" name="isReadClaims" id="isReadClaims">
+              <!-- PARK_VERBATIM_READ_CLAIMS: exact declaration text for Noa/counsel review -->
+              <span>קראתי את כל תוכן הטופס ואני מאשר/ת שהפרטים שמסרתי נכונים ומלאים. אני מסכים/ה לאסוף את המידע ולהשתמש בו לצרכי ניהול הקרן</span>
+            </label>
+            <div class="group-error" id="err-readClaims" style="margin-right:28px">יש לאשר את ההצהרה</div>
+          </div>
+
+        </div>
+
+        <div class="section">
+          <div class="section-title">העלאת מסמכים</div>
+          <div class="section-hint">כל הקבצים מאובטחים ומועברים ישירות לקרן. PDF, JPG, PNG מתקבלים (מקסימום 10MB לקובץ)</div>
+
+          <!-- ID documents: single vs biometric -->
+          <div class="radio-group" style="margin-bottom:16px">
+            <div class="group-label">סוג מסמך זהות</div>
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="isBiometric" value="false" checked> תעודת זהות (דף אחד)</label>
+              <label class="radio-opt"><input type="radio" name="isBiometric" value="true"> תעודת זהות ביומטרית (קדמי + אחורי)</label>
+            </div>
+          </div>
+
+          <!-- Non-biometric: single ID -->
+          <div id="cond-idSingle">
+            <label class="upload-card" id="uc-id" for="file-id">
+              <span class="upload-card-icon">🪪</span>
+              <div class="upload-card-body">
+                <p class="upload-card-title">תעודת זהות</p>
+                <p class="upload-card-hint">PDF, JPG או PNG</p>
+                <p class="upload-card-filename" id="fn-id"></p>
+              </div>
+              <input type="file" id="file-id" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+          </div>
+          <div class="upload-error" id="err-idSingle">נדרשת העלאת תעודת זהות</div>
+
+          <!-- Biometric: front + back -->
+          <div id="cond-idBiometric" hidden>
+            <label class="upload-card" id="uc-idFront" for="file-idFront">
+              <span class="upload-card-icon">🪪</span>
+              <div class="upload-card-body">
+                <p class="upload-card-title">תעודת זהות - צד קדמי</p>
+                <p class="upload-card-hint">PDF, JPG או PNG</p>
+                <p class="upload-card-filename" id="fn-idFront"></p>
+              </div>
+              <input type="file" id="file-idFront" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+            <label class="upload-card" id="uc-idBack" for="file-idBack">
+              <span class="upload-card-icon">🪪</span>
+              <div class="upload-card-body">
+                <p class="upload-card-title">תעודת זהות - צד אחורי</p>
+                <p class="upload-card-hint">PDF, JPG או PNG</p>
+                <p class="upload-card-filename" id="fn-idBack"></p>
+              </div>
+              <input type="file" id="file-idBack" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+          </div>
+          <div class="upload-error" id="err-idBiometric">נדרשת העלאת שני צידי תעודת הזהות</div>
+
+          <!-- Passport -->
+          <label class="upload-card" id="uc-passport" for="file-passport">
+            <span class="upload-card-icon">🛂</span>
+            <div class="upload-card-body">
+              <p class="upload-card-title">דרכון</p>
+              <p class="upload-card-hint">PDF, JPG או PNG</p>
+              <p class="upload-card-filename" id="fn-passport"></p>
+            </div>
+            <input type="file" id="file-passport" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="upload-error" id="err-passport">נדרשת העלאת דרכון</div>
+
+          <!-- Account management approval -->
+          <label class="upload-card" id="uc-accountMgmt" for="file-accountMgmt">
+            <span class="upload-card-icon">📄</span>
+            <div class="upload-card-body">
+              <p class="upload-card-title">אישור ניהול חשבון</p>
+              <p class="upload-card-hint">אישור מהבנק על ניהול חשבון (PDF, JPG)</p>
+              <p class="upload-card-filename" id="fn-accountMgmt"></p>
+            </div>
+            <input type="file" id="file-accountMgmt" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="upload-error" id="err-accountMgmt">נדרשת העלאת אישור ניהול חשבון</div>
+
+          <!-- Pre-signed qualification: shown if isSignedQualification = כן -->
+          <div class="cond" id="cond-qualificationUpload">
+            <label class="upload-card" id="uc-qualification" for="file-qualification">
+              <span class="upload-card-icon">⚖️</span>
+              <div class="upload-card-body">
+                <p class="upload-card-title">טופס הצהרת כשירות חתום</p>
+                <p class="upload-card-hint">PDF של טופס הכשירות החתום</p>
+                <p class="upload-card-filename" id="fn-qualification"></p>
+              </div>
+              <input type="file" id="file-qualification" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+            <div class="upload-error" id="err-qualification">נדרשת העלאת טופס כשירות חתום</div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-7 -->
+
+      <!-- Page 8: Additional investors gate -->
+      <div id="page-8" data-page="8" hidden>
+
+        <div class="section">
+          <div class="section-title">משקיעים נוספים</div>
+          <div class="legal-text">האם יש משקיעים נוספים בהצטרפות זו (בן/בת זוג, שותף)?</div>
+
+          <div class="radio-group" id="rg-additionalInvestors">
+            <div class="radio-opts horizontal">
+              <label class="radio-opt"><input type="radio" name="additionalInvestors" value="לא" checked> לא, אני המשקיע היחיד</label>
+              <label class="radio-opt"><input type="radio" name="additionalInvestors" value="כן"> כן, יש משקיעים נוספים</label>
+            </div>
+            <div class="group-error" id="err-additionalInvestors">נא לבחור</div>
+          </div>
+
+          <!-- PARK: multi-investor form pages not yet built -->
+          <div class="cond" id="cond-additionalInvestorsNote">
+            <div style="background:#f0f4f8;border-radius:8px;padding:16px;margin-top:8px;font-size:14px;color:var(--navy-body);">
+              <strong>הערה:</strong> כרגע ניתן להשלים הצטרפות עם משקיע יחיד דרך הטופס הזה. לתהליך עם מספר משקיעים, אנא צרו קשר עם הקרן ישירות.
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /page-8 -->
+
+      <!-- Page 9: Review -->
+      <div id="page-9" data-page="9" hidden>
+
+        <div class="section">
+          <div class="section-title">סיכום ואישור</div>
+          <div class="section-hint">אנא בדקו את הפרטים לפני הגשה. לאחר ההגשה תישלח אליכם קישור לחתימה.</div>
+
+          <div class="review-section">
+            <h3>פרטים אישיים</h3>
+            <div class="review-grid" id="rv-personal"></div>
+          </div>
+          <div class="review-section">
+            <h3>פרטי השקעה</h3>
+            <div class="review-grid" id="rv-investment"></div>
+          </div>
+          <div class="review-section">
+            <h3>מסמכים שהועלו</h3>
+            <div class="review-grid" id="rv-files"></div>
+          </div>
+        </div>
+
+      </div><!-- /page-9 -->
+
+    </div><!-- /card -->
+
+    <!-- Footer nav -->
+    <div class="footer" id="footer">
+      <button class="btn btn-secondary" id="btn-prev" hidden>חזור</button>
+      <button class="btn btn-primary" id="btn-next">המשך</button>
+      <button class="btn btn-primary" id="btn-submit" hidden>הגשה ומעבר לחתימה</button>
+    </div>
+    <div class="status-line" id="status-line"></div>
+
+  </div><!-- /shell-inner -->
+</div><!-- /shell -->
+
+<script>
+(function () {
+  'use strict';
+
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+  var ISRAEL_COUNTRIES = [
+    'ישראל','ארצות הברית','קנדה','בריטניה','גרמניה','צרפת','איטליה','ספרד','הולנד','שווייץ',
+    'אוסטרליה','ניו זילנד','יפן','סינגפור','הונג קונג','ברזיל','אוקראינה','רוסיה','טורקיה',
+    'מקסיקו','דרום אפריקה','הודו','סין','פולין','שוודיה','נורווגיה','דנמרק','פינלנד',
+    'בלגיה','אוסטריה','פורטוגל','יוון','צ\'כיה','הונגריה','רומניה','בולגריה','קרואטיה',
+    'סרביה','סלובניה','אסטוניה','לטביה','ליטא','אירלנד','לוקסמבורג','קפריסין','מלטה',
+    'ליכטנשטיין','מונקו','אנדורה','אחר'
+  ];
+  var TOTAL_PAGES = 9;
+
+  /* State */
+  var currentPage = 1;
+  var CFG = {};
+  var uploadedFiles = {};
+  var mondayItemId = null;
+  var resumeToken = null;
+
+  /* DOM refs */
+  var greeting = document.getElementById('page-greeting');
+  var shell = document.getElementById('shell');
+  var btnStart = document.getElementById('btn-start');
+  var btnPrev = document.getElementById('btn-prev');
+  var btnNext = document.getElementById('btn-next');
+  var btnSubmit = document.getElementById('btn-submit');
+  var statusLine = document.getElementById('status-line');
+  var progLabel = document.getElementById('prog-label');
+  var progBar = document.getElementById('prog-bar');
+  var pageTitle = document.getElementById('page-title');
+
+  /* Bootstrap */
+  var p = new URLSearchParams(location.search);
+  mondayItemId = p.get('item') || null;
+  resumeToken = p.get('t') || p.get('token') || null;
+
+  if (p.get('type') === 'entity') {
+    window.location.href = '/israel-entity.html' + location.search;
+  }
+
+  /* Load brand assets + config from GAS (synchronous at startup) */
+  (function loadConfig() {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET',
+        GAS_URL + '?api=config' +
+        '&t='    + encodeURIComponent(resumeToken || '') +
+        '&lane=israeli',
+        false
+      );
+      xhr.send(null);
+      if (xhr.status === 200) {
+        var c = JSON.parse(xhr.responseText);
+        if (c && c.ok) {
+          CFG = c;
+          if (!mondayItemId && c.mondayItemId) mondayItemId = String(c.mondayItemId);
+          if (c.brandLogoUrl) {
+            document.getElementById('logo-greeting').src = c.brandLogoUrl;
+            document.getElementById('logo-shell').src = c.brandLogoUrl;
+          }
+          if (c.brandBgUrl) {
+            var s = document.createElement('style');
+            s.textContent = 'body::before{background-image:url("' + c.brandBgUrl + '")}';
+            document.head.appendChild(s);
+          }
+          if (c.prefill) applyPrefill(c.prefill);
+        }
+      }
+    } catch (err) {
+      if (window.console) console.warn('[IsraelForm] config load failed:', err);
+    }
+  })();
+
+  /* Populate country selects */
+  (function populateSelects() {
+    var sels = document.querySelectorAll(
+      'select[name="birthCountry"], select[name="citizenship"], select[name="additionalCitizenship"], ' +
+      'select[name="residencyCountry"], select[name="beneficiariesDetails.beneficiariesArray.0.country"], ' +
+      'select[name="taxResidency.israelAndOtherCountries.countriesArray.0.country"], ' +
+      'select[name="taxResidency.otherCountries.countriesArray.0.country"]'
+    );
+    Array.prototype.forEach.call(sels, function (sel) {
+      ISRAEL_COUNTRIES.forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        sel.appendChild(o);
+      });
+    });
+  })();
+
+  /* Greeting -> shell */
+  btnStart.addEventListener('click', function () {
+    greeting.hidden = true;
+    shell.hidden = false;
+    showPage(1);
+  });
+
+  /* Conditional visibility */
+  function updateConditionals() {
+    var birth = val('birthCountry');
+    var citizenship = val('citizenship');
+    var addCitz = val('isAdditionalCitizenship') === 'true';
+    var residency = val('residencyCountry');
+    var qualType = val('qualificationType');
+    var isQualified = (qualType === 'isLiquidAssets' || qualType === 'isIncomeLevel' || qualType === 'isBoth');
+    var signedQual = val('isSignedQualification');
+    var moneySource = val('moneySource');
+    var pep = val('publicOrPoliticalActivity');
+    var legal = val('legalOrAdministrativeProceedings');
+    var benefType = val('beneficiaryType');
+    var taxCountry = val('taxCountry');
+    var isBiometric = val('isBiometric') === 'true';
+    var addInv = val('additionalInvestors') === 'כן';
+
+    show('cond-additionalCitizenship', addCitz);
+    show('cond-aliyaDate', birth && birth !== 'ישראל');
+    var isUS = citizenship === 'ארצות הברית' || (addCitz && val('additionalCitizenship') === 'ארצות הברית');
+    show('cond-ssn', isUS);
+
+    show('cond-israelAddress', residency === 'ישראל');
+    show('cond-nonIsraelAddress', !!(residency && residency !== 'ישראל'));
+
+    show('cond-signedQualification', isQualified);
+    show('cond-liquidDate', qualType === 'isLiquidAssets');
+    show('cond-qualificationUpload', isQualified && signedQual === 'כן');
+
+    show('cond-bankIsrael', residency === 'ישראל');
+    show('cond-bankForeign', !!(residency && residency !== 'ישראל'));
+
+    show('cond-otherSource', moneySource === 'אחר');
+    show('cond-pepDesc', pep === 'כן');
+    show('cond-legalDesc', legal === 'כן');
+
+    show('cond-reasonUnknown', benefType === 'isUnknownBeneficies');
+    show('cond-beneficiariesDetails', benefType === 'isBeneficiaries');
+
+    show('cond-taxIsraelAndOther', taxCountry === 'ישראל ומדינה אחרת');
+    show('cond-taxOtherOnly', taxCountry === 'מדינה אחרת');
+
+    var idSingle = document.getElementById('cond-idSingle');
+    var idBio = document.getElementById('cond-idBiometric');
+    if (idSingle) idSingle.hidden = isBiometric;
+    if (idBio) idBio.hidden = !isBiometric;
+
+    show('cond-additionalInvestorsNote', addInv);
+
+    /* Floating label: mark has-value */
+    document.querySelectorAll('.field input, .field select, .field textarea').forEach(function (el) {
+      var field = el.closest('.field');
+      if (field) field.classList.toggle('has-value', !!el.value);
+    });
+  }
+
+  function show(id, visible) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('show', !!visible);
+  }
+
+  function val(name) {
+    var el = document.querySelector('[name="' + name + '"]:checked');
+    if (el) return el.value;
+    el = document.querySelector('[name="' + name + '"]');
+    if (el && el.tagName !== 'INPUT') return el.value;
+    if (el) return el.value;
+    return '';
+  }
+
+  document.addEventListener('input', updateConditionals);
+  document.addEventListener('change', updateConditionals);
+  updateConditionals();
+
+  document.addEventListener('blur', function (e) {
+    var field = e.target && e.target.closest && e.target.closest('.field');
+    if (field) field.classList.toggle('has-value', !!e.target.value);
+  }, true);
+
+  /* File upload handling */
+  var fileSlots = {
+    'file-id':            { key: 'id',            cardId: 'uc-id',           fnId: 'fn-id' },
+    'file-idFront':       { key: 'idFront',        cardId: 'uc-idFront',      fnId: 'fn-idFront' },
+    'file-idBack':        { key: 'idBack',         cardId: 'uc-idBack',       fnId: 'fn-idBack' },
+    'file-passport':      { key: 'passport',       cardId: 'uc-passport',     fnId: 'fn-passport' },
+    'file-accountMgmt':   { key: 'accountMgmt',    cardId: 'uc-accountMgmt',  fnId: 'fn-accountMgmt' },
+    'file-qualification': { key: 'qualification',  cardId: 'uc-qualification',fnId: 'fn-qualification' }
+  };
+
+  Object.keys(fileSlots).forEach(function (inputId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { setStatus('הקובץ גדול מדי (מקסימום 10MB)', 'error'); return; }
+      var slot = fileSlots[inputId];
+      var card = document.getElementById(slot.cardId);
+      var fn = document.getElementById(slot.fnId);
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var base64 = ev.target.result.split(',')[1];
+        uploadedFiles[slot.key] = { base64: base64, mimeType: file.type, filename: file.name };
+        if (card) card.classList.add('has-file');
+        if (fn) fn.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  /* Page navigation */
+  var pageTitles = {
+    1: 'פרטים אישיים',    2: 'יצירת קשר וכתובת',
+    3: 'כשירות משקיע',    4: 'פרטי השקעה',
+    5: 'הצהרת נהנה',      6: 'תושבות לצרכי מס',
+    7: 'מסמכים והצהרות', 8: 'משקיעים נוספים',
+    9: 'סיכום ואישור'
+  };
+
+  function showPage(n) {
+    for (var i = 1; i <= TOTAL_PAGES; i++) {
+      var pg = document.getElementById('page-' + i);
+      if (pg) pg.hidden = (i !== n);
+    }
+    currentPage = n;
+    progLabel.textContent = n + ' / ' + TOTAL_PAGES;
+    progBar.style.width = Math.round(n / TOTAL_PAGES * 100) + '%';
+    pageTitle.textContent = pageTitles[n] || '';
+    btnPrev.hidden = (n === 1);
+    btnNext.hidden = (n === TOTAL_PAGES);
+    btnSubmit.hidden = (n !== TOTAL_PAGES);
+    setStatus('');
+    updateConditionals();
+    if (n === TOTAL_PAGES) renderReview();
+    window.scrollTo(0, 0);
+  }
+
+  btnPrev.addEventListener('click', function () {
+    if (currentPage > 1) showPage(currentPage - 1);
+  });
+  btnNext.addEventListener('click', function () {
+    if (!validatePage(currentPage)) return;
+    if (currentPage < TOTAL_PAGES) showPage(currentPage + 1);
+  });
+
+  /* Validation */
+  var HE_RE = /^[א-ת׳״\s'"\-]+$/;
+  var EN_RE = /^[A-Za-z\s'\-]+$/;
+  var EN_DIGITS_RE = /^[A-Za-z0-9\s'\-,./]+$/;
+  var PHONE_RE = /^0[0-9]{1,2}[-\s]?[0-9]{7,8}$/;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  var DIGITS_RE = /^\d+$/;
+
+  function clearErrors(pageNum) {
+    var pg = document.getElementById('page-' + pageNum);
+    if (!pg) return;
+    pg.querySelectorAll('.field.invalid').forEach(function (f) { f.classList.remove('invalid'); });
+    pg.querySelectorAll('.group-error.visible').forEach(function (e) { e.classList.remove('visible'); });
+    pg.querySelectorAll('.upload-error.visible').forEach(function (e) { e.classList.remove('visible'); });
+  }
+
+  function fieldErr(id) { var f = document.getElementById(id); if (f) f.classList.add('invalid'); }
+  function groupErr(id) { var e = document.getElementById(id); if (e) e.classList.add('visible'); }
+  function uploadErr(id) { var e = document.getElementById(id); if (e) e.classList.add('visible'); }
+
+  function isDateValid(s, opts) {
+    var m = DATE_RE.exec(s);
+    if (!m) return false;
+    var dd = +m[1], mo = +m[2], yy = +m[3];
+    if (mo < 1 || mo > 12 || dd < 1 || dd > 31) return false;
+    var d = new Date(yy, mo - 1, dd);
+    if (d.getMonth() !== mo - 1 || d.getDate() !== dd) return false;
+    var now = new Date();
+    if (opts && opts.past && d >= now) return false;
+    if (opts && opts.future && d <= now) return false;
+    if (opts && opts.minAge18) {
+      var cutoff = new Date(now.getFullYear() - 18, now.getMonth(), now.getDate());
+      if (d > cutoff) return false;
+    }
+    if (opts && opts.within3m) {
+      var threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      if (d < threeMonthsAgo || d > now) return false;
+    }
+    return true;
+  }
+
+  function isIsraeliId(id) {
+    var s = String(id || '').replace(/[^0-9]/g, '');
+    if (s.length !== 9) return false;
+    var sum = 0;
+    for (var i = 0; i < 9; i++) {
+      var n = +s[i] * (i % 2 === 0 ? 1 : 2);
+      sum += n > 9 ? n - 9 : n;
+    }
+    return sum % 10 === 0;
+  }
+
+  function validatePage(n) {
+    clearErrors(n);
+    var ok = true;
+    function fail(id, isGroup, isUpload) {
+      ok = false;
+      if (isGroup) groupErr(id);
+      else if (isUpload) uploadErr(id);
+      else fieldErr(id);
+    }
+    function req(id, extra) {
+      var v = document.getElementById(id);
+      if (!v || !v.value.trim()) { fail('f-' + id); return false; }
+      if (extra && !extra(v.value.trim())) { fail('f-' + id); return false; }
+      return true;
+    }
+    function radio(name, errId) {
+      if (!val(name)) { fail(errId, true); return false; }
+      return true;
+    }
+
+    if (n === 1) {
+      req('firstName', function (v) { return HE_RE.test(v) && v.length >= 2 && v.length <= 20; });
+      req('lastName',  function (v) { return HE_RE.test(v) && v.length >= 2 && v.length <= 20; });
+      radio('gender', 'err-gender');
+      req('idNumber', isIsraeliId);
+      req('birthCountry');
+      req('birthDate', function (v) { return isDateValid(v, { past: true, minAge18: true }); });
+      req('citizenship');
+      if (val('isAdditionalCitizenship') === 'true') {
+        req('additionalCitizenship');
+        if (val('citizenship') === val('additionalCitizenship') && val('citizenship')) {
+          fieldErr('f-additionalCitizenship'); ok = false;
+        }
+      }
+      if (val('birthCountry') && val('birthCountry') !== 'ישראל') {
+        req('aliyaDate', function (v) { return isDateValid(v, { past: true }); });
+      }
+      var isUS = val('citizenship') === 'ארצות הברית' ||
+                 (val('isAdditionalCitizenship') === 'true' && val('additionalCitizenship') === 'ארצות הברית');
+      if (isUS) req('ssn', function (v) { return /^\d{3}-?\d{2}-?\d{4}$/.test(v.replace(/\s/g,'')); });
+      req('occupation', function (v) { return v.length >= 2 && v.length <= 20; });
+      req('residencyCountry');
+    }
+
+    if (n === 2) {
+      req('email', function (v) { return EMAIL_RE.test(v); });
+      req('phoneNumber', function (v) { return PHONE_RE.test(v.replace(/\s/g,'')); });
+      if (val('residencyCountry') === 'ישראל') {
+        req('city'); req('street'); req('houseNumber');
+      }
+      req('enFirstName', function (v) { return EN_RE.test(v) && v.length >= 2 && v.length <= 20; });
+      req('enLastName',  function (v) { return EN_RE.test(v) && v.length >= 2 && v.length <= 20; });
+      req('enCity',   function (v) { return EN_RE.test(v); });
+      req('enStreet', function (v) { return EN_DIGITS_RE.test(v); });
+    }
+
+    if (n === 3) {
+      var qt = val('qualificationType');
+      if (!qt) { fail('err-qualification', true); }
+      var isQualified = (qt === 'isLiquidAssets' || qt === 'isIncomeLevel' || qt === 'isBoth');
+      if (isQualified) radio('isSignedQualification', 'err-signedQualification');
+      if (qt === 'isLiquidAssets') req('liquidDate', function (v) { return isDateValid(v, { within3m: true }); });
+    }
+
+    if (n === 4) {
+      req('investedAmount', function (v) {
+        var amt = parseFloat(String(v).replace(/,/g,''));
+        return !isNaN(amt) && amt > 50000;
+      });
+      radio('investedCurrency', 'err-currency');
+      req('investmentDate', function (v) { return isDateValid(v, { future: true }); });
+      var residency = val('residencyCountry');
+      if (residency === 'ישראל') { req('bankNameIsrael'); req('branchNumberIsrael'); }
+      else if (residency) { req('bankName'); req('branchNumber'); }
+      req('accountNumber', function (v) { return DIGITS_RE.test(v); });
+      radio('moneySource', 'err-moneySource');
+      if (val('moneySource') === 'אחר') req('otherSource');
+      radio('publicOrPoliticalActivity', 'err-pep');
+      if (val('publicOrPoliticalActivity') === 'כן') req('pepDesc');
+      radio('legalOrAdministrativeProceedings', 'err-legal');
+      if (val('legalOrAdministrativeProceedings') === 'כן') req('legalDesc');
+    }
+
+    if (n === 5) {
+      var bt = val('beneficiaryType');
+      if (!bt) { fail('err-beneficiary', true); }
+      if (bt === 'isUnknownBeneficies') req('reasonUnknown');
+      if (bt === 'isBeneficiaries') {
+        req('benFullName', function (v) { return HE_RE.test(v) && v.length >= 2 && v.length <= 35; });
+        req('benIdOrCompany');
+        req('benBirthDate', function (v) { return isDateValid(v, { past: true }); });
+        req('benCountry');
+        req('connectionBetweenBeneficiaries');
+      }
+    }
+
+    if (n === 6) {
+      radio('taxCountry', 'err-taxCountry');
+      var tc = val('taxCountry');
+      if (tc === 'ישראל ומדינה אחרת') { req('taxOtherCountry1'); req('taxOtherTin1', function (v) { return DIGITS_RE.test(v); }); }
+      if (tc === 'מדינה אחרת') { req('taxOtherOnlyCountry1'); req('taxOtherOnlyTin1', function (v) { return DIGITS_RE.test(v); }); }
+    }
+
+    if (n === 7) {
+      var isBI = val('isBiometric') === 'true';
+      if (!isBI && !uploadedFiles['id'])      { uploadErr('err-idSingle'); ok = false; }
+      if (isBI  && !uploadedFiles['idFront']) { uploadErr('err-idBiometric'); ok = false; }
+      if (isBI  && !uploadedFiles['idBack'])  { uploadErr('err-idBiometric'); ok = false; }
+      if (!uploadedFiles['passport'])         { uploadErr('err-passport'); ok = false; }
+      if (!uploadedFiles['accountMgmt'])      { uploadErr('err-accountMgmt'); ok = false; }
+      var squal = val('isSignedQualification');
+      var isQual = (val('qualificationType') === 'isLiquidAssets' || val('qualificationType') === 'isIncomeLevel' || val('qualificationType') === 'isBoth');
+      if (isQual && squal === 'כן' && !uploadedFiles['qualification']) { uploadErr('err-qualification'); ok = false; }
+      if (!document.getElementById('isNonBusinessIncome').checked) { groupErr('err-nonBusiness'); ok = false; }
+      if (!document.getElementById('isReadClaims').checked) { groupErr('err-readClaims'); ok = false; }
+    }
+
+    if (!ok) setStatus('אנא תקנו את השדות המסומנים', 'error');
+    return ok;
+  }
+
+  /* Review render */
+  function renderReview() {
+    var rv = document.getElementById('rv-personal');
+    if (rv) rv.innerHTML = renderKV([
+      ['שם', (val('firstName') + ' ' + val('lastName')).trim()],
+      ['תעודת זהות', val('idNumber')],
+      ['אזרחות', val('citizenship')],
+      ['ארץ לידה', val('birthCountry')],
+      ['תאריך לידה', val('birthDate')],
+      ['עיסוק', val('occupation')],
+      ['ארץ מגורים', val('residencyCountry')],
+      ['דוא"ל', val('email')],
+      ['טלפון', val('phoneNumber')]
+    ]);
+    var ri = document.getElementById('rv-investment');
+    if (ri) ri.innerHTML = renderKV([
+      ['סכום', val('investedAmount') + ' ' + val('investedCurrency')],
+      ['תאריך השקעה', val('investmentDate')],
+      ['כשירות', qualLabel()],
+      ['מקור כסף', val('moneySource')]
+    ]);
+    var rf = document.getElementById('rv-files');
+    var fileItems = [];
+    ['id','idFront','idBack','passport','accountMgmt','qualification'].forEach(function (k) {
+      if (uploadedFiles[k]) {
+        var labels = { id:'ת"ז', idFront:'ת"ז קדמי', idBack:'ת"ז אחורי', passport:'דרכון', accountMgmt:'אישור חשבון', qualification:'טופס כשירות' };
+        fileItems.push([labels[k] || k, uploadedFiles[k].filename]);
+      }
+    });
+    if (rf) rf.innerHTML = fileItems.length ? renderKV(fileItems) : '<span style="color:var(--muted);font-size:13px">לא הועלו קבצים</span>';
+  }
+
+  function renderKV(pairs) {
+    return pairs.filter(function (pair) { return pair[1]; }).map(function (pair) {
+      return '<span class="review-key">' + esc(pair[0]) + '</span><span class="review-val">' + esc(pair[1]) + '</span>';
+    }).join('');
+  }
+
+  function qualLabel() {
+    var m = { isLiquidAssets:'נכסים נזילים', isIncomeLevel:'רמת הכנסה', isBoth:'שניהם', isNotQualified:'לא כשיר' };
+    return m[val('qualificationType')] || val('qualificationType');
+  }
+
+  /* Submit */
+  btnSubmit.addEventListener('click', function () {
+    if (!validatePage(currentPage)) return;
+    if (!mondayItemId) {
+      setStatus('שגיאה: לא נמצא מזהה משקיע. אנא השתמשו בקישור שנשלח אליכם', 'error');
+      return;
+    }
+    setStatus('שולח...', 'saving');
+    btnSubmit.disabled = true;
+    btnPrev.disabled = true;
+
+    var submission = buildSubmission();
+    var files = { investors: [buildFilesForInvestor()] };
+
+    fetch(GAS_URL + '?source=lp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'submit',
+        lane: 'israeli',
+        flowType: 'onboarding_individual',
+        payload: { submission: submission, files: files }
+      })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res && res.ok && res.nextUrl) {
+        setStatus('הטופס הוגש! מעביר לחתימה...', '');
+        setTimeout(function () { window.location.href = res.nextUrl; }, 800);
+      } else if (res && res.ok) {
+        document.open();
+        document.write(thankYouPage());
+        document.close();
+      } else {
+        var msg = (res && res.error) ? res.error : 'שגיאה בהגשת הטופס. אנא נסו שוב.';
+        setStatus(msg, 'error');
+        btnSubmit.disabled = false;
+        btnPrev.disabled = false;
+      }
+    })
+    .catch(function () {
+      setStatus('שגיאת רשת - אנא נסו שוב', 'error');
+      btnSubmit.disabled = false;
+      btnPrev.disabled = false;
+    });
+  });
+
+  /* Build submission body */
+  function buildSubmission() {
+    var qualType = val('qualificationType');
+    var isQualified = (qualType === 'isLiquidAssets' || qualType === 'isIncomeLevel' || qualType === 'isBoth');
+    var investor = {
+      firstName: val('firstName'), lastName: val('lastName'), gender: val('gender'),
+      idNumber: val('idNumber'), birthCountry: val('birthCountry'), birthDate: val('birthDate'),
+      citizenship: val('citizenship'),
+      isAdditionalCitizenship: val('isAdditionalCitizenship') === 'true',
+      additionalCitizenship: val('isAdditionalCitizenship') === 'true' ? val('additionalCitizenship') : '',
+      aliyaDate: val('aliyaDate'), ssn: val('ssn'), occupation: val('occupation'),
+      residencyCountry: val('residencyCountry'), email: val('email'), phoneNumber: val('phoneNumber'),
+      israelAddress: {
+        city: val('city'), street: val('street'),
+        houseNumber: val('houseNumber'), postalCode: val('postalCode')
+      },
+      englishDetails: {
+        firstName: val('enFirstName'), lastName: val('enLastName'),
+        englishAddress: { city: val('enCity'), street: val('enStreet') }
+      },
+      qualification: {
+        isLiquidAssets: qualType === 'isLiquidAssets',
+        isIncomeLevel:  qualType === 'isIncomeLevel',
+        isBoth:         qualType === 'isBoth',
+        isNotQualified: qualType === 'isNotQualified',
+        isSignedQualification: isQualified ? val('isSignedQualification') : '',
+        lawyerApprove: { liquidDate: qualType === 'isLiquidAssets' ? val('liquidDate') : '', other: '' }
+      },
+      signature: null,
+      taxResidency: buildTaxResidency(),
+      isReadClaims: document.getElementById('isReadClaims').checked,
+      fileUpload: {
+        isBiometric: val('isBiometric') === 'true',
+        isSeparateAppendix: false,
+        id: null, idFront: null, idBack: null, idAppendix: null,
+        accountManagementApproval: null, passport: null, qualification: null
+      }
+    };
+
+    var benefType = val('beneficiaryType');
+    var beneficiaryStatement = {
+      isForMyself: benefType === 'isForMyself',
+      isUnknownBeneficies: benefType === 'isUnknownBeneficies',
+      isBeneficiaries: benefType === 'isBeneficiaries',
+      reasonUnknown: val('reasonUnknown'),
+      beneficiariesDetails: {
+        beneficiariesArray: benefType === 'isBeneficiaries' ? [{
+          fullName: val('benFullName'),
+          idOrCompanyNumber: val('benIdOrCompany'),
+          birthOrIncorporationDate: val('benBirthDate'),
+          country: val('benCountry')
+        }] : [],
+        connectionBetweenBeneficiaries: val('connectionBetweenBeneficiaries')
+      }
+    };
+
+    var amtRaw = parseFloat(String(val('investedAmount')).replace(/,/g,'')) || 0;
+    return {
+      flowType: 'onboarding_individual', lane: 'israeli', language: 'he',
+      investorsArray: [investor],
+      lawyerDetails: { firstName:'', lastName:'', fullName:'', email:'', phoneNumber:'', licenseNumber:'', stamp:null, signature:null },
+      moneyInvestedInFund: {
+        investedAmountArray: [{ investedAmount: String(amtRaw), investedCurrency: val('investedCurrency') }],
+        investedAmount: String(amtRaw), investmentDate: val('investmentDate'),
+        bankDetails: {
+          bankNameIsrael: val('bankNameIsrael'), branchNumberIsrael: val('branchNumberIsrael'),
+          bankName: val('bankName'), branchNumber: val('branchNumber'),
+          accountNumber: val('accountNumber')
+        },
+        moneySource: val('moneySource'), otherSource: val('otherSource'),
+        publicOrPoliticalActivity: val('publicOrPoliticalActivity'),
+        publicOrPoliticalActivityDescription: val('pepDesc'),
+        legalOrAdministrativeProceedings: val('legalOrAdministrativeProceedings'),
+        legalOrAdministrativeProceedingsDescription: val('legalDesc')
+      },
+      beneficiaryStatement: beneficiaryStatement,
+      taxDeclaration: { isNonBusinessIncome: document.getElementById('isNonBusinessIncome').checked },
+      additionalInvestors: val('additionalInvestors') || 'לא',
+      additionalInvestorsNumber: '',
+      lp: {
+        type: 'individual',
+        legalName: (val('firstName') + ' ' + val('lastName')).trim(),
+        idNumber: val('idNumber'), primaryEmail: val('email')
+      },
+      meta: { flowType: 'onboarding_individual', lane: 'israeli', language: 'he', mondayItemId: mondayItemId, uploadedFiles: [] }
+    };
+  }
+
+  function buildTaxResidency() {
+    var tc = val('taxCountry');
+    return {
+      taxCountry: tc,
+      israelAndOtherCountries: { countriesArray: tc === 'ישראל ומדינה אחרת'
+        ? [{ country: val('taxOtherCountry1'), tin: val('taxOtherTin1') }] : [] },
+      otherCountries: { countriesArray: tc === 'מדינה אחרת'
+        ? [{ country: val('taxOtherOnlyCountry1'), tin: val('taxOtherOnlyTin1') }] : [] }
+    };
+  }
+
+  function buildFilesForInvestor() {
+    var isBI = val('isBiometric') === 'true';
+    return {
+      id:                      (!isBI && uploadedFiles['id'])        || null,
+      idFront:                 (isBI  && uploadedFiles['idFront'])    || null,
+      idBack:                  (isBI  && uploadedFiles['idBack'])     || null,
+      idAppendix:              null,
+      accountManagementApproval: uploadedFiles['accountMgmt']        || null,
+      passport:                uploadedFiles['passport']              || null,
+      qualification:           uploadedFiles['qualification']         || null
+    };
+  }
+
+  /* Thank you page after successful submit with no nextUrl */
+  function thankYouPage() {
+    return '<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>תודה</title>' +
+      '<style>html,body{margin:0;height:100%;font-family:Assistant,sans-serif;background:#f4f7fa;}' +
+      'body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box;}' +
+      '.c{background:#fff;max-width:520px;width:100%;padding:48px 36px;border-radius:12px;box-shadow:0 6px 24px rgba(13,63,106,.12);text-align:center;}' +
+      '.icon{width:64px;height:64px;border-radius:50%;background:#FFB42C;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}' +
+      '.icon svg{width:32px;height:32px;}' +
+      'h1{color:#0D3F6A;font-size:26px;margin:0 0 16px;font-weight:700;}' +
+      'p{color:#4a5568;font-size:16px;line-height:1.7;margin:0;}' +
+      '.bar{height:4px;width:100px;background:#FFB42C;margin:20px auto 0;border-radius:2px;}</style>' +
+      '</head><body><div class="c">' +
+      '<div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+      '<h1>הטופס הוגש בהצלחה</h1>' +
+      '<p>תודה! נשלח אליכם קישור לחתימה בקרוב. לאחר שכל החתימות יושלמו תקבלו אישור בדוא"ל.</p>' +
+      '<div class="bar"></div></div></body></html>';
+  }
+
+  /* Prefill from session config */
+  function applyPrefill(prefill) {
+    if (!prefill) return;
+    if (prefill.fullNameHe) {
+      var parts = String(prefill.fullNameHe).split(/\s+/);
+      setVal('firstName', parts[0] || '');
+      setVal('lastName', parts.slice(1).join(' ') || '');
+    }
+    if (prefill.primaryEmail) setVal('email', prefill.primaryEmail);
+  }
+
+  function setVal(name, value) {
+    var el = document.querySelector('[name="' + name + '"]');
+    if (el && el.tagName === 'INPUT' && el.type !== 'radio' && el.type !== 'checkbox') {
+      el.value = value;
+      el.closest('.field') && el.closest('.field').classList.toggle('has-value', !!value);
+    }
+  }
+
+  function setStatus(msg, kind) {
+    statusLine.textContent = msg || '';
+    statusLine.className = 'status-line' + (kind ? ' ' + kind : '');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* Initial state */
+  showPage(1);
+
+})();
+</script>
+</body>
+</html>
