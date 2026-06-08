@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Legacy Value Partners CI subscription</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <!--
@@ -234,8 +234,9 @@
     .lvp-upload__icon-wrap { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #F3F4F6; color: #9CA3AF; transition: background 0.15s, color 0.15s; }
     .lvp-upload__icon-ok { display: none; }
     .lvp-upload__content { flex: 1; min-width: 0; }
-    .lvp-upload__action { display: block; font-size: 14px; font-weight: 600; color: var(--lvp-text); }
-    .lvp-upload__formats { display: block; font-size: 13px; color: var(--lvp-text-muted); margin-top: 2px; }
+    .lvp-upload__doc-title { display: block; font-size: 14px; font-weight: 600; color: var(--lvp-text); }
+    .lvp-upload__action { display: block; font-size: 13px; color: var(--lvp-text-muted); margin-top: 2px; }
+    .lvp-upload__formats { display: block; font-size: 12px; color: var(--lvp-text-muted); margin-top: 1px; }
     .lvp-upload__name { display: none; font-size: 13px; color: var(--lvp-navy); font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lvp-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
     @media (hover: hover) { .lvp-upload:hover .lvp-upload__btn { border-color: #9CA3AF; } }
@@ -244,7 +245,7 @@
     .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-wrap { background: #DBEAFE; color: var(--lvp-navy); }
     .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-up { display: none; }
     .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-ok { display: block; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__action,
+    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__action { display: none; }
     .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__formats { display: none; }
     .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__name { display: block; }
     /* Focus ring for keyboard navigation */
@@ -1120,7 +1121,7 @@
     function swapScopeText(root, lang) {
       var blockSel = '.lvp-page__title, .lvp-subhead, .lvp-field__label, ' +
         '.lvp-fieldset__legend, .lvp-page__hint, .lvp-hint-small, .lvp-note, ' +
-        '.lvp-repeating-row__title, span[data-upload-label]';
+        '.lvp-repeating-row__title, span[data-upload-label], .lvp-upload__doc-title';
       root.querySelectorAll(blockSel).forEach(function (el) { swapTextContent(el, lang); });
       root.querySelectorAll('option').forEach(function (op) { swapTextContent(op, lang); });
       root.querySelectorAll('label.lvp-radio, label.lvp-checkbox').forEach(function (lbl) { swapTrailingTextNode(lbl, lang); });
@@ -1961,22 +1962,24 @@
         if (inp.parentElement.classList.contains('lvp-upload')) return;
         var slot  = inp.getAttribute('data-upload');
         var isKyc = KYC.indexOf(slot) > -1;
-        var label = isKyc ? 'Upload a photo or PDF' : 'Upload a file';
+        var action = isKyc ? 'Upload a photo or PDF' : 'Upload a file';
         var fmts  = isKyc ? 'JPG · PNG · HEIC · PDF' : 'PDF · JPG · PNG';
+        var parentLabel = inp.closest('label.lvp-field');
+        var labelSpan = parentLabel ? parentLabel.querySelector('.lvp-field__label') : null;
+        var docName = labelSpan ? labelSpan.textContent : '';
+        if (labelSpan) labelSpan.style.display = 'none';
         var wrap = document.createElement('div');
         wrap.className = 'lvp-upload';
         var btn = document.createElement('div');
         btn.className = 'lvp-upload__btn';
-        // Seeded in English; swapScopeText handles the action label on lang toggle.
-        // __name lives inside btn so CSS :has([data-has-file]) drives the filled state.
-        // The change handler finds __name via wrap.querySelector('[data-upload-name]').
         btn.innerHTML =
           '<span class="lvp-upload__icon-wrap">' +
             '<span class="lvp-upload__icon-up">' + UP_SVG + '</span>' +
             '<span class="lvp-upload__icon-ok">' + OK_SVG + '</span>' +
           '</span>' +
           '<span class="lvp-upload__content">' +
-            '<span data-upload-label class="lvp-upload__action">' + label + '</span>' +
+            '<span class="lvp-upload__doc-title">' + docName + '</span>' +
+            '<span data-upload-label class="lvp-upload__action">' + action + '</span>' +
             '<span class="lvp-upload__formats">' + fmts + '</span>' +
             '<span class="lvp-upload__name" data-upload-name="' + slot + '"></span>' +
           '</span>';
