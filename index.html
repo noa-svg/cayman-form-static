@@ -181,10 +181,30 @@
     .lvp-result h2 { color: var(--lvp-navy); font-size: 22px; font-weight: 700; margin: 0 0 10px; }
     .lvp-result p { color: var(--lvp-text-muted); font-size: 16px; line-height: 1.6; margin: 6px 0; }
 
+    /* Language toggle: fixed top corner, simple EN | HE segmented control. */
+    .lvp-lang {
+      position: fixed; top: 14px; right: 16px; z-index: 50;
+      display: inline-flex; align-items: stretch;
+      background: #fff; border: 1px solid var(--lvp-input-line);
+      border-radius: 999px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(13, 63, 106, 0.12);
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+    }
+    .lvp-lang__btn {
+      font: inherit; font-size: 13px; font-weight: 700;
+      border: none; background: transparent; color: var(--lvp-navy);
+      padding: 7px 16px; cursor: pointer; line-height: 1.2;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .lvp-lang__btn[aria-pressed="true"] { background: var(--lvp-navy); color: #fff; }
+    .lvp-lang__btn:not([aria-pressed="true"]):hover { background: #f0f3f7; }
+
     @media (max-width: 480px) {
       .lvp-card { padding: 20px 18px; border-radius: 4px; }
       .lvp-header__logo { height: 44px; }
       .lvp-page__title { font-size: 19px; }
+      .lvp-lang { top: 8px; right: 8px; }
+      .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
     }
     /* RTL: when the form container is rtl, flip alignment but keep inputs LTR so
        numbers, emails, dates and account fields stay readable left-to-right. */
@@ -282,6 +302,10 @@
   </style>
 </head>
 <body>
+  <div class="lvp-lang" role="group" aria-label="Language">
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
+  </div>
     <div class="lvp-app">
     <header class="lvp-header">
       <img class="lvp-header__logo" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" data-brand-logo alt="Legacy Value Partners">
