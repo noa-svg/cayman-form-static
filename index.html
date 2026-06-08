@@ -999,6 +999,18 @@
        even inside HTML comments, so an empty one becomes invalid JS and the whole
        template throws SyntaxError. -->
   <script>
+    // Stale-page guard. Fetches this file with no-store (bypasses CDN + browser cache)
+    // and reloads if the live copy has a different build token. Ensures LPs never see
+    // a cached older version of the form after a deploy.
+    var BUILD = 'v144-2026-06-08';
+    (function(){
+      try{
+        fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
+          .then(function(r){return r.text();})
+          .then(function(h){if(h.indexOf("var BUILD = '"+BUILD+"'") === -1) location.reload(true);})
+          .catch(function(){});
+      }catch(e){}
+    })();
     // Static bootstrap: load CFG synchronously from GAS ?api=config.
     (function () {
       var p = new URLSearchParams(location.search);
