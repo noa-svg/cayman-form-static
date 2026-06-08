@@ -211,6 +211,7 @@
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
   function apiFetch(qs){ return fetch(GW+qs).then(function(r){return r.json();}); }
 
+  var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
   var STAGES = [["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
   var SAMPLE = [
     {pid:"p_maya",name:"Maya Tidewater", he:"מאיה קורלין", stage:"signing", age:"2h", wait:"Lawyer to sign"},
@@ -276,7 +277,6 @@
   }
 
   // ---- fund switch ----
-  var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
   (function(){
     var fs=document.getElementById("fundsw");
     fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;
