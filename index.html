@@ -1373,6 +1373,59 @@
           setStatus('Please use English letters (the documents are in English).', true);
         }
       });
+      // Qualification: at least one condition or "None of the above"
+      if (pageEl.getAttribute('data-page') === 'qualification') {
+        var qualChecked = pageEl.querySelectorAll('input[data-qual]:checked').length > 0;
+        var noneChecked = pageEl.querySelector('input[data-qual-none]') && pageEl.querySelector('input[data-qual-none]').checked;
+        if (!qualChecked && !noneChecked) {
+          ok = false;
+          var qualFieldset = pageEl.querySelector('.lvp-fieldset') || pageEl;
+          qualFieldset.classList.add('lvp-fieldset--error');
+          if (!firstError) firstError = qualFieldset;
+        }
+      }
+      // Email format (novalidate on form disables browser checks)
+      pageEl.querySelectorAll('input[type="email"]').forEach(function (i) {
+        var holder = i.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder) || !i.value.trim()) return;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(i.value.trim())) {
+          ok = false; holder.classList.add('lvp-field--error');
+          if (!firstError) firstError = holder;
+        }
+      });
+      // SWIFT (8 or 11 chars) or ABA (9 digits)
+      var swiftInput = pageEl.querySelector('input[name="investment.lpBank.swift"]');
+      if (swiftInput && swiftInput.value.trim()) {
+        var sv = swiftInput.value.trim().toUpperCase();
+        var isSwift = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(sv);
+        var isAba = /^\d{9}$/.test(sv);
+        if (!isSwift && !isAba) {
+          ok = false;
+          var sh = swiftInput.closest('.lvp-field');
+          if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
+        }
+      }
+      // Phone format (intl-tel-input exposes isValidNumber)
+      if (typeof itiInstances !== 'undefined') {
+        itiInstances.forEach(function (rec) {
+          var holder = rec.input.closest('.lvp-field, .lvp-fieldset');
+          if (!holder || isHidden(holder) || !rec.input.value.trim()) return;
+          if (!rec.iti.isValidNumber()) {
+            ok = false; holder.classList.add('lvp-field--error');
+            if (!firstError) firstError = holder;
+          }
+        });
+      }
+      // Investment amount must be positive
+      var amountInput = pageEl.querySelector('input[data-amount]');
+      if (amountInput && amountInput.value) {
+        var numVal = Number(amountInput.value.replace(/[^0-9]/g, ''));
+        if (!(numVal > 0)) {
+          ok = false;
+          var ah = amountInput.closest('.lvp-field');
+          if (ah) { ah.classList.add('lvp-field--error'); if (!firstError) firstError = ah; }
+        }
+      }
       // Scroll the first errored field into view (long pages can show red above the
       // fold with the status message far below; auto-scroll removes the hunt).
       if (firstError) {
