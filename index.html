@@ -344,12 +344,11 @@
     .lvp-gate__logo { width: 140px; margin-bottom: 28px; opacity: .92; animation: gateLogoIn .8s cubic-bezier(.34,1.56,.64,1) both, gateFloat 5s ease-in-out .8s infinite; }
     @keyframes gateLogoIn { from{opacity:0;transform:translateY(-22px) scale(.75)} to{opacity:.92;transform:translateY(0) scale(1)} }
     @keyframes gateFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
-    .lvp-gate__icon { font-size: 44px; margin-bottom: 22px; display: block; line-height: 1; animation: gateIconIn .55s .25s both, gateWiggle 5s 1.2s ease-in-out infinite; }
-    @keyframes gateIconIn { from{opacity:0;transform:rotate(-30deg) scale(.4)} to{opacity:1;transform:rotate(0) scale(1)} }
-    @keyframes gateWiggle { 0%,78%,100%{transform:rotate(0)} 82%{transform:rotate(-16deg)} 88%{transform:rotate(12deg)} 93%{transform:rotate(-7deg)} 97%{transform:rotate(3deg)} }
-    .lvp-gate__title { font-size: 26px; font-weight: 700; color: #1A2330; margin: 0 0 10px; direction: rtl; animation: gateUp .5s .45s both; }
-    .lvp-gate__msg { font-size: 15px; color: #4B5563; margin: 0 0 18px; direction: rtl; max-width: 300px; line-height: 1.55; animation: gateUp .5s .65s both; }
-    .lvp-gate__en { font-size: 12px; color: #9CA3AF; margin: 0; letter-spacing: .04em; animation: gateUp .5s .85s both; }
+    .lvp-gate__icon { font-size: 44px; margin-bottom: 22px; display: block; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both, gateSwing 6s 1s ease-in-out infinite; transform-origin: 50% 20%; }
+    @keyframes gateIconIn { from{opacity:0;transform:scale(.3) rotate(90deg)} to{opacity:1;transform:scale(1) rotate(0)} }
+    @keyframes gateSwing { 0%,70%,100%{transform:rotate(0)} 75%{transform:rotate(-16deg)} 82%{transform:rotate(16deg)} 88%{transform:rotate(-9deg)} 93%{transform:rotate(6deg)} 97%{transform:rotate(-2deg)} }
+    .lvp-gate__msg { font-size: 16px; font-weight: 600; color: #1A2330; margin: 0 0 14px; direction: rtl; max-width: 320px; line-height: 1.55; animation: gateUp .5s .45s both; }
+    .lvp-gate__en { font-size: 13px; color: #9CA3AF; margin: 0; letter-spacing: .04em; animation: gateUp .5s .65s both; }
     @keyframes gateUp { from{opacity:0;transform:translateY(13px)} to{opacity:1;transform:translateY(0)} }
   </style>
   <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin'))document.documentElement.classList.add('lvp-gate-mode');})();</script>
@@ -357,9 +356,8 @@
 <body>
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
-    <span class="lvp-gate__icon">🗝️</span>
-    <p class="lvp-gate__title">כמעט שם.</p>
-    <p class="lvp-gate__msg">הקישור שנשלח אליך הוא הכניסה.</p>
+    <span class="lvp-gate__icon">🔗</span>
+    <p class="lvp-gate__msg">נא להשתמש בלינק שנשלח אלייך.</p>
     <p class="lvp-gate__en">Your link is your key.</p>
   </div>
   <div class="lvp-lang" role="group" aria-label="Language">
