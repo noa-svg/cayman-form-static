@@ -22,7 +22,8 @@
   .fundsw{display:flex;gap:6px;margin-top:14px}
   .fundsw button{flex:1;padding:7px 0;font-size:12px;font-weight:700;font-family:inherit;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted);border-radius:6px;cursor:pointer;transition:all .15s}
   .fundsw button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-  nav{padding:12px 10px;display:flex;flex-direction:column;gap:1px}
+  nav{padding:12px 10px;display:flex;flex-direction:column;gap:1px;flex:1}
+  .side-foot{padding:14px 22px;border-top:1px solid var(--side-line);font-size:11px;color:#475569;line-height:1.6}
   .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:var(--side-muted);cursor:pointer;font-weight:500;transition:all .15s}
   .nav:hover{background:#1E293B;color:#fff}
   .nav.on{background:#1E3A8A;color:#93C5FD;font-weight:700}
@@ -136,6 +137,7 @@
       <div class="nav" data-view="w8">W-8 renewals</div>
       <div class="nav" data-view="settings">Settings</div>
     </nav>
+    <div class="side-foot" id="side-foot">GAS @156</div>
   </aside>
   <div class="main">
     <div class="view" id="v-board">
@@ -194,7 +196,6 @@
       <div><input id="name" placeholder="David Cohen  (English)"></div>
       <div><input id="nameHebrew" dir="rtl" placeholder="&#1491;&#1493;&#1491; &#1499;&#1492;&#1503;  (&#1506;&#1489;&#1512;&#1497;&#1514;)"></div>
     </div>
-    <div class="hint">English, Hebrew, or both. If both, the Monday item is named in English.</div>
 
     <label>Goes by <span class="opt">optional</span></label>
     <input id="nickname" placeholder="David  /  &#1491;&#1497;&#1493;&#1493;&#1497;&#1491;">
@@ -237,6 +238,7 @@
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows.length?rows:SAMPLE);
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);document.getElementById('side-foot').innerHTML='GAS @156<br><span style="color:#64748b">synced '+t+'</span>';}
     }).catch(function(){render(SAMPLE);});
   }
   load();
