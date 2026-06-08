@@ -336,20 +336,31 @@
     }
     .lvp-sig-actions { display: flex; gap: 10px; margin-top: 10px; }
     .lvp-sig-err { color: var(--lvp-error); font-size: 13px; margin-top: 8px; min-height: 18px; }
-    /* no-token gate: shown when sign.legacyvpartners.com is visited without a link */
-    #lvp-gate { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; }
+    /* no-token gate */
+    #lvp-gate { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; position: fixed; inset: 0; background: linear-gradient(-45deg,#FBF7EC,#EEF3FF,#FFF5F0,#F0F7F4); background-size: 400% 400%; animation: gateShift 12s ease infinite; }
+    @keyframes gateShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
     .lvp-gate-mode #lvp-gate { display: flex; }
     .lvp-gate-mode .lvp-lang, .lvp-gate-mode .lvp-app { display: none; }
-    .lvp-gate__logo { width: 160px; margin-bottom: 36px; opacity: .9; }
-    .lvp-gate__msg { font-size: 18px; font-weight: 600; color: #1A2330; margin: 0 0 12px; direction: rtl; }
-    .lvp-gate__sub { font-size: 14px; color: #6B7888; margin: 0; }
+    .lvp-gate__logo { width: 140px; margin-bottom: 28px; opacity: .92; animation: gateLogoIn .8s cubic-bezier(.34,1.56,.64,1) both, gateFloat 5s ease-in-out .8s infinite; }
+    @keyframes gateLogoIn { from{opacity:0;transform:translateY(-22px) scale(.75)} to{opacity:.92;transform:translateY(0) scale(1)} }
+    @keyframes gateFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+    .lvp-gate__icon { font-size: 44px; margin-bottom: 22px; display: block; line-height: 1; animation: gateIconIn .55s .25s both, gateWiggle 5s 1.2s ease-in-out infinite; }
+    @keyframes gateIconIn { from{opacity:0;transform:rotate(-30deg) scale(.4)} to{opacity:1;transform:rotate(0) scale(1)} }
+    @keyframes gateWiggle { 0%,78%,100%{transform:rotate(0)} 82%{transform:rotate(-16deg)} 88%{transform:rotate(12deg)} 93%{transform:rotate(-7deg)} 97%{transform:rotate(3deg)} }
+    .lvp-gate__title { font-size: 26px; font-weight: 700; color: #1A2330; margin: 0 0 10px; direction: rtl; animation: gateUp .5s .45s both; }
+    .lvp-gate__msg { font-size: 15px; color: #4B5563; margin: 0 0 18px; direction: rtl; max-width: 300px; line-height: 1.55; animation: gateUp .5s .65s both; }
+    .lvp-gate__en { font-size: 12px; color: #9CA3AF; margin: 0; letter-spacing: .04em; animation: gateUp .5s .85s both; }
+    @keyframes gateUp { from{opacity:0;transform:translateY(13px)} to{opacity:1;transform:translateY(0)} }
   </style>
   <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin'))document.documentElement.classList.add('lvp-gate-mode');})();</script>
 </head>
 <body>
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
-    <p class="lvp-gate__msg">לגישה לטופס יש להשתמש בקישור שנשלח אליך.</p>
+    <span class="lvp-gate__icon">🗝️</span>
+    <p class="lvp-gate__title">כמעט שם.</p>
+    <p class="lvp-gate__msg">הקישור שנשלח אליך הוא הכניסה.</p>
+    <p class="lvp-gate__en">Your link is your key.</p>
   </div>
   <div class="lvp-lang" role="group" aria-label="Language">
     <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
