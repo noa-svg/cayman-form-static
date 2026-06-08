@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<!--
+  israel-entity.html - Israel entity onboarding form (onboarding_entity)
+  Static HTML/JS hosted on GitHub Pages (sign.legacyvpartners.com).
+  Lane: israeli, flowType: onboarding_entity.
+  Spec: onboarding-entity-logic.md (processId UgenNEh036gacwEWIRea, 220 fields, 109-node workflow).
+
+  Entry: ?item=<mondayItemId> (new entity LP link from operator).
+  Submit: POST {action:'submit', lane:'israeli', flowType:'onboarding_entity', payload:{submission,files}}
+          to GAS exec URL.
+  On success: redirect to sign.html?sign=<firstSignerToken>.
+
+  PARK_VERBATIM items (Noa/counsel must confirm before LP-facing deploy):
+    - PARK_VERBATIM_ENTITY_QUALIFIED_50M: §15A 50M-equity qualified-entity clause
+    - PARK_VERBATIM_ENTITY_WHOLLY_OWNED: §15A wholly-owned-by-qualified clause
+    - PARK_VERBATIM_W8_FATCA_OPTIONS: entityW8 opt1..opt29 option labels
+
+  Controlling persons: up to 4, each collects full individual-like KYC.
+  Signer order: firstAuthorized -> (secondAuthorized) -> CP1..N -> (lawyer).
+-->
+<html dir="rtl" lang="he">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners - הצטרפות תאגיד</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap');
+    *,*::before,*::after{box-sizing:border-box}
+    :root{
+      --navy:#0D3F6A;--navy-b:rgb(17,61,105);--gold:#FFB42C;
+      --err:#c0392b;--line:#c7d2dc;--act:#0D3F6A;--muted:#6b7c8a;
+      --sh:0 6px 24px rgba(13,63,106,.12);
+    }
+    html,body{height:100%}
+    body{margin:0;direction:rtl;font-family:'Assistant',sans-serif;font-size:16px;
+      line-height:1.6;color:var(--navy-b);text-align:right;background:#fff;min-height:100vh}
+    body::before{content:"";position:fixed;inset:0;
+      background:url('https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png') no-repeat center center;
+      background-size:100% 100%;opacity:.5;z-index:-1;pointer-events:none}
+    #shell{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 0}
+    .si{width:100%;max-width:760px;display:flex;flex-direction:column;flex:1}
+    .sh{padding:8px 4px 18px}.sh .lg{width:160px;display:block}
+    .ta{margin-bottom:14px}.ta h2{font-size:24px;font-weight:700;color:var(--navy);margin:0 0 8px}
+    .tl{height:4px;width:90px;background:linear-gradient(to left,var(--gold) 0 45px,var(--navy) 45px 90px)}
+    .pw{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .pl{font-size:13px;color:var(--muted);white-space:nowrap;font-weight:600}
+    .pb{flex:1;height:4px;background:#e9eef3;border-radius:2px}
+    .pf{height:100%;background:var(--gold);border-radius:2px;transition:width 250ms ease}
+    .card{background:#fff;border-radius:12px;box-shadow:var(--sh);padding:32px 36px;flex:1}
+    .sec{margin-bottom:28px}
+    .st{font-size:18px;font-weight:700;color:var(--navy);margin:0 0 16px}
+    .sh2{font-size:14px;color:var(--muted);margin:-8px 0 16px}
+    .cp-box{border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;background:#fafcff}
+    .cp-title{font-size:16px;font-weight:700;color:var(--navy);margin:0 0 16px;border-bottom:1px solid var(--line);padding-bottom:8px}
+    /* fields */
+    .f{position:relative;margin:0 0 22px}
+    .f label{position:absolute;right:0;top:14px;font-size:16px;color:var(--muted);
+      pointer-events:none;transition:transform .15s,font-size .15s,color .15s;transform-origin:right top}
+    .f.hv label,.f input:focus~label,.f select:focus~label,.f textarea:focus~label
+      {transform:translateY(-22px) scale(.78);color:var(--navy)}
+    .f input[type=text],.f input[type=email],.f input[type=tel],.f select,.f textarea{
+      width:100%;padding:14px 0 8px;border:none;border-bottom:2px solid var(--line);
+      font-size:16px;font-family:inherit;color:var(--navy-b);background:transparent;
+      outline:none;transition:border-color .15s;direction:rtl;text-align:right}
+    .f input:focus,.f select:focus,.f textarea:focus{border-bottom-color:var(--act)}
+    .f select{appearance:none;cursor:pointer}
+    .f textarea{resize:vertical;min-height:72px;padding-top:16px}
+    .fe{font-size:13px;color:var(--err);margin-top:4px;display:none}
+    .f.inv .fe{display:block}.f.inv input,.f.inv select,.f.inv textarea{border-bottom-color:var(--err)}
+    /* radio/check */
+    .rg,.cg{margin:0 0 22px}
+    .gl{font-size:14px;color:var(--muted);margin:0 0 10px;font-weight:600}
+    .ro,.co{display:flex;flex-direction:column;gap:10px}
+    .ro.h,.co.h{flex-direction:row;flex-wrap:wrap;gap:12px 24px}
+    .rl,.cl{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px;color:var(--navy-b)}
+    .rl input,.cl input{width:18px;height:18px;cursor:pointer;accent-color:var(--navy);flex-shrink:0}
+    .ge{font-size:13px;color:var(--err);margin-top:4px;display:none}
+    .ge.vis{display:block}
+    /* upload */
+    .uc{border:2px dashed var(--line);border-radius:8px;padding:18px 16px;margin:0 0 16px;
+      cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:14px}
+    .uc:hover,.uc.hf{border-color:var(--navy)}.uc.hf{border-style:solid;background:rgba(13,63,106,.04)}
+    .ui{font-size:22px;flex-shrink:0}.ub{flex:1}
+    .ut{font-size:15px;font-weight:600;color:var(--navy);margin:0}
+    .uh{font-size:13px;color:var(--muted);margin:4px 0 0}
+    .ufn{font-size:13px;color:var(--navy);font-weight:600;margin:4px 0 0;display:none}
+    .uc.hf .ufn{display:block}.uc.hf .uh{display:none}
+    .uc input[type=file]{display:none}
+    .uerr{font-size:13px;color:var(--err);margin-bottom:8px;display:none}
+    .uerr.vis{display:block}
+    /* cond */
+    .cond{display:none}.cond.show{display:block}
+    /* review */
+    .rv-sec{margin-bottom:20px}
+    .rv-sec h3{font-size:16px;font-weight:700;color:var(--navy);margin:0 0 10px;
+      border-bottom:1px solid #e4eaf0;padding-bottom:6px}
+    .rvg{display:grid;grid-template-columns:max-content 1fr;gap:6px 20px}
+    .rk{font-size:13px;color:var(--muted)}.rv{font-size:14px;color:var(--navy-b);font-weight:600;word-break:break-word}
+    /* footer */
+    .foot{display:flex;justify-content:space-between;align-items:center;padding:18px 4px 28px}
+    .btn{border:none;border-radius:25px;cursor:pointer;font-size:15px;font-family:inherit;
+      font-weight:700;padding:11px 32px;transition:background .15s}
+    .bp{background:var(--navy);color:#fff}.bp:hover{background:#0a3157}
+    .bs{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+    .bs:hover{background:rgba(13,63,106,.06)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .sl{font-size:13px;color:var(--muted);min-height:18px;margin-top:8px;text-align:center}
+    .sl.err{color:var(--err)}
+    .sl.sav::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;
+      border:2px solid var(--line);border-top-color:var(--navy);
+      animation:spin 700ms linear infinite;vertical-align:middle;margin-left:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){.card{padding:24px 18px}}
+  </style>
+</head>
+<body>
+<div id="shell">
+  <div class="si">
+    <div class="sh"><img class="lg" id="logo" src="" alt="Legacy Value Partners"></div>
+    <div class="ta"><h2 id="pt">פרטי החברה</h2><div class="tl"></div></div>
+    <div class="pw">
+      <span class="pl" id="prog-l">1 / 10</span>
+      <div class="pb"><div class="pf" id="prog-b" style="width:10%"></div></div>
+    </div>
+    <div class="card">
+
+      <!-- PAGE 1: Corporate identity -->
+      <div id="p1" data-p="1">
+        <div class="sec">
+          <div class="st">פרטי החברה</div>
+          <div class="f" id="f-corpName">
+            <input type="text" id="corpName" maxlength="30">
+            <label for="corpName">שם החברה (עברית)</label>
+            <div class="fe">שם החברה נדרש (2-30 תווים, עברית או ספרות)</div>
+          </div>
+          <div class="f" id="f-corpType">
+            <select id="corpType">
+              <option value=""></option>
+              <option value="חברה" selected>חברה</option>
+              <option value="שותפות">שותפות</option>
+              <option value="עמותה">עמותה</option>
+              <option value="קרן">קרן</option>
+              <option value="אחר">אחר</option>
+            </select>
+            <label for="corpType">סוג התאגיד</label>
+            <div class="fe">נא לבחור סוג תאגיד</div>
+          </div>
+          <div class="f" id="f-companyNumber">
+            <input type="text" id="companyNumber" inputmode="numeric" maxlength="9">
+            <label for="companyNumber">מספר חברה (ח.פ.) - 9 ספרות</label>
+            <div class="fe">נא להזין מספר חברה תקין (9 ספרות)</div>
+          </div>
+          <div class="f" id="f-incDate">
+            <input type="text" id="incDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <label for="incDate">תאריך התאגדות (dd/mm/yyyy)</label>
+            <div class="fe">נא להזין תאריך התאגדות תקין (בעבר)</div>
+          </div>
+          <div class="f" id="f-stateOfInc">
+            <select id="stateOfInc"><option value=""></option></select>
+            <label for="stateOfInc">מדינת התאגדות</label>
+            <div class="fe">נא לבחור מדינת התאגדות</div>
+          </div>
+          <div class="f" id="f-corpActivity">
+            <textarea id="corpActivity" rows="2"></textarea>
+            <label for="corpActivity">תיאור פעילות החברה</label>
+            <div class="fe">נא לתאר את פעילות החברה</div>
+          </div>
+        </div>
+      </div><!-- /p1 -->
+
+      <!-- PAGE 2: Contact + address + English -->
+      <div id="p2" data-p="2" hidden>
+        <div class="sec">
+          <div class="st">פרטי קשר ומגורים</div>
+          <div class="f" id="f-corpEmail">
+            <input type="email" id="corpEmail" autocomplete="email">
+            <label for="corpEmail">כתובת דוא"ל של החברה</label>
+            <div class="fe">נא להזין כתובת דוא"ל תקינה</div>
+          </div>
+          <div class="f" id="f-corpPhone">
+            <input type="tel" id="corpPhone" placeholder="05X-XXXXXXX" maxlength="12">
+            <label for="corpPhone">טלפון נייד</label>
+            <div class="fe">נא להזין מספר טלפון ישראלי תקין</div>
+          </div>
+          <div class="f" id="f-corpResidency">
+            <select id="corpResidency"><option value=""></option></select>
+            <label for="corpResidency">ארץ מגורים / פעילות</label>
+            <div class="fe">נא לבחור ארץ</div>
+          </div>
+        </div>
+        <div class="cond sec" id="cond-corpAddr">
+          <div class="st">כתובת בישראל</div>
+          <div class="f" id="f-corpCity"><input type="text" id="corpCity"><label for="corpCity">עיר</label><div class="fe">נא להזין עיר</div></div>
+          <div class="f" id="f-corpStreet"><input type="text" id="corpStreet"><label for="corpStreet">רחוב</label><div class="fe">נא להזין רחוב</div></div>
+          <div class="f" id="f-corpHouseNum"><input type="text" id="corpHouseNum" maxlength="10"><label for="corpHouseNum">מספר בית</label><div class="fe">נא להזין מספר בית</div></div>
+          <div class="f" id="f-corpPostal"><input type="text" id="corpPostal" inputmode="numeric" maxlength="7"><label for="corpPostal">מיקוד (אופציונלי)</label></div>
+        </div>
+        <div class="sec">
+          <div class="st">פרטים באנגלית</div>
+          <div class="f" id="f-enCorpName">
+            <input type="text" id="enCorpName" maxlength="30" dir="ltr" style="text-align:left">
+            <label for="enCorpName" style="right:auto;left:0;transform-origin:left top">Company name (English)</label>
+            <div class="fe">נא להזין שם חברה באנגלית (2-30 תווים)</div>
+          </div>
+          <div class="f" id="f-enStateOfInc">
+            <input type="text" id="enStateOfInc" dir="ltr" style="text-align:left">
+            <label for="enStateOfInc" style="right:auto;left:0;transform-origin:left top">State of incorporation (English)</label>
+            <div class="fe">נא להזין מדינת התאגדות באנגלית</div>
+          </div>
+          <div class="f" id="f-enCorpResidency">
+            <input type="text" id="enCorpResidency" dir="ltr" style="text-align:left">
+            <label for="enCorpResidency" style="right:auto;left:0;transform-origin:left top">Country of residence (English)</label>
+            <div class="fe">נא להזין ארץ מגורים באנגלית</div>
+          </div>
+          <div class="f" id="f-enCorpCity">
+            <input type="text" id="enCorpCity" dir="ltr" style="text-align:left">
+            <label for="enCorpCity" style="right:auto;left:0;transform-origin:left top">City (English)</label>
+            <div class="fe">נא להזין עיר באנגלית</div>
+          </div>
+          <div class="f" id="f-enCorpStreet">
+            <input type="text" id="enCorpStreet" dir="ltr" style="text-align:left">
+            <label for="enCorpStreet" style="right:auto;left:0;transform-origin:left top">Street (English)</label>
+            <div class="fe">נא להזין רחוב באנגלית</div>
+          </div>
+        </div>
+      </div><!-- /p2 -->
+
+      <!-- PAGE 3: Qualification -->
+      <div id="p3" data-p="3" hidden>
+        <div class="sec">
+          <div class="st">כשירות התאגיד (סעיף 15א)</div>
+          <!--
+            PARK_VERBATIM_ENTITY_QUALIFIED_50M and PARK_VERBATIM_ENTITY_WHOLLY_OWNED:
+            The two qualified-entity clause labels below are structural descriptors.
+            Verbatim §15A entity clause Hebrew text is Noa/counsel decision.
+            Do NOT ship to LPs without Noa sign-off on exact wording.
+          -->
+          <div class="rg" id="rg-qual">
+            <div class="gl">בחרו את הקטגוריה המתאימה לתאגיד *</div>
+            <div class="ro">
+              <label class="rl"><input type="radio" name="qualification" value="equity50M">
+                <!-- PARK: verbatim §15A entity 50M-equity qualified clause here -->
+                <span>תאגיד כשיר - הון עצמי מעל 50 מיליון שקל (סעיף 15א)</span></label>
+              <label class="rl"><input type="radio" name="qualification" value="whollyOwned">
+                <!-- PARK: verbatim §15A entity wholly-owned-by-qualified clause here -->
+                <span>תאגיד כשיר - כל בעלי השליטה הם משקיעים כשירים לפי סעיף 15א(ב)</span></label>
+              <label class="rl"><input type="radio" name="qualification" value="nonQualified">
+                <span>הצטרפות כתאגיד שאינו כשיר על פי ידיעת המנהל</span></label>
+            </div>
+            <div class="ge" id="err-qual">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-signedQual">
+            <div class="rg" id="rg-signedQual">
+              <div class="gl">האם ברשותכם טופס הצהרת כשירות חתום? *</div>
+              <div class="ro h">
+                <label class="rl"><input type="radio" name="isSignedQualification" value="כן"> כן</label>
+                <label class="rl"><input type="radio" name="isSignedQualification" value="לא"> לא, נפנה לעו"ד</label>
+              </div>
+              <div class="ge" id="err-signedQual">נא לבחור</div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /p3 -->
+
+      <!-- PAGE 4: Authorized signatories -->
+      <div id="p4" data-p="4" hidden>
+        <div class="sec">
+          <div class="st">מורשה חתימה ראשון</div>
+          <div class="f" id="f-a1fn"><input type="text" id="a1fn"><label for="a1fn">שם פרטי (עברית)</label><div class="fe">נא להזין שם פרטי (2-20 תווים, עברית)</div></div>
+          <div class="f" id="f-a1ln"><input type="text" id="a1ln"><label for="a1ln">שם משפחה (עברית)</label><div class="fe">נא להזין שם משפחה (2-20 תווים, עברית)</div></div>
+          <div class="f" id="f-a1id"><input type="text" id="a1id" inputmode="numeric" maxlength="9"><label for="a1id">מספר תעודת זהות</label><div class="fe">נא להזין מספר תעודת זהות ישראלי תקין</div></div>
+          <div class="f" id="f-a1email"><input type="email" id="a1email"><label for="a1email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
+          <div class="f" id="f-a1enFn"><input type="text" id="a1enFn" dir="ltr" style="text-align:left"><label for="a1enFn" style="right:auto;left:0;transform-origin:left top">First name (English)</label><div class="fe">נא להזין שם פרטי באנגלית</div></div>
+          <div class="f" id="f-a1enLn"><input type="text" id="a1enLn" dir="ltr" style="text-align:left"><label for="a1enLn" style="right:auto;left:0;transform-origin:left top">Last name (English)</label><div class="fe">נא להזין שם משפחה באנגלית</div></div>
+          <div class="cg">
+            <label class="cl"><input type="checkbox" id="a1readClaims">
+              <span>קראתי ואישרתי את כל פרטי הטופס (מורשה חתימה ראשון)</span></label>
+            <div class="ge" id="err-a1read" style="margin-right:28px">נדרשת הצהרה</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="st">מורשה חתימה שני</div>
+          <div class="rg">
+            <div class="gl">האם יש מורשה חתימה שני? *</div>
+            <div class="ro h">
+              <label class="rl"><input type="radio" name="isSecondAuthorized" value="כן"> כן</label>
+              <label class="rl"><input type="radio" name="isSecondAuthorized" value="לא" checked> לא</label>
+            </div>
+          </div>
+          <div class="cond" id="cond-a2">
+            <div class="f" id="f-a2fn"><input type="text" id="a2fn"><label for="a2fn">שם פרטי (עברית)</label><div class="fe">נא להזין שם פרטי</div></div>
+            <div class="f" id="f-a2ln"><input type="text" id="a2ln"><label for="a2ln">שם משפחה (עברית)</label><div class="fe">נא להזין שם משפחה</div></div>
+            <div class="f" id="f-a2id"><input type="text" id="a2id" inputmode="numeric" maxlength="9"><label for="a2id">מספר תעודת זהות</label><div class="fe">נא להזין ת.ז. תקין</div></div>
+            <div class="f" id="f-a2email"><input type="email" id="a2email"><label for="a2email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
+            <div class="f" id="f-a2enFn"><input type="text" id="a2enFn" dir="ltr" style="text-align:left"><label for="a2enFn" style="right:auto;left:0;transform-origin:left top">First name (English)</label><div class="fe">נא להזין שם פרטי באנגלית</div></div>
+            <div class="f" id="f-a2enLn"><input type="text" id="a2enLn" dir="ltr" style="text-align:left"><label for="a2enLn" style="right:auto;left:0;transform-origin:left top">Last name (English)</label><div class="fe">נא להזין שם משפחה באנגלית</div></div>
+            <div class="cg">
+              <label class="cl"><input type="checkbox" id="a2readClaims">
+                <span>קראתי ואישרתי את כל פרטי הטופס (מורשה חתימה שני)</span></label>
+              <div class="ge" id="err-a2read" style="margin-right:28px">נדרשת הצהרה</div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /p4 -->
+
+      <!-- PAGE 5: Controlling shareholders gate + CP1..4 -->
+      <div id="p5" data-p="5" hidden>
+        <div class="sec">
+          <div class="st">בעלי שליטה</div>
+          <div class="rg" id="rg-isCP">
+            <div class="gl">האם יש בעלי שליטה (מחזיקי 25% ומעלה)? *</div>
+            <div class="ro h">
+              <label class="rl"><input type="radio" name="isControllingShareholders" value="כן"> כן</label>
+              <label class="rl"><input type="radio" name="isControllingShareholders" value="לא"> לא</label>
+            </div>
+            <div class="ge" id="err-isCP">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-noCP">
+            <div class="f" id="f-ifNoCp">
+              <textarea id="ifNoCp" rows="2"></textarea>
+              <label for="ifNoCp">סיבה לאי-קיום בעלי שליטה</label>
+              <div class="fe">נא לפרט</div>
+            </div>
+          </div>
+          <div class="cond" id="cond-cpNum">
+            <div class="f" id="f-cpNum">
+              <select id="cpNum">
+                <option value=""></option>
+                <option value="1">1 בעל שליטה</option>
+                <option value="2">2 בעלי שליטה</option>
+                <option value="3">3 בעלי שליטה</option>
+                <option value="4">4 בעלי שליטה</option>
+              </select>
+              <label for="cpNum">מספר בעלי שליטה</label>
+              <div class="fe">נא לבחור מספר בעלי שליטה</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CP1 -->
+        <div class="cond" id="cond-cp1">
+          <div class="cp-box">
+            <div class="cp-title">בעל שליטה 1</div>
+            <div id="cpf-1"><!-- fields injected by buildCpFields(1) --></div>
+          </div>
+        </div>
+
+        <!-- CP2 -->
+        <div class="cond" id="cond-cp2">
+          <div class="cp-box">
+            <div class="cp-title">בעל שליטה 2</div>
+            <div id="cpf-2"></div>
+          </div>
+        </div>
+
+        <!-- CP3 -->
+        <div class="cond" id="cond-cp3">
+          <div class="cp-box">
+            <div class="cp-title">בעל שליטה 3</div>
+            <div id="cpf-3"></div>
+          </div>
+        </div>
+
+        <!-- CP4 -->
+        <div class="cond" id="cond-cp4">
+          <div class="cp-box">
+            <div class="cp-title">בעל שליטה 4</div>
+            <div id="cpf-4"></div>
+          </div>
+        </div>
+      </div><!-- /p5 -->
+
+      <!-- PAGE 6: Investment details -->
+      <div id="p6" data-p="6" hidden>
+        <div class="sec">
+          <div class="st">פרטי השקעה</div>
+          <div class="f" id="f-invAmt"><input type="text" id="invAmt" inputmode="numeric" placeholder="מעל 50,000"><label for="invAmt">סכום השקעה (מעל 50,000)</label><div class="fe">סכום ההשקעה חייב לעלות על 50,000</div></div>
+          <div class="rg" id="rg-invCur">
+            <div class="gl">מטבע *</div>
+            <div class="ro h">
+              <label class="rl"><input type="radio" name="invCur" value="שקל"> שקל</label>
+              <label class="rl"><input type="radio" name="invCur" value="דולר"> דולר</label>
+              <label class="rl"><input type="radio" name="invCur" value="יורו"> יורו</label>
+            </div>
+            <div class="ge" id="err-invCur">נא לבחור מטבע</div>
+          </div>
+          <div class="f" id="f-invDate"><input type="text" id="invDate" placeholder="dd/mm/yyyy" maxlength="10"><label for="invDate">תאריך השקעה</label><div class="fe">נא להזין תאריך עתידי תקין</div></div>
+        </div>
+        <div class="sec">
+          <div class="st">פרטי חשבון בנק</div>
+          <div class="cond" id="cond-bankIL">
+            <div class="f" id="f-bankILName">
+              <select id="bankILName">
+                <option value=""></option>
+                <option value="בנק לאומי">בנק לאומי</option>
+                <option value="בנק הפועלים">בנק הפועלים</option>
+                <option value="בנק דיסקונט">בנק דיסקונט</option>
+                <option value="בנק מזרחי-טפחות">בנק מזרחי-טפחות</option>
+                <option value="הבנק הבינלאומי הראשון לישראל">הבנק הבינלאומי הראשון לישראל</option>
+                <option value="בנק אוצר החייל">בנק אוצר החייל</option>
+                <option value="בנק יהב">בנק יהב</option>
+                <option value="One Zero Digital Bank">One Zero Digital Bank</option>
+                <option value="בנק אחר">בנק אחר</option>
+              </select>
+              <label for="bankILName">שם בנק</label>
+              <div class="fe">נא לבחור בנק</div>
+            </div>
+            <div class="f" id="f-bankILBranch"><input type="text" id="bankILBranch" inputmode="numeric" maxlength="6"><label for="bankILBranch">מספר סניף</label><div class="fe">נא להזין מספר סניף</div></div>
+          </div>
+          <div class="cond" id="cond-bankForeign">
+            <div class="f" id="f-bankFName"><input type="text" id="bankFName" dir="ltr" style="text-align:left"><label for="bankFName" style="right:auto;left:0;transform-origin:left top">Bank name</label><div class="fe">נא להזין שם בנק</div></div>
+            <div class="f" id="f-bankFBranch"><input type="text" id="bankFBranch" dir="ltr" style="text-align:left"><label for="bankFBranch" style="right:auto;left:0;transform-origin:left top">Branch / Sort code</label><div class="fe">נא להזין מספר סניף</div></div>
+          </div>
+          <div class="f" id="f-bankAcct"><input type="text" id="bankAcct" inputmode="numeric" maxlength="15"><label for="bankAcct">מספר חשבון</label><div class="fe">נא להזין מספר חשבון (ספרות בלבד)</div></div>
+        </div>
+      </div><!-- /p6 -->
+
+      <!-- PAGE 7: Source + PEP + legal (entity-level) -->
+      <div id="p7" data-p="7" hidden>
+        <div class="sec">
+          <div class="st">מקור הכסף</div>
+          <div class="rg" id="rg-money">
+            <div class="gl">מקור כספי ההשקעה *</div>
+            <div class="ro">
+              <label class="rl"><input type="radio" name="moneySource" value="הכנסה עסקית"> הכנסה עסקית</label>
+              <label class="rl"><input type="radio" name="moneySource" value="חיסכונות"> חיסכונות</label>
+              <label class="rl"><input type="radio" name="moneySource" value="מכירת נכסים"> מכירת נכסים</label>
+              <label class="rl"><input type="radio" name="moneySource" value="השקעות"> הכנסות מהשקעות</label>
+              <label class="rl"><input type="radio" name="moneySource" value="אחר"> אחר</label>
+            </div>
+            <div class="ge" id="err-money">נא לבחור מקור הכסף</div>
+          </div>
+          <div class="cond" id="cond-otherMoney">
+            <div class="f" id="f-otherSrc"><textarea id="otherSrc" rows="2"></textarea><label for="otherSrc">פרטו את מקור הכסף</label><div class="fe">נא לפרט</div></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="st">פעילות ציבורית ומשפטית</div>
+          <div class="rg" id="rg-pep">
+            <div class="gl">האם התאגיד קשור לפעיל פוליטי / בעל תפקיד ציבורי? *</div>
+            <div class="ro h">
+              <label class="rl"><input type="radio" name="corpPep" value="כן"> כן</label>
+              <label class="rl"><input type="radio" name="corpPep" value="לא"> לא</label>
+            </div>
+            <div class="ge" id="err-pep">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-pepDesc">
+            <div class="f" id="f-pepD"><textarea id="pepD" rows="2"></textarea><label for="pepD">פרטים על הפעילות</label><div class="fe">נא לפרט</div></div>
+          </div>
+          <div class="rg" id="rg-legal">
+            <div class="gl">האם התאגיד מעורב בהליכים משפטיים? *</div>
+            <div class="ro h">
+              <label class="rl"><input type="radio" name="corpLegal" value="כן"> כן</label>
+              <label class="rl"><input type="radio" name="corpLegal" value="לא"> לא</label>
+            </div>
+            <div class="ge" id="err-legal">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-legalDesc">
+            <div class="f" id="f-legalD"><textarea id="legalD" rows="2"></textarea><label for="legalD">פרטים על ההליכים</label><div class="fe">נא לפרט</div></div>
+          </div>
+        </div>
+      </div><!-- /p7 -->
+
+      <!-- PAGE 8: Tax residency + entity W-8 (simplified) -->
+      <div id="p8" data-p="8" hidden>
+        <div class="sec">
+          <div class="st">תושבות לצרכי מס (CRS)</div>
+          <div class="rg" id="rg-taxCt">
+            <div class="gl">מדינת תושבות לצרכי מס *</div>
+            <div class="ro">
+              <label class="rl"><input type="radio" name="taxCt" value="ישראל בלבד"> ישראל בלבד</label>
+              <label class="rl"><input type="radio" name="taxCt" value="ישראל ומדינה אחרת"> ישראל ומדינה נוספת</label>
+              <label class="rl"><input type="radio" name="taxCt" value="מדינה אחרת"> מדינה אחרת (לא ישראל)</label>
+              <label class="rl"><input type="radio" name="taxCt" value="אין לישות תושבות לצרכי מס"> אין לתאגיד תושבות לצרכי מס</label>
+            </div>
+            <div class="ge" id="err-taxCt">נא לבחור</div>
+          </div>
+          <div class="cond" id="cond-taxILOther">
+            <div class="f" id="f-taxOC1"><select id="taxOC1"><option value=""></option></select><label for="taxOC1">מדינה נוספת</label><div class="fe">נא לבחור מדינה</div></div>
+            <div class="f" id="f-taxOT1"><input type="text" id="taxOT1" inputmode="numeric"><label for="taxOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
+          </div>
+          <div class="cond" id="cond-taxOther">
+            <div class="f" id="f-taxOOC1"><select id="taxOOC1"><option value=""></option></select><label for="taxOOC1">מדינת תושבות</label><div class="fe">נא לבחור מדינה</div></div>
+            <div class="f" id="f-taxOOT1"><input type="text" id="taxOOT1" inputmode="numeric"><label for="taxOOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="st">סיווג FATCA (W-8BEN-E)</div>
+          <div class="sh2">הסיווג יכלל במסמך ה-W-8BEN-E. אנא ציינו את המעמד המתאים לתאגיד.</div>
+          <!--
+            PARK_VERBATIM_W8_FATCA_OPTIONS: the FATCA status options below use
+            structural labels. The verbatim IRS opt1..opt29 option text is
+            Noa/counsel decision. Simplified to Active NFFE / Passive NFFE / Other.
+          -->
+          <div class="rg" id="rg-fatca">
+            <div class="gl">מעמד FATCA *</div>
+            <div class="ro">
+              <label class="rl"><input type="radio" name="fatcaStatus" value="Active NFFE"> Active NFFE (ישות פיננסית לא-אמריקאית פעילה)</label>
+              <label class="rl"><input type="radio" name="fatcaStatus" value="Passive NFFE"> Passive NFFE (ישות פיננסית לא-אמריקאית פסיבית)</label>
+              <label class="rl"><input type="radio" name="fatcaStatus" value="other"> <!-- PARK: opt1..opt29 full list -->אחר - יש לפרט</label>
+            </div>
+            <div class="ge" id="err-fatca">נא לבחור מעמד FATCA</div>
+          </div>
+          <div class="cond" id="cond-fatcaPassive">
+            <div class="rg" id="rg-passiveAB">
+              <div class="gl">Passive NFFE - סוג *</div>
+              <div class="ro h">
+                <label class="rl"><input type="radio" name="passiveAorB" value="A"> A</label>
+                <label class="rl"><input type="radio" name="passiveAorB" value="B"> B</label>
+              </div>
+              <div class="ge" id="err-passiveAB">נא לבחור</div>
+            </div>
+          </div>
+          <div class="cond" id="cond-fatcaOther">
+            <div class="f" id="f-fatcaOtherDesc"><textarea id="fatcaOtherDesc" rows="2"></textarea><label for="fatcaOtherDesc">פרטו את מעמד ה-FATCA</label><div class="fe">נא לפרט</div></div>
+          </div>
+          <div class="f" id="f-w8Country"><select id="w8Country"><option value=""></option></select><label for="w8Country">ארץ תושבות לצרכי W-8</label><div class="fe">נא לבחור ארץ</div></div>
+        </div>
+      </div><!-- /p8 -->
+
+      <!-- PAGE 9: File uploads + declarations -->
+      <div id="p9" data-p="9" hidden>
+        <div class="sec">
+          <div class="st">מסמכים תאגידיים</div>
+          <div class="sh2">כל הקבצים מאובטחים. PDF, JPG, PNG - מקסימום 10MB לקובץ.</div>
+
+          <label class="uc" id="uc-stamp" for="file-stamp">
+            <span class="ui">🏢</span><div class="ub">
+              <p class="ut">חותמת החברה</p><p class="uh">קובץ תמונה (JPG, PNG)</p>
+              <p class="ufn" id="fn-stamp"></p></div>
+            <input type="file" id="file-stamp" accept=".jpg,.jpeg,.png,.pdf">
+          </label>
+          <div class="uerr" id="err-stamp">נדרשת חותמת החברה</div>
+
+          <label class="uc" id="uc-certInc" for="file-certInc">
+            <span class="ui">📜</span><div class="ub">
+              <p class="ut">תעודת התאגדות</p><p class="uh">PDF</p>
+              <p class="ufn" id="fn-certInc"></p></div>
+            <input type="file" id="file-certInc" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="uerr" id="err-certInc">נדרשת תעודת התאגדות</div>
+
+          <label class="uc" id="uc-bylaws" for="file-bylaws">
+            <span class="ui">📋</span><div class="ub">
+              <p class="ut">תקנון החברה</p><p class="uh">PDF</p>
+              <p class="ufn" id="fn-bylaws"></p></div>
+            <input type="file" id="file-bylaws" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="uerr" id="err-bylaws">נדרש תקנון החברה</div>
+
+          <label class="uc" id="uc-protocol" for="file-protocol">
+            <span class="ui">📄</span><div class="ub">
+              <p class="ut">פרוטוקול דירקטוריון (לאישור ההצטרפות)</p><p class="uh">PDF</p>
+              <p class="ufn" id="fn-protocol"></p></div>
+            <input type="file" id="file-protocol" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="uerr" id="err-protocol">נדרש פרוטוקול דירקטוריון</div>
+
+          <label class="uc" id="uc-acctMgmt" for="file-acctMgmt">
+            <span class="ui">🏦</span><div class="ub">
+              <p class="ut">אישור ניהול חשבון</p><p class="uh">PDF, JPG</p>
+              <p class="ufn" id="fn-acctMgmt"></p></div>
+            <input type="file" id="file-acctMgmt" accept=".pdf,.jpg,.jpeg,.png">
+          </label>
+          <div class="uerr" id="err-acctMgmt">נדרש אישור ניהול חשבון</div>
+
+          <div class="cond" id="cond-qualFile">
+            <label class="uc" id="uc-qualFile" for="file-qualFile">
+              <span class="ui">⚖️</span><div class="ub">
+                <p class="ut">טופס הצהרת כשירות חתום</p><p class="uh">PDF</p>
+                <p class="ufn" id="fn-qualFile"></p></div>
+              <input type="file" id="file-qualFile" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+            <div class="uerr" id="err-qualFile">נדרש טופס כשירות חתום</div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="st">הצהרות</div>
+          <div class="cg">
+            <label class="cl">
+              <input type="checkbox" id="readClaims">
+              <!-- PARK_VERBATIM_READ_CLAIMS: exact declaration text for Noa/counsel review -->
+              <span>קראתי את כל תוכן הטופס ואני מאשר/ת שהפרטים שמסרתי נכונים ומלאים. אני מסכים/ה לאסוף את המידע ולהשתמש בו לצרכי ניהול הקרן</span>
+            </label>
+            <div class="ge" id="err-read" style="margin-right:28px">יש לאשר את ההצהרה</div>
+          </div>
+        </div>
+      </div><!-- /p9 -->
+
+      <!-- PAGE 10: Review -->
+      <div id="p10" data-p="10" hidden>
+        <div class="sec">
+          <div class="st">סיכום ואישור</div>
+          <div class="sh2">אנא בדקו את הפרטים לפני הגשה.</div>
+          <div class="rv-sec"><h3>פרטי החברה</h3><div class="rvg" id="rv-corp"></div></div>
+          <div class="rv-sec"><h3>מורשי חתימה</h3><div class="rvg" id="rv-auth"></div></div>
+          <div class="rv-sec"><h3>פרטי השקעה</h3><div class="rvg" id="rv-inv"></div></div>
+          <div class="rv-sec"><h3>מסמכים שהועלו</h3><div class="rvg" id="rv-files"></div></div>
+        </div>
+      </div><!-- /p10 -->
+
+    </div><!-- /card -->
+
+    <div class="foot">
+      <button class="btn bs" id="btn-prev" hidden>חזור</button>
+      <button class="btn bp" id="btn-next">המשך</button>
+      <button class="btn bp" id="btn-submit" hidden>הגשה ומעבר לחתימה</button>
+    </div>
+    <div class="sl" id="sl"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+var COUNTRIES = [
+  'ישראל','ארצות הברית','קנדה','בריטניה','גרמניה','צרפת','איטליה','ספרד','הולנד','שווייץ',
+  'אוסטרליה','ניו זילנד','יפן','סינגפור','הונג קונג','ברזיל','אוקראינה','רוסיה','טורקיה',
+  'מקסיקו','דרום אפריקה','הודו','סין','פולין','שוודיה','נורווגיה','דנמרק','פינלנד',
+  'בלגיה','אוסטריה','פורטוגל','יוון','צ\'כיה','הונגריה','רומניה','בולגריה','קרואטיה',
+  'סרביה','אסטוניה','לטביה','ליטא','אירלנד','לוקסמבורג','קפריסין','מלטה','אנדורה','אחר'
+];
+var TOTAL = 10;
+var cur = 1;
+var CFG = {};
+var mondayItemId = null;
+var uploadedFiles = {};
+// cpFiles[i] = {id, idFront, idBack, passport, accountMgmt} for CP i+1
+var cpFiles = [{},{},{},{}];
+
+var p = new URLSearchParams(location.search);
+mondayItemId = p.get('item') || null;
+
+/* load config */
+(function(){
+  try{
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', GAS_URL + '?api=config&lane=israeli&type=entity', false);
+    xhr.send(null);
+    if(xhr.status === 200){
+      var c = JSON.parse(xhr.responseText);
+      if(c && c.ok){
+        CFG = c;
+        if(!mondayItemId && c.mondayItemId) mondayItemId = String(c.mondayItemId);
+        if(c.brandLogoUrl) document.getElementById('logo').src = c.brandLogoUrl;
+      }
+    }
+  } catch(e){ if(window.console) console.warn('[EntityForm] config:', e); }
+})();
+
+/* populate selects */
+(function(){
+  var sels = document.querySelectorAll(
+    '#stateOfInc, #corpResidency, #taxOC1, #taxOOC1, #w8Country'
+  );
+  Array.prototype.forEach.call(sels, function(s){
+    COUNTRIES.forEach(function(c){
+      var o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      s.appendChild(o);
+    });
+  });
+})();
+
+/* build CP fields dynamically to keep HTML compact */
+function buildCpFields(n){
+  var c = document.getElementById('cpf-' + n);
+  if(!c || c.children.length) return;
+  var p = 'cp' + n + '_';
+  c.innerHTML =
+    fld(p+'fn', 'שם פרטי (עברית)', 'text') +
+    fld(p+'ln', 'שם משפחה (עברית)', 'text') +
+    radioG(p+'gender', 'מגדר *', [['זכר','זכר'],['נקבה','נקבה']]) +
+    fld(p+'id', 'מספר תעודת זהות', 'text', 'numeric', '9') +
+    selFld(p+'birthCtry', 'ארץ לידה') +
+    fld(p+'birthDate', 'תאריך לידה (dd/mm/yyyy)', 'text', '', '10') +
+    selFld(p+'citizenship', 'אזרחות') +
+    radioG(p+'addCitz', 'אזרחות נוספת?', [['true','כן'],['false','לא']]) +
+    '<div class="cond" id="cond-'+p+'addCitz"><div class="f" id="f-'+p+'addCitzVal"><select id="'+p+'addCitzVal">'+cOpts()+'</select><label for="'+p+'addCitzVal">אזרחות נוספת</label><div class="fe">נא לבחור</div></div></div>' +
+    '<div class="cond" id="cond-'+p+'aliya"><div class="f" id="f-'+p+'aliya"><input type="text" id="'+p+'aliya" maxlength="10" placeholder="dd/mm/yyyy"><label for="'+p+'aliya">תאריך עלייה</label><div class="fe">נא להזין תאריך תקין</div></div></div>' +
+    '<div class="cond" id="cond-'+p+'ssn"><div class="f" id="f-'+p+'ssn"><input type="text" id="'+p+'ssn" maxlength="11" placeholder="XXX-XX-XXXX"><label for="'+p+'ssn">SSN (אזרחים אמריקאיים)</label><div class="fe">נא להזין SSN תקני</div></div></div>' +
+    fld(p+'occ', 'עיסוק', 'text', '', '20') +
+    selFld(p+'res', 'ארץ מגורים') +
+    fld(p+'email', 'דוא"ל', 'email') +
+    fld(p+'phone', 'טלפון נייד ישראלי', 'tel') +
+    '<div class="cond show" id="cond-'+p+'addr">' +
+      fld(p+'city', 'עיר', 'text') +
+      fld(p+'street', 'רחוב', 'text') +
+      fld(p+'hnum', 'מספר בית', 'text') +
+    '</div>' +
+    fld(p+'enFn', 'First name (English)', 'text', '', '', true) +
+    fld(p+'enLn', 'Last name (English)', 'text', '', '', true) +
+    fld(p+'enCity', 'City (English)', 'text', '', '', true) +
+    fld(p+'enStr', 'Street (English)', 'text', '', '', true) +
+    fld(p+'own', 'אחוז בעלות (0.1-100)', 'text', 'decimal') +
+    radioG(p+'pep', 'פעיל פוליטי / תפקיד ציבורי?', [['כן','כן'],['לא','לא']]) +
+    '<div class="cond" id="cond-'+p+'pepD"><div class="f" id="f-'+p+'pepD"><textarea id="'+p+'pepD" rows="2"></textarea><label for="'+p+'pepD">פרטים</label><div class="fe">נא לפרט</div></div></div>' +
+    radioG(p+'legal', 'מעורב בהליכים משפטיים?', [['כן','כן'],['לא','לא']]) +
+    '<div class="cond" id="cond-'+p+'legalD"><div class="f" id="f-'+p+'legalD"><textarea id="'+p+'legalD" rows="2"></textarea><label for="'+p+'legalD">פרטים</label><div class="fe">נא לפרט</div></div></div>' +
+    /* per-CP KYC uploads */
+    '<div class="rg" style="margin-bottom:16px"><div class="gl">סוג מסמך זהות</div>' +
+      '<div class="ro h">' +
+        '<label class="rl"><input type="radio" name="'+p+'bio" value="false" checked> תעודת זהות (דף אחד)</label>' +
+        '<label class="rl"><input type="radio" name="'+p+'bio" value="true"> ביומטרית</label>' +
+      '</div></div>' +
+    '<div id="cond-'+p+'idS"><label class="uc" id="uc-'+p+'id" for="file-'+p+'id"><span class="ui">🪪</span><div class="ub"><p class="ut">תעודת זהות</p><p class="uh">PDF/JPG</p><p class="ufn" id="fn-'+p+'id"></p></div><input type="file" id="file-'+p+'id" accept=".pdf,.jpg,.jpeg,.png"></label></div>' +
+    '<div id="cond-'+p+'idB" hidden>' +
+      '<label class="uc" id="uc-'+p+'idFront" for="file-'+p+'idFront"><span class="ui">🪪</span><div class="ub"><p class="ut">ת.ז. - צד קדמי</p><p class="uh">PDF/JPG</p><p class="ufn" id="fn-'+p+'idFront"></p></div><input type="file" id="file-'+p+'idFront" accept=".pdf,.jpg,.jpeg,.png"></label>' +
+      '<label class="uc" id="uc-'+p+'idBack" for="file-'+p+'idBack"><span class="ui">🪪</span><div class="ub"><p class="ut">ת.ז. - צד אחורי</p><p class="uh">PDF/JPG</p><p class="ufn" id="fn-'+p+'idBack"></p></div><input type="file" id="file-'+p+'idBack" accept=".pdf,.jpg,.jpeg,.png"></label>' +
+    '</div>' +
+    '<label class="uc" id="uc-'+p+'pass" for="file-'+p+'pass"><span class="ui">🛂</span><div class="ub"><p class="ut">דרכון</p><p class="uh">PDF/JPG</p><p class="ufn" id="fn-'+p+'pass"></p></div><input type="file" id="file-'+p+'pass" accept=".pdf,.jpg,.jpeg,.png"></label>' +
+    '<div class="uerr" id="err-'+p+'id">נדרשת תעודת זהות</div>' +
+    '<div class="uerr" id="err-'+p+'pass">נדרש דרכון</div>' +
+    '<div class="cg"><label class="cl"><input type="checkbox" id="'+p+'read"><span>קראתי ואישרתי את כל פרטי הטופס</span></label><div class="ge" id="err-'+p+'read" style="margin-right:28px">נדרשת הצהרה</div></div>';
+
+  /* populate the select elements just added */
+  ['birthCtry','citizenship','addCitzVal','res'].forEach(function(nm){
+    var sel = document.getElementById(p + nm);
+    if(!sel) return;
+    COUNTRIES.forEach(function(c){
+      var o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+  });
+
+  /* wire file inputs for this CP */
+  var cpIdx = n - 1;
+  ['id','idFront','idBack','pass'].forEach(function(key){
+    var inp = document.getElementById('file-' + p + key);
+    if(!inp) return;
+    inp.addEventListener('change', function(){
+      var file = inp.files && inp.files[0];
+      if(!file) return;
+      if(file.size > 10*1024*1024){ setStatus('הקובץ גדול מדי', 'err'); return; }
+      var card = document.getElementById('uc-' + p + key);
+      var fn = document.getElementById('fn-' + p + key);
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        var b64 = ev.target.result.split(',')[1];
+        cpFiles[cpIdx][key] = {base64:b64, mimeType:file.type, filename:file.name};
+        if(card) card.classList.add('hf');
+        if(fn) fn.textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+}
+
+function fld(id, lbl, type, im, ml, ltr){
+  var imA = im ? ' inputmode="'+im+'"' : '';
+  var mlA = ml ? ' maxlength="'+ml+'"' : '';
+  var dir = ltr ? ' dir="ltr" style="text-align:left"' : '';
+  var lblStyle = ltr ? ' style="right:auto;left:0;transform-origin:left top"' : '';
+  var err = ltr ? 'נא להזין' : 'שדה חובה';
+  return '<div class="f" id="f-'+id+'"><input type="'+type+'" id="'+id+'"'+imA+mlA+dir+'><label for="'+id+'"'+lblStyle+'>'+lbl+'</label><div class="fe">'+err+'</div></div>';
+}
+function selFld(id, lbl){
+  return '<div class="f" id="f-'+id+'"><select id="'+id+'"><option value=""></option></select><label for="'+id+'">'+lbl+'</label><div class="fe">נא לבחור</div></div>';
+}
+function cOpts(){
+  return COUNTRIES.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+}
+function radioG(name, lbl, opts){
+  var o = opts.map(function(x){ return '<label class="rl"><input type="radio" name="'+name+'" value="'+x[0]+'"> '+x[1]+'</label>'; }).join('');
+  return '<div class="rg"><div class="gl">'+lbl+'</div><div class="ro h">'+o+'</div><div class="ge" id="err-'+name+'">נא לבחור</div></div>';
+}
+
+/* wire corporate file uploads */
+var corpSlots = {
+  'file-stamp': {key:'stamp', cardId:'uc-stamp', fnId:'fn-stamp'},
+  'file-certInc': {key:'certInc', cardId:'uc-certInc', fnId:'fn-certInc'},
+  'file-bylaws': {key:'bylaws', cardId:'uc-bylaws', fnId:'fn-bylaws'},
+  'file-protocol': {key:'protocol', cardId:'uc-protocol', fnId:'fn-protocol'},
+  'file-acctMgmt': {key:'acctMgmt', cardId:'uc-acctMgmt', fnId:'fn-acctMgmt'},
+  'file-qualFile': {key:'qualFile', cardId:'uc-qualFile', fnId:'fn-qualFile'}
+};
+Object.keys(corpSlots).forEach(function(iid){
+  var inp = document.getElementById(iid);
+  if(!inp) return;
+  inp.addEventListener('change', function(){
+    var file = inp.files && inp.files[0];
+    if(!file) return;
+    if(file.size > 10*1024*1024){ setStatus('הקובץ גדול מדי','err'); return; }
+    var s = corpSlots[iid];
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      uploadedFiles[s.key] = {base64:ev.target.result.split(',')[1], mimeType:file.type, filename:file.name};
+      var card = document.getElementById(s.cardId);
+      var fn = document.getElementById(s.fnId);
+      if(card) card.classList.add('hf');
+      if(fn) fn.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+/* conditionals */
+function vc(name){
+  var el = document.querySelector('[name="'+name+'"]:checked');
+  if(el) return el.value;
+  el = document.querySelector('[name="'+name+'"]');
+  if(el && el.tagName !== 'INPUT') return el.value;
+  if(el) return el.value;
+  return '';
+}
+function gid(id){ return document.getElementById(id); }
+function showEl(id, v){ var e = gid(id); if(e) e.classList.toggle('show', !!v); }
+function hideEl(id){ var e = gid(id); if(e){ e.hidden = true; } }
+function unhideEl(id){ var e = gid(id); if(e){ e.hidden = false; } }
+
+function updateConds(){
+  /* corporate */
+  var res = vc('residencyCountry'); // not a radio - read differently
+  var corpRes = (gid('corpResidency') && gid('corpResidency').value) || '';
+  showEl('cond-corpAddr', corpRes === 'ישראל');
+  showEl('cond-signedQual', vc('qualification') === 'equity50M' || vc('qualification') === 'whollyOwned');
+  showEl('cond-a2', vc('isSecondAuthorized') === 'כן');
+  var isCP = vc('isControllingShareholders') === 'כן';
+  showEl('cond-noCP', vc('isControllingShareholders') === 'לא');
+  showEl('cond-cpNum', isCP);
+  var cpN = parseInt((gid('cpNum') && gid('cpNum').value) || '0', 10) || 0;
+  for(var i = 1; i <= 4; i++){
+    showEl('cond-cp' + i, isCP && cpN >= i);
+    if(isCP && cpN >= i) buildCpFields(i);
+  }
+  /* bank */
+  var invRes = (gid('corpResidency') && gid('corpResidency').value) || '';
+  showEl('cond-bankIL', invRes === 'ישראל');
+  showEl('cond-bankForeign', !!(invRes && invRes !== 'ישראל'));
+  /* money source */
+  showEl('cond-otherMoney', vc('moneySource') === 'אחר');
+  showEl('cond-pepDesc', vc('corpPep') === 'כן');
+  showEl('cond-legalDesc', vc('corpLegal') === 'כן');
+  /* tax */
+  var tc = vc('taxCt');
+  showEl('cond-taxILOther', tc === 'ישראל ומדינה אחרת');
+  showEl('cond-taxOther', tc === 'מדינה אחרת');
+  /* W-8 */
+  var fatca = vc('fatcaStatus');
+  showEl('cond-fatcaPassive', fatca === 'Passive NFFE');
+  showEl('cond-fatcaOther', fatca === 'other');
+  /* qual file */
+  showEl('cond-qualFile', vc('isSignedQualification') === 'כן');
+
+  /* per-CP conditionals */
+  for(var ci = 1; ci <= 4; ci++){
+    var pfx = 'cp' + ci + '_';
+    var birth = (gid(pfx+'birthCtry') && gid(pfx+'birthCtry').value) || '';
+    var citz = (gid(pfx+'citizenship') && gid(pfx+'citizenship').value) || '';
+    var addC = vc(pfx+'addCitz') === 'true';
+    var addCVal = (gid(pfx+'addCitzVal') && gid(pfx+'addCitzVal').value) || '';
+    showEl('cond-'+pfx+'addCitz', addC);
+    showEl('cond-'+pfx+'aliya', !!(birth && birth !== 'ישראל'));
+    var isUS = citz === 'ארצות הברית' || (addC && addCVal === 'ארצות הברית');
+    showEl('cond-'+pfx+'ssn', isUS);
+    var cpRes = (gid(pfx+'res') && gid(pfx+'res').value) || '';
+    showEl('cond-'+pfx+'addr', !!(cpRes));
+    showEl('cond-'+pfx+'pepD', vc(pfx+'pep') === 'כן');
+    showEl('cond-'+pfx+'legalD', vc(pfx+'legal') === 'כן');
+    var bio = vc(pfx+'bio') === 'true';
+    var idS = gid('cond-'+pfx+'idS');
+    var idB = gid('cond-'+pfx+'idB');
+    if(idS) idS.hidden = bio;
+    if(idB) idB.hidden = !bio;
+  }
+
+  /* floating labels */
+  document.querySelectorAll('.f input, .f select, .f textarea').forEach(function(el){
+    var field = el.closest('.f');
+    if(field) field.classList.toggle('hv', !!el.value);
+  });
+}
+
+document.addEventListener('input', updateConds);
+document.addEventListener('change', updateConds);
+updateConds();
+document.addEventListener('blur', function(e){
+  var field = e.target && e.target.closest && e.target.closest('.f');
+  if(field) field.classList.toggle('hv', !!e.target.value);
+}, true);
+
+/* page titles */
+var TITLES = {
+  1:'פרטי החברה', 2:'פרטי קשר ומגורים', 3:'כשירות התאגיד',
+  4:'מורשי חתימה', 5:'בעלי שליטה', 6:'פרטי השקעה',
+  7:'מקור כספים', 8:'תושבות ו-FATCA',
+  9:'מסמכים והצהרות', 10:'סיכום ואישור'
+};
+
+function showPage(n){
+  for(var i = 1; i <= TOTAL; i++){
+    var pg = gid('p'+i);
+    if(pg) pg.hidden = (i !== n);
+  }
+  cur = n;
+  gid('prog-l').textContent = n + ' / ' + TOTAL;
+  gid('prog-b').style.width = Math.round(n/TOTAL*100) + '%';
+  gid('pt').textContent = TITLES[n] || '';
+  gid('btn-prev').hidden = (n === 1);
+  gid('btn-next').hidden = (n === TOTAL);
+  gid('btn-submit').hidden = (n !== TOTAL);
+  setStatus('');
+  updateConds();
+  if(n === TOTAL) renderReview();
+  window.scrollTo(0,0);
+}
+
+gid('btn-prev').addEventListener('click', function(){ if(cur > 1) showPage(cur - 1); });
+gid('btn-next').addEventListener('click', function(){ if(!validatePage(cur)) return; if(cur < TOTAL) showPage(cur + 1); });
+
+/* validation helpers */
+var HE_RE = /^[א-ת׳״\s'"\-]+$/;
+var HE_DIG_RE = /^[א-ת׳״0-9\s'"\-]+$/;
+var EN_RE = /^[A-Za-z\s'\-]+$/;
+var EN_DIG_RE = /^[A-Za-z0-9\s'\-,./]+$/;
+var PHONE_RE = /^0[0-9]{1,2}[-\s]?[0-9]{7,8}$/;
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+var DATE_RE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+var DIGITS_RE = /^\d+$/;
+
+function dateOk(s, opts){
+  var m = DATE_RE.exec(s);
+  if(!m) return false;
+  var dd=+m[1], mo=+m[2], yy=+m[3];
+  if(mo<1||mo>12||dd<1||dd>31) return false;
+  var d = new Date(yy,mo-1,dd);
+  if(d.getMonth()!==mo-1||d.getDate()!==dd) return false;
+  var now = new Date();
+  if(opts&&opts.past&&d>=now) return false;
+  if(opts&&opts.future&&d<=now) return false;
+  if(opts&&opts.min18){var cut=new Date(now.getFullYear()-18,now.getMonth(),now.getDate());if(d>cut) return false;}
+  return true;
+}
+function ilId(v){ var s=String(v||'').replace(/\D/g,''); if(s.length!==9) return false; var sum=0; for(var i=0;i<9;i++){var n=+s[i]*(i%2?2:1);sum+=n>9?n-9:n;} return sum%10===0; }
+
+function clearE(pg){
+  var e = gid('p'+pg);
+  if(!e) return;
+  e.querySelectorAll('.f.inv').forEach(function(f){f.classList.remove('inv');});
+  e.querySelectorAll('.ge.vis').forEach(function(g){g.classList.remove('vis');});
+  e.querySelectorAll('.uerr.vis').forEach(function(u){u.classList.remove('vis');});
+}
+function fe(id){ var f=gid(id); if(f) f.classList.add('inv'); }
+function ge(id){ var e=gid(id); if(e) e.classList.add('vis'); }
+function ue(id){ var e=gid(id); if(e) e.classList.add('vis'); }
+
+function validatePage(n){
+  clearE(n);
+  var ok = true;
+  function fail(id,t){ok=false;if(t==='g')ge(id);else if(t==='u')ue(id);else fe(id);}
+  function req(id,fn){
+    var el=gid(id);
+    if(!el||!el.value.trim()){fail('f-'+id);return false;}
+    if(fn&&!fn(el.value.trim())){fail('f-'+id);return false;}
+    return true;
+  }
+  function rad(name,eid){if(!vc(name)){fail(eid,'g');return false;}return true;}
+
+  if(n===1){
+    req('corpName', function(v){return HE_DIG_RE.test(v)&&v.length>=2&&v.length<=30;});
+    req('corpType');
+    req('companyNumber', function(v){return /^\d{9}$/.test(v.replace(/\D/g,''));});
+    req('incDate', function(v){return dateOk(v,{past:true});});
+    req('stateOfInc');
+    req('corpActivity');
+  }
+  if(n===2){
+    req('corpEmail', function(v){return EMAIL_RE.test(v);});
+    req('corpPhone', function(v){return PHONE_RE.test(v.replace(/\s/g,''));});
+    req('corpResidency');
+    var cr = (gid('corpResidency')&&gid('corpResidency').value)||'';
+    if(cr==='ישראל'){req('corpCity');req('corpStreet');req('corpHouseNum');}
+    req('enCorpName', function(v){return EN_DIG_RE.test(v)&&v.length>=2&&v.length<=30;});
+    req('enStateOfInc', function(v){return EN_RE.test(v);});
+    req('enCorpResidency', function(v){return EN_RE.test(v);});
+    req('enCorpCity', function(v){return EN_RE.test(v);});
+    req('enCorpStreet', function(v){return EN_DIG_RE.test(v);});
+  }
+  if(n===3){
+    var q = vc('qualification');
+    if(!q){fail('err-qual','g');}
+    var isQual = q==='equity50M'||q==='whollyOwned';
+    if(isQual) rad('isSignedQualification','err-signedQual');
+  }
+  if(n===4){
+    req('a1fn', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+    req('a1ln', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+    req('a1id', ilId);
+    req('a1email', function(v){return EMAIL_RE.test(v);});
+    req('a1enFn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+    req('a1enLn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+    if(!gid('a1readClaims').checked){fail('err-a1read','g');}
+    if(vc('isSecondAuthorized')==='כן'){
+      req('a2fn', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+      req('a2ln', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+      req('a2id', ilId);
+      req('a2email', function(v){return EMAIL_RE.test(v);});
+      req('a2enFn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+      req('a2enLn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+      if(!gid('a2readClaims').checked){fail('err-a2read','g');}
+    }
+  }
+  if(n===5){
+    rad('isControllingShareholders','err-isCP');
+    if(vc('isControllingShareholders')==='לא') req('ifNoCp');
+    if(vc('isControllingShareholders')==='כן'){
+      req('cpNum');
+      var cpN = parseInt((gid('cpNum')&&gid('cpNum').value)||'0',10)||0;
+      for(var ci=1;ci<=cpN;ci++) validateCp(ci);
+    }
+  }
+  if(n===6){
+    req('invAmt', function(v){var a=parseFloat(String(v).replace(/,/g,''));return !isNaN(a)&&a>50000;});
+    rad('invCur','err-invCur');
+    req('invDate', function(v){return dateOk(v,{future:true});});
+    var cr2 = (gid('corpResidency')&&gid('corpResidency').value)||'';
+    if(cr2==='ישראל'){req('bankILName');req('bankILBranch');}
+    else if(cr2){req('bankFName');req('bankFBranch');}
+    req('bankAcct', function(v){return DIGITS_RE.test(v);});
+  }
+  if(n===7){
+    rad('moneySource','err-money');
+    if(vc('moneySource')==='אחר') req('otherSrc');
+    rad('corpPep','err-pep');
+    if(vc('corpPep')==='כן') req('pepD');
+    rad('corpLegal','err-legal');
+    if(vc('corpLegal')==='כן') req('legalD');
+  }
+  if(n===8){
+    rad('taxCt','err-taxCt');
+    var tc=vc('taxCt');
+    if(tc==='ישראל ומדינה אחרת'){req('taxOC1');req('taxOT1', function(v){return DIGITS_RE.test(v);});}
+    if(tc==='מדינה אחרת'){req('taxOOC1');req('taxOOT1', function(v){return DIGITS_RE.test(v);});}
+    rad('fatcaStatus','err-fatca');
+    if(vc('fatcaStatus')==='Passive NFFE') rad('passiveAorB','err-passiveAB');
+    if(vc('fatcaStatus')==='other') req('fatcaOtherDesc');
+    req('w8Country');
+  }
+  if(n===9){
+    if(!uploadedFiles['stamp']) ue('err-stamp');
+    if(!uploadedFiles['certInc']) ue('err-certInc');
+    if(!uploadedFiles['bylaws']) ue('err-bylaws');
+    if(!uploadedFiles['protocol']) ue('err-protocol');
+    if(!uploadedFiles['acctMgmt']) ue('err-acctMgmt');
+    if(vc('isSignedQualification')==='כן' && !uploadedFiles['qualFile']) ue('err-qualFile');
+    var anyUErr = document.getElementById('p9') && document.getElementById('p9').querySelector('.uerr.vis');
+    if(anyUErr) ok = false;
+    if(!gid('readClaims').checked){fail('err-read','g');}
+  }
+
+  if(!ok) setStatus('אנא תקנו את השדות המסומנים','err');
+  return ok;
+}
+
+function validateCp(ci){
+  var p='cp'+ci+'_';
+  function reqCP(id,fn){
+    var el=gid(p+id);
+    if(!el||!el.value.trim()){fe('f-'+p+id);return false;}
+    if(fn&&!fn(el.value.trim())){fe('f-'+p+id);return false;}
+    return true;
+  }
+  reqCP('fn', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+  reqCP('ln', function(v){return HE_RE.test(v)&&v.length>=2&&v.length<=20;});
+  reqCP('id', ilId);
+  reqCP('birthCtry');
+  reqCP('birthDate', function(v){return dateOk(v,{past:true,min18:true});});
+  reqCP('citizenship');
+  reqCP('occ', function(v){return v.length>=2&&v.length<=20;});
+  reqCP('res');
+  reqCP('email', function(v){return EMAIL_RE.test(v);});
+  reqCP('phone', function(v){return PHONE_RE.test(v.replace(/\s/g,''));});
+  reqCP('own', function(v){var n=parseFloat(v);return !isNaN(n)&&n>=0.1&&n<=100;});
+  reqCP('enFn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+  reqCP('enLn', function(v){return EN_RE.test(v)&&v.length>=2&&v.length<=20;});
+  if(!gid(p+'read')||!gid(p+'read').checked){ge('err-'+p+'read');}
+  var bio = vc(p+'bio')==='true';
+  if(!bio && !cpFiles[ci-1]['id']) ue('err-'+p+'id');
+  if(bio && (!cpFiles[ci-1]['idFront'] || !cpFiles[ci-1]['idBack'])) ue('err-'+p+'id');
+  if(!cpFiles[ci-1]['pass']) ue('err-'+p+'pass');
+}
+
+/* submit */
+gid('btn-submit').addEventListener('click', function(){
+  if(!validatePage(cur)) return;
+  if(!mondayItemId){setStatus('שגיאה: לא נמצא מזהה תאגיד. אנא השתמשו בקישור שנשלח אליכם','err');return;}
+  setStatus('שולח...','sav');
+  gid('btn-submit').disabled = true;
+  gid('btn-prev').disabled = true;
+
+  var submission = buildSubmission();
+  var files = {
+    corporate: {
+      stamp: uploadedFiles['stamp']||null,
+      certificateOfIncorporation: uploadedFiles['certInc']||null,
+      corporateBylaws: uploadedFiles['bylaws']||null,
+      protocol: uploadedFiles['protocol']||null,
+      accountManagementApproval: uploadedFiles['acctMgmt']||null,
+      qualification: uploadedFiles['qualFile']||null
+    },
+    controllingPersons: cpFiles.slice(0, parseInt((gid('cpNum')&&gid('cpNum').value)||'0',10)).map(function(cf){
+      return {id:cf.id||null,idFront:cf.idFront||null,idBack:cf.idBack||null,passport:cf.pass||null};
+    })
+  };
+
+  fetch(GAS_URL + '?source=lp', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'submit',lane:'israeli',flowType:'onboarding_entity',payload:{submission:submission,files:files}})
+  })
+  .then(function(r){return r.json();})
+  .then(function(res){
+    if(res&&res.ok&&res.nextUrl){
+      setStatus('הטופס הוגש! מעביר לחתימה...','');
+      setTimeout(function(){window.location.href=res.nextUrl;},800);
+    } else if(res&&res.ok){
+      document.open();document.write(tyPage());document.close();
+    } else {
+      var msg=(res&&res.error)?res.error:'שגיאה בהגשת הטופס. אנא נסו שוב.';
+      setStatus(msg,'err');
+      gid('btn-submit').disabled=false;gid('btn-prev').disabled=false;
+    }
+  })
+  .catch(function(){
+    setStatus('שגיאת רשת - אנא נסו שוב','err');
+    gid('btn-submit').disabled=false;gid('btn-prev').disabled=false;
+  });
+});
+
+function gv(id){ var e = gid(id); return e ? e.value.trim() : ''; }
+function gc(id){ var e = gid(id); return e ? e.checked : false; }
+
+function buildSubmission(){
+  var q = vc('qualification');
+  var cpN = parseInt((gid('cpNum')&&gid('cpNum').value)||'0',10)||0;
+  var cpArr = [];
+  for(var ci=1;ci<=cpN;ci++){
+    var pf='cp'+ci+'_';
+    cpArr.push({
+      firstName:gv(pf+'fn'),lastName:gv(pf+'ln'),gender:vc(pf+'gender'),
+      idNumber:gv(pf+'id'),birthCountry:gv(pf+'birthCtry'),birthDate:gv(pf+'birthDate'),
+      citizenship:gv(pf+'citizenship'),
+      isAdditionalCitizenship:vc(pf+'addCitz')==='true',
+      additionalCitizenship:vc(pf+'addCitz')==='true'?gv(pf+'addCitzVal'):'',
+      aliyaDate:gv(pf+'aliya'),ssn:gv(pf+'ssn'),
+      occupation:gv(pf+'occ'),residencyCountry:gv(pf+'res'),
+      email:gv(pf+'email'),phoneNumber:gv(pf+'phone'),
+      israelAddress:{city:gv(pf+'city'),street:gv(pf+'street'),houseNumber:gv(pf+'hnum'),postalCode:''},
+      isSameAddressAsFirst:false,
+      englishDetails:{firstName:gv(pf+'enFn'),lastName:gv(pf+'enLn'),englishAddress:{city:gv(pf+'enCity'),street:gv(pf+'enStr')}},
+      ownershipPercentage:gv(pf+'own'),
+      publicOrPoliticalActivity:vc(pf+'pep'),publicOrPoliticalActivityDescription:gv(pf+'pepD'),
+      legalOrAdministrativeProceedings:vc(pf+'legal'),legalOrAdministrativeProceedingsDescription:gv(pf+'legalD'),
+      qualification:{isLiquidAssets:false,isIncomeLevel:false,isBoth:false,isNotQualified:false,lawyerApprove:{liquidDate:'',other:''}},
+      isReadClaims:gc(pf+'read'),
+      signature:null,
+      taxResidency:{taxCountry:'',israelAndOtherCountries:{countriesArray:[]},otherCountries:{countriesArray:[]}},
+      fileUpload:{isBiometric:vc(pf+'bio')==='true',isSeparateAppendix:false,id:null,idFront:null,idBack:null,idAppendix:null,accountManagementApproval:null,passport:null}
+    });
+  }
+  var tc=vc('taxCt');
+  var taxRes={
+    taxCountry:tc,
+    israelAndOtherCountries:{countriesArray:tc==='ישראל ומדינה אחרת'?[{country:gv('taxOC1'),tin:gv('taxOT1')}]:[]},
+    otherCountries:{countriesArray:tc==='מדינה אחרת'?[{country:gv('taxOOC1'),tin:gv('taxOOT1')}]:[]}
+  };
+  var amtRaw = parseFloat(String(gv('invAmt')).replace(/,/g,''))||0;
+  return {
+    flowType:'onboarding_entity', lane:'israeli', language:'he',
+    corporationDetails:{
+      corporationName:gv('corpName'),corporationType:gv('corpType'),
+      stateOfIncorporation:gv('stateOfInc'),incorporationDate:gv('incDate'),
+      corporateActivity:gv('corpActivity'),companyNumber:gv('companyNumber'),
+      email:gv('corpEmail'),phoneNumber:gv('corpPhone'),
+      residencyCountry:gv('corpResidency'),
+      israelAddress:{city:gv('corpCity'),street:gv('corpStreet'),houseNumber:gv('corpHouseNum'),postalCode:gv('corpPostal')},
+      corporateSeal:null,
+      qualification:q,isSignedQualification:vc('isSignedQualification'),
+      englishDetails:{
+        corporationName:gv('enCorpName'),stateOfIncorporation:gv('enStateOfInc'),
+        residencyCountry:gv('enCorpResidency'),
+        englishAddress:{city:gv('enCorpCity'),street:gv('enCorpStreet'),houseNumber:'',postalCode:''}
+      }
+    },
+    firstAuthorized:{
+      firstName:gv('a1fn'),lastName:gv('a1ln'),idNumber:gv('a1id'),email:gv('a1email'),
+      signature:null,isReadClaims:gc('a1readClaims'),
+      englishDetails:{firstName:gv('a1enFn'),lastName:gv('a1enLn')}
+    },
+    isSecondAuthorized:vc('isSecondAuthorized')||'לא',
+    secondAuthorized:{
+      firstName:gv('a2fn'),lastName:gv('a2ln'),idNumber:gv('a2id'),email:gv('a2email'),
+      signature:null,isReadClaims:gc('a2readClaims'),
+      englishDetails:{firstName:gv('a2enFn'),lastName:gv('a2enLn')},
+      isControlling:'',validOneContrilling:true
+    },
+    isControllingShareholders:vc('isControllingShareholders'),
+    ifNoControllingShareholders:gv('ifNoCp'),
+    controllingShareholdersNum:gv('cpNum'),
+    controllingShareholdersContainer:{
+      isFirstControlling:'',
+      controllingShareholdersArray:cpArr
+    },
+    lawyerDetails:{firstName:'',lastName:'',fullName:'',email:'',phoneNumber:'',licenseNumber:'',stamp:null,signature:null,isApprove:false,lawyerQualificationApprove:{isReport:false,reportDate:'',isControllingQualification:false,isOther:false,other:''}},
+    moneyInvestedInFund:{
+      investedAmountArray:[{investedAmount:String(amtRaw),investedCurrency:vc('invCur')}],
+      investedAmount:String(amtRaw),investmentDate:gv('invDate'),
+      bankDetails:{bankNameIsrael:gv('bankILName'),branchNumberIsrael:gv('bankILBranch'),bankName:gv('bankFName'),branchNumber:gv('bankFBranch'),accountNumber:gv('bankAcct')},
+      moneySource:vc('moneySource'),otherSource:gv('otherSrc'),
+      publicOrPoliticalActivity:vc('corpPep'),publicOrPoliticalActivityDescription:gv('pepD'),
+      legalOrAdministrativeProceedings:vc('corpLegal'),legalOrAdministrativeProceedingsDescription:gv('legalD')
+    },
+    taxResidency:taxRes,
+    entityW8:{
+      fatcaStatus:vc('fatcaStatus'),type:'',defenetion:'',
+      residentCountry:gv('w8Country'),
+      isOtherType:{explain:''},
+      specialDefenitions:{hybridClaim:''},
+      ifActive:{},ifPassive:{passiveAorB:vc('passiveAorB')},
+      fatca:{isOtherFatcaStatus:''},specialFatca:{}
+    },
+    fileUpload:{
+      accountManagementApproval:null,stamp:null,
+      certificateOfIncorporation:null,corporateBylaws:null,
+      protocol:null,qualification:null
+    },
+    lp:{type:'entity',legalName:gv('corpName'),idNumber:gv('companyNumber'),primaryEmail:gv('corpEmail')},
+    meta:{flowType:'onboarding_entity',lane:'israeli',language:'he',mondayItemId:mondayItemId,uploadedFiles:[]}
+  };
+}
+
+/* review */
+function renderReview(){
+  var rv = gid('rv-corp');
+  if(rv) rv.innerHTML = kv([
+    ['שם החברה', gv('corpName')],['ח.פ.', gv('companyNumber')],
+    ['סוג', gv('corpType')],['מדינת מגורים', gv('corpResidency')],
+    ['דוא"ל', gv('corpEmail')],['כשירות', qualLbl()]
+  ]);
+  var ra = gid('rv-auth');
+  if(ra) ra.innerHTML = kv([
+    ['מורשה 1', gv('a1fn')+' '+gv('a1ln')],
+    ['מורשה 2', vc('isSecondAuthorized')==='כן'?(gv('a2fn')+' '+gv('a2ln')):'לא']
+  ]);
+  var ri = gid('rv-inv');
+  if(ri) ri.innerHTML = kv([
+    ['סכום', gv('invAmt')+' '+vc('invCur')],
+    ['תאריך', gv('invDate')],['מקור', vc('moneySource')]
+  ]);
+  var rf = gid('rv-files');
+  var fItems = [];
+  var fMap = {stamp:'חותמת',certInc:'תעודת התאגדות',bylaws:'תקנון',protocol:'פרוטוקול',acctMgmt:'אישור חשבון',qualFile:'טופס כשירות'};
+  Object.keys(fMap).forEach(function(k){
+    if(uploadedFiles[k]) fItems.push([fMap[k], uploadedFiles[k].filename]);
+  });
+  if(rf) rf.innerHTML = fItems.length ? kv(fItems) : '<span style="color:var(--muted);font-size:13px">לא הועלו קבצים</span>';
+}
+
+function kv(pairs){
+  return pairs.filter(function(x){return x[1];}).map(function(x){
+    return '<span class="rk">'+esc(x[0])+'</span><span class="rv">'+esc(x[1])+'</span>';
+  }).join('');
+}
+
+function qualLbl(){
+  var m = {equity50M:'כשיר (50M)',whollyOwned:'כשיר (wholly owned)',nonQualified:'לא כשיר'};
+  return m[vc('qualification')] || vc('qualification');
+}
+
+function tyPage(){
+  return '<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>תודה</title>' +
+    '<style>html,body{margin:0;height:100%;font-family:Assistant,sans-serif;background:#f4f7fa;}' +
+    'body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box;}' +
+    '.c{background:#fff;max-width:520px;width:100%;padding:48px 36px;border-radius:12px;box-shadow:0 6px 24px rgba(13,63,106,.12);text-align:center;}' +
+    'h1{color:#0D3F6A;font-size:26px;margin:0 0 16px;}p{color:#4a5568;font-size:16px;line-height:1.7;}</style>' +
+    '</head><body><div class="c"><h1>הטופס הוגש בהצלחה</h1>' +
+    '<p>תודה! קישור לחתימה יישלח לכל הצדדים הרלוונטיים בקרוב.</p></div></body></html>';
+}
+
+function setStatus(msg, kind){
+  var s = gid('sl');
+  s.textContent = msg||'';
+  s.className = 'sl' + (kind?' '+kind:'');
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+showPage(1);
+})();
+</script>
+</body>
+</html>
