@@ -87,7 +87,7 @@
     .lvp-progress[hidden] { display: none; }
     .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; }
     .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
-    .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
+    .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
 
     .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 14px; }
     .lvp-page__title::after { content: ""; display: block; height: 4px; width: 90px; margin-top: 4px;
@@ -240,41 +240,25 @@
     .lvp-link { color: var(--lvp-navy); text-decoration: underline; }
     /* Custom file upload block */
     .lvp-upload { position: relative; display: block; margin: 0 0 20px; }
-    .lvp-upload__btn { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #E5E7EB; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.06); pointer-events: none; user-select: none; transition: border-color 0.15s, background 0.15s; }
-    .lvp-upload__icon-wrap { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #F3F4F6; color: #9CA3AF; transition: background 0.15s, color 0.15s; }
-    .lvp-upload__icon-ok { display: none; }
+    .lvp-upload__btn { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1px solid #D1D5DB; border-radius: 8px; background: #FFFFFF; pointer-events: none; user-select: none; transition: border-color 0.15s; }
     .lvp-upload__content { flex: 1; min-width: 0; }
-    .lvp-upload__doc-title { display: block; font-size: 15px; font-weight: 600; color: var(--lvp-text); }
-    .lvp-upload__action { display: block; font-size: 13px; color: var(--lvp-text-muted); margin-top: 2px; }
-    .lvp-upload__formats { display: block; font-size: 13px; color: var(--lvp-text-muted); margin-top: 1px; }
-    .lvp-upload__name { display: none; font-size: 13px; color: var(--lvp-navy); font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lvp-upload__hint { font-size: 13px; color: var(--lvp-text-muted); line-height: 1.4; margin: 6px 16px 0; }
+    .lvp-upload__doc-title { display: block; font-size: 14px; font-weight: 500; color: var(--lvp-text); }
+    .lvp-upload__name { display: none; font-size: 13px; color: var(--lvp-navy); font-weight: 400; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lvp-upload__hint { font-size: 12px; color: var(--lvp-text-muted); line-height: 1.4; margin: 5px 0 0; }
     .lvp-upload input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
-    @media (hover: hover) { .lvp-upload:hover .lvp-upload__btn { border-color: #9CA3AF; } }
-    /* Filled state. :has() drives the swap with no JS class write needed. */
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) { border-color: var(--lvp-navy); background: #EFF6FF; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-wrap { background: #DBEAFE; color: var(--lvp-navy); }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-up { display: none; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__icon-ok { display: block; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__action { display: none; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__formats { display: none; }
-    .lvp-upload__btn:has([data-upload-name][data-has-file]) .lvp-upload__name { display: block; }
+    @media (hover: hover) { .lvp-upload:hover .lvp-upload__btn { border-color: var(--lvp-navy); } }
+    .lvp-upload__btn::after { content: ''; display: block; width: 16px; height: 16px; flex-shrink: 0; }
+    .lvp-upload.has-file .lvp-upload__btn { border-color: var(--lvp-navy); }
+    .lvp-upload.has-file .lvp-upload__btn::after { content: '✓'; width: auto; height: auto; color: var(--lvp-navy); font-size: 13px; font-weight: 600; }
+    .lvp-upload.has-file .lvp-upload__name { display: block; }
+    .lvp-upload.has-file .lvp-upload__doc-title { color: var(--lvp-navy); }
     /* Remove button: appears on filled cards so the LP can clear a wrong file */
     .lvp-upload__remove { display: none; position: absolute; top: 8px; right: 8px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(13,63,106,0.08); color: var(--lvp-text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; transition: background 0.15s; }
     .lvp-upload__remove:hover { background: rgba(13,63,106,0.18); color: var(--lvp-error); }
     .lvp-upload.has-file .lvp-upload__remove { display: flex; align-items: center; justify-content: center; }
     /* JS fallback class for :has() (pre-2023 browsers) */
-    .lvp-upload.has-file .lvp-upload__btn { border-color: var(--lvp-navy); background: #EFF6FF; }
-    .lvp-upload.has-file .lvp-upload__icon-wrap { background: #DBEAFE; color: var(--lvp-navy); }
-    .lvp-upload.has-file .lvp-upload__icon-up { display: none; }
-    .lvp-upload.has-file .lvp-upload__icon-ok { display: block; }
-    .lvp-upload.has-file .lvp-upload__action { display: none; }
-    .lvp-upload.has-file .lvp-upload__formats { display: none; }
-    .lvp-upload.has-file .lvp-upload__name { display: block; }
     /* Focus ring for keyboard navigation */
-    .lvp-upload:focus-within .lvp-upload__btn { outline: 2px solid var(--lvp-navy); outline-offset: 2px; border-radius: 12px; }
-    /* RTL: mirror icon to the right */
-    .lvp-card[dir="rtl"] .lvp-upload__btn { flex-direction: row-reverse; }
+    .lvp-upload:focus-within .lvp-upload__btn { outline: 2px solid var(--lvp-navy); outline-offset: 2px; }
     .lvp-card[dir="rtl"] .lvp-upload__remove { right: auto; left: 8px; }
     /* Field width constraints for short inputs (ID, SWIFT, dates) */
     .lvp-field--short { max-width: 280px; }
@@ -2032,14 +2016,9 @@
     // button over the invisible native file input. The native input stays in the DOM
     // so the existing change handler (pendingUploads + autofill) fires unchanged.
     function initUploadBlocks() {
-      // Upload icon (empty state) and checkmark (filled state).
-      var UP_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
-      var OK_SVG = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
       form.querySelectorAll('input[type="file"][data-upload]').forEach(function (inp) {
         if (inp.parentElement.classList.contains('lvp-upload')) return;
         var slot  = inp.getAttribute('data-upload');
-        var action = 'Upload documents';
-        var fmts  = 'PDF · JPG · PNG';
         var parentLabel = inp.closest('label.lvp-field');
         var labelSpan = parentLabel ? parentLabel.querySelector('.lvp-field__label') : null;
         var docName = labelSpan ? labelSpan.textContent : '';
@@ -2049,14 +2028,8 @@
         var btn = document.createElement('div');
         btn.className = 'lvp-upload__btn';
         btn.innerHTML =
-          '<span class="lvp-upload__icon-wrap">' +
-            '<span class="lvp-upload__icon-up">' + UP_SVG + '</span>' +
-            '<span class="lvp-upload__icon-ok">' + OK_SVG + '</span>' +
-          '</span>' +
           '<span class="lvp-upload__content">' +
             '<span class="lvp-upload__doc-title">' + docName + '</span>' +
-            '<span data-upload-label class="lvp-upload__action">' + action + '</span>' +
-            '<span class="lvp-upload__formats">' + fmts + '</span>' +
             '<span class="lvp-upload__name" data-upload-name="' + slot + '"></span>' +
           '</span>';
         var removeBtn = document.createElement('button');
