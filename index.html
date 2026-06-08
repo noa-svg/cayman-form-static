@@ -83,6 +83,7 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 24px; gap: 12px;
     }
+    .lvp-progress[hidden] { display: none; }
     .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; }
     .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
@@ -96,6 +97,7 @@
     .lvp-page[data-page="welcome"] { text-align: center; padding: 20px 0 8px; }
     .lvp-page[data-page="welcome"] .lvp-page__title { font-size: 30px; margin-bottom: 22px; }
     .lvp-page[data-page="welcome"] .lvp-page__title::after { margin-left: auto; margin-right: auto; }
+    .lvp-card[dir="rtl"] .lvp-page[data-page="welcome"] .lvp-page__title::after { margin-left: auto; margin-right: auto; background: linear-gradient(to right, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
     .lvp-page[data-page="welcome"] .lvp-page__hint { font-size: 19px; line-height: 1.75; color: var(--lvp-text-muted); max-width: 560px; margin: 0 auto; }
     @media (max-width: 560px) { .lvp-page[data-page="welcome"] .lvp-page__title { font-size: 24px; } .lvp-page[data-page="welcome"] .lvp-page__hint { font-size: 17px; } }
 
