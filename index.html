@@ -176,6 +176,8 @@
     .lvp-fieldset--error .lvp-fieldset__legend { color: var(--lvp-error); }
     .lvp-fieldset--error .lvp-fieldset__legend::after, .lvp-field--error .lvp-field__label::after { content: " required"; font-weight: 400; opacity: 0.85; }
     .lvp-card[dir="rtl"] .lvp-field--error .lvp-field__label::after, .lvp-card[dir="rtl"] .lvp-fieldset--error .lvp-fieldset__legend::after { content: " שדה חובה"; }
+    .lvp-field--value-error .lvp-input, .lvp-field--value-error .lvp-input--select { border-bottom-color: var(--lvp-error); border-bottom-width: 2px; padding-bottom: 7px; }
+    .lvp-field--value-error .lvp-field__label { color: var(--lvp-error); }
 
     /* Submit: full-card loading + branded confirmation states (fix 5/UX). */
     .lvp-result { text-align: center; padding: 24px 8px 12px; }
@@ -361,7 +363,7 @@
           <div data-applicant="individual">
             <label class="lvp-field" data-required><span class="lvp-field__label">Passport</span><input class="lvp-input" type="file" data-upload="passportPrimary" accept="image/*,application/pdf"></label>
 
-            <label class="lvp-field"><span class="lvp-field__label">ID card</span><input class="lvp-input" type="file" data-upload="nationalId" accept="image/*,application/pdf" multiple><p class="lvp-hint-small" data-id-status="nationalId">If Israeli, attach the back of the card (if biometric) and the appendix (ספח). You can attach up to 3 files. <a class="lvp-link" href="https://www.gov.il/he/service/renew_id_appendix" target="_blank" rel="noopener">Download appendix</a></p></label>
+            <label class="lvp-field"><span class="lvp-field__label">ID card</span><input class="lvp-input" type="file" data-upload="nationalId" accept="image/*,application/pdf" multiple><p class="lvp-hint-small" data-id-status="nationalId">If Israeli, attach the back of the card (if biometric) and the appendix (ספח). You can attach up to 3 files.</p><a class="lvp-link" href="https://www.gov.il/he/service/renew_id_appendix" target="_blank" rel="noopener">Download your ID appendix from the Population Authority</a></label>
 
             <label class="lvp-field" data-required><span class="lvp-field__label">Proof of residential address</span><input class="lvp-input" type="file" data-upload="proofOfAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">A document dated within the last 3 months: utility bill (water, electricity, gas, phone, internet, TV), property tax bill, credit card statement, bank letter, or other government-issued letter.</p></label>
             <label class="lvp-field lvp-field--narrow" data-required><span class="lvp-field__label">Date on proof of address</span><input class="lvp-input" type="date" name="uploads.proofOfAddress.documentDate"></label>
@@ -1461,7 +1463,7 @@
     function validatePage(pageEl) {
       var ok = true;
       var firstError = null;
-      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); });
+      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--value-error'); });
       pageEl.querySelectorAll('[data-required]').forEach(function (holder) {
         if (isHidden(holder)) return;
         var inputs = holder.querySelectorAll('input, select, textarea');
@@ -1494,12 +1496,12 @@
         var d = new Date(inp.value + 'T00:00:00');
         var now = new Date(); now.setHours(0,0,0,0);
         if (d > now) {
-          ok = false; holder.classList.add('lvp-field--error'); if (!firstError) firstError = holder;
+          ok = false; holder.classList.add('lvp-field--value-error'); if (!firstError) firstError = holder;
           setStatus(curLang === 'he' ? 'התאריך לא יכול להיות בעתיד.' : 'The date cannot be in the future.', true);
         } else {
           var threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
           if (d < threeMonthsAgo) {
-            ok = false; holder.classList.add('lvp-field--error'); if (!firstError) firstError = holder;
+            ok = false; holder.classList.add('lvp-field--value-error'); if (!firstError) firstError = holder;
             setStatus(curLang === 'he' ? 'המסמך חייב להיות מ-3 החודשים האחרונים.' : 'The document must be dated within the last 3 months.', true);
           }
         }
@@ -1518,7 +1520,7 @@
       while (el && el !== form) { if (el.hidden || el.style.display === 'none') return true; el = el.parentElement; }
       return false;
     }
-    function clearError(pageEl) { if (pageEl) pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); }); }
+    function clearError(pageEl) { if (pageEl) pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error, .lvp-field--value-error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--value-error'); }); }
 
     // ---- navigation ----
     function currentPageEl() { return visiblePages()[idx]; }
