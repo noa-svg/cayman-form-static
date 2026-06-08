@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners CI - signer</title>
+  <link rel="icon" href="https://sign.legacyvpartners.com/favicon.png">
+  <!--
+    Per-signer form + inline doc review + signature page. Each secondary signer
+    (subscriber2, cp1..4, lawyer) lands here via a tokenized URL. They see:
+      1. Locked/greyed primary details (read-only context)
+      2. Their editable personal fields
+      3. Full inline doc package for review
+      4. Signature canvas
+      5. Submit
+    Same pattern as the primary signer's flow (decision #3, 2026-06-08).
+    No em-dashes in LP-visible copy.
+  -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
+    :root { --navy:#0D3F6A; --navy-700:#0a3257; --gold:#FFB42C; --text:#1d1d1d; --muted:#545454; --line:#C2C2C2; --error:#c0392b; --card-bg:#fff; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; min-height:100%; }
+    body { font-family:"Assistant","Arimo",Arial,sans-serif; color:var(--text); line-height:1.5; background:#fff; min-height:100vh; }
+    body::before { content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background:url('https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png') no-repeat center center;
+      background-size:100% 100%; opacity:0.5; }
+    .app { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px 48px; }
+    .header { width:100%; max-width:700px; margin-bottom:28px; }
+    .header img { height:56px; width:auto; display:block; }
+    .card { background:var(--card-bg); width:100%; max-width:700px; border-radius:12px;
+      box-shadow:0 6px 24px rgba(13,63,106,0.12); padding:32px 32px 28px; }
+    .pill { display:inline-block; padding:4px 12px; background:var(--navy); color:#fff; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:0.03em; margin-bottom:14px; }
+    h1 { color:var(--navy); font-size:24px; font-weight:700; margin:0 0 14px; }
+    h1::after { content:""; display:block; height:4px; width:90px; margin-top:8px; background:linear-gradient(to right, var(--gold) 0 45px, var(--navy) 45px 90px); }
+    h2 { color:var(--navy); font-size:18px; font-weight:700; margin:24px 0 12px; }
+    .hint { color:var(--muted); font-size:15px; margin:0 0 20px; line-height:1.6; }
+
+    /* Locked/greyed context block */
+    .locked { background:#f4f7fb; border:1px solid #dce3eb; border-radius:8px; padding:16px; margin:0 0 20px; }
+    .locked dt { font-size:12px; color:var(--muted); margin:8px 0 2px; }
+    .locked dt:first-child { margin-top:0; }
+    .locked dd { margin:0; font-size:15px; color:var(--text); font-weight:700; }
+
+    /* Editable form fields */
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:13px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+    .field input, .field select { font:inherit; font-size:15px; width:100%; padding:10px 12px;
+      border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); }
+    .field input:focus, .field select:focus { outline:none; border-color:var(--navy); }
+    .field--error input, .field--error select { border-color:var(--error); }
+
+    /* Doc preview */
+    .doc-preview { margin-top:24px; }
+    .doc { margin-top:16px; border:1px solid #dce3eb; border-radius:8px; overflow:hidden; }
+    .doc__title { background:#f4f7fb; padding:10px 16px; font-weight:700; font-size:14px;
+      color:var(--navy); border-bottom:1px solid #dce3eb; cursor:pointer; user-select:none;
+      display:flex; align-items:center; justify-content:space-between; }
+    .doc__title::after { content:""; display:inline-block; width:8px; height:8px;
+      border-right:2px solid var(--navy); border-bottom:2px solid var(--navy);
+      transform:rotate(45deg); transition:transform 200ms ease; flex-shrink:0; margin-left:12px; }
+    .doc.collapsed .doc__title::after { transform:rotate(-45deg); }
+    .doc__body { max-height:400px; overflow-y:auto; padding:16px; font-size:13px; line-height:1.6; background:#fff; }
+    .doc.collapsed .doc__body { max-height:0; padding:0 16px; overflow:hidden; }
+    .doc__body img { max-width:100%; height:auto; }
+    .doc__note { padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
+
+    /* Signature */
+    .sig-section { margin-top:28px; }
+    .consent-check { display:flex; align-items:flex-start; gap:10px; margin-bottom:16px;
+      font-size:14px; line-height:1.5; color:var(--text); cursor:pointer; }
+    .consent-check input[type="checkbox"] { width:18px; height:18px; flex-shrink:0; margin-top:2px; accent-color:var(--navy); }
+    .pad-shell { border:1px solid #d0d4d8; border-radius:8px; padding:14px; background:#fff; }
+    canvas { width:100%; height:200px; border:1px dashed #b9c2cb; border-radius:8px; touch-action:none; background:#fff; display:block; }
+    .row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+    .btn { font:inherit; font-weight:700; font-size:15px; padding:13px 32px; border-radius:999px; border:none; cursor:pointer; transition:background 120ms ease; }
+    .btn--primary { background:var(--navy); color:#fff; }
+    .btn--primary:hover { background:var(--navy-700); }
+    .btn--primary[disabled] { opacity:0.5; cursor:not-allowed; }
+    .btn--secondary { background:rgba(255,255,255,0.85); color:var(--navy); border:1px solid var(--line); font-size:13px; padding:8px 18px; }
+    .err { color:var(--error); font-size:13px; margin-top:12px; min-height:18px; }
+    .state { text-align:center; padding:16px 4px; }
+    .check { width:56px; height:56px; border-radius:50%; background:var(--navy); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:12px; }
+    .state h1 { display:inline-block; }
+    .state h1::after { margin-left:auto; margin-right:auto; }
+    .state p { color:var(--muted); font-size:15px; margin:6px 0; line-height:1.6; }
+    .spinner { width:40px; height:40px; border:4px solid #dce3eb; border-top-color:var(--navy);
+      border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    [hidden] { display:none !important; }
+    @media (max-width:480px){ .card{ padding:22px 18px; } .header img{ height:44px; } }
+
+    .lvp-lang { position:fixed; top:14px; right:16px; z-index:50; display:inline-flex; align-items:stretch;
+      background:#fff; border:1px solid var(--line); border-radius:999px; overflow:hidden;
+      box-shadow:0 2px 8px rgba(13,63,106,0.12); font-family:"Assistant","Arimo",Arial,sans-serif; }
+    .lvp-lang__btn { font:inherit; font-size:13px; font-weight:700; border:none; background:transparent;
+      color:var(--navy); padding:7px 16px; cursor:pointer; line-height:1.2; transition:background 120ms ease, color 120ms ease; }
+    .lvp-lang__btn[aria-pressed="true"] { background:var(--navy); color:#fff; }
+  </style>
+</head>
+<body>
+  <div class="lvp-lang" role="group" aria-label="Language">
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="true">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="false">&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</button>
+  </div>
+  <div class="app">
+    <header class="header">
+      <img src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
+    </header>
+    <div class="card">
+
+      <!-- Loading state -->
+      <div data-state="loading">
+        <div class="state">
+          <div class="spinner"></div>
+          <p>Loading your form...</p>
+        </div>
+      </div>
+
+      <!-- Error / invalid state -->
+      <div data-state="invalid" hidden>
+        <div class="state">
+          <h1>Link unavailable</h1>
+          <p id="invalid-msg">This signing link is invalid or has expired. Please contact Legacy Value Partners.</p>
+        </div>
+      </div>
+
+      <!-- Already signed state -->
+      <div data-state="signed" hidden>
+        <div class="state">
+          <div class="check">&#x2713;</div>
+          <h1>Already signed</h1>
+          <p>Your signature has already been recorded. No further action is needed.</p>
+        </div>
+      </div>
+
+      <!-- Not your turn state -->
+      <div data-state="notyet" hidden>
+        <div class="state">
+          <h1>Not yet</h1>
+          <p>It is not your turn to sign yet. You will receive an email when the prior signers have completed their signatures.</p>
+        </div>
+      </div>
+
+      <!-- Main form + docs + sign -->
+      <div data-state="form" hidden>
+        <div class="pill">Legacy Value Partners CI, LP</div>
+        <h1 id="form-title">Complete and sign</h1>
+        <p class="hint" id="form-hint">Please review the details below, complete your section, review the subscription documents, and sign.</p>
+
+        <!-- Locked/greyed primary context -->
+        <div id="locked-context"></div>
+
+        <!-- Editable fields -->
+        <h2 id="fields-title">Your details</h2>
+        <form id="signer-form" autocomplete="on" novalidate>
+          <div id="editable-fields"></div>
+        </form>
+
+        <!-- Inline doc preview -->
+        <div class="doc-preview">
+          <h2>Subscription documents</h2>
+          <div id="doc-list"></div>
+        </div>
+
+        <!-- Signature -->
+        <div class="sig-section">
+          <h2>Your signature</h2>
+          <label class="consent-check">
+            <input type="checkbox" id="consent">
+            <span>I have reviewed the documents above and confirm my agreement to the terms set out in the Subscription Agreement.</span>
+          </label>
+          <div class="pad-shell">
+            <canvas id="pad"></canvas>
+          </div>
+          <div class="row">
+            <button type="button" class="btn btn--secondary" id="clear">Clear</button>
+            <span style="flex:1"></span>
+            <button type="button" class="btn btn--primary" id="done" disabled>Sign and submit</button>
+          </div>
+          <div class="err" id="err"></div>
+        </div>
+      </div>
+
+      <!-- Done state -->
+      <div data-state="done" hidden>
+        <div class="state">
+          <div class="check">&#x2713;</div>
+          <h1>Thank you</h1>
+          <p id="done-msg">Your signature has been recorded.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+    var params = new URLSearchParams(location.search);
+    var TOKEN = params.get('t') || params.get('sign') || '';
+
+    var HE_MAP = {
+      "Loading your form...": "טוען את הטופס...",
+      "Link unavailable": "קישור לא זמין",
+      "This signing link is invalid or has expired. Please contact Legacy Value Partners.": "קישור החתימה אינו תקין או פג תוקפו. נא לפנות ל-Legacy Value Partners.",
+      "Already signed": "כבר נחתם",
+      "Your signature has already been recorded. No further action is needed.": "החתימה שלך כבר תועדה. אין צורך בפעולה נוספת.",
+      "Not yet": "עוד לא תורך",
+      "It is not your turn to sign yet. You will receive an email when the prior signers have completed their signatures.": "עדיין לא הגיע תורך לחתום. תקבל/י מייל כשהחותמים הקודמים יסיימו.",
+      "Complete and sign": "מילוי וחתימה",
+      "Please review the details below, complete your section, review the subscription documents, and sign.": "נא לעיין בפרטים להלן, למלא את החלק שלך, לעיין במסמכי ההצטרפות ולחתום.",
+      "Your details": "הפרטים שלך",
+      "Subscription documents": "מסמכי ההצטרפות",
+      "Your signature": "חתימה",
+      "I have reviewed the documents above and confirm my agreement to the terms set out in the Subscription Agreement.": "עיינתי במסמכים שלעיל ואני מאשר/ת את הסכמתי לתנאים המפורטים בהסכם ההצטרפות.",
+      "Clear": "נקה",
+      "Sign and submit": "חתימה ושליחה",
+      "Recording...": "מתעד....",
+      "Thank you": "תודה",
+      "Your signature has been recorded.": "החתימה שלך תועדה.",
+      "All signatures are in. We will assemble the documents and email a confirmation.": "כל החתימות התקבלו. נרכיב את המסמכים ונשלח אישור למייל.",
+      "Your signature has been recorded. We will notify the next signer.": "החתימה שלך תועדה. נודיע לחותם/ת הבא/ה.",
+      "We could not record your signature. Please try again.": "לא ניתן לתעד את החתימה. נא לנסות שוב.",
+      "Please confirm that you have reviewed the documents.": "יש לאשר שעיינת במסמכים.",
+      "Please draw your signature before submitting.": "יש לשרטט חתימה לפני השליחה.",
+      "Company details": "פרטי החברה",
+      "Primary investor": "המשקיע/ה הראשי/ת",
+      "Investment amount": "סכום השקעה",
+      "First name *": "שם פרטי",
+      "Last name *": "שם משפחה",
+      "Email *": "מייל",
+      "Phone *": "טלפון",
+      "ID or passport number *": "מספר תעודת זהות או דרכון",
+      "Title or position *": "תפקיד",
+      "Date of birth *": "תאריך לידה",
+      "Nationality *": "אזרחות",
+      "Address *": "כתובת",
+      "City *": "עיר",
+      "Country *": "מדינה",
+      "Postal code *": "מיקוד",
+      "License number *": "מספר רישיון",
+      "Firm name": "שם המשרד",
+      "Control type *": "סוג שליטה",
+      "Ownership percentage *": "אחוז בעלות"
+    };
+
+    var curLang = 'en';
+    function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; }); }
+
+    function applyLang(lang) {
+      curLang = lang;
+      document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+      });
+      // Translate static text nodes
+      document.querySelectorAll('[data-state] h1, [data-state] p, .hint, h2, .consent-check span, .btn, label').forEach(function (el) {
+        if (!el.dataset.en) el.dataset.en = el.textContent;
+        var he = HE_MAP[el.dataset.en];
+        if (he && lang === 'he') el.textContent = he;
+        else if (el.dataset.en && lang === 'en') el.textContent = el.dataset.en;
+      });
+    }
+    document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+      b.addEventListener('click', function () { applyLang(b.getAttribute('data-lang-set')); });
+    });
+
+    function show(name) {
+      var els = document.querySelectorAll('[data-state]');
+      for (var i = 0; i < els.length; i++) els[i].hidden = (els[i].getAttribute('data-state') !== name);
+    }
+
+    if (!TOKEN) { show('invalid'); return; }
+
+    // Fetch signer form context
+    var x = new XMLHttpRequest();
+    x.open('GET', GW + '?api=signerform&t=' + encodeURIComponent(TOKEN), true);
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      var ctx = {};
+      try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
+      if (!ctx.ok) {
+        if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
+        if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
+        applyLang('he'); show('invalid'); return;
+      }
+      renderSignerForm(ctx);
+    };
+    x.send(null);
+
+    function renderSignerForm(ctx) {
+      applyLang('he');
+
+      // Locked context
+      var lockedHtml = '<dl class="locked">';
+      var lc = ctx.lockedContext || {};
+      if (lc.companyName) {
+        lockedHtml += '<dt>' + esc(tHe('Company details')) + '</dt>';
+        lockedHtml += '<dd>' + esc(lc.companyName) + '</dd>';
+        if (lc.registrationNumber) lockedHtml += '<dt>' + esc(tHe('Registration number')) + '</dt><dd>' + esc(lc.registrationNumber) + '</dd>';
+        if (lc.countryOfIncorporation) lockedHtml += '<dt>' + esc(tHe('Country')) + '</dt><dd>' + esc(lc.countryOfIncorporation) + '</dd>';
+        if (lc.primarySignatory) lockedHtml += '<dt>' + esc(tHe('Primary signatory')) + '</dt><dd>' + esc(lc.primarySignatory.name) + '</dd>';
+      }
+      if (lc.primaryInvestor) {
+        lockedHtml += '<dt>' + esc(tHe('Primary investor')) + '</dt><dd>' + esc(lc.primaryInvestor.name) + '</dd>';
+      }
+      if (lc.investmentAmount) {
+        var amtDisplay = lc.investmentCurrency ? (lc.investmentCurrency + ' ' + Number(lc.investmentAmount).toLocaleString('en-US')) : String(lc.investmentAmount);
+        lockedHtml += '<dt>' + esc(tHe('Investment amount')) + '</dt><dd>' + esc(amtDisplay) + '</dd>';
+      }
+      lockedHtml += '</dl>';
+      document.getElementById('locked-context').innerHTML = lockedHtml;
+
+      // Editable fields
+      var ef = ctx.editableFields || {};
+      var fieldsHtml = '';
+      var fieldDefs = {
+        firstName:    { label: 'First name *', type: 'text' },
+        lastName:     { label: 'Last name *', type: 'text' },
+        email:        { label: 'Email *', type: 'email' },
+        phone:        { label: 'Phone *', type: 'tel' },
+        idNumber:     { label: 'ID or passport number *', type: 'text' },
+        title:        { label: 'Title or position *', type: 'text' },
+        dateOfBirth:  { label: 'Date of birth *', type: 'date' },
+        nationality:  { label: 'Nationality *', type: 'text' },
+        address:      { label: 'Address *', type: 'text' },
+        city:         { label: 'City *', type: 'text' },
+        country:      { label: 'Country *', type: 'text' },
+        postalCode:   { label: 'Postal code *', type: 'text' },
+        licenseNumber:{ label: 'License number *', type: 'text' },
+        firmName:     { label: 'Firm name', type: 'text' },
+        controlType:  { label: 'Control type *', type: 'text' },
+        ownershipPercentage: { label: 'Ownership percentage *', type: 'text' }
+      };
+      (ef.fields || []).forEach(function (f) {
+        var def = fieldDefs[f];
+        if (!def) return;
+        fieldsHtml += '<div class="field"><label>' + esc(tHe(def.label)) + '</label>' +
+          '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"></div>';
+      });
+      document.getElementById('editable-fields').innerHTML = fieldsHtml;
+
+      // Docs
+      var docList = document.getElementById('doc-list');
+      (ctx.docs || []).forEach(function (doc) {
+        var el = document.createElement('div');
+        el.className = 'doc';
+        if (doc.acroFill) {
+          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
+            '<div class="doc__note">' + esc(doc.note || 'This tax form will be completed from your answers.') + '</div>';
+        } else if (doc.html) {
+          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
+            '<div class="doc__body">' + doc.html + '</div>';
+        } else {
+          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
+            '<div class="doc__note">' + esc(doc.error || 'Document preview not available.') + '</div>';
+        }
+        var titleEl = el.querySelector('.doc__title');
+        if (titleEl) titleEl.addEventListener('click', function () { el.classList.toggle('collapsed'); });
+        docList.appendChild(el);
+      });
+
+      show('form');
+      initPad(ctx);
+    }
+
+    function initPad(ctx) {
+      var canvas = document.getElementById('pad');
+      var doneBtn = document.getElementById('done');
+      var clearBtn = document.getElementById('clear');
+      var consentBox = document.getElementById('consent');
+      var errEl = document.getElementById('err');
+      var ctx2 = canvas.getContext('2d');
+      var ratio = window.devicePixelRatio || 1;
+      function size() {
+        var r = canvas.getBoundingClientRect();
+        canvas.width = r.width * ratio; canvas.height = r.height * ratio;
+        ctx2.scale(ratio, ratio); ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
+      }
+      size();
+      var drawing = false, dirty = false, last = { x:0, y:0 }, points = 0;
+      var MIN_POINTS = 8;
+      function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
+      function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+      function move(e) {
+        if (!drawing) return;
+        var p = pos(e);
+        ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
+        last = p; dirty = true; points++;
+        updateBtn();
+        e.preventDefault();
+      }
+      function endDraw() { drawing = false; }
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', endDraw);
+
+      function updateBtn() {
+        doneBtn.disabled = !(dirty && points >= MIN_POINTS && consentBox.checked);
+      }
+      consentBox.addEventListener('change', updateBtn);
+
+      clearBtn.addEventListener('click', function () {
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        dirty = false; points = 0; errEl.textContent = '';
+        updateBtn();
+      });
+
+      doneBtn.addEventListener('click', function () {
+        if (doneBtn.disabled) return;
+        if (!consentBox.checked) { errEl.textContent = tHe('Please confirm that you have reviewed the documents.'); return; }
+        if (!dirty || points < MIN_POINTS) { errEl.textContent = tHe('Please draw your signature before submitting.'); return; }
+
+        doneBtn.disabled = true; clearBtn.disabled = true; errEl.textContent = '';
+        doneBtn.textContent = tHe('Recording...');
+        var png = canvas.toDataURL('image/png');
+
+        // Collect editable field values
+        var formData = {};
+        var inputs = document.querySelectorAll('#signer-form input');
+        inputs.forEach(function (inp) { if (inp.name) formData[inp.name] = inp.value; });
+
+        var body = JSON.stringify({
+          action: 'record_signature',
+          token: TOKEN,
+          lane: 'cayman',
+          payload: {
+            signToken: TOKEN,
+            pngBase64: png,
+            signerFormData: formData
+          }
+        });
+
+        var p = new XMLHttpRequest();
+        p.open('POST', GW + '?source=lp', true);
+        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        p.onreadystatechange = function () {
+          if (p.readyState !== 4) return;
+          var res = {};
+          try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
+          if (res && res.ok) {
+            document.getElementById('done-msg').textContent = res.completed
+              ? tHe('All signatures are in. We will assemble the documents and email a confirmation.')
+              : tHe('Your signature has been recorded. We will notify the next signer.');
+            show('done');
+          } else {
+            errEl.textContent = tHe('We could not record your signature. Please try again.');
+            doneBtn.textContent = tHe('Sign and submit');
+            doneBtn.disabled = false; clearBtn.disabled = false;
+          }
+        };
+        p.send(body);
+      });
+    }
+  })();
+  </script>
+</body>
+</html>
