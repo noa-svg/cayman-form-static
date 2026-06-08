@@ -303,7 +303,7 @@
 </head>
 <body>
   <div class="lvp-lang" role="group" aria-label="Language">
-    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
     <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
   </div>
     <div class="lvp-app">
@@ -333,21 +333,21 @@
 
           <!-- INDIVIDUAL documents -->
           <div data-applicant="individual">
-            <label class="lvp-field"><span class="lvp-field__label">Passport</span><input class="lvp-input" type="file" data-upload="passportPrimary" accept="image/*,application/pdf"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Passport</span><input class="lvp-input" type="file" data-upload="passportPrimary" accept="image/*,application/pdf"></label>
 
             <label class="lvp-field"><span class="lvp-field__label">Israeli ID (teudat zehut)</span><input class="lvp-input" type="file" data-upload="nationalId" accept="image/*,application/pdf" multiple><p class="lvp-hint-small" data-id-status="nationalId">Attach both sides of the card (if biometric) and the appendix (ספח). You can add more than one photo.</p></label>
             <p class="lvp-helplink"><a class="lvp-link" href="https://www.gov.il/he/service/renew_id_appendix" target="_blank" rel="noopener">Download your ID appendix from the Population Authority</a></p>
 
-            <label class="lvp-field"><span class="lvp-field__label">Proof of residential address</span><input class="lvp-input" type="file" data-upload="proofOfAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Utility bill or bank statement dated within the last 3 months.</p></label>
-            <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Date on proof of address</span><input class="lvp-input" type="date" name="uploads.proofOfAddress.documentDate"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Proof of residential address</span><input class="lvp-input" type="file" data-upload="proofOfAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Utility bill or bank statement dated within the last 3 months.</p></label>
+            <label class="lvp-field lvp-field--narrow" data-required><span class="lvp-field__label">Date on proof of address</span><input class="lvp-input" type="date" name="uploads.proofOfAddress.documentDate"></label>
 
-            <label class="lvp-field"><span class="lvp-field__label">Bank account confirmation</span><input class="lvp-input" type="file" data-upload="bankAccountConfirmation" accept="application/pdf,image/*"><p class="lvp-hint-small">A letter or statement from your bank confirming the account is held in your name.</p></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Bank account confirmation</span><input class="lvp-input" type="file" data-upload="bankAccountConfirmation" accept="application/pdf,image/*"><p class="lvp-hint-small">A letter or statement from your bank confirming the account is held in your name.</p></label>
           </div>
 
           <!-- ENTITY documents -->
           <div data-applicant="entity">
             <!-- Entity type asked here so doc conditionals fire immediately -->
-            <label class="lvp-field"><span class="lvp-field__label">Entity type</span>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Entity type</span>
               <select class="lvp-input--select" name="entity.type" data-show-when-trigger="entity.type">
                 <option value="">Select</option>
                 <option value="Corporation">Corporation</option>
@@ -358,22 +358,22 @@
               </select>
             </label>
 
-            <label class="lvp-field"><span class="lvp-field__label">Certificate of Incorporation / government registration</span><input class="lvp-input" type="file" data-upload="certificateOfIncorporation" accept="application/pdf,image/*"></label>
-            <label class="lvp-field"><span class="lvp-field__label">List of authorized signatories</span><input class="lvp-input" type="file" data-upload="listOfAuthorizedSignatories" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Certificate of Incorporation / government registration</span><input class="lvp-input" type="file" data-upload="certificateOfIncorporation" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">List of authorized signatories</span><input class="lvp-input" type="file" data-upload="listOfAuthorizedSignatories" accept="application/pdf,image/*"></label>
 
             <div data-show-when="entity.type=Corporation;entity.type=LLC">
-              <label class="lvp-field"><span class="lvp-field__label">Articles of Incorporation</span><input class="lvp-input" type="file" data-upload="articlesOfIncorporation" accept="application/pdf,image/*"></label>
-              <label class="lvp-field"><span class="lvp-field__label">Corporate resolution / authorization</span><input class="lvp-input" type="file" data-upload="corporateResolution" accept="application/pdf,image/*"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Articles of Incorporation</span><input class="lvp-input" type="file" data-upload="articlesOfIncorporation" accept="application/pdf,image/*"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Corporate resolution / authorization</span><input class="lvp-input" type="file" data-upload="corporateResolution" accept="application/pdf,image/*"></label>
             </div>
-            <label class="lvp-field" data-show-when="entity.type=Partnership"><span class="lvp-field__label">Partnership agreement</span><input class="lvp-input" type="file" data-upload="partnershipAgreement" accept="application/pdf,image/*"></label>
-            <label class="lvp-field" data-show-when="entity.type=Trust"><span class="lvp-field__label">Trust agreement (relevant pages)</span><input class="lvp-input" type="file" data-upload="trustAgreement" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-required data-show-when="entity.type=Partnership"><span class="lvp-field__label">Partnership agreement</span><input class="lvp-input" type="file" data-upload="partnershipAgreement" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-required data-show-when="entity.type=Trust"><span class="lvp-field__label">Trust agreement (relevant pages)</span><input class="lvp-input" type="file" data-upload="trustAgreement" accept="application/pdf,image/*"></label>
 
             <label class="lvp-field"><span class="lvp-field__label">Corporate seal or stamp</span><input class="lvp-input" type="file" data-upload="corporateSeal" accept="application/pdf,image/*"><p class="lvp-hint-small">Upload an image of the seal at original size, without a background, so it prints clearly on the documents.</p></label>
 
-            <label class="lvp-field"><span class="lvp-field__label">Proof of registered address</span><input class="lvp-input" type="file" data-upload="proofOfRegisteredAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Bank statement or utility bill dated within the last 3 months.</p></label>
-            <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Date on proof of address</span><input class="lvp-input" type="date" name="uploads.proofOfRegisteredAddress.documentDate"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Proof of registered address</span><input class="lvp-input" type="file" data-upload="proofOfRegisteredAddress" accept="application/pdf,image/*"><p class="lvp-hint-small">Bank statement or utility bill dated within the last 3 months.</p></label>
+            <label class="lvp-field lvp-field--narrow" data-required><span class="lvp-field__label">Date on proof of address</span><input class="lvp-input" type="date" name="uploads.proofOfRegisteredAddress.documentDate"></label>
 
-            <label class="lvp-field"><span class="lvp-field__label">Bank account confirmation</span><input class="lvp-input" type="file" data-upload="bankAccountConfirmation" accept="application/pdf,image/*"><p class="lvp-hint-small">A letter or statement from the entity's bank confirming the account is held in the entity's name.</p></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Bank account confirmation</span><input class="lvp-input" type="file" data-upload="bankAccountConfirmation" accept="application/pdf,image/*"><p class="lvp-hint-small">A letter or statement from the entity's bank confirming the account is held in the entity's name.</p></label>
           </div>
         </section>
 
@@ -383,40 +383,40 @@
           <h2 class="lvp-page__title">Subscriber details</h2>
           <p class="lvp-page__hint" data-emph="English|באנגלית">Enter your details in English, exactly as they appear on your passport or official ID.</p>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="individual.firstName" data-help="In English, as on your passport or official ID"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="individual.lastName"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="individual.firstName" data-help="In English, as on your passport or official ID"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="individual.lastName"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">Full name in Hebrew</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep your name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
-          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="individual.idNumber" data-help="National ID or passport number"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Full name in Hebrew</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep your name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="individual.idNumber" data-help="National ID or passport number"></label>
         </section>
 
         <section class="lvp-page" data-page="individual.address" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Residential address</h2>
-          <label class="lvp-field"><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="individual.address.street" data-places="individual.address"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="individual.address.street" data-places="individual.address"></label>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="individual.address.city"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="individual.address.city"></label>
             <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="individual.address.state"></label>
           </div>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="individual.address.postCode"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="individual.address.country" data-country></select></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="individual.address.postCode"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="individual.address.country" data-country></select></label>
           </div>
         </section>
 
         <section class="lvp-page" data-page="individual.personal" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Personal details</h2>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">Date of birth</span><input class="lvp-input" type="date" name="individual.birthDate"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="individual.birthCountry" data-country></select></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Date of birth</span><input class="lvp-input" type="date" name="individual.birthDate"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="individual.birthCountry" data-country></select></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="individual.citizenship" data-country data-show-when-trigger="individual.citizenship"><option value="">Select</option></select></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="individual.citizenship" data-country data-show-when-trigger="individual.citizenship"><option value="">Select</option></select></label>
           <label class="lvp-checkbox"><input type="checkbox" name="individual.isAdditionalCitizenship" value="true" data-show-when-trigger="individual.isAdditionalCitizenship"> I hold an additional citizenship</label>
           <label class="lvp-field" data-show-when="individual.isAdditionalCitizenship=true"><span class="lvp-field__label">Additional citizenship</span><select class="lvp-input--select" name="individual.additionalCitizenship" data-country></select></label>
         </section>
 
         <section class="lvp-page" data-page="individual.background" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Source of funds and occupation</h2>
-          <label class="lvp-field"><span class="lvp-field__label">Source of funds</span>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Source of funds</span>
             <select class="lvp-input--select" name="individual.sourceOfFunds.category" data-show-when-trigger="individual.sourceOfFunds.category" data-help="How and where the funds were accumulated">
               <option value="">Select</option>
               <option value="salary">Salary or employment income</option>
@@ -428,26 +428,26 @@
               <option value="other">Other</option>
             </select>
           </label>
-          <label class="lvp-field" data-show-when="individual.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="individual.sourceOfFunds.otherDescription"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Occupation</span><input class="lvp-input" type="text" name="individual.occupation" placeholder="e.g., attorney, physician, business owner"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="individual.purposeOfInvestment" placeholder="e.g., long-term capital appreciation, portfolio diversification"></label>
+          <label class="lvp-field" data-required data-show-when="individual.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="individual.sourceOfFunds.otherDescription"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Occupation</span><input class="lvp-input" type="text" name="individual.occupation" placeholder="e.g., attorney, physician, business owner"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="individual.purposeOfInvestment" placeholder="e.g., long-term capital appreciation, portfolio diversification"></label>
         </section>
 
         <section class="lvp-page" data-page="individual.pep" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Politically exposed person</h2>
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Are you a Politically Exposed Person (PEP) or senior political figure?</legend>
             <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
             <label class="lvp-radio"><input type="radio" name="individual.isPep" value="true" data-show-when-trigger="individual.isPep"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="individual.isPep" value="false"> No</label>
           </fieldset>
-          <label class="lvp-field" data-show-when="individual.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="individual.pepDetails" rows="2"></textarea></label>
+          <label class="lvp-field" data-required data-show-when="individual.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="individual.pepDetails" rows="2"></textarea></label>
         </section>
 
         <section class="lvp-page" data-page="individual.contact" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Contact details</h2>
-          <label class="lvp-field"><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="individual.phone" placeholder="+972 ..." data-help="Include country code"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Email address</span><input class="lvp-input" type="email" name="individual.email" data-help="Primary email for regular communication, including monthly yield updates"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="individual.phone" placeholder="+972 ..." data-help="Include country code"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Email address</span><input class="lvp-input" type="email" name="individual.email" data-help="Primary email for regular communication, including monthly yield updates"></label>
         </section>
 
         <!-- ========================= PAGE: ENTITY DETAILS (ci-spec Page 10-11 entity) ========================= -->
@@ -455,34 +455,34 @@
         <section class="lvp-page" data-page="entity.details" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Entity details</h2>
           <p class="lvp-page__hint">Tell us about the entity making this subscription.</p>
-          <label class="lvp-field"><span class="lvp-field__label">Legal entity name</span><input class="lvp-input" type="text" name="entity.legalName" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Entity name in Hebrew</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
-          <label class="lvp-field" data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify)</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
-          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Legal entity name</span><input class="lvp-input" type="text" name="entity.legalName" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Entity name in Hebrew</span><input class="lvp-input" type="text" name="fullNameHebrew" dir="rtl" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
+          <label class="lvp-field" data-required data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify)</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber"></label>
         </section>
 
         <section class="lvp-page" data-page="entity.address" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Registered address</h2>
-          <label class="lvp-field"><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="entity.address.street" data-places="entity.address"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="entity.address.street" data-places="entity.address"></label>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.address.city"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.address.city"></label>
             <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="entity.address.state"></label>
           </div>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="entity.address.postCode"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="entity.address.country" data-country></select></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="entity.address.postCode"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="entity.address.country" data-country></select></label>
           </div>
           <label class="lvp-checkbox"><input type="checkbox" name="entity.hasMailingAddress" value="true" data-show-when-trigger="entity.hasMailingAddress"> The mailing address differs from the registered address</label>
           <fieldset class="lvp-fieldset" data-show-when="entity.hasMailingAddress=true">
             <legend class="lvp-fieldset__legend">Mailing address</legend>
-            <label class="lvp-field"><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="entity.mailingAddress.street" data-places="entity.mailingAddress"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="entity.mailingAddress.street" data-places="entity.mailingAddress"></label>
             <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.mailingAddress.city"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.mailingAddress.city"></label>
               <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="entity.mailingAddress.state"></label>
             </div>
             <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="entity.mailingAddress.postCode"></label>
-              <label class="lvp-field"><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="entity.mailingAddress.country" data-country></select></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="entity.mailingAddress.postCode"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="entity.mailingAddress.country" data-country></select></label>
             </div>
           </fieldset>
         </section>
@@ -490,10 +490,10 @@
         <section class="lvp-page" data-page="entity.incorporation" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Incorporation and business</h2>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">Country of incorporation</span><select class="lvp-input--select" name="entity.formationCountry" data-country></select></label>
-            <label class="lvp-field"><span class="lvp-field__label">Date of incorporation</span><input class="lvp-input" type="date" name="entity.formationDate"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Country of incorporation</span><select class="lvp-input--select" name="entity.formationCountry" data-country></select></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Date of incorporation</span><input class="lvp-input" type="date" name="entity.formationDate"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">Source of funds</span>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Source of funds</span>
             <select class="lvp-input--select" name="entity.sourceOfFunds.category" data-show-when-trigger="entity.sourceOfFunds.category">
               <option value="">Select</option>
               <option value="operatingRevenues">Operating or business revenues</option>
@@ -505,27 +505,27 @@
               <option value="other">Other</option>
             </select>
           </label>
-          <label class="lvp-field" data-show-when="entity.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="entity.sourceOfFunds.otherDescription"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Principal business activity</span><input class="lvp-input" type="text" name="entity.principalActivity" placeholder="e.g., real estate investment, asset management"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="entity.purposeOfInvestment"></label>
+          <label class="lvp-field" data-required data-show-when="entity.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="entity.sourceOfFunds.otherDescription"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Principal business activity</span><input class="lvp-input" type="text" name="entity.principalActivity" placeholder="e.g., real estate investment, asset management"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="entity.purposeOfInvestment"></label>
         </section>
 
         <section class="lvp-page" data-page="entity.pep" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Politically exposed person</h2>
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Is the entity a Politically Exposed Person (PEP) or controlled by one?</legend>
             <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
             <label class="lvp-radio"><input type="radio" name="entity.isPep" value="true" data-show-when-trigger="entity.isPep"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="entity.isPep" value="false"> No</label>
           </fieldset>
-          <label class="lvp-field" data-show-when="entity.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="entity.pepDetails" rows="2"></textarea></label>
+          <label class="lvp-field" data-required data-show-when="entity.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="entity.pepDetails" rows="2"></textarea></label>
         </section>
 
         <section class="lvp-page" data-page="entity.contact" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Contact details</h2>
-          <label class="lvp-field"><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" placeholder="+972 ..."></label>
-          <label class="lvp-field"><span class="lvp-field__label">Primary entity email</span><input class="lvp-input" type="email" name="entity.email"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Contact person</span><input class="lvp-input" type="text" name="entity.contactPerson"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" placeholder="+972 ..."></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Primary entity email</span><input class="lvp-input" type="email" name="entity.email"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Contact person</span><input class="lvp-input" type="text" name="entity.contactPerson"></label>
         </section>
 
         <!-- ========================= PAGE: ENTITY AUTHORIZED SIGNATORIES (ci-spec Pages 13-14) ========================= -->
@@ -534,19 +534,19 @@
           <p class="lvp-page__hint">Identify who will sign on behalf of the entity. Each signatory receives their own signature link by email.</p>
           <h3 class="lvp-subhead">First authorized signatory</h3>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.primary.firstName"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.primary.lastName"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.primary.firstName"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.primary.lastName"></label>
           </div>
-          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.primary.email"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.primary.title" placeholder="Director, Managing Member, CEO"></label>
-          <fieldset class="lvp-fieldset">
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.primary.email"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.primary.title" placeholder="Director, Managing Member, CEO"></label>
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Is this person a controlling shareholder of the entity?</legend>
             <label class="lvp-radio"><input type="radio" name="signatories.primary.isControlling" value="true"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="signatories.primary.isControlling" value="false"> No</label>
           </fieldset>
 
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Is there an additional required signatory?</legend>
             <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="true" data-show-when-trigger="isSecondAuthorized"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="false"> No</label>
@@ -554,13 +554,13 @@
           <div data-show-when="isSecondAuthorized=true">
             <h3 class="lvp-subhead">Second authorized signatory</h3>
             <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.secondary.firstName"></label>
-              <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.secondary.lastName"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.secondary.firstName"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.secondary.lastName"></label>
             </div>
-            <label class="lvp-field lvp-field--short"><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.secondary.email"></label>
-            <label class="lvp-field"><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.secondary.title"></label>
-            <fieldset class="lvp-fieldset">
+            <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.secondary.email"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.secondary.title"></label>
+            <fieldset class="lvp-fieldset" data-required>
               <legend class="lvp-fieldset__legend">Is this person a controlling shareholder of the entity?</legend>
               <label class="lvp-radio"><input type="radio" name="signatories.secondary.isControlling" value="true"> Yes</label>
               <label class="lvp-radio"><input type="radio" name="signatories.secondary.isControlling" value="false"> No</label>
@@ -573,28 +573,28 @@
           <h2 class="lvp-page__title">Your investment</h2>
           <p class="lvp-page__hint">Your subscription amount and currency.</p>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">Currency</span>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Currency</span>
               <select class="lvp-input--select" name="investment.currency"><option value="ILS">ILS (shekel)</option><option value="USD">USD ($)</option><option value="EUR">EUR (euro)</option></select>
             </label>
-            <label class="lvp-field"><span class="lvp-field__label">Requested investment amount (Class A)</span><input class="lvp-input" type="text" name="investment.amount" inputmode="numeric" data-amount data-help="Whole amount, no cents. We will format it for you." placeholder="e.g., 500,000"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Requested investment amount (Class A)</span><input class="lvp-input" type="text" name="investment.amount" inputmode="numeric" data-amount data-help="Whole amount, no cents. We will format it for you." placeholder="e.g., 500,000"></label>
           </div>
         </section>
 
         <section class="lvp-page" data-page="investment.bank">
           <h2 class="lvp-page__title">Your bank details</h2>
           <p class="lvp-page__hint">The account you will wire from. Redemption payments return to this same account.</p>
-          <label class="lvp-field"><span class="lvp-field__label">Name and address of your bank</span><input class="lvp-input" type="text" name="investment.lpBank.nameAndAddress" data-help="Full legal name of bank plus full branch address including city and country"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Name and address of your bank</span><input class="lvp-input" type="text" name="investment.lpBank.nameAndAddress" data-help="Full legal name of bank plus full branch address including city and country"></label>
           <label class="lvp-field"><span class="lvp-field__label">Bank contact information</span><input class="lvp-input" type="text" name="investment.lpBank.contactInfo" data-help="Phone or email for the bank, if available"></label>
-          <label class="lvp-field lvp-field--short"><span class="lvp-field__label">SWIFT or ABA</span><input class="lvp-input" type="text" name="investment.lpBank.swift" data-help="8 or 11 characters (SWIFT), or 9 digits (ABA)"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber"></label>
-          <label class="lvp-field"><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-help="Must match the subscriber name exactly: the entity's legal name (for an entity), or the individual LP's name (for an individual)."></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">SWIFT or ABA</span><input class="lvp-input" type="text" name="investment.lpBank.swift" data-help="8 or 11 characters (SWIFT), or 9 digits (ABA)"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-help="Must match the subscriber name exactly: the entity's legal name (for an entity), or the individual LP's name (for an individual)."></label>
           <label class="lvp-field"><span class="lvp-field__label">Further credit instructions</span><textarea class="lvp-input--textarea" name="investment.lpBank.furtherCredit" rows="2" placeholder="Optional"></textarea></label>
         </section>
 
         <!-- ========================= PAGE: ADDITIONAL INVESTORS (individual joint holders) ========================= -->
         <section class="lvp-page" data-page="individual.additional" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">Additional investors</h2>
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Will there be additional investors in this subscription (including spouse)?</legend>
             <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="true" data-show-when-trigger="hasAdditionalInvestors"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="false"> No</label>
@@ -613,16 +613,16 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Additional investor ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].firstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].firstName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastName"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="additionalInvestors[${i}].email"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="additionalInvestors[${i}].email"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">Date of birth</span><input class="lvp-input" type="date" name="additionalInvestors[${i}].birthDate"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="additionalInvestors[${i}].citizenship" data-country></select></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Date of birth</span><input class="lvp-input" type="date" name="additionalInvestors[${i}].birthDate"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="additionalInvestors[${i}].citizenship" data-country></select></label>
               </div>
             </div>
           </template>
@@ -667,15 +667,15 @@
               <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="false" checked data-show-when-trigger="qualification.preSignedAvailable"> No, I will provide lawyer details</label>
             </fieldset>
             <div data-show-when="qualification.preSignedAvailable=true">
-              <label class="lvp-field"><span class="lvp-field__label">Upload signed qualification form</span><input class="lvp-input" type="file" data-upload="qualification.preSignedUpload" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB. Must be dated within the last 12 months.</p></label>
-              <label class="lvp-field lvp-field--narrow"><span class="lvp-field__label">Document date</span><input class="lvp-input" type="date" name="qualification.preSignedUpload.documentDate"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Upload signed qualification form</span><input class="lvp-input" type="file" data-upload="qualification.preSignedUpload" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB. Must be dated within the last 12 months.</p></label>
+              <label class="lvp-field lvp-field--narrow" data-required><span class="lvp-field__label">Document date</span><input class="lvp-input" type="date" name="qualification.preSignedUpload.documentDate"></label>
             </div>
             <div data-show-when="qualification.preSignedAvailable=false">
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">Lawyer or CPA first name</span><input class="lvp-input" type="text" name="qualification.lawyer.firstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="qualification.lawyer.lastName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Lawyer or CPA first name</span><input class="lvp-input" type="text" name="qualification.lawyer.firstName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="qualification.lawyer.lastName"></label>
               </div>
-              <label class="lvp-field"><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="qualification.lawyer.email" data-help="We will send the signing link here"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="qualification.lawyer.email" data-help="We will send the signing link here"></label>
               <label class="lvp-field"><span class="lvp-field__label">Phone</span><input class="lvp-input" type="tel" name="qualification.lawyer.phone" placeholder="Optional"></label>
               <label class="lvp-field"><span class="lvp-field__label">Firm</span><input class="lvp-input" type="text" name="qualification.lawyer.firm" placeholder="Optional"></label>
             </div>
@@ -686,10 +686,10 @@
         <section class="lvp-page" data-page="tax">
           <h2 class="lvp-page__title">Israeli tax status</h2>
           <p class="lvp-note">I hereby declare that I consent to and accept the provisions of the Tax Ruling the Fund received from the tax authorities in Israel, as amended from time to time. I declare that the following tax status applies:</p>
-          <label class="lvp-field"><span class="lvp-field__label">Country of tax residence</span><select class="lvp-input--select" name="tax.residencyCountry" data-country></select></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Country of tax residence</span><select class="lvp-input--select" name="tax.residencyCountry" data-country></select></label>
           <label class="lvp-checkbox" data-applicant="entity"><input type="checkbox" name="tax.isFamilyCompany" value="true"> The entity is a family company for tax purposes</label>
 
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Tax status</legend>
             <label class="lvp-radio"><input type="radio" name="tax.incomeType" value="nonBusiness"> Non-business income. Will be taxed as capital gain per the Tax Ruling.</label>
             <label class="lvp-radio"><input type="radio" name="tax.incomeType" value="business"> Business income. Will be taxed marginally per the Tax Ruling.</label>
@@ -698,14 +698,14 @@
           </fieldset>
           <div data-applicant="entity">
             <label class="lvp-checkbox"><input type="checkbox" name="tax.hasExemption" value="true" data-show-when-trigger="tax.hasExemption"> The entity holds a valid withholding-tax exemption it would like applied to Fund income.</label>
-            <label class="lvp-field" data-show-when="tax.hasExemption=true"><span class="lvp-field__label">Upload tax exemption certificate</span><input class="lvp-input" type="file" data-upload="tax.exemptionCertificate" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB.</p></label>
+            <label class="lvp-field" data-required data-show-when="tax.hasExemption=true"><span class="lvp-field__label">Upload tax exemption certificate</span><input class="lvp-input" type="file" data-upload="tax.exemptionCertificate" accept="application/pdf"><p class="lvp-hint-small">PDF, up to 10 MB.</p></label>
           </div>
         </section>
 
         <!-- ========================= PAGE: SCHEDULE 4 BENEFICIARY (shared, branches) ========================= -->
         <section class="lvp-page" data-page="beneficial">
           <h2 class="lvp-page__title">Beneficiary declaration</h2>
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">On whose behalf is this subscription made?</legend>
             <label class="lvp-radio"><input type="radio" name="beneficial.statement" value="self" data-show-when-trigger="beneficial.statement"> On my own behalf only (individual) / the entity acts on its own behalf only</label>
             <label class="lvp-radio"><input type="radio" name="beneficial.statement" value="others" data-show-when-trigger="beneficial.statement"> There are beneficiaries</label>
@@ -714,20 +714,20 @@
             <p class="lvp-hint-small">List each beneficiary below.</p>
             <div data-repeating-typed-path="beneficial.beneficiaries" data-repeating-min="1" data-repeating-template="bnf"></div>
             <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="beneficial.beneficiaries">+ Add another beneficiary</button>
-            <label class="lvp-field"><span class="lvp-field__label">Relationship between you and the beneficiaries</span><textarea class="lvp-input--textarea" name="beneficial.relationshipDescription" rows="2"></textarea></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Relationship between you and the beneficiaries</span><textarea class="lvp-input--textarea" name="beneficial.relationshipDescription" rows="2"></textarea></label>
           </div>
           <template data-row-template="bnf">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Beneficiary ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].fullName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">ID / passport / registration number</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].idOrCompanyNumber"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].fullName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">ID / passport / registration number</span><input class="lvp-input" type="text" name="beneficial.beneficiaries[${i}].idOrCompanyNumber"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">Date of birth or formation</span><input class="lvp-input" type="date" name="beneficial.beneficiaries[${i}].birthOrIncorporationDate"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Gender</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].gender"><option value="">Select</option><option value="F">Female</option><option value="M">Male</option><option value="Other">Other</option></select></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Date of birth or formation</span><input class="lvp-input" type="date" name="beneficial.beneficiaries[${i}].birthOrIncorporationDate"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Gender</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].gender"><option value="">Select</option><option value="F">Female</option><option value="M">Male</option><option value="Other">Other</option></select></label>
               </div>
-              <label class="lvp-field"><span class="lvp-field__label">Country of citizenship or incorporation</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].country" data-country></select></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Country of citizenship or incorporation</span><select class="lvp-input--select" name="beneficial.beneficiaries[${i}].country" data-country></select></label>
             </div>
           </template>
         </section>
@@ -738,16 +738,16 @@
           <h2 class="lvp-page__title">U.S. status and tax residency</h2>
           <p class="lvp-page__hint">This confirms your U.S. tax status and where you are tax-resident.</p>
 
-          <fieldset class="lvp-fieldset">
+          <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Are you a U.S. person for tax purposes?</legend>
             <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="specified" data-show-when-trigger="fatcaCrs.usPersonStatus"> <span data-applicant="individual">Yes. I am a U.S. citizen or resident for tax purposes.</span><span data-applicant="entity">Yes. The entity is a Specified U.S. Person.</span></label>
             <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="notSpecified" data-show-when-trigger="fatcaCrs.usPersonStatus"> <span data-applicant="individual">I was born in the U.S. but have surrendered my citizenship.</span><span data-applicant="entity">Yes. The entity is a U.S. Person but not a Specified U.S. Person.</span></label>
             <label class="lvp-radio"><input type="radio" name="fatcaCrs.usPersonStatus" value="notUs" data-show-when-trigger="fatcaCrs.usPersonStatus"> No. Not a U.S. person.</label>
           </fieldset>
-          <label class="lvp-field" data-show-when="fatcaCrs.usPersonStatus=specified"><span class="lvp-field__label">U.S. TIN</span><input class="lvp-input" type="text" name="fatcaCrs.usTin" placeholder="SSN, ITIN, or EIN"></label>
+          <label class="lvp-field" data-required data-show-when="fatcaCrs.usPersonStatus=specified"><span class="lvp-field__label">U.S. TIN</span><input class="lvp-input" type="text" name="fatcaCrs.usTin" placeholder="SSN, ITIN, or EIN"></label>
           <div data-show-when="fatcaCrs.usPersonStatus=notSpecified">
-            <label class="lvp-field" data-applicant="individual"><span class="lvp-field__label">Upload your CLN or surrender documentation</span><input class="lvp-input" type="file" data-upload="clnUpload" accept="application/pdf,image/*"></label>
-            <label class="lvp-field" data-applicant="entity"><span class="lvp-field__label">Indicate exemption</span><input class="lvp-input" type="text" name="fatcaCrs.usExemptionCategory"></label>
+            <label class="lvp-field" data-required data-applicant="individual"><span class="lvp-field__label">Upload your CLN or surrender documentation</span><input class="lvp-input" type="file" data-upload="clnUpload" accept="application/pdf,image/*"></label>
+            <label class="lvp-field" data-required data-applicant="entity"><span class="lvp-field__label">Indicate exemption</span><input class="lvp-input" type="text" name="fatcaCrs.usExemptionCategory"></label>
           </div>
 
           <!-- Tax residency (always shown) -->
@@ -758,10 +758,10 @@
           <template data-row-template="taxres">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Jurisdiction ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
-              <label class="lvp-field"><span class="lvp-field__label">Jurisdiction</span><select class="lvp-input--select" name="fatcaCrs.entityTaxResidency[${i}].jurisdiction" data-country></select></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Jurisdiction</span><select class="lvp-input--select" name="fatcaCrs.entityTaxResidency[${i}].jurisdiction" data-country></select></label>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">Tax reference type</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefType" placeholder="e.g., TIN"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Tax reference number</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefNumber"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference type</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefType" placeholder="e.g., TIN"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference number</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].taxRefNumber"></label>
               </div>
               <label class="lvp-field"><span class="lvp-field__label">If no tax reference number, the reason</span><input class="lvp-input" type="text" name="fatcaCrs.entityTaxResidency[${i}].reasonNoTaxRef" data-help="Required only if no tax reference number is available for this jurisdiction."></label>
             </div>
@@ -776,13 +776,13 @@
 
           <!-- Default: one classification drives BOTH FATCA and CRS (sanitizer maps it) -->
           <div data-show-when="fatcaCrs.fatcaCrsDiffer=false">
-            <fieldset class="lvp-fieldset">
+            <fieldset class="lvp-fieldset" data-required>
               <legend class="lvp-fieldset__legend">Entity classification</legend>
               <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="passiveNfe" data-show-when-trigger="fatcaCrs.entityClassification"> Passive holding entity. It holds investments or assets (most family and holding companies).</label>
               <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="activeNfe" data-show-when-trigger="fatcaCrs.entityClassification"> Active business. An operating company that mainly trades or produces.</label>
               <label class="lvp-radio"><input type="radio" name="fatcaCrs.entityClassification" value="financialInstitution" data-show-when-trigger="fatcaCrs.entityClassification"> Financial Institution. A fund, bank, insurer, or similar regulated entity.</label>
             </fieldset>
-            <label class="lvp-field" data-show-when="fatcaCrs.entityClassification=financialInstitution"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.mergedGiin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If the entity has one. We will confirm the exact Financial Institution sub-type with you.</p></label>
+            <label class="lvp-field" data-required data-show-when="fatcaCrs.entityClassification=financialInstitution"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.mergedGiin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If the entity has one. We will confirm the exact Financial Institution sub-type with you.</p></label>
           </div>
 
           <label class="lvp-checkbox"><input type="checkbox" name="fatcaCrs.fatcaCrsDiffer" value="true" data-show-when-trigger="fatcaCrs.fatcaCrsDiffer"> Advanced: the entity's FATCA and CRS classifications differ</label>
@@ -796,7 +796,7 @@
                 <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.2" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.2 Financial Institution unable to provide a GIIN</label>
                 <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.3" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.3 Not a Foreign Financial Institution</label>
               </fieldset>
-              <label class="lvp-field" data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">3.1 sub-type</span>
+              <label class="lvp-field" data-required data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">3.1 sub-type</span>
                 <select class="lvp-input--select" name="fatcaCrs.fatca.subType31">
                   <option value="">Select</option>
                   <option value="(a)">(a) Reporting Model 1 FFI</option>
@@ -804,9 +804,9 @@
                   <option value="(c)">(c) Reporting Model 2 FFI</option>
                   <option value="(d)">(d) Participating FFI</option>
                 </select></label>
-              <label class="lvp-field" data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If registration is in progress, indicate so.</p></label>
+              <label class="lvp-field" data-required data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If registration is in progress, indicate so.</p></label>
               <div data-show-when="fatcaCrs.fatca.branch=3.2">
-                <label class="lvp-field"><span class="lvp-field__label">3.2 sub-type</span>
+                <label class="lvp-field" data-required><span class="lvp-field__label">3.2 sub-type</span>
                   <select class="lvp-input--select" name="fatcaCrs.fatca.subType32">
                     <option value="">Select</option>
                     <option value="(a)">(a) Sponsored FFI (relies on sponsor GIIN)</option>
@@ -817,7 +817,7 @@
                 <label class="lvp-field"><span class="lvp-field__label">Sponsor or trustee GIIN</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin32" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">The sponsoring entity's or trustee's GIIN, if applicable.</p></label>
               </div>
               <div data-show-when="fatcaCrs.fatca.branch=3.3">
-                <label class="lvp-field"><span class="lvp-field__label">3.3 sub-status</span>
+                <label class="lvp-field" data-required><span class="lvp-field__label">3.3 sub-status</span>
                   <select class="lvp-input--select" name="fatcaCrs.fatca.subType" data-show-when-trigger="fatcaCrs.fatca.subType">
                     <option value="">Select</option>
                     <option value="(a)">(a) Exempt Beneficial Owner</option>
@@ -827,7 +827,7 @@
                     <option value="(e)">(e) Passive NFFE</option>
                   </select>
                 </label>
-                <fieldset class="lvp-fieldset" data-show-when="fatcaCrs.fatca.subType=(e)">
+                <fieldset class="lvp-fieldset" data-required data-show-when="fatcaCrs.fatca.subType=(e)">
                   <legend class="lvp-fieldset__legend">Passive NFFE controlling-persons reporting method</legend>
                   <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="substantialUsOwners"> Using the "Substantial U.S. Owner" definition</label>
                   <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="controllingPersons"> Using the "Controlling Person" definition per CRS</label>
@@ -839,9 +839,9 @@
                   <template data-row-template="susown">
                     <div class="lvp-repeating-row" data-row-index="${i}">
                       <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Substantial U.S. owner ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
-                      <label class="lvp-field"><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].fullName"></label>
-                      <label class="lvp-field"><span class="lvp-field__label">Full residence address</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].address"></label>
-                      <label class="lvp-field"><span class="lvp-field__label">Tax reference type and number</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].taxRefTypeAndNumber"></label>
+                      <label class="lvp-field" data-required><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].fullName"></label>
+                      <label class="lvp-field" data-required><span class="lvp-field__label">Full residence address</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].address"></label>
+                      <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference type and number</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].taxRefTypeAndNumber"></label>
                     </div>
                   </template>
                 </div>
@@ -853,14 +853,14 @@
                 <label class="lvp-radio"><input type="radio" name="fatcaCrs.crs.branch" value="5.2" data-show-when-trigger="fatcaCrs.crs.branch"> 5.2 Active Non-Financial Entity</label>
                 <label class="lvp-radio"><input type="radio" name="fatcaCrs.crs.branch" value="5.3" data-show-when-trigger="fatcaCrs.crs.branch"> 5.3 Passive Non-Financial Entity</label>
               </fieldset>
-              <label class="lvp-field" data-show-when="fatcaCrs.crs.branch=5.1"><span class="lvp-field__label">5.1 sub-type</span>
+              <label class="lvp-field" data-required data-show-when="fatcaCrs.crs.branch=5.1"><span class="lvp-field__label">5.1 sub-type</span>
                 <select class="lvp-input--select" name="fatcaCrs.crs.subType51">
                   <option value="">Select</option>
                   <option value="(a)">(a) Reporting Financial Institution</option>
                   <option value="(b)">(b) Non-Reporting Financial Institution</option>
                   <option value="(c)">(c) Investment Entity in a Non-Participating Jurisdiction (controlling-person look-through)</option>
                 </select></label>
-              <label class="lvp-field" data-show-when="fatcaCrs.crs.branch=5.2"><span class="lvp-field__label">5.2 sub-type</span>
+              <label class="lvp-field" data-required data-show-when="fatcaCrs.crs.branch=5.2"><span class="lvp-field__label">5.2 sub-type</span>
                 <select class="lvp-input--select" name="fatcaCrs.crs.subType52">
                   <option value="">Select</option>
                   <option value="(a)">(a) Corporation regularly traded, or a related entity</option>
@@ -880,11 +880,11 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Controlling person ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="controllingPersons[${i}].firstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="controllingPersons[${i}].lastName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="controllingPersons[${i}].firstName"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="controllingPersons[${i}].lastName"></label>
               </div>
-              <label class="lvp-field"><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="controllingPersons[${i}].email" data-help="They receive their own link to complete details and sign"></label>
-              <label class="lvp-field"><span class="lvp-field__label">Type of controlling person</span>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="controllingPersons[${i}].email" data-help="They receive their own link to complete details and sign"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Type of controlling person</span>
                 <select class="lvp-input--select" name="controllingPersons[${i}].details.type">
                   <option value="">Select</option>
                   <option value="legal_ownership">Legal person, control by ownership</option>
@@ -1414,11 +1414,8 @@
       var ok = true;
       var firstError = null;
       pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); });
-      var labels = pageEl.querySelectorAll('.lvp-field__label, .lvp-fieldset__legend');
-      labels.forEach(function (lbl) {
-        if (lbl.textContent.indexOf('*') === -1) return;
-        var holder = lbl.closest('.lvp-field, .lvp-fieldset');
-        if (!holder || isHidden(holder)) return;
+      pageEl.querySelectorAll('[data-required]').forEach(function (holder) {
+        if (isHidden(holder)) return;
         var inputs = holder.querySelectorAll('input, select, textarea');
         var filled = false, hasRadio = false;
         inputs.forEach(function (i) {
