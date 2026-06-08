@@ -1502,7 +1502,7 @@
           var threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
           if (d < threeMonthsAgo) {
             ok = false; holder.classList.add('lvp-field--value-error'); if (!firstError) firstError = holder;
-            setStatus(curLang === 'he' ? 'המסמך חייב להיות מ-3 החודשים האחרונים.' : 'The document must be dated within the last 3 months.', true);
+            setStatus(curLang === 'he' ? 'המסמך צריך להיות בתוקף מ-3 החודשים האחרונים.' : 'The document must be dated within the last 3 months.', true);
           }
         }
       });
