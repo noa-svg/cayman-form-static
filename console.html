@@ -138,6 +138,8 @@
       <label>שם בעברית</label>
       <input type="text" id="mNameHe" dir="rtl" placeholder="שם פרטי מספיק">
       <div class="note">Fill at least one. The Hebrew name is used on the BDO note.</div>
+      <label>Email language</label>
+      <select id="mLang"><option value="he">Hebrew (default)</option><option value="en">English</option></select>
       <div class="modal__row"><button type="button" class="btns" id="mCancel">Cancel</button><button type="submit" class="btnp" id="mGo">Create + email</button></div>
       <div id="mResult"></div>
     </form>
@@ -326,7 +328,8 @@
     var qs='?admin=mintLink&type='+encodeURIComponent(document.getElementById('mType').value)+
       '&email='+encodeURIComponent(document.getElementById('mEmail').value)+
       '&name='+encodeURIComponent(nEn)+
-      '&nameHebrew='+encodeURIComponent(nHe);
+      '&nameHebrew='+encodeURIComponent(nHe)+
+      '&language='+encodeURIComponent(document.getElementById('mLang').value);
     jget(qs).then(function(r){
       go.disabled=false;go.textContent='Create + email';
       if(r&&r.ok){

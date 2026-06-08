@@ -336,9 +336,22 @@
     }
     .lvp-sig-actions { display: flex; gap: 10px; margin-top: 10px; }
     .lvp-sig-err { color: var(--lvp-error); font-size: 13px; margin-top: 8px; min-height: 18px; }
+    /* no-token gate: shown when sign.legacyvpartners.com is visited without a link */
+    #lvp-gate { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; }
+    .lvp-gate-mode #lvp-gate { display: flex; }
+    .lvp-gate-mode .lvp-lang, .lvp-gate-mode .lvp-app { display: none; }
+    .lvp-gate__logo { width: 160px; margin-bottom: 36px; opacity: .9; }
+    .lvp-gate__msg { font-size: 18px; font-weight: 600; color: #1A2330; margin: 0 0 12px; direction: rtl; }
+    .lvp-gate__sub { font-size: 14px; color: #6B7888; margin: 0; }
   </style>
+  <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin'))document.documentElement.classList.add('lvp-gate-mode');})();</script>
 </head>
 <body>
+  <div id="lvp-gate">
+    <img class="lvp-gate__logo" src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners">
+    <p class="lvp-gate__msg">לגישה לטופס, יש להשתמש בקישור שנשלח אליך.</p>
+    <p class="lvp-gate__sub">Legacy Value Partners CI</p>
+  </div>
   <div class="lvp-lang" role="group" aria-label="Language">
     <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
     <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
@@ -1065,6 +1078,7 @@
     })();
     // Static bootstrap: load CFG synchronously from GAS ?api=config.
     (function () {
+      if (document.documentElement.classList.contains('lvp-gate-mode')) return;
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
       try {
