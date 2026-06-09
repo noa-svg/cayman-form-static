@@ -2244,6 +2244,23 @@
         inp.value = strVal;
       });
       applyConditionals();
+      // Stub uploads for test links. prefill.__testUploads is an array of slot names;
+      // each gets a placeholder entry in pendingUploads and a green "has-file" UI state
+      // so all upload validation passes without the LP needing to select real files.
+      if (Array.isArray(prefill.__testUploads)) {
+        // Minimal valid 1x1 PNG (68 bytes) used as the stub payload for all slots.
+        var STUB_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        prefill.__testUploads.forEach(function (slot) {
+          pendingUploads[slot] = { slot: slot, fileName: 'test-doc.png', mimeType: 'image/png', fileSizeBytes: 68, base64: STUB_B64, isTestStub: true };
+          var inp = form.querySelector('input[data-upload="' + slot + '"]');
+          if (!inp) return;
+          var wrap = inp.closest('.lvp-upload');
+          if (!wrap) return;
+          var nm = wrap.querySelector('[data-upload-name]');
+          if (nm) { nm.textContent = 'test-doc.png'; nm.setAttribute('data-has-file', '1'); }
+          wrap.classList.add('has-file');
+        });
+      }
     }
 
     // ---- init ----
