@@ -1972,7 +1972,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       <div class="nav on" data-view="board" data-icon="B">Board</div>
       <div class="nav" data-view="messages" data-icon="M">Messages</div>
       <div class="nav" data-view="activity" data-icon="A">Activity</div>
-      <div class="nav" data-view="attention" data-icon="!">Needs attention<span class="badge" id="attention-badge" style="display:none"></span></div>
       <div class="nav" data-view="w8" data-icon="W">W-8 renewals</div>
       <div class="nav" data-view="settings" data-icon="S">Settings</div>
     </nav>
@@ -1991,7 +1990,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
         <div id="mob-fund"><button class="mob-fb on" data-v="cayman">CY</button><button class="mob-fb" data-v="israel">IL</button></div>
         <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path" id="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
         <div class="top-right">
-          <span class="flagged-badge" id="flagged-badge" style="display:none"><span class="s-red">!</span>&nbsp;<span id="flagged-n">0</span> flagged</span>
           <div class="new-wrap" id="newWrap">
             <div class="cmd-split">
               <button class="cmd-btn cmd-btn-main" id="newBtn">&gt; new</button><button class="cmd-btn cmd-btn-arr" id="newArr" title="Quick create">&#9660;</button>
@@ -2020,7 +2018,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
           <span class="sb-seg" id="ver-line">synced</span>
           <span class="sb-seg" id="sb-fund">cayman</span>
           <span class="sb-seg">connected</span>
-          <span class="sb-seg s-red" id="sb-flagged" style="display:none">^ <span id="sb-flagged-n">0</span> flagged</span>
         </div>
       </div>
     </div>
@@ -2046,17 +2043,10 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
             <option value="all_signed">all_signed</option>
             <option value="complete">complete</option>
             <option value="voided">voided</option>
-            <option value="needs_attention">needs_attention</option>
           </select>
         </div>
       </div>
       <div class="content" style="padding:0"><div class="act-terminal"><div id="act-table"></div></div></div>
-    </div>
-    <div class="view" id="v-attention" hidden>
-      <div class="top"><div><h1>Needs attention</h1><div class="sub">Stuck processes, errors, and overdue actions.</div></div></div>
-      <div class="content">
-        <div id="att-list"></div>
-      </div>
     </div>
     <div class="view" id="v-w8" hidden>
       <div class="top"><div><h1>W-8 renewals</h1><div class="sub">The 3-year IRS clock. Who is due.</div></div></div>
@@ -2279,17 +2269,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   function render(rows){
     allRows=rows;
     var counts={};STAGES.forEach(function(s){counts[s[0]]=0;});
-    var flagged=0;
-    rows.forEach(function(r){
-      if(counts[r.stage]!==undefined)counts[r.stage]++;
-      else if(r.stage==='needs_attention')flagged++;
-    });
-    // Update flagged badges
-    var fb=document.getElementById("flagged-badge"),fn_=document.getElementById("flagged-n");
-    var sbf=document.getElementById("sb-flagged"),sbfn=document.getElementById("sb-flagged-n");
-    if(fb&&fn_){fn_.textContent=flagged;fb.style.display=flagged?'':'none';}
-    if(sbf&&sbfn){sbfn.textContent=flagged;sbf.style.display=flagged?'':'none';}
-    var tabBadge=document.getElementById('tab-att-badge');if(tabBadge){tabBadge.textContent=flagged;tabBadge.style.display=flagged?'':'none';}
+    rows.forEach(function(r){if(counts[r.stage]!==undefined)counts[r.stage]++;});
     // Pipeline bar
     document.getElementById("stages").innerHTML=STAGES.map(function(s,i){
       var n=counts[s[0]]||0;
@@ -2318,7 +2298,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
-    refreshAttentionBadge();
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
@@ -2500,12 +2479,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv)nv.classList.add("on");
     Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab"),function(x){x.classList.remove("on");});
     var tv=document.querySelector('#tab-bar .tab[data-view="'+v+'"]');if(tv)tv.classList.add("on");
-    ["board","messages","activity","attention","w8","settings"].forEach(function(id){
+    ["board","messages","activity","w8","settings"].forEach(function(id){
       var el=document.getElementById("v-"+id);if(el)el.hidden=(id!==v);
     });
     if(v==="messages"&&!MSGS)loadMsgs();
     if(v==="w8"&&!W8)loadW8();
-    if(v==="attention")loadAttention();
     if(v==="activity")loadActivity();
     if(v==="settings")loadSettings();
   }
@@ -2569,48 +2547,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var f=document.getElementById('actFilter');
     if(f)f.addEventListener('change',applyActFilter);
   })();
-
-  // Needs Attention
-  function loadAttention(){
-    var el=document.getElementById("att-list");
-    if(el)el.innerHTML='<div style="color:var(--color-ink-muted);padding:24px 0">Loading...</div>';
-    apiFetch('?api=attention&lane='+state.lane).then(function(d){
-      var items=(d&&d.items)||[];
-      // Update badge
-      var badge=document.getElementById("attention-badge");
-      if(badge){if(items.length>0){badge.textContent=items.length;badge.style.display='';}else{badge.style.display='none';}}
-      if(!el)return;
-      if(!items.length){el.innerHTML='<div class="empty">Nothing stuck. All processes are moving.</div>';return;}
-      el.innerHTML=items.map(function(item){
-        var ini=((item.displayName||"?").trim()||"?").slice(0,1).toUpperCase();
-        var daysTxt=item.daysStuck>0?item.daysStuck+'d':'today';
-        var chipCls=(item.stage==='needs_attention')?'s4':'s6';
-        var row='<div class="row" style="cursor:pointer" data-pid="'+esc2(item.processId)+'">';
-        row+='<div class="row-top"><div class="av">'+ini+'</div>';
-        row+='<div class="row-info"><div class="nm">'+esc2(item.displayName||item.processId)+'</div>';
-        row+='<div class="row-he">'+esc2(item.reason)+'</div></div></div>';
-        row+='<div class="row-foot"><span class="chip '+chipCls+'">'+esc2(item.stage)+'</span>';
-        row+='<span class="row-age">'+daysTxt+'</span>';
-        if(item.mondayUrl)row+='<a class="lk" href="'+esc2(item.mondayUrl)+'" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px" onclick="event.stopPropagation()">Monday</a>';
-        row+='</div></div>';
-        return row;
-      }).join('');
-      Array.prototype.forEach.call(el.querySelectorAll(".row[data-pid]"),function(r){
-        r.onclick=function(){openDrawer(r.getAttribute("data-pid"));};
-      });
-    }).catch(function(){
-      if(el)el.innerHTML='<div class="pe">Could not load attention items.</div>';
-    });
-  }
-  // Auto-load attention badge on boot (after auth)
-  function refreshAttentionBadge(){
-    apiFetch('?api=attention&lane='+state.lane).then(function(d){
-      var items=(d&&d.items)||[];
-      var badge=document.getElementById("attention-badge");
-      if(badge){if(items.length>0){badge.textContent=items.length;badge.style.display='';}else{badge.style.display='none';}}
-      var tabBadge=document.getElementById('tab-att-badge');if(tabBadge){tabBadge.textContent=items.length;tabBadge.style.display=items.length?'':'none';}
-    }).catch(function(){});
-  }
 
   // W-8 renewals
   var W8=null;
@@ -2732,7 +2668,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   <button class="tab on" data-view="board"><span class="tab-icon">&#8801;</span><span class="tab-lbl">Board</span></button>
   <button class="tab" data-view="messages"><span class="tab-icon">&#9993;</span><span class="tab-lbl">Msgs</span></button>
   <button class="tab" data-view="activity"><span class="tab-icon">&#9678;</span><span class="tab-lbl">Activity</span></button>
-  <button class="tab" data-view="attention"><span class="tab-icon">&#9651;<span id="tab-att-badge" class="tab-badge" style="display:none"></span></span><span class="tab-lbl">Flags</span></button>
   <button class="tab" data-view="w8"><span class="tab-icon" style="font-size:10px;font-weight:700;letter-spacing:-0.02em">W8</span><span class="tab-lbl">W-8</span></button>
   <button class="tab" data-view="settings"><span class="tab-icon">&#9881;</span><span class="tab-lbl">Settings</span></button>
 </nav>
