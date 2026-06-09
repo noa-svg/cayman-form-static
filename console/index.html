@@ -544,9 +544,13 @@ nav {
   background: var(--color-bg-card);
   text-align: center;
   padding: var(--space-5) var(--space-2);
-  cursor: default;
+  cursor: pointer;
   transition: background var(--dur-base) var(--ease-out);
+  user-select: none;
 }
+.st:hover { background: var(--color-atrium-tint); }
+.st.sel { background: var(--color-atrium-tint); outline: 2px solid var(--color-atrium); outline-offset: -2px; }
+.st.sel .ct, .st.sel .lbl { color: var(--color-atrium); }
 
 .st .ct {
   font-family: var(--font-display);
@@ -1726,10 +1730,11 @@ input:focus {
   }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
-  var STAGES=[["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
+  var STAGES=[["link_sent","invited"],["opened","opening"],["submitted","submitted"],["signing","signing"],["all_signed","all signed"],["complete","done"]];
   var idxOf={}; STAGES.forEach(function(s,i){idxOf[s[0]]=i});
-  function chipClass(st){var i=idxOf[st]||0; return i>=5?"s6":(i>=3?"s4":"s1")}
+  function chipClass(st){var i=idxOf[st]; if(i==null)i=0; return i>=5?"s6":(i>=3?"s4":"s1")}
   var allRows=[];
+  var stageFilter=null;
   function renderRows(rows){
     document.getElementById("list").innerHTML=rows.length?rows.map(function(r){
       var ini=(r.name||r.he||"?").trim().slice(0,1).toUpperCase();
@@ -1747,8 +1752,9 @@ input:focus {
   }
   function applySearch(){
     var q=(document.getElementById("boardSearch").value||"").trim().toLowerCase();
-    if(!q){renderRows(allRows);return;}
-    var filtered=allRows.filter(function(r){
+    var base=stageFilter?allRows.filter(function(r){return r.stage===stageFilter;}):allRows;
+    if(!q){renderRows(base);return;}
+    var filtered=base.filter(function(r){
       return (r.name||"").toLowerCase().indexOf(q)>=0
           ||(r.he||"").toLowerCase().indexOf(q)>=0
           ||(r.stage||"").toLowerCase().indexOf(q)>=0
@@ -1758,10 +1764,24 @@ input:focus {
   }
   function render(rows){
     allRows=rows;
-    var counts=[0,0,0,0,0,0]; rows.forEach(function(r){counts[idxOf[r.stage]||0]++});
+    var counts=STAGES.map(function(){return 0;});
+    var uncounted=0;
+    rows.forEach(function(r){
+      var i=idxOf[r.stage];
+      if(i!=null)counts[i]++;
+      else uncounted++;
+    });
     document.getElementById("stages").innerHTML=STAGES.map(function(s,i){
-      return '<div class="st'+(counts[i]?' hot':'')+'"><div class="ct">'+counts[i]+'</div><div class="lbl">'+s[0]+'</div></div>';
-    }).join("");
+      var isSel=(stageFilter===s[0]);
+      return '<div class="st'+(counts[i]?' hot':'')+(isSel?' sel':'')+'"><div class="ct">'+counts[i]+'</div><div class="lbl">'+s[0]+'</div></div>';
+    }).join("")+(uncounted?'<div class="st hot"><div class="ct">'+uncounted+'</div><div class="lbl">other</div></div>':'');
+    Array.prototype.forEach.call(document.querySelectorAll("#stages .st"),function(el,i){
+      el.onclick=function(){
+        var s=i<STAGES.length?STAGES[i][0]:null;
+        stageFilter=(stageFilter===s)?null:s;
+        render(allRows);
+      };
+    });
     applySearch();
   }
   (function(){
