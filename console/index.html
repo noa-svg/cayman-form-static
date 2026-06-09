@@ -2325,7 +2325,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var isSub=(state.process==="subscription");
     var el;
     el=document.getElementById("kindCell");if(el)el.style.display=isSub?"":"none";
-    el=document.getElementById("nicknameRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
   }
