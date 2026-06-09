@@ -270,11 +270,6 @@
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
   var STAGES = [["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
-  var SAMPLE = [
-    {pid:"p_maya",name:"Maya Tidewater", he:"מאיה קורלין", stage:"signing", age:"2h", wait:"Lawyer to sign"},
-    {pid:"p_sandy",name:"Sandy Koufax", he:"סנדי קופקס", stage:"complete", age:"1d", wait:""},
-    {pid:"p_david",name:"David Cohen", he:"דוד כהן", stage:"link_sent", age:"10m", wait:"Investor to open"}
-  ];
   var idxOf={}; STAGES.forEach(function(s,i){idxOf[s[0]]=i});
   function chipClass(st){var i=idxOf[st]||0; return i>=5?"s6":(i>=3?"s4":"s1")}
   function render(rows){
@@ -293,9 +288,9 @@
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
-      render(rows.length?rows:SAMPLE);
+      render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @157<br><span style="color:#64748b">synced '+t+'</span>';}
-    }).catch(function(){render(SAMPLE);});
+    }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--err)">Could not load. Refresh or check auth.</div>';});
   }
   load();
   // slide-over
@@ -379,11 +374,6 @@
 
   // ---- W-8 renewals ----
   var W8=null;
-  var SAMPLE_W8={counts:{valid:14,expiring:3,expired:1},due:[
-    {name:"Sandy Koufax",variant:"W-8BEN",expiry:"2026-07-31",status:"expiring"},
-    {name:"Cayman Holdco Ltd",variant:"W-8BEN-E",expiry:"2026-08-15",status:"expiring"},
-    {name:"Maya Tidewater",variant:"W-8BEN",expiry:"2026-06-01",status:"expired"}
-  ]};
   function renderW8(d){
     d=d||{counts:{valid:0,expiring:0,expired:0},due:[]};
     var c=d.counts||{};
@@ -399,20 +389,16 @@
     }).join(""):'<div class="empty">Nothing due. Every W-8 on file is current.</div>';
   }
   function loadW8(){
-    apiFetch('?api=w8renewals').then(function(d){W8=d||SAMPLE_W8;renderW8(W8);}).catch(function(){W8=SAMPLE_W8;renderW8(W8);});
+    apiFetch('?api=w8renewals').then(function(d){W8=d||{counts:{valid:0,expiring:0,expired:0},due:[]};renderW8(W8);}).catch(function(){renderW8({counts:{valid:0,expiring:0,expired:0},due:[]});});
   }
 
   // ---- Messages ----
   var MSGS=null, curMsg=null, curLang="he";
   var SAMPLE_VARS={name:"David Cohen", link:"https://sign.legacyvpartners.com/?t=...", applicantType:"individual"};
-  var SAMPLE_MSGS=[
-    {key:"invite_new",label:"Invite: new LP",to:"The investor",placeholders:["name","link"],he:{subject:"לגאסי ואליו פרטנרס - הצטרפות לקרן - {{name}}",body:"שלום {{name}},\n\nניתן להתחיל בלינק המצורף: {{link}}\n\nבברכה,\nנועה",overridden:false},en:{subject:"Legacy Value Partners - Subscription - {{name}}",body:"Hello {{name}},\n\nBegin here: {{link}}\n\nLegacy Value Partners",overridden:false}},
-    {key:"completion_lp",label:"Signed docs: investor",to:"The investor",placeholders:["name"],he:{subject:"לגאסי ואליו פרטנרס - מסמכים חתומים - {{name}}",body:"שלום {{name}},\n\nהמסמכים החתומים מצורפים.\n\nלגאסי ואליו פרטנרס",overridden:false},en:{subject:"Legacy Value Partners - Signed documents - {{name}}",body:"Hello {{name}},\n\nYour signed documents are attached.\n\nLegacy Value Partners",overridden:true}}
-  ];
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function interp(t){return String(t==null?"":t).replace(/\{\{\s*([\w.]+)\s*\}\}/g,function(_,k){return SAMPLE_VARS[k]!=null?SAMPLE_VARS[k]:"";});}
   function loadMsgs(){
-    apiFetch('?api=messages&lane='+state.lane).then(function(d){MSGS=(d&&d.messages&&d.messages.length)?d.messages:SAMPLE_MSGS;renderMsgList();}).catch(function(){MSGS=SAMPLE_MSGS;renderMsgList();});
+    apiFetch('?api=messages&lane='+state.lane).then(function(d){MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];renderMsgList();}).catch(function(){MSGS=[];renderMsgList();});
   }
   function renderMsgList(){
     document.getElementById("msglist").innerHTML=MSGS.map(function(m){
