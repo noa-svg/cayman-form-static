@@ -417,6 +417,14 @@ nav {
   --shadow-modal:         0 8px 40px rgba(15,23,42,0.16);
 }
 
+/* Theme toggle button: high contrast in light mode */
+:root[data-theme="light"] #theme-toggle {
+  color: var(--color-ink);
+  background: var(--color-bg-card);
+  border-color: var(--color-border);
+  font-weight: 600;
+}
+
 :root[data-theme="light"] .brand .mark {
   text-shadow: none;
 }
