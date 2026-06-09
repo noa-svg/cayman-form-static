@@ -605,6 +605,22 @@ nav {
   color: var(--color-ink-muted);
 }
 
+.board-search {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink-primary);
+  background: var(--color-bg-input, #FBF7EC);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: 8px;
+  padding: 6px 12px;
+  width: 220px;
+  outline: none;
+  transition: border-color 120ms;
+}
+.board-search:focus { border-color: var(--color-accent); }
+.board-search::placeholder { color: var(--color-ink-muted); }
+.board-search::-webkit-search-cancel-button { opacity: 0.4; cursor: pointer; }
+
 #list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1551,7 +1567,7 @@ input:focus {
       </div>
       <div class="content">
         <div class="stages" id="stages"></div>
-        <div class="listhead"><h2>In flight</h2></div>
+        <div class="listhead"><h2>In flight</h2><input class="board-search" id="boardSearch" type="search" placeholder="Search by name or stage" autocomplete="off"></div>
         <div id="list"></div>
       </div>
     </div>
@@ -1705,11 +1721,8 @@ input:focus {
   var STAGES=[["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
   var idxOf={}; STAGES.forEach(function(s,i){idxOf[s[0]]=i});
   function chipClass(st){var i=idxOf[st]||0; return i>=5?"s6":(i>=3?"s4":"s1")}
-  function render(rows){
-    var counts=[0,0,0,0,0,0]; rows.forEach(function(r){counts[idxOf[r.stage]||0]++});
-    document.getElementById("stages").innerHTML=STAGES.map(function(s,i){
-      return '<div class="st'+(counts[i]?' hot':'')+'"><div class="ct">'+counts[i]+'</div><div class="lbl">'+s[0]+'</div></div>';
-    }).join("");
+  var allRows=[];
+  function renderRows(rows){
     document.getElementById("list").innerHTML=rows.length?rows.map(function(r){
       var ini=(r.name||r.he||"?").trim().slice(0,1).toUpperCase();
       var _avColors=[['#EEF3FA','#1F5DB0'],['#FDF3D9','#D4A227'],['#FDF0EE','#D85E4C'],['#EBF5EC','#2E8540'],['#F3EEF9','#5C2C82']];
@@ -1724,12 +1737,35 @@ input:focus {
     }).join(""):'<div class="empty">Nothing here yet. Start something with + New process.</div>';
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){el.onclick=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};});
   }
+  function applySearch(){
+    var q=(document.getElementById("boardSearch").value||"").trim().toLowerCase();
+    if(!q){renderRows(allRows);return;}
+    var filtered=allRows.filter(function(r){
+      return (r.name||"").toLowerCase().indexOf(q)>=0
+          ||(r.he||"").toLowerCase().indexOf(q)>=0
+          ||(r.stage||"").toLowerCase().indexOf(q)>=0
+          ||(r.pid||"").toLowerCase().indexOf(q)>=0;
+    });
+    renderRows(filtered);
+  }
+  function render(rows){
+    allRows=rows;
+    var counts=[0,0,0,0,0,0]; rows.forEach(function(r){counts[idxOf[r.stage]||0]++});
+    document.getElementById("stages").innerHTML=STAGES.map(function(s,i){
+      return '<div class="st'+(counts[i]?' hot':'')+'"><div class="ct">'+counts[i]+'</div><div class="lbl">'+s[0]+'</div></div>';
+    }).join("");
+    applySearch();
+  }
+  (function(){
+    var si=document.getElementById("boardSearch");
+    if(si)si.addEventListener("input",applySearch);
+  })();
   function load(){
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @158<br><span style="opacity:.6;font-size:10px">synced '+t+'</span>';}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @159<br><span style="opacity:.6;font-size:10px">synced '+t+'</span>';}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
     refreshAttentionBadge();
   }
