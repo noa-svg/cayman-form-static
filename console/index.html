@@ -26,9 +26,8 @@
   .side-foot{padding:14px 22px;border-top:1px solid var(--side-line);font-size:11px;color:#475569;line-height:1.6}
   .auth-row{display:flex;align-items:center;gap:8px;margin-top:8px}
   .auth-row button{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
-  #auth-input-row{margin-top:7px;display:none}
-  #auth-input{width:100%;padding:7px 9px;font-size:11px;border:1px solid #334155;background:#1E293B;color:#94A3B8;border-radius:5px;font-family:inherit}
-  #auth-input:focus{outline:none;border-color:var(--blue);box-shadow:none}
+  #sign-out-btn{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
+  #gsi-container{margin-top:7px}
   .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:var(--side-muted);cursor:pointer;font-weight:500;transition:all .15s}
   .nav:hover{background:#1E293B;color:#fff}
   .nav.on{background:#1E3A8A;color:#93C5FD;font-weight:700}
@@ -143,8 +142,8 @@
       <div class="nav" data-view="settings">Settings</div>
     </nav>
     <div class="side-foot" id="side-foot"><span id="ver-line">GAS @156</span>
-      <div class="auth-row"><span id="auth-status">🔒 not signed in</span><button id="auth-btn">Sign in</button></div>
-      <div id="auth-input-row"><input type="password" id="auth-input" placeholder="operator secret" autocomplete="off"></div>
+      <div class="auth-row"><span id="auth-status">🔒 not signed in</span><button id="sign-out-btn" style="display:none" onclick="clearGsiAuth()">Sign out</button></div>
+      <div id="gsi-container"></div>
     </div>
   </aside>
   <div class="main">
@@ -227,11 +226,47 @@
 
 <script>
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-  var OP = (new URLSearchParams(location.search)).get('op') || sessionStorage.getItem('lvp_op') || '';
-  function apiFetch(qs){ return fetch(GW+qs+(OP?'&op='+encodeURIComponent(OP):'')).then(function(r){return r.json();}); }
-  function setAuth(secret){ OP=secret; sessionStorage.setItem('lvp_op',secret); document.getElementById('auth-status').textContent='🔓 signed in'; document.getElementById('auth-btn').textContent='Clear'; }
-  function clearAuth(){ OP=''; sessionStorage.removeItem('lvp_op'); document.getElementById('auth-status').textContent='🔒 not signed in'; document.getElementById('auth-btn').textContent='Sign in'; }
-  if(OP) setAuth(OP);
+  var GSI_CLIENT_ID = 'PENDING_GCP_SETUP'; // replaced after GCP OAuth client is created
+  var ID_TOKEN = sessionStorage.getItem('lvp_id_token') || '';
+  var OP_FALLBACK = (new URLSearchParams(location.search)).get('op') || ''; // URL-param fallback during transition
+  function apiFetch(qs){
+    var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
+    return fetch(GW+qs+auth).then(function(r){return r.json();});
+  }
+  function handleCredential(resp){
+    try{
+      var pl=JSON.parse(atob(resp.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      ID_TOKEN=resp.credential;
+      sessionStorage.setItem('lvp_id_token',ID_TOKEN);
+      document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
+      document.getElementById('sign-out-btn').style.display='inline';
+      document.getElementById('gsi-container').style.display='none';
+      load();
+    }catch(e){}
+  }
+  function clearGsiAuth(){
+    ID_TOKEN=''; sessionStorage.removeItem('lvp_id_token');
+    if(typeof google!=='undefined'&&google.accounts) google.accounts.id.disableAutoSelect();
+    document.getElementById('auth-status').textContent='🔒 not signed in';
+    document.getElementById('sign-out-btn').style.display='none';
+    document.getElementById('gsi-container').style.display='block';
+  }
+  function initGsi(){
+    var ready=GSI_CLIENT_ID&&GSI_CLIENT_ID!=='PENDING_GCP_SETUP';
+    if(!ready){document.getElementById('gsi-container').innerHTML='<span style="font-size:10px;color:#475569">Sign-in pending GCP setup</span>';return;}
+    google.accounts.id.initialize({client_id:GSI_CLIENT_ID,callback:handleCredential,auto_select:true,use_fedcm_for_prompt:false});
+    if(ID_TOKEN){
+      try{
+        var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
+        document.getElementById('sign-out-btn').style.display='inline';
+        document.getElementById('gsi-container').style.display='none';
+      }catch(e){clearGsiAuth();google.accounts.id.renderButton(document.getElementById('gsi-container'),{theme:'outline',size:'small',width:180});google.accounts.id.prompt();}
+    }else{
+      google.accounts.id.renderButton(document.getElementById('gsi-container'),{theme:'outline',size:'small',width:180});
+      google.accounts.id.prompt();
+    }
+  }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
   var STAGES = [["link_sent","sent"],["in_progress","filling"],["submitted","in"],["signing","signing"],["docs_assembled","sealing"],["complete","done"]];
@@ -259,7 +294,7 @@
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows.length?rows:SAMPLE);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @156<br><span style="color:#64748b">synced '+t+'</span>';}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @157<br><span style="color:#64748b">synced '+t+'</span>';}
     }).catch(function(){render(SAMPLE);});
   }
   load();
@@ -312,14 +347,6 @@
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
-  document.getElementById('auth-btn').onclick=function(){
-    if(OP){clearAuth();document.getElementById('auth-input-row').style.display='none';}
-    else{var r=document.getElementById('auth-input-row');var show=r.style.display==='none'||!r.style.display;r.style.display=show?'block':'none';if(show)document.getElementById('auth-input').focus();}
-  };
-  document.getElementById('auth-input').addEventListener('keydown',function(e){
-    if(e.key==='Enter'){var v=this.value.trim();if(v){setAuth(v);document.getElementById('auth-input-row').style.display='none';this.value='';}}
-    if(e.key==='Escape'){document.getElementById('auth-input-row').style.display='none';}
-  });
   // create
   document.getElementById("createBtn").onclick=function(){
     var msg=document.getElementById("msg");
@@ -424,4 +451,5 @@
     };
   }
 </script>
+<script src="https://accounts.google.com/gsi/client" async onload="initGsi()"></script>
 </body></html>
