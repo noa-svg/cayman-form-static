@@ -1861,8 +1861,9 @@ input:focus {
 
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
-  var ID_TOKEN = sessionStorage.getItem('lvp_id_token') || '';
-  var OP_FALLBACK = (new URLSearchParams(location.search)).get('op') || '';
+  var TOKEN_KEY='lvp_op_token_v1'; // localStorage -- persists across tabs, cleared on sign-out
+  var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
+  var OP_FALLBACK=(new URLSearchParams(location.search)).get('op')||'';
   function apiFetch(qs){
     var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
     return fetch(GW+qs+auth).then(function(r){return r.json();}).then(function(d){
@@ -1874,7 +1875,7 @@ input:focus {
     try{
       var pl=JSON.parse(atob(resp.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
       ID_TOKEN=resp.credential;
-      sessionStorage.setItem('lvp_id_token',ID_TOKEN);
+      localStorage.setItem(TOKEN_KEY,ID_TOKEN);
       document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
       document.getElementById('sign-out-btn').style.display='inline';
       document.getElementById('gsi-container').style.display='none';
@@ -1883,7 +1884,7 @@ input:focus {
     }catch(e){}
   }
   function clearGsiAuth(){
-    ID_TOKEN=''; sessionStorage.removeItem('lvp_id_token');
+    ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
     if(typeof google!=='undefined'&&google.accounts) google.accounts.id.disableAutoSelect();
     document.getElementById('auth-status').textContent='🔒 not signed in';
     document.getElementById('sign-out-btn').style.display='none';
@@ -1898,12 +1899,19 @@ input:focus {
       try{
         var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
         var exp=Number(pl.exp||0);
-        if(exp&&exp*1000<Date.now()){sessionStorage.removeItem('lvp_id_token');ID_TOKEN='';showLogin();return;}
+        var nowMs=Date.now();
+        if(exp&&exp*1000<nowMs){localStorage.removeItem(TOKEN_KEY);ID_TOKEN='';showLogin();return;}
         document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
         document.getElementById('gsi-container').style.display='none';
         document.getElementById('login-screen').classList.add('off');
         load();
+        // If token expires in < 10 min, silently prompt for a fresh one in the background.
+        // auto_select:true means Google fires handleCredential without any UI if the account
+        // is already signed in to Chrome. No visible overlay unless auto-select fails.
+        if(exp&&(exp*1000-nowMs)<600000){
+          google.accounts.id.prompt(function(n){if(n.isSkippedMoment&&n.isSkippedMoment()){}});
+        }
       }catch(e){showLogin();}
     }else{
       showLogin();
