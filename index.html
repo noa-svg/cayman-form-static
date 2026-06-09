@@ -284,6 +284,9 @@
     /* Focus ring for keyboard navigation */
     .lvp-upload:focus-within .lvp-upload__btn { outline: 2px solid var(--lvp-navy); outline-offset: 2px; }
     .lvp-card[dir="rtl"] .lvp-upload__remove { right: auto; left: 8px; }
+    /* RTL: checkmark ::after lands at the same left-edge as the × button -- hide it;
+       green background + filename already show the uploaded state. */
+    .lvp-card[dir="rtl"] .lvp-upload.has-file .lvp-upload__btn::after { display: none; }
     /* ---- Numbered ID card slot group ---- */
     .lvp-id-group { margin-bottom: 20px; }
     .lvp-id-group__hdr { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; }
