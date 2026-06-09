@@ -1685,6 +1685,39 @@ input:focus {
 #allowlist-input { font-family: var(--font-mono); }
 
 /* ============================================================
+   HAMBURGER + MOBILE SIDEBAR SCRIM
+   ============================================================ */
+
+#mob-menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  color: var(--color-atrium);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+#mob-menu:hover { background: var(--color-bg-hover); }
+
+#side-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: var(--color-bg-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-drawer) var(--ease-out);
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 
@@ -1693,6 +1726,55 @@ input:focus {
     --grid-gutter: 16px;
     --panel-w: 100vw;
   }
+
+  /* Sidebar: off-canvas overlay */
+  .side {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 50;
+    width: 240px;
+    transform: translateX(-100%);
+    transition: transform var(--dur-drawer) var(--ease-out);
+    box-shadow: var(--shadow-drawer);
+  }
+  body.side-open .side { transform: translateX(0); }
+
+  /* Sidebar scrim */
+  #side-scrim { display: block; }
+  body.side-open #side-scrim { opacity: 1; pointer-events: auto; }
+
+  /* Show hamburger */
+  #mob-menu { display: flex; }
+
+  /* Topbar: tighter */
+  .top { padding: 10px var(--grid-gutter); gap: 8px; }
+  .prompt-path { display: none; }
+
+  /* Search: full width */
+  .board-search { width: 100%; }
+  .listhead { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+
+  /* Hide stage + age columns in board table */
+  .th-st, .rst, .th-age, .rage { display: none; }
+
+  /* Status bar: wrap */
+  .statusbar { flex-wrap: wrap; gap: 4px 0; }
+
+  /* Login: compact */
+  #login-screen { padding: var(--space-4); }
+  .lc { padding: var(--space-6) var(--space-4) var(--space-4); }
+
+  /* Messages: stack panels */
+  .msgwrap { flex-direction: column; height: auto; min-height: 0; }
+  .msglist { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); max-height: 220px; }
+
+  /* Activity: compact grid, hide flow + lane */
+  .act-row { grid-template-columns: 1fr 90px 50px; }
+  .act-flow, .act-lane { display: none; }
+
+  /* Messages side-by-side editor: stack */
+  .medit-wrap { grid-template-columns: 1fr; }
+  .medit-right { position: static; }
 }
 </style></head>
 <body>
@@ -1721,6 +1803,7 @@ input:focus {
   <div class="main">
     <div class="view" id="v-board">
       <div class="top">
+        <button id="mob-menu" aria-label="Menu">&#9776;</button>
         <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path" id="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
         <div class="top-right">
           <span class="flagged-badge" id="flagged-badge" style="display:none"><span class="s-red">!</span>&nbsp;<span id="flagged-n">0</span> flagged</span>
@@ -1801,6 +1884,7 @@ input:focus {
     </div>
   </div>
 
+  <div id="side-scrim"></div>
   <div class="scrim" id="dscrim"></div>
   <div class="panel" id="drawer"><div class="x" id="dclose">&times;</div><div id="dbody"></div></div>
 
@@ -2038,6 +2122,9 @@ input:focus {
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
   function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on")}
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
+  // mobile sidebar
+  document.getElementById('mob-menu').onclick=function(){document.body.classList.toggle('side-open');};
+  document.getElementById('side-scrim').onclick=function(){document.body.classList.remove('side-open');};
   var currentPid=null;
   function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   function renderDrawer(d){
@@ -2154,6 +2241,7 @@ input:focus {
   // view switching
   Array.prototype.forEach.call(document.querySelectorAll(".nav[data-view]"),function(n){
     n.onclick=function(){
+      document.body.classList.remove('side-open');
       var v=n.getAttribute("data-view");
       Array.prototype.forEach.call(document.querySelectorAll(".nav"),function(x){x.classList.remove("on")});
       n.classList.add("on");
