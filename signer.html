@@ -47,6 +47,7 @@
     /* Editable form fields */
     .field { margin-bottom:16px; }
     .field label { display:block; font-size:13px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+    .field label .req { color:var(--error); }
     .field input, .field select { font:inherit; font-size:15px; width:100%; padding:10px 12px;
       border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); }
     .field input:focus, .field select:focus { outline:none; border-color:var(--navy); }
@@ -102,8 +103,8 @@
 </head>
 <body>
   <div class="lvp-lang" role="group" aria-label="Language">
-    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="true">EN</button>
-    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="false">&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</button>
   </div>
   <div class="app">
     <header class="header">
@@ -216,6 +217,9 @@
       "Loading your form...": "טוען את הטופס...",
       "Link unavailable": "קישור לא זמין",
       "This signing link is invalid or has expired. Please contact Legacy Value Partners.": "קישור החתימה אינו תקין או פג תוקפו. נא לפנות ל-Legacy Value Partners.",
+      "This signing link has expired. Please contact Legacy Value Partners for a new link.": "תוקף קישור החתימה פג. נא לפנות ל-Legacy Value Partners לקבלת קישור חדש.",
+      "This subscription has been cancelled. Please contact Legacy Value Partners.": "ההצטרפות בוטלה. נא לפנות ל-Legacy Value Partners.",
+      "This signing link has been revoked. Please contact Legacy Value Partners.": "קישור החתימה בוטל. נא לפנות ל-Legacy Value Partners.",
       "Already signed": "כבר נחתם",
       "Your signature has already been recorded. No further action is needed.": "החתימה שלך כבר תועדה. אין צורך בפעולה נוספת.",
       "Not yet": "עוד לא תורך",
@@ -261,7 +265,9 @@
       "Try again": "נסה שוב",
       "Registration number": "מספר רישום",
       "Primary signatory": "חותם/ת ראשי/ת",
-      "Country": "מדינה"
+      "Country": "מדינה",
+      "This tax form will be completed from your answers.": "טופס המס הזה ימולא מתוך התשובות שלך.",
+      "Document preview not available.": "תצוגה מקדימה של המסמך אינה זמינה."
     };
 
     var curLang = 'en';
@@ -275,8 +281,11 @@
       document.querySelectorAll('[data-lang-set]').forEach(function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
       });
-      // Translate static text nodes
-      document.querySelectorAll('[data-state] h1, [data-state] p, .hint, h2, .consent-check span, .btn, label').forEach(function (el) {
+      // Translate static text nodes. Editable-field labels (#editable-fields
+      // label), locked-context dt's, and doc titles are deliberately excluded:
+      // renderDynamic owns those and re-translates them from source so the
+      // required-asterisk span survives and a lang toggle stays clean. F5/F46.
+      document.querySelectorAll('[data-state] h1, [data-state] p, .hint, h2, .consent-check span, .btn').forEach(function (el) {
         if (!el.dataset.en) el.dataset.en = el.textContent;
         var he = HE_MAP[el.dataset.en];
         if (he && lang === 'he') el.textContent = he;
@@ -284,7 +293,13 @@
       });
     }
     document.querySelectorAll('[data-lang-set]').forEach(function (b) {
-      b.addEventListener('click', function () { applyLang(b.getAttribute('data-lang-set')); });
+      b.addEventListener('click', function () {
+        applyLang(b.getAttribute('data-lang-set'));
+        // Re-translate the dynamically built sections (locked context, field
+        // labels, doc titles) that applyLang's static selector does not cover,
+        // so a foreign signer can toggle EN<->HE cleanly. F5.
+        if (CTX) renderDynamic(CTX, false);
+      });
     });
 
     function show(name) {
@@ -307,6 +322,19 @@
         if (!ctx.ok) {
           if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
           if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
+          // Map known invalid reasons to specific copy; keep the generic
+          // fallback for unknown/unset reasons. F47. We set both the visible
+          // text and data-en so applyLang('he') translates it via HE_MAP.
+          var reasonMsg = {
+            expired: 'This signing link has expired. Please contact Legacy Value Partners for a new link.',
+            voided:  'This subscription has been cancelled. Please contact Legacy Value Partners.',
+            revoked: 'This signing link has been revoked. Please contact Legacy Value Partners.'
+          };
+          var msgEl = document.getElementById('invalid-msg');
+          if (msgEl && reasonMsg[ctx.reason]) {
+            msgEl.dataset.en = reasonMsg[ctx.reason];
+            msgEl.textContent = reasonMsg[ctx.reason];
+          }
           applyLang('he'); show('invalid'); return;
         }
         renderSignerForm(ctx);
@@ -318,9 +346,15 @@
     document.getElementById('retry-btn').onclick = loadSignerForm;
     loadSignerForm();
 
-    function renderSignerForm(ctx) {
-      applyLang('he');
+    var CTX = null; // current signer context, kept in scope for re-translation on lang toggle (F5)
 
+    // Re-render the dynamically built, translatable sections (locked context,
+    // editable field labels, doc titles). Safe to call on every language
+    // toggle: it rebuilds the labels from source via tHe() rather than relying
+    // on applyLang's static-node capture, so an EN<->HE toggle always returns
+    // clean copy. Doc bodies (server HTML) and the signature pad are NOT
+    // touched here; they are wired once in renderSignerForm. (F5)
+    function renderDynamic(ctx, isInitial) {
       // Locked context
       var lockedHtml = '<dl class="locked">';
       var lc = ctx.lockedContext || {};
@@ -343,7 +377,6 @@
 
       // Editable fields
       var ef = ctx.editableFields || {};
-      var fieldsHtml = '';
       var fieldDefs = {
         firstName:    { label: 'First name *', type: 'text' },
         lastName:     { label: 'Last name *', type: 'text' },
@@ -362,35 +395,81 @@
         controlType:  { label: 'Control type *', type: 'text' },
         ownershipPercentage: { label: 'Ownership percentage *', type: 'text' }
       };
-      (ef.fields || []).forEach(function (f) {
-        var def = fieldDefs[f];
-        if (!def) return;
+      // Build the label markup for a field. Required-ness is derived from the
+      // '*' in the English def label; the asterisk is rendered separately so the
+      // Hebrew label (no '*' in HE_MAP) still shows the required cue. F46. We
+      // translate via the full '*' key (HE_MAP keys carry the '*'), then strip a
+      // trailing '*' from whatever comes back and re-append it in its own span.
+      function labelMarkup(def) {
         var isReq = def.label.indexOf('*') >= 0;
-        fieldsHtml += '<div class="field"><label>' + esc(tHe(def.label)) + '</label>' +
-          '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"' + (isReq ? ' required' : '') + '></div>';
-      });
-      document.getElementById('editable-fields').innerHTML = fieldsHtml;
+        var labelText = tHe(def.label).replace(/\s*\*\s*$/, '');
+        return esc(labelText) + (isReq ? ' <span class="req">*</span>' : '');
+      }
+      var efContainer = document.getElementById('editable-fields');
+      if (isInitial) {
+        var fieldsHtml = '';
+        (ef.fields || []).forEach(function (f) {
+          var def = fieldDefs[f];
+          if (!def) return;
+          var isReq = def.label.indexOf('*') >= 0;
+          fieldsHtml += '<div class="field"><label>' + labelMarkup(def) + '</label>' +
+            '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"' + (isReq ? ' required' : '') + '></div>';
+        });
+        efContainer.innerHTML = fieldsHtml;
+      } else {
+        // Re-translate field labels in place; preserve typed input values. F5.
+        (ef.fields || []).forEach(function (f) {
+          var def = fieldDefs[f];
+          if (!def) return;
+          var input = efContainer.querySelector('input[name="' + f + '"]');
+          if (!input) return;
+          var field = input.closest('.field');
+          var lbl = field ? field.querySelector('label') : null;
+          if (lbl) lbl.innerHTML = labelMarkup(def);
+        });
+      }
 
-      // Docs
+      // Doc titles: server-provided text, re-translated on each pass so a
+      // language toggle does not strand them in the first-rendered language. F5.
       var docList = document.getElementById('doc-list');
-      (ctx.docs || []).forEach(function (doc) {
-        var el = document.createElement('div');
-        el.className = 'doc';
-        if (doc.acroFill) {
-          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
-            '<div class="doc__note">' + esc(doc.note || 'This tax form will be completed from your answers.') + '</div>';
-        } else if (doc.html) {
-          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
-            '<div class="doc__body">' + doc.html + '</div>';
-        } else {
-          el.innerHTML = '<div class="doc__title">' + esc(doc.title) + '</div>' +
-            '<div class="doc__note">' + esc(doc.error || 'Document preview not available.') + '</div>';
-        }
-        var titleEl = el.querySelector('.doc__title');
-        if (titleEl) titleEl.addEventListener('click', function () { el.classList.toggle('collapsed'); });
-        docList.appendChild(el);
-      });
+      if (isInitial) {
+        (ctx.docs || []).forEach(function (doc) {
+          var el = document.createElement('div');
+          el.className = 'doc';
+          if (doc.acroFill) {
+            el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
+              '<div class="doc__note">' + esc(tHe(doc.note || 'This tax form will be completed from your answers.')) + '</div>';
+          } else if (doc.html) {
+            el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
+              '<div class="doc__body">' + doc.html + '</div>';
+          } else {
+            el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
+              '<div class="doc__note">' + esc(tHe(doc.error || 'Document preview not available.')) + '</div>';
+          }
+          var titleEl = el.querySelector('.doc__title');
+          if (titleEl) titleEl.addEventListener('click', function () { el.classList.toggle('collapsed'); });
+          docList.appendChild(el);
+        });
+      } else {
+        var docEls = docList.querySelectorAll('.doc');
+        (ctx.docs || []).forEach(function (doc, i) {
+          var el = docEls[i];
+          if (!el) return;
+          var titleEl = el.querySelector('.doc__title');
+          if (titleEl) titleEl.textContent = tHe(doc.title);
+          var noteEl = el.querySelector('.doc__note');
+          if (noteEl) {
+            if (doc.acroFill) noteEl.textContent = tHe(doc.note || 'This tax form will be completed from your answers.');
+            else noteEl.textContent = tHe(doc.error || 'Document preview not available.');
+          }
+        });
+      }
+    }
 
+    function renderSignerForm(ctx) {
+      CTX = ctx;
+      applyLang('he');
+      renderDynamic(ctx, true);
       show('form');
       initPad(ctx);
     }

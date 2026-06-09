@@ -2169,7 +2169,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var TOKEN_KEY='lvp_op_token_v1';
   var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
-  var OP_FALLBACK=(new URLSearchParams(location.search)).get('op')||'';
+  // F21: the ?op= plaintext-identity fallback is a dev shortcut only. It bypasses
+  // Google sign-in with an unauthenticated identity, so it must never be honored
+  // on the production console host. Gate it to non-prod origins (localhost / file).
+  var IS_PROD_HOST=(location.hostname==='sign.legacyvpartners.com');
+  var OP_FALLBACK=IS_PROD_HOST?'':((new URLSearchParams(location.search)).get('op')||'');
 
   // Pick up id_token from URL hash after Google redirect-back
   (function(){
@@ -2199,6 +2203,22 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     document.getElementById('login-screen').classList.remove('off');
     var dbg=document.getElementById('login-debug');
     if(dbg&&reason)dbg.textContent='reason: '+reason;
+    // F43: blank every rendered LP data region, close open panels, and drop
+    // in-memory caches so nothing stays visible behind the login overlay on a
+    // shared machine.
+    try{
+      ['list','stages','act-table','msglist','w8list','w8counts','dbody'].forEach(function(id){
+        var el=document.getElementById(id);if(el)el.innerHTML='';
+      });
+      var me=document.getElementById('msgedit');
+      if(me)me.innerHTML='<div class="msgempty">Pick a message to see who it goes to, its placeholders, and a live preview, then edit the copy.</div>';
+      var dr=document.getElementById('drawer'),ds=document.getElementById('dscrim');
+      if(dr)dr.classList.remove('on');if(ds)ds.classList.remove('on');
+      var pn=document.getElementById('panel'),sc=document.getElementById('scrim');
+      if(pn)pn.classList.remove('on');if(sc)sc.classList.remove('on');
+      document.body.style.overflow='';
+      allRows=[];ACT_ROWS=null;W8=null;MSGS=null;curMsg=null;currentPid=null;
+    }catch(e){}
   }
   function startGoogleSignIn(){
     var nonce=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
@@ -2230,11 +2250,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
-  var STAGES=[["link_sent","LINK_SENT"],["opened","OPENED"],["submitted","SUBMITTED"],["signing","SIGNING"],["all_signed","ALL_SIGNED"],["complete","COMPLETE"]];
+  var STAGES=[["link_sent","LINK_SENT"],["opened","OPENED"],["submitted","SUBMITTED"],["signing","SIGNING"],["all_signed","ALL_SIGNED"],["docs_assembled","DOCS_ASSEMBLED"],["dispatched","DISPATCHED"],["complete","COMPLETE"]];
   var idxOf={}; STAGES.forEach(function(s,i){idxOf[s[0]]=i});
   function statusGlyph(st){
     if(st==='complete')return{g:'○',c:'s-dim'};
-    if(st==='signing'||st==='all_signed')return{g:'◉',c:'s-amber'};
+    if(st==='signing'||st==='all_signed'||st==='docs_assembled'||st==='dispatched')return{g:'◉',c:'s-amber'};
     if(st==='needs_attention')return{g:'▲',c:'s-red'};
     return{g:'●',c:'s-green'};
   }
@@ -2355,7 +2375,29 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top:2px">'+esc2(d.nameHebrew)+'</div>';
     h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
-    h+='<div class="dact"><button class="resend" data-act="resendCurrent">Resend invite</button><button class="nudge" data-act="nudge">Nudge signer</button><button class="reseal" data-act="reseal">Reseal docs</button><button class="dvoid" data-act="void">Void</button></div>';
+    // F44: gate lifecycle actions on stage so a footgun (reseal with no docs,
+    // resend on a completed sub) can never be clicked.
+    var dstage=String(d.stage||d.currentStage||'');
+    var isComplete=(dstage==='complete');
+    var isVoided=(dstage==='voided'||dstage==='void');
+    var isTerminal=isComplete||isVoided;
+    // Docs exist once signing has produced a sealed pack.
+    var docsExist=(dstage==='all_signed'||dstage==='docs_assembled'||dstage==='dispatched'||dstage==='complete');
+    var dactBtns='';
+    if(!isTerminal){
+      dactBtns+='<button class="resend" data-act="resendCurrent">Resend invite</button><button class="nudge" data-act="nudge">Nudge signer</button>';
+    }
+    if(docsExist&&!isVoided){
+      dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
+    }
+    if(!isTerminal){
+      dactBtns+='<button class="dvoid" data-act="void">Void</button>';
+    }
+    if(dactBtns){
+      h+='<div class="dact">'+dactBtns+'</div>';
+    }else{
+      h+='<div class="dact"><span class="pe" style="font-size:12px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span></div>';
+    }
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -2396,7 +2438,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
         if(!others.length){el.remove();return;}
         var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_onboarding:'Sub',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
-        var STAGE_DOT={complete:'#16A34A',sealed:'#16A34A',voided:'#9CA3AF',void:'#9CA3AF',needs_attention:'#DC2626',complete:'#16A34A'};
+        var STAGE_DOT={complete:'#16A34A',sealed:'#16A34A',voided:'#9CA3AF',void:'#9CA3AF',needs_attention:'#DC2626'};
         var rows='';
         others.forEach(function(p){
           var label=FLOW_LABEL[p.flowType]||p.flowType||'Process';
