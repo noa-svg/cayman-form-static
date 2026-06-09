@@ -1865,7 +1865,10 @@ input:focus {
   var OP_FALLBACK = (new URLSearchParams(location.search)).get('op') || '';
   function apiFetch(qs){
     var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
-    return fetch(GW+qs+auth).then(function(r){return r.json();});
+    return fetch(GW+qs+auth).then(function(r){return r.json();}).then(function(d){
+      if(d&&d.ok===false&&d.error==='unauthorized'){clearGsiAuth();throw new Error('unauthorized');}
+      return d;
+    });
   }
   function handleCredential(resp){
     try{
@@ -1894,6 +1897,8 @@ input:focus {
     if(ID_TOKEN){
       try{
         var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        var exp=Number(pl.exp||0);
+        if(exp&&exp*1000<Date.now()){sessionStorage.removeItem('lvp_id_token');ID_TOKEN='';showLogin();return;}
         document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
         document.getElementById('gsi-container').style.display='none';
