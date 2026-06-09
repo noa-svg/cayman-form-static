@@ -245,10 +245,10 @@
     @media (hover: hover) { .lvp-doc-block:hover { border-color: var(--lvp-navy); } }
     .lvp-doc-block:has(.lvp-upload.has-file) { border-color: var(--lvp-navy); }
     .lvp-doc-block:has(.lvp-field--error) { border-color: var(--lvp-error) !important; }
-    .lvp-doc-block__date { border-top: 1px solid #E9EBF0; padding: 8px 16px 10px 28px; }
+    .lvp-doc-block__date { border-top: 1px solid #E9EBF0; padding: 8px 16px 10px 28px; display: flex; flex-direction: row; align-items: center; gap: 12px; }
     .lvp-card[dir="rtl"] .lvp-doc-block__date { padding: 8px 28px 10px 16px; }
-    .lvp-doc-block__date .lvp-field__label { font-size: 12px; color: var(--lvp-text-muted); display: block; margin: 0 0 4px; }
-    .lvp-doc-block__date .lvp-input { max-width: 148px; }
+    .lvp-doc-block__date .lvp-field__label { font-size: 12px; color: var(--lvp-text-muted); white-space: nowrap; flex-shrink: 0; margin: 0; }
+    .lvp-doc-block__date .lvp-input { max-width: 148px; margin: 0; }
     .lvp-doc-block__date.lvp-field--error .lvp-field__label { color: var(--lvp-error); }
     .lvp-link { color: var(--lvp-navy); text-decoration: underline; }
     /* Custom file upload block */
@@ -281,8 +281,7 @@
     .lvp-upload__slot-num { width: 28px; height: 28px; flex-shrink: 0; border: 1.5px solid #D1D5DB; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #B0B7C3; background: #fff; }
     .lvp-upload--slot-req .lvp-upload__slot-num { border-color: var(--lvp-navy); color: var(--lvp-navy); }
     .lvp-upload--slot-req .lvp-upload__btn { border-width: 1.5px; }
-    .lvp-upload--slot-opt .lvp-upload__btn { background: #F9FAFB; border-color: #E9EBF0; }
-    .lvp-upload--slot-opt .lvp-upload__slot-num { background: #F9FAFB; }
+    /* Optional slots look the same as other slots (not disabled/greyed) */
     .lvp-upload__slot-badge { font-size: 11px; font-weight: 600; color: var(--lvp-navy); display: block; margin-top: 2px; }
     .lvp-upload__slot-sub { font-size: 12px; color: var(--lvp-text-muted); display: block; margin-top: 2px; }
     /* Field width constraints for short inputs (ID, SWIFT, dates) */
@@ -1084,36 +1083,55 @@
           .catch(function(){});
       }catch(e){}
     })();
-    // Static bootstrap: load CFG synchronously from GAS ?api=config.
+    // Static bootstrap: load CFG from GAS ?api=config.
+    // Uses sessionStorage to serve cached CFG instantly on repeat visits (eliminates
+    // the 3-5 sec GAS cold-start delay). Always refreshes in background; applies
+    // language switch async if the LP token says English.
     (function () {
       if (document.documentElement.classList.contains('lvp-gate-mode')) return;
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET',
-          gasUrl + '?api=config' +
-          '&t='    + encodeURIComponent(p.get('t')    || '') +
-          '&type=' + encodeURIComponent(p.get('type') || '') +
-          '&lane=' + encodeURIComponent(p.get('lane') || '') +
-          '&fp='   + encodeURIComponent(p.get('fp')   || ''),
-          false
-        );
-        xhr.send(null);
-        if (xhr.status === 200) {
-          window.CAYMAN_CFG = JSON.parse(xhr.responseText);
-          var cfg = window.CAYMAN_CFG;
-          if (cfg.brandLogoUrl) {
-            var logo = document.querySelector('[data-brand-logo]');
-            if (logo) logo.src = cfg.brandLogoUrl;
-          }
-          if (cfg.brandBgUrl) {
-            var s = document.createElement('style');
-            s.textContent = 'body::before{background-image:url("' + cfg.brandBgUrl + '")}';
-            document.head.appendChild(s);
-          }
+      var cacheKey = 'lvp_cfg_v1_' + (p.get('t') || p.get('token') || '');
+
+      function applyCfgVisuals(cfg) {
+        if (!cfg) return;
+        if (cfg.brandLogoUrl) {
+          var logo = document.querySelector('[data-brand-logo]');
+          if (logo) logo.src = cfg.brandLogoUrl;
         }
-      } catch (err) {
+        if (cfg.brandBgUrl) {
+          var s = document.createElement('style');
+          s.textContent = 'body::before{background-image:url("' + cfg.brandBgUrl + '")}';
+          document.head.appendChild(s);
+        }
+      }
+
+      // Serve cached CFG immediately (repeat visits are instant)
+      try {
+        var raw = sessionStorage.getItem(cacheKey);
+        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); }
+      } catch(e) {}
+
+      // Always fetch fresh in background; update cache + apply language if needed
+      var url = gasUrl + '?api=config'
+        + '&t='    + encodeURIComponent(p.get('t')    || '')
+        + '&type=' + encodeURIComponent(p.get('type') || '')
+        + '&lane=' + encodeURIComponent(p.get('lane') || '')
+        + '&fp='   + encodeURIComponent(p.get('fp')   || '');
+      try {
+        fetch(url)
+          .then(function(r) { return r.json(); })
+          .then(function(cfg) {
+            window.CAYMAN_CFG = cfg;
+            applyCfgVisuals(cfg);
+            if (cfg.language === 'en') {
+              var btn = document.querySelector('[data-lang-set="en"]');
+              if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
+            }
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
+          })
+          .catch(function() {});
+      } catch(err) {
         if (window.console) console.warn('[CaymanForm] CFG load failed:', err);
       }
     })();
