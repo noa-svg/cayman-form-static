@@ -1589,6 +1589,19 @@ input:focus {
   border-color: var(--color-atrium);
 }
 
+.dact .nudge {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-border-strong);
+}
+
+.dact .dvoid {
+  background: transparent;
+  color: var(--color-red);
+  border-color: var(--color-red);
+  margin-left: auto;
+}
+
 .kv {
   display: flex;
   gap: var(--space-2);
@@ -1708,7 +1721,7 @@ input:focus {
   <div class="main">
     <div class="view" id="v-board">
       <div class="top">
-        <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
+        <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path" id="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
         <div class="top-right">
           <span class="flagged-badge" id="flagged-badge" style="display:none"><span class="s-red">!</span>&nbsp;<span id="flagged-n">0</span> flagged</span>
           <button class="cmd-btn" id="newBtn">&gt; new process</button>
@@ -1912,7 +1925,6 @@ input:focus {
       response_type:'id_token',
       scope:'openid email profile',
       nonce:nonce,
-      hd:'legacyvpartners.com',
       prompt:'select_account'
     });
     window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
@@ -2030,7 +2042,7 @@ input:focus {
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top:2px">'+esc2(d.nameHebrew)+'</div>';
     h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
-    h+='<div class="dact"><button class="resend" data-act="resendCurrent">Resend invite</button><button class="reseal" data-act="reseal">Reseal docs</button></div>';
+    h+='<div class="dact"><button class="resend" data-act="resendCurrent">Resend invite</button><button class="nudge" data-act="nudge">Nudge signer</button><button class="reseal" data-act="reseal">Reseal docs</button><button class="dvoid" data-act="void">Void</button></div>';
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -2054,7 +2066,13 @@ input:focus {
     Array.prototype.forEach.call(document.querySelectorAll(".dact button"),function(b){
       var act=b.getAttribute("data-act");
       b.onclick=function(){
-        apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){alert(r&&r.ok?'Done':((r&&r.error)||'Error'));load();if(currentPid)openDrawer(currentPid);}).catch(function(){alert('Error');});
+        if(act==='void'&&!confirm('Void this process? Signer links will stop working.'))return;
+        b.disabled=true;
+        apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
+          b.disabled=false;
+          if(r&&r.ok){load();if(act!=='void'&&currentPid)openDrawer(currentPid);}
+          else{alert((r&&r.error)||'Error');}
+        }).catch(function(){b.disabled=false;alert('Error');});
       };
     });
     // Async history load
@@ -2096,6 +2114,7 @@ input:focus {
       document.body.setAttribute("data-lane",state.lane);
       var fnEl=document.getElementById("fundName");if(fnEl)fnEl.textContent=(state.lane==="israel")?"Israel":"Cayman";
       var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(state.lane==="israel")?"israel":"cayman";
+      var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(state.lane==="israel"?"israel":"cayman")+'$';
       load(); MSGS=null; curMsg=null;
     };
   })();
