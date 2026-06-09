@@ -1110,12 +1110,15 @@ gid('btn-submit').addEventListener('click', function(){
     })
   };
 
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 35000) : null;
   fetch(GAS_URL + '?source=lp', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'submit',lane:'israeli',flowType:'onboarding_entity',payload:{submission:submission,files:files}})
+    body: JSON.stringify({action:'submit',lane:'israeli',flowType:'onboarding_entity',payload:{submission:submission,files:files}}),
+    signal: ctrl ? ctrl.signal : undefined
   })
-  .then(function(r){return r.json();})
+  .then(function(r){ if(timer) clearTimeout(timer); return r.json(); })
   .then(function(res){
     if(res&&res.ok&&res.nextUrl){
       setStatus('הטופס הוגש! מעביר לחתימה...','');
@@ -1128,8 +1131,10 @@ gid('btn-submit').addEventListener('click', function(){
       gid('btn-submit').disabled=false;gid('btn-prev').disabled=false;
     }
   })
-  .catch(function(){
-    setStatus('שגיאת רשת - אנא נסו שוב','err');
+  .catch(function(err){
+    if(timer) clearTimeout(timer);
+    var msg=(err&&err.name==='AbortError')?'השרת לא ענה בזמן. אנא נסו שוב.':'שגיאת רשת - אנא נסו שוב';
+    setStatus(msg,'err');
     gid('btn-submit').disabled=false;gid('btn-prev').disabled=false;
   });
 });
