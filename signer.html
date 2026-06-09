@@ -51,7 +51,12 @@
     .field input, .field select { font:inherit; font-size:15px; width:100%; padding:10px 12px;
       border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); }
     .field input:focus, .field select:focus { outline:none; border-color:var(--navy); }
-    .field--error input, .field--error select { border-color:var(--error); }
+    .field--error input, .field--error select, .field--error textarea { border-color:var(--error); }
+    .field textarea { font:inherit; font-size:15px; width:100%; padding:10px 12px; border:1px solid var(--line, #D1D5DB); border-radius:8px; box-sizing:border-box; resize:vertical; }
+    .field textarea:focus { outline:none; border-color:var(--navy); }
+    .signer-check { display:flex; align-items:flex-start; gap:8px; font-size:14px; font-weight:500; color:var(--navy); cursor:pointer; }
+    .signer-check input { width:auto; margin-top:3px; flex:0 0 auto; }
+    .signer-note { font-size:13px; color:var(--error); margin:4px 0 0; }
 
     /* Doc preview */
     .doc-preview { margin-top:24px; }
@@ -259,6 +264,23 @@
       "Firm name": "שם המשרד",
       "Control type *": "סוג שליטה",
       "Ownership percentage *": "אחוז בעלות",
+      "ID type *": "סוג תעודה",
+      "National ID": "תעודת זהות",
+      "Passport": "דרכון",
+      "Company Registration Number": "מספר תאגיד",
+      "Country of tax residence *": "מדינת תושבות לצורכי מס",
+      "Tax ID / TIN": "מספר זיהוי לצורכי מס (TIN)",
+      "U.S. tax status *": "מעמד מס בארה\"ב",
+      "Not a U.S. person": "אינו/ה U.S. Person",
+      "U.S. person": "U.S. Person",
+      "Accredited-investor qualification basis *": "בסיס כשירות המשקיע/ה",
+      "Bank name": "שם הבנק",
+      "Bank branch": "סניף",
+      "Bank account number": "מספר חשבון",
+      "SWIFT": "קוד SWIFT",
+      "Beneficiaries (if any)": "נהנים (אם קיימים)",
+      "I independently confirm the accredited-investor qualification *": "הריני לאשר באופן בלתי תלוי את כשירות המשקיע/ה",
+      "This detail needs to be completed with Legacy Value Partners.": "יש להשלים פרט זה מול Legacy Value Partners.",
       "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
       "Taking a moment": "רגע...",
       "The server is warming up. Please tap to try again.": "השרת מתחמם. נא להקיש לנסות שוב.",
@@ -383,6 +405,7 @@
         email:        { label: 'Email *', type: 'email' },
         phone:        { label: 'Phone *', type: 'tel' },
         idNumber:     { label: 'ID or passport number *', type: 'text' },
+        idType:       { label: 'ID type *', type: 'select', options: ['National ID', 'Passport', 'Company Registration Number'] },
         title:        { label: 'Title or position *', type: 'text' },
         dateOfBirth:  { label: 'Date of birth *', type: 'date' },
         nationality:  { label: 'Nationality *', type: 'text' },
@@ -390,11 +413,45 @@
         city:         { label: 'City *', type: 'text' },
         country:      { label: 'Country *', type: 'text' },
         postalCode:   { label: 'Postal code *', type: 'text' },
+        // F10: these were returned by the server for joint/CP/lawyer signers but
+        // had no client def, so they silently never rendered. Added with sensible
+        // controls. Structured validation + routing into each schedule is M5/F22.
+        taxResidency: { label: 'Country of tax residence *', type: 'text' },
+        taxId:        { label: 'Tax ID / TIN', type: 'text' },
+        fatcaStatus:  { label: 'U.S. tax status *', type: 'select', options: ['Not a U.S. person', 'U.S. person'] },
+        qualification:{ label: 'Accredited-investor qualification basis *', type: 'text' },
+        bankName:     { label: 'Bank name', type: 'text' },
+        bankBranch:   { label: 'Bank branch', type: 'text' },
+        bankAccount:  { label: 'Bank account number', type: 'text' },
+        bankSwift:    { label: 'SWIFT', type: 'text' },
+        beneficiaries:{ label: 'Beneficiaries (if any)', type: 'textarea' },
         licenseNumber:{ label: 'License number *', type: 'text' },
         firmName:     { label: 'Firm name', type: 'text' },
         controlType:  { label: 'Control type *', type: 'text' },
-        ownershipPercentage: { label: 'Ownership percentage *', type: 'text' }
+        ownershipPercentage: { label: 'Ownership percentage *', type: 'text' },
+        attestationConfirmed: { label: 'I independently confirm the accredited-investor qualification *', type: 'checkbox' }
       };
+      // Build the control markup for a field by type. Falls through to a visible
+      // "contact us" notice for any field the server returns that has no def, so a
+      // declared-but-unrenderable field can never silently vanish (F10).
+      function controlMarkup(f, def) {
+        var isReq = def.label.indexOf('*') >= 0;
+        var reqAttr = isReq ? ' required' : '';
+        var nm = esc(f);
+        if (def.type === 'select') {
+          var opts = '<option value=""></option>' + (def.options || []).map(function (o) {
+            return '<option value="' + esc(o) + '">' + esc(tHe(o)) + '</option>';
+          }).join('');
+          return '<select name="' + nm + '"' + reqAttr + '>' + opts + '</select>';
+        }
+        if (def.type === 'textarea') {
+          return '<textarea name="' + nm + '" rows="2"' + reqAttr + '></textarea>';
+        }
+        if (def.type === 'checkbox') {
+          return '<label class="signer-check"><input type="checkbox" name="' + nm + '"' + reqAttr + '> ' + esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReq ? ' <span class="req">*</span>' : '') + '</label>';
+        }
+        return '<input type="' + esc(def.type) + '" name="' + nm + '" autocomplete="on"' + reqAttr + '>';
+      }
       // Build the label markup for a field. Required-ness is derived from the
       // '*' in the English def label; the asterisk is rendered separately so the
       // Hebrew label (no '*' in HE_MAP) still shows the required cue. F46. We
@@ -410,22 +467,49 @@
         var fieldsHtml = '';
         (ef.fields || []).forEach(function (f) {
           var def = fieldDefs[f];
-          if (!def) return;
-          var isReq = def.label.indexOf('*') >= 0;
-          fieldsHtml += '<div class="field"><label>' + labelMarkup(def) + '</label>' +
-            '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"' + (isReq ? ' required' : '') + '></div>';
+          if (!def) {
+            // F10: never silently drop a server-declared field. Surface it.
+            fieldsHtml += '<div class="field field--error"><label>' + esc(f) +
+              '</label><p class="signer-note">' +
+              esc(tHe('This detail needs to be completed with Legacy Value Partners.')) + '</p></div>';
+            if (window.console) console.warn('signer: no client def for server field "' + f + '"');
+            return;
+          }
+          // Checkbox renders its own inline label; others get a separate label.
+          if (def.type === 'checkbox') {
+            fieldsHtml += '<div class="field" data-field="' + esc(f) + '">' + controlMarkup(f, def) + '</div>';
+          } else {
+            fieldsHtml += '<div class="field" data-field="' + esc(f) + '"><label>' + labelMarkup(def) + '</label>' +
+              controlMarkup(f, def) + '</div>';
+          }
         });
         efContainer.innerHTML = fieldsHtml;
       } else {
-        // Re-translate field labels in place; preserve typed input values. F5.
+        // Re-translate field labels in place; preserve typed values. F5.
         (ef.fields || []).forEach(function (f) {
           var def = fieldDefs[f];
           if (!def) return;
-          var input = efContainer.querySelector('input[name="' + f + '"]');
-          if (!input) return;
-          var field = input.closest('.field');
-          var lbl = field ? field.querySelector('label') : null;
-          if (lbl) lbl.innerHTML = labelMarkup(def);
+          var field = efContainer.querySelector('[data-field="' + f + '"]');
+          if (!field) return;
+          var lbl = field.querySelector('label');
+          if (lbl && def.type !== 'checkbox') lbl.innerHTML = labelMarkup(def);
+          else if (def.type === 'checkbox' && lbl) {
+            // rebuild the inline checkbox label, preserving the checked state
+            var cb = lbl.querySelector('input');
+            var wasChecked = cb && cb.checked;
+            lbl.innerHTML = '<input type="checkbox" name="' + esc(f) + '"' + (def.label.indexOf('*') >= 0 ? ' required' : '') + '> ' +
+              esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (def.label.indexOf('*') >= 0 ? ' <span class="req">*</span>' : '');
+            if (wasChecked) lbl.querySelector('input').checked = true;
+          }
+          // re-translate select option text, preserving the chosen value
+          var sel = field.querySelector('select');
+          if (sel && def.options) {
+            var chosen = sel.value;
+            sel.innerHTML = '<option value=""></option>' + def.options.map(function (o) {
+              return '<option value="' + esc(o) + '">' + esc(tHe(o)) + '</option>';
+            }).join('');
+            sel.value = chosen;
+          }
         });
       }
 
@@ -522,12 +606,13 @@
       doneBtn.addEventListener('click', function () {
         if (doneBtn.disabled) return;
 
-        // Validate required fields
-        var reqInputs = document.querySelectorAll('#signer-form input[required]');
+        // Validate required fields (inputs, selects, textareas, checkboxes)
+        var reqInputs = document.querySelectorAll('#signer-form input[required], #signer-form select[required], #signer-form textarea[required]');
         var firstInvalid = null;
         reqInputs.forEach(function (inp) {
           var field = inp.closest('.field');
-          if (!inp.value.trim()) {
+          var empty = (inp.type === 'checkbox') ? !inp.checked : !String(inp.value).trim();
+          if (empty) {
             if (field) field.classList.add('field--error');
             if (!firstInvalid) firstInvalid = inp;
           } else {
@@ -547,10 +632,13 @@
         doneBtn.textContent = tHe('Recording...');
         var png = canvas.toDataURL('image/png');
 
-        // Collect editable field values
+        // Collect editable field values (inputs, selects, textareas, checkboxes)
         var formData = {};
-        var inputs = document.querySelectorAll('#signer-form input');
-        inputs.forEach(function (inp) { if (inp.name) formData[inp.name] = inp.value; });
+        var inputs = document.querySelectorAll('#signer-form input, #signer-form select, #signer-form textarea');
+        inputs.forEach(function (inp) {
+          if (!inp.name) return;
+          formData[inp.name] = (inp.type === 'checkbox') ? (inp.checked ? 'true' : 'false') : inp.value;
+        });
 
         var body = JSON.stringify({
           action: 'record_signature',
