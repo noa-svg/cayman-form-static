@@ -1808,12 +1808,22 @@
     // ---- gateway calls (Foundation source=lp envelope) ----
     function gateway(action, payload) {
       var body = { action: action, token: CFG.token, lane: 'cayman', payload: payload || {} };
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 30000) : null;
       return fetch(CFG.gatewayUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body)
-      }).then(function (r) { return r.json(); }).then(function (res) {
+        body: JSON.stringify(body),
+        signal: ctrl ? ctrl.signal : undefined
+      }).then(function (r) {
+        if (timer) clearTimeout(timer);
+        return r.json();
+      }).then(function (res) {
         if (!res || res.ok === false) throw new Error((res && res.error) || 'Something went wrong. Please try again.');
         return res;
+      }).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (err && err.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+        throw err;
       });
     }
     // Strip file base64 out of a snapshot's __uploads, keeping only the metadata

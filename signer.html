@@ -144,6 +144,15 @@
         </div>
       </div>
 
+      <!-- Timeout / retry state -->
+      <div data-state="timeout" hidden>
+        <div class="state">
+          <h1>Taking a moment</h1>
+          <p>The server is warming up. Please tap to try again.</p>
+          <button type="button" class="btn btn--primary" id="retry-btn" style="margin-top:18px">Try again</button>
+        </div>
+      </div>
+
       <!-- Main form + docs + sign -->
       <div data-state="form" hidden>
         <div class="pill">Legacy Value Partners CI, LP</div>
@@ -245,7 +254,14 @@
       "License number *": "מספר רישיון",
       "Firm name": "שם המשרד",
       "Control type *": "סוג שליטה",
-      "Ownership percentage *": "אחוז בעלות"
+      "Ownership percentage *": "אחוז בעלות",
+      "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
+      "Taking a moment": "רגע...",
+      "The server is warming up. Please tap to try again.": "השרת מתחמם. נא להקיש לנסות שוב.",
+      "Try again": "נסה שוב",
+      "Registration number": "מספר רישום",
+      "Primary signatory": "חותם/ת ראשי/ת",
+      "Country": "מדינה"
     };
 
     var curLang = 'en';
@@ -278,21 +294,29 @@
 
     if (!TOKEN) { show('invalid'); return; }
 
-    // Fetch signer form context
-    var x = new XMLHttpRequest();
-    x.open('GET', GW + '?api=signerform&t=' + encodeURIComponent(TOKEN), true);
-    x.onreadystatechange = function () {
-      if (x.readyState !== 4) return;
-      var ctx = {};
-      try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
-      if (!ctx.ok) {
-        if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
-        if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
-        applyLang('he'); show('invalid'); return;
-      }
-      renderSignerForm(ctx);
-    };
-    x.send(null);
+    // Fetch signer form context (with 20s timeout for GAS cold starts)
+    function loadSignerForm() {
+      show('loading');
+      var x = new XMLHttpRequest();
+      x.open('GET', GW + '?api=signerform&t=' + encodeURIComponent(TOKEN), true);
+      x.timeout = 20000;
+      x.onreadystatechange = function () {
+        if (x.readyState !== 4) return;
+        var ctx = {};
+        try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
+        if (!ctx.ok) {
+          if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
+          if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
+          applyLang('he'); show('invalid'); return;
+        }
+        renderSignerForm(ctx);
+      };
+      x.ontimeout = function () { applyLang('he'); show('timeout'); };
+      x.onerror   = function () { applyLang('he'); show('timeout'); };
+      x.send(null);
+    }
+    document.getElementById('retry-btn').onclick = loadSignerForm;
+    loadSignerForm();
 
     function renderSignerForm(ctx) {
       applyLang('he');
@@ -341,8 +365,9 @@
       (ef.fields || []).forEach(function (f) {
         var def = fieldDefs[f];
         if (!def) return;
+        var isReq = def.label.indexOf('*') >= 0;
         fieldsHtml += '<div class="field"><label>' + esc(tHe(def.label)) + '</label>' +
-          '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"></div>';
+          '<input type="' + def.type + '" name="' + esc(f) + '" autocomplete="on"' + (isReq ? ' required' : '') + '></div>';
       });
       document.getElementById('editable-fields').innerHTML = fieldsHtml;
 
@@ -417,6 +442,25 @@
 
       doneBtn.addEventListener('click', function () {
         if (doneBtn.disabled) return;
+
+        // Validate required fields
+        var reqInputs = document.querySelectorAll('#signer-form input[required]');
+        var firstInvalid = null;
+        reqInputs.forEach(function (inp) {
+          var field = inp.closest('.field');
+          if (!inp.value.trim()) {
+            if (field) field.classList.add('field--error');
+            if (!firstInvalid) firstInvalid = inp;
+          } else {
+            if (field) field.classList.remove('field--error');
+          }
+        });
+        if (firstInvalid) {
+          errEl.textContent = tHe('Please fill in all required fields.');
+          firstInvalid.focus();
+          return;
+        }
+
         if (!consentBox.checked) { errEl.textContent = tHe('Please confirm that you have reviewed the documents.'); return; }
         if (!dirty || points < MIN_POINTS) { errEl.textContent = tHe('Please draw your signature before submitting.'); return; }
 
@@ -443,6 +487,12 @@
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        p.timeout = 40000; // 40s -- signature PNG upload on cold GAS can be slow
+        function onPostFail() {
+          errEl.textContent = tHe('We could not record your signature. Please try again.');
+          doneBtn.textContent = tHe('Sign and submit');
+          doneBtn.disabled = false; clearBtn.disabled = false;
+        }
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
           var res = {};
@@ -453,12 +503,19 @@
               : tHe('Your signature has been recorded. We will notify the next signer.');
             show('done');
           } else {
-            errEl.textContent = tHe('We could not record your signature. Please try again.');
-            doneBtn.textContent = tHe('Sign and submit');
-            doneBtn.disabled = false; clearBtn.disabled = false;
+            onPostFail();
           }
         };
+        p.ontimeout = onPostFail;
+        p.onerror   = onPostFail;
         p.send(body);
+      });
+
+      // Clear field-error styling on input
+      document.addEventListener('input', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.field--error')) {
+          if (e.target.value.trim()) e.target.closest('.field').classList.remove('field--error');
+        }
       });
     }
   })();
