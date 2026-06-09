@@ -1761,7 +1761,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
    ============================================================ */
 
-#tab-bar { display: none; }
+#tab-bar { display: none; flex-direction: row; flex: none; overflow: hidden; }
 #mob-fund { display: none; }
 
 /* ============================================================
@@ -1781,6 +1781,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   /* Bottom tab bar */
   #tab-bar {
     display: flex;
+    flex-direction: row;
     position: fixed;
     bottom: 0; left: 0; right: 0;
     height: 56px;
