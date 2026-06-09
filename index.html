@@ -294,10 +294,8 @@
     .lvp-id-group:has(.lvp-field--error) .lvp-id-group__hdr { border-bottom-color: var(--lvp-error); }
     .lvp-upload__slot-num { width: 28px; height: 28px; flex-shrink: 0; border: 1.5px solid var(--lvp-navy); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--lvp-navy); background: #fff; }
     .lvp-upload--slot-req .lvp-upload__btn { border-width: 1.5px; }
-    /* Required slots: red asterisk after the doc title */
-    .lvp-upload--slot-req .lvp-upload__doc-title::after { content: " *"; color: var(--lvp-error); font-weight: 700; }
-    /* Required file-upload labels (non-slot): red asterisk */
-    .lvp-field[data-required]:has(input[type="file"]) .lvp-field__label::after { content: " *"; color: var(--lvp-error); font-weight: 700; }
+    /* All required upload blocks (slots + converted label wrappers): red asterisk */
+    .lvp-upload[data-required] .lvp-upload__doc-title::after { content: " *"; color: var(--lvp-error); font-weight: 700; }
     .lvp-upload__slot-badge { font-size: 11px; font-weight: 600; color: var(--lvp-navy); display: block; margin-top: 2px; display: none; }
     .lvp-upload__slot-sub { font-size: 12px; color: var(--lvp-text-muted); display: block; margin-top: 2px; }
     /* Field width constraints for short inputs (ID, SWIFT, dates) */
@@ -2204,6 +2202,12 @@
         removeBtn.setAttribute('aria-label', 'Remove file');
         removeBtn.innerHTML = '&times;';
         var hint = parentLabel ? parentLabel.querySelector('.lvp-hint-small') : null;
+        // Propagate data-required to the wrapper so the * CSS rule fires on
+        // the visible doc-title span (the label span is hidden by initUploadBlocks).
+        if (parentLabel && parentLabel.hasAttribute('data-required')) {
+          wrap.setAttribute('data-required', '');
+          parentLabel.removeAttribute('data-required');
+        }
         inp.parentNode.insertBefore(wrap, inp);
         inp.classList.remove('lvp-input');
         wrap.appendChild(removeBtn);
