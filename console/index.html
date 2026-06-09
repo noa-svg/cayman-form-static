@@ -1758,6 +1758,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
 }
 
 /* ============================================================
+   MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
+   ============================================================ */
+
+#tab-bar { display: none; }
+#mob-fund { display: none; }
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 
@@ -1767,31 +1774,115 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     --panel-w: 100vw;
   }
 
-  /* Sidebar: off-canvas overlay */
-  .side {
+  /* Sidebar: tab bar replaces it entirely on mobile */
+  .side { display: none !important; }
+  #mob-menu { display: none !important; }
+
+  /* Bottom tab bar */
+  #tab-bar {
+    display: flex;
     position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 50;
-    width: 240px;
-    transform: translateX(-100%);
-    transition: transform var(--dur-drawer) var(--ease-out);
-    box-shadow: var(--shadow-drawer);
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--color-bg-sidebar);
+    border-top: 1px solid var(--color-border);
+    z-index: 30;
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color: transparent;
   }
-  body.side-open .side { transform: translateX(0); }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    padding: 6px 2px;
+    font-family: var(--font-mono);
+    min-height: 44px;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .tab:active { opacity: 0.65; }
+  .tab.on { color: var(--color-atrium); }
+  .tab-icon { font-size: 14px; line-height: 1; display: block; }
+  .tab-lbl { font-size: 8px; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; display: block; }
+  .tab-badge {
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    margin-right: -20px;
+    background: var(--color-danger);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    border-radius: 7px;
+    text-align: center;
+    padding: 0 3px;
+  }
 
-  /* Sidebar scrim */
-  #side-scrim { display: block; }
-  body.side-open #side-scrim { opacity: 1; pointer-events: auto; }
+  /* Content above tab bar + safe area */
+  .main { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  body { overscroll-behavior: none; }
 
-  /* Show hamburger */
-  #mob-menu { display: flex; }
+  /* iOS safe area for login */
+  #login-screen { padding: 16px; }
+  .lc { padding: var(--space-6) var(--space-4) var(--space-4); }
 
   /* Topbar: tighter */
   .top { padding: 10px var(--grid-gutter); gap: 8px; }
   .prompt-path { display: none; }
 
-  /* Search: full width */
-  .board-search { width: 100%; }
+  /* Mobile fund switcher in topbar */
+  #mob-fund {
+    display: flex;
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 2px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .mob-fb {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-sub);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
+    cursor: pointer;
+    min-height: 28px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .mob-fb.on { background: var(--color-atrium); color: var(--color-ink-inverse); }
+
+  /* Touch targets */
+  .row { min-height: 44px; align-items: center; }
+  .cmd-btn { min-height: 36px; padding: 8px 14px; }
+  .dact button { min-height: 40px; }
+  .seg button { min-height: 40px; }
+  .btn { min-height: 40px; }
+  .cta { min-height: 48px; }
+
+  /* iOS zoom prevention: font-size 16px on all inputs */
+  input, select, textarea { font-size: 16px !important; }
+  .board-search { font-size: 16px; width: 100%; }
+
+  /* Search and listhead */
   .listhead { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
 
   /* Hide stage + age columns in board table */
@@ -1800,13 +1891,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
 
-  /* Login: compact */
-  #login-screen { padding: var(--space-4); }
-  .lc { padding: var(--space-6) var(--space-4) var(--space-4); }
+  /* Content padding: tighter */
+  .content { padding: var(--space-4) var(--grid-gutter); }
+  .panel { padding: var(--space-6) var(--space-4); }
 
   /* Messages: stack panels */
   .msgwrap { flex-direction: column; height: auto; min-height: 0; }
-  .msglist { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); max-height: 220px; }
+  .msglist { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); max-height: 200px; }
 
   /* Activity: compact grid, hide flow + lane */
   .act-row { grid-template-columns: 1fr 90px 50px; }
@@ -1845,6 +1936,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="view" id="v-board">
       <div class="top">
         <button id="mob-menu" aria-label="Menu">&#9776;</button>
+        <div id="mob-fund"><button class="mob-fb on" data-v="cayman">CY</button><button class="mob-fb" data-v="israel">IL</button></div>
         <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path" id="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
         <div class="top-right">
           <span class="flagged-badge" id="flagged-badge" style="display:none"><span class="s-red">!</span>&nbsp;<span id="flagged-n">0</span> flagged</span>
@@ -2125,6 +2217,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var sbf=document.getElementById("sb-flagged"),sbfn=document.getElementById("sb-flagged-n");
     if(fb&&fn_){fn_.textContent=flagged;fb.style.display=flagged?'':'none';}
     if(sbf&&sbfn){sbfn.textContent=flagged;sbf.style.display=flagged?'':'none';}
+    var tabBadge=document.getElementById('tab-att-badge');if(tabBadge){tabBadge.textContent=flagged;tabBadge.style.display=flagged?'':'none';}
     // Pipeline bar
     document.getElementById("stages").innerHTML=STAGES.map(function(s,i){
       var n=counts[s[0]]||0;
@@ -2157,13 +2250,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
-  function open(){scrim.classList.add("on");panel.classList.add("on")}
-  function close(){scrim.classList.remove("on");panel.classList.remove("on")}
+  function open(){scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';}
+  function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';}
   document.getElementById("newBtn").onclick=open; document.getElementById("closeBtn").onclick=close; scrim.onclick=close;
 
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
-  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on")}
+  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';}
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
   // mobile sidebar
   document.getElementById('mob-menu').onclick=function(){document.body.classList.toggle('side-open');};
@@ -2241,7 +2334,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     }
   }
   function openDrawer(pid){
-    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on");
+    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden';
     document.getElementById("dbody").innerHTML='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(){document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process.</div></div>';});
   }
@@ -2249,15 +2342,19 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   // fund switch
   (function(){
     var fs=document.getElementById("fundsw");
-    fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;
-      Array.prototype.forEach.call(fs.children,function(x){x.classList.remove("on")});
-      b.classList.add("on"); state.lane=b.getAttribute("data-v");
-      document.body.setAttribute("data-lane",state.lane);
-      var fnEl=document.getElementById("fundName");if(fnEl)fnEl.textContent=(state.lane==="israel")?"Israel":"Cayman";
-      var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(state.lane==="israel")?"israel":"cayman";
-      var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(state.lane==="israel"?"israel":"cayman")+'$';
+    var mf=document.getElementById("mob-fund");
+    function syncFund(v){
+      state.lane=v;
+      document.body.setAttribute("data-lane",v);
+      Array.prototype.forEach.call(fs.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
+      if(mf)Array.prototype.forEach.call(mf.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
+      var fnEl=document.getElementById("fundName");if(fnEl)fnEl.textContent=(v==="israel")?"Israel":"Cayman";
+      var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(v==="israel")?"israel":"cayman";
+      var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(v==="israel"?"israel":"cayman")+'$';
       load(); MSGS=null; curMsg=null;
-    };
+    }
+    fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
+    if(mf)mf.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
@@ -2265,8 +2362,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   (function(){
     var sec=document.getElementById('revShareSection');
     function syncRevShare(){if(sec)sec.style.display=(state.process==='subscription')?'':'none';}
-    var orig=document.getElementById('segProc').onclick;
-    document.getElementById('segProc').onclick=function(e){orig&&orig.call(this,e);setTimeout(syncRevShare,0);};
+    document.getElementById('segProc').addEventListener('click',function(){setTimeout(syncRevShare,0);});
     syncRevShare();
   })();
   // create
@@ -2298,21 +2394,23 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   };
 
   // view switching
+  function switchView(v){
+    document.body.classList.remove('side-open');
+    Array.prototype.forEach.call(document.querySelectorAll(".nav"),function(x){x.classList.remove("on");});
+    var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv)nv.classList.add("on");
+    Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab"),function(x){x.classList.remove("on");});
+    var tv=document.querySelector('#tab-bar .tab[data-view="'+v+'"]');if(tv)tv.classList.add("on");
+    ["board","messages","activity","attention","w8","settings"].forEach(function(id){
+      var el=document.getElementById("v-"+id);if(el)el.hidden=(id!==v);
+    });
+    if(v==="messages"&&!MSGS)loadMsgs();
+    if(v==="w8"&&!W8)loadW8();
+    if(v==="attention")loadAttention();
+    if(v==="activity")loadActivity();
+    if(v==="settings")loadSettings();
+  }
   Array.prototype.forEach.call(document.querySelectorAll(".nav[data-view]"),function(n){
-    n.onclick=function(){
-      document.body.classList.remove('side-open');
-      var v=n.getAttribute("data-view");
-      Array.prototype.forEach.call(document.querySelectorAll(".nav"),function(x){x.classList.remove("on")});
-      n.classList.add("on");
-      ["board","messages","activity","attention","w8","settings"].forEach(function(id){
-        var el=document.getElementById("v-"+id); if(el) el.hidden=(id!==v);
-      });
-      if(v==="messages"&&!MSGS) loadMsgs();
-      if(v==="w8"&&!W8) loadW8();
-      if(v==="attention") loadAttention();
-      if(v==="activity") loadActivity();
-      if(v==="settings") loadSettings();
-    };
+    n.onclick=function(){switchView(n.getAttribute("data-view"));};
   });
 
   // Activity (journey tracker)
@@ -2410,6 +2508,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       var items=(d&&d.items)||[];
       var badge=document.getElementById("attention-badge");
       if(badge){if(items.length>0){badge.textContent=items.length;badge.style.display='';}else{badge.style.display='none';}}
+      var tabBadge=document.getElementById('tab-att-badge');if(tabBadge){tabBadge.textContent=items.length;tabBadge.style.display=items.length?'':'none';}
     }).catch(function(){});
   }
 
@@ -2529,4 +2628,17 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   </div>
 </div>
 <script>initAuth();</script>
+<nav id="tab-bar">
+  <button class="tab on" data-view="board"><span class="tab-icon">&#8801;</span><span class="tab-lbl">Board</span></button>
+  <button class="tab" data-view="messages"><span class="tab-icon">&#9993;</span><span class="tab-lbl">Msgs</span></button>
+  <button class="tab" data-view="activity"><span class="tab-icon">&#9678;</span><span class="tab-lbl">Activity</span></button>
+  <button class="tab" data-view="attention"><span class="tab-icon">&#9651;<span id="tab-att-badge" class="tab-badge" style="display:none"></span></span><span class="tab-lbl">Flags</span></button>
+  <button class="tab" data-view="w8"><span class="tab-icon" style="font-size:10px;font-weight:700;letter-spacing:-0.02em">W8</span><span class="tab-lbl">W-8</span></button>
+  <button class="tab" data-view="settings"><span class="tab-icon">&#9881;</span><span class="tab-lbl">Settings</span></button>
+</nav>
+<script>
+  Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
+    t.onclick=function(){switchView(t.getAttribute("data-view"));};
+  });
+</script>
 </body></html>
