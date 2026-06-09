@@ -1811,6 +1811,8 @@ input:focus {
     if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){h+='<div class="person"><div class="pav">'+(s.name||"?").trim().slice(0,1).toUpperCase()+'</div><div><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><span class="pr">'+esc2(s.role)+'</span></div>';});h+='</div>';}
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){h+='<div class="kv"><span class="k">'+esc2(k)+'</span><span class="v">'+esc2(d.fields[k])+'</span></div>';});h+='</div>';}
+    // History placeholder: populated async if mondayItemId is known
+    if(d.mondayItemId)h+='<div id="dhist" class="dsec" style="opacity:.5;font-size:12px;color:var(--color-ink-muted)">Loading history...</div>';
     document.getElementById("dbody").innerHTML=h;
     Array.prototype.forEach.call(document.querySelectorAll("#drawer .cp"),function(b){b.onclick=function(){var t=document.createElement("textarea");t.value=b.getAttribute("data-c");document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(t);b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1200);};});
     Array.prototype.forEach.call(document.querySelectorAll(".dact button"),function(b){
@@ -1819,6 +1821,29 @@ input:focus {
         apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){alert(r&&r.ok?'Done':((r&&r.error)||'Error'));load();if(currentPid)openDrawer(currentPid);}).catch(function(){alert('Error');});
       };
     });
+    // Async history load
+    if(d.mondayItemId){
+      apiFetch('?api=lpHistory&mondayItemId='+encodeURIComponent(d.mondayItemId)).then(function(hr){
+        var el=document.getElementById('dhist');if(!el)return;
+        if(!hr||!hr.ok||!hr.processes||!hr.processes.length){el.remove();return;}
+        var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
+        if(!others.length){el.remove();return;}
+        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_onboarding:'Sub',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
+        var STAGE_DOT={complete:'#16A34A',sealed:'#16A34A',voided:'#9CA3AF',void:'#9CA3AF',needs_attention:'#DC2626',complete:'#16A34A'};
+        var rows='';
+        others.forEach(function(p){
+          var label=FLOW_LABEL[p.flowType]||p.flowType||'Process';
+          var dot=STAGE_DOT[p.currentStage]||'#F59E0B';
+          var when=p.daysAgo!=null?(p.daysAgo===0?'today':p.daysAgo+'d ago'):'';
+          rows+='<div class="kv" style="cursor:pointer;border-radius:6px;padding:5px 6px;transition:background .12s" onmouseover="this.style.background=\'var(--color-hover)\'" onmouseout="this.style.background=\'\'" onclick="openDrawer(\''+esc2(p.processId)+'\')">'
+            +'<span class="k" style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;display:inline-block"></span>'+esc2(label)+'</span>'
+            +'<span class="v" style="display:flex;align-items:center;gap:8px"><span style="color:var(--color-ink-muted)">'+esc2(p.currentStage)+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
+            +'</div>';
+        });
+        el.innerHTML='<h3>History ('+others.length+')</h3>'+rows;
+        el.style.opacity='1';
+      }).catch(function(){var el=document.getElementById('dhist');if(el)el.remove();});
+    }
   }
   function openDrawer(pid){
     currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on");
