@@ -1565,7 +1565,12 @@ input:focus {
     </div>
 
     <div class="view" id="v-activity" hidden><div class="top"><h1>Activity</h1><div class="sub">The transaction log.</div></div><div class="content"><div class="soon">Every link minted, submit, signature, seal and email, in one timeline. Coming next.</div></div></div>
-    <div class="view" id="v-attention" hidden><div class="top"><h1>Needs attention</h1><div class="sub">What is waiting on you.</div></div><div class="content"><div class="soon">Flags the system raises instead of guessing. Coming next.</div></div></div>
+    <div class="view" id="v-attention" hidden>
+      <div class="top"><div><h1>Needs attention</h1><div class="sub">Stuck processes, errors, and overdue actions.</div></div></div>
+      <div class="content">
+        <div id="att-list"></div>
+      </div>
+    </div>
     <div class="view" id="v-w8" hidden>
       <div class="top"><div><h1>W-8 renewals</h1><div class="sub">The 3-year IRS clock. Who is due.</div></div></div>
       <div class="content">
@@ -1726,6 +1731,7 @@ input:focus {
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @158<br><span style="opacity:.6;font-size:10px">synced '+t+'</span>';}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
+    refreshAttentionBadge();
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
@@ -1743,8 +1749,21 @@ input:focus {
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top:2px">'+esc2(d.nameHebrew)+'</div>';
-    h+='<span class="st">'+esc2(d.currentStage||"")+'</span></div>';
+    h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
     h+='<div class="dact"><button class="resend" data-act="resendInvite">Resend invite</button><button class="reseal" data-act="resealDocs">Reseal docs</button></div>';
+    // Quick links: Monday profile + onboarding form link
+    var qlinks=[];
+    if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
+    if(d.onboardingLink)qlinks.push({label:'Onboarding link',url:d.onboardingLink,copy:true});
+    if(qlinks.length){
+      h+='<div class="dsec"><h3>Quick links</h3>';
+      qlinks.forEach(function(l){
+        h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label)+'</a>';
+        if(l.copy)h+='<button class="cp" data-c="'+esc2(l.url)+'">Copy</button>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
     if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){h+='<div class="person"><div class="pav">'+(s.name||"?").trim().slice(0,1).toUpperCase()+'</div><div><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><span class="pr">'+esc2(s.role)+'</span></div>';});h+='</div>';}
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){h+='<div class="kv"><span class="k">'+esc2(k)+'</span><span class="v">'+esc2(d.fields[k])+'</span></div>';});h+='</div>';}
@@ -1803,9 +1822,51 @@ input:focus {
       });
       if(v==="messages"&&!MSGS) loadMsgs();
       if(v==="w8"&&!W8) loadW8();
+      if(v==="attention") loadAttention();
       if(v==="settings") loadSettings();
     };
   });
+
+  // Needs Attention
+  function loadAttention(){
+    var el=document.getElementById("att-list");
+    if(el)el.innerHTML='<div style="color:var(--color-ink-muted);padding:24px 0">Loading...</div>';
+    apiFetch('?api=attention&lane='+state.lane).then(function(d){
+      var items=(d&&d.items)||[];
+      // Update badge
+      var badge=document.getElementById("attention-badge");
+      if(badge){if(items.length>0){badge.textContent=items.length;badge.style.display='';}else{badge.style.display='none';}}
+      if(!el)return;
+      if(!items.length){el.innerHTML='<div class="empty">Nothing stuck. All processes are moving.</div>';return;}
+      el.innerHTML=items.map(function(item){
+        var ini=((item.displayName||"?").trim()||"?").slice(0,1).toUpperCase();
+        var daysTxt=item.daysStuck>0?item.daysStuck+'d':'today';
+        var chipCls=(item.stage==='needs_attention')?'s4':'s6';
+        var row='<div class="row" style="cursor:pointer" data-pid="'+esc2(item.processId)+'">';
+        row+='<div class="row-top"><div class="av">'+ini+'</div>';
+        row+='<div class="row-info"><div class="nm">'+esc2(item.displayName||item.processId)+'</div>';
+        row+='<div class="row-he">'+esc2(item.reason)+'</div></div></div>';
+        row+='<div class="row-foot"><span class="chip '+chipCls+'">'+esc2(item.stage)+'</span>';
+        row+='<span class="row-age">'+daysTxt+'</span>';
+        if(item.mondayUrl)row+='<a class="lk" href="'+esc2(item.mondayUrl)+'" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px" onclick="event.stopPropagation()">Monday</a>';
+        row+='</div></div>';
+        return row;
+      }).join('');
+      Array.prototype.forEach.call(el.querySelectorAll(".row[data-pid]"),function(r){
+        r.onclick=function(){openDrawer(r.getAttribute("data-pid"));};
+      });
+    }).catch(function(){
+      if(el)el.innerHTML='<div class="pe">Could not load attention items.</div>';
+    });
+  }
+  // Auto-load attention badge on boot (after auth)
+  function refreshAttentionBadge(){
+    apiFetch('?api=attention&lane='+state.lane).then(function(d){
+      var items=(d&&d.items)||[];
+      var badge=document.getElementById("attention-badge");
+      if(badge){if(items.length>0){badge.textContent=items.length;badge.style.display='';}else{badge.style.display='none';}}
+    }).catch(function(){});
+  }
 
   // W-8 renewals
   var W8=null;
