@@ -1830,7 +1830,11 @@
       var dd = (d.value || '').replace(/\D/g, ''), mm = (m.value || '').replace(/\D/g, ''), yy = (y.value || '').replace(/\D/g, '');
       var di = parseInt(dd, 10), mi = parseInt(mm, 10), yi = parseInt(yy, 10);
       var valid = yy.length === 4 && yi >= 1900 && yi <= 2100 && mi >= 1 && mi <= 12 && di >= 1 && di <= 31;
-      iso.value = valid ? (yy + '-' + ('0' + mm).slice(-2) + '-' + ('0' + dd).slice(-2)) : '';
+      var isoVal = valid ? (yy + '-' + ('0' + mm).slice(-2) + '-' + ('0' + dd).slice(-2)) : '';
+      // A birth or formation date can never be in the future. Reject it so a
+      // mistyped year (2206 for 1960) does not pass as a valid date.
+      if (isoVal && isoVal > new Date().toISOString().slice(0, 10)) isoVal = '';
+      iso.value = isoVal;
     }
     function dobSplit(holder) {
       var iso = holder.querySelector('[data-dob-iso]');
@@ -1848,6 +1852,12 @@
       var isSeg = e.target.hasAttribute('data-dob-d') || e.target.hasAttribute('data-dob-m') || e.target.hasAttribute('data-dob-y');
       if (!isSeg) return;
       dobAssemble(holder);
+      // reward early: once the date is complete + valid, clear any error mark
+      var dobIso2 = holder.querySelector('[data-dob-iso]');
+      if (dobIso2 && /^\d{4}-\d{2}-\d{2}$/.test(dobIso2.value || '')) {
+        holder.querySelectorAll('[data-dob-d],[data-dob-m],[data-dob-y]').forEach(function (s) { s.removeAttribute('aria-invalid'); });
+        holder.classList.remove('lvp-field--error');
+      }
       // auto-advance to the next segment when this one is full
       if (e.target.hasAttribute('data-dob-d') && e.target.value.length >= 2) { var mm = holder.querySelector('[data-dob-m]'); if (mm) mm.focus(); }
       else if (e.target.hasAttribute('data-dob-m') && e.target.value.length >= 2) { var yy = holder.querySelector('[data-dob-y]'); if (yy) yy.focus(); }
@@ -1870,7 +1880,15 @@
         if (isHidden(holder)) return;
         if (holder.classList.contains('lvp-dob')) {
           var dobIso = holder.querySelector('[data-dob-iso]');
-          if (!dobIso || !/^\d{4}-\d{2}-\d{2}$/.test(dobIso.value || '')) { ok = false; flag(holder, false, holder.getAttribute('data-dob-msg') || 'Please enter a valid date of birth.'); }
+          var dobOk = dobIso && /^\d{4}-\d{2}-\d{2}$/.test(dobIso.value || '');
+          var dobSegs = holder.querySelectorAll('[data-dob-d],[data-dob-m],[data-dob-y]');
+          if (!dobOk) {
+            ok = false; flag(holder, false, holder.getAttribute('data-dob-msg') || 'Please enter a valid date of birth.');
+            // a11y: mark each segment invalid so a screen reader announces the error
+            dobSegs.forEach(function (s) { s.setAttribute('aria-invalid', 'true'); });
+          } else {
+            dobSegs.forEach(function (s) { s.removeAttribute('aria-invalid'); });
+          }
           return;
         }
         var inputs = holder.querySelectorAll('input, select, textarea');
