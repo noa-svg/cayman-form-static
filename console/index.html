@@ -2017,7 +2017,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
         <div class="tbl-head"><span class="th-sg">-</span><span class="th-nm">name</span><span class="th-st">stage</span><span class="th-age">time</span></div>
         <div id="list"></div>
         <div class="statusbar" id="statusbar">
-          <span class="sb-seg" id="ver-line">synced @167</span>
+          <span class="sb-seg" id="ver-line">synced</span>
           <span class="sb-seg" id="sb-fund">cayman</span>
           <span class="sb-seg">connected</span>
           <span class="sb-seg s-red" id="sb-flagged" style="display:none">^ <span id="sb-flagged-n">0</span> flagged</span>
@@ -2316,7 +2316,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced @167 · '+t;}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
     refreshAttentionBadge();
   }
