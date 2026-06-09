@@ -1997,14 +1997,16 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
               <button class="cmd-btn cmd-btn-main" id="newBtn">&gt; new</button><button class="cmd-btn cmd-btn-arr" id="newArr" title="Quick create">&#9660;</button>
             </div>
             <div class="new-dd" id="newDd">
-              <div class="new-dd-hdr">subscription</div>
-              <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">Individual <span class="ndt">he &middot; new LP</span></button>
-              <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="en">Individual <span class="ndt">en &middot; new LP</span></button>
-              <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new" data-lang="he">Entity <span class="ndt">he &middot; new LP</span></button>
+              <div class="new-dd-hdr">onboarding</div>
+              <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">Individual <span class="ndt">he</span></button>
+              <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="en">Individual <span class="ndt">en</span></button>
+              <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new" data-lang="he">Entity <span class="ndt">he</span></button>
               <div class="new-dd-sep"></div>
               <div class="new-dd-hdr">existing LP</div>
-              <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing" data-lang="he">Increase</button>
-              <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing" data-lang="he">Withdrawal</button>
+              <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing" data-lang="he">Increase <span class="ndt">individual</span></button>
+              <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing" data-lang="he">Increase <span class="ndt">entity</span></button>
+              <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing" data-lang="he">Withdrawal <span class="ndt">individual</span></button>
+              <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing" data-lang="he">Withdrawal <span class="ndt">entity</span></button>
             </div>
           </div>
         </div>
@@ -2094,7 +2096,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="lead">Creates the Monday item, emails the investor, and notifies the team.</div>
     <label>Process</label>
     <div class="seg" id="segProc"><button class="on" data-v="subscription">Subscription</button><button data-v="increase">Increase</button><button data-v="withdrawal">Withdrawal</button></div>
-    <div class="g2">
+    <div class="g2" id="typeKindRow">
       <div><label>Subscriber</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
       <div id="kindCell"><label>Investor</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
     </div>
@@ -2324,7 +2326,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   function syncPanelFields(){
     var isSub=(state.process==="subscription");
     var el;
-    el=document.getElementById("kindCell");if(el)el.style.display=isSub?"":"none";
+    el=document.getElementById("typeKindRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
   }
