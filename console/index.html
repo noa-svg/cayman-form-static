@@ -1662,8 +1662,15 @@ input:focus {
     <div class="hint">Standard tiers preloaded. Pick "Custom" to enter any value.</div>
 
     <button class="cta" id="createBtn">Send invite</button>
-    <div class="hint" id="msg"></div>
-    <div class="res" id="res">Link created. <div class="lk" id="lk"></div></div>
+    <div id="msg" style="margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
+    <div class="res" id="res">
+      <div style="font-weight:600;font-size:14px;color:var(--color-atrium);margin-bottom:6px">Invite sent.</div>
+      <div style="font-size:12px;color:var(--color-ink-muted);margin-bottom:6px">Copy the link to share manually, or use Resend in the process drawer.</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
+        <button id="copyLinkBtn" class="btn" style="font-size:12px;padding:6px 14px;white-space:nowrap">Copy link</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -1787,7 +1794,7 @@ input:focus {
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top:2px">'+esc2(d.nameHebrew)+'</div>';
     h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
-    h+='<div class="dact"><button class="resend" data-act="resendInvite">Resend invite</button><button class="reseal" data-act="resealDocs">Reseal docs</button></div>';
+    h+='<div class="dact"><button class="resend" data-act="resendCurrent">Resend invite</button><button class="reseal" data-act="reseal">Reseal docs</button></div>';
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -1833,19 +1840,31 @@ input:focus {
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
   // create
+  function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"#FEF2F2":"#EEF3FA";m.style.color=isErr?"#B91C1C":"#1F5DB0";m.style.border=isErr?"1px solid #FECACA":"1px solid #C7D9F5";}
   document.getElementById("createBtn").onclick=function(){
+    var btn=this;
     var msg=document.getElementById("msg");
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
-    if(!name&&!nameHebrew){msg.textContent="Enter at least one name, English or Hebrew.";return}
-    if(email.indexOf("@")<0){msg.textContent="Enter a valid investor email.";return}
-    msg.textContent="Creating...";
+    if(!name&&!nameHebrew){showMsg("Enter at least one name, English or Hebrew.",true);return}
+    if(email.indexOf("@")<0){showMsg("Enter a valid investor email.",true);return}
+    btn.disabled=true;btn.textContent="Sending...";
+    document.getElementById("res").classList.remove("on");
+    showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
     var _rsel=document.getElementById('revShareSel');var revShare=_rsel&&_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):(_rsel?_rsel.value:'');
     apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')).then(function(res){
-      if(!res||!res.ok){msg.textContent=(res&&res.error)||"Could not create.";return}
-      msg.textContent=""; document.getElementById("res").classList.add("on");
-      document.getElementById("lk").textContent=res.url||""; load();
-    }).catch(function(e){msg.textContent="Could not create: "+((e&&e.message)||"server error");});
+      btn.disabled=false;btn.textContent="Send invite";
+      if(!res||!res.ok){showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
+      showMsg("",false);
+      document.getElementById("res").classList.add("on");
+      document.getElementById("lk").textContent=res.url||"";
+      load();
+    }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+  };
+  document.getElementById("copyLinkBtn").onclick=function(){
+    var lk=document.getElementById("lk").textContent;
+    if(!lk)return;
+    navigator.clipboard.writeText(lk).then(function(){var b=document.getElementById("copyLinkBtn");b.textContent="Copied";setTimeout(function(){b.textContent="Copy link";},2000);}).catch(function(){});
   };
 
   // view switching
