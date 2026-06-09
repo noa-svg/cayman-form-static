@@ -1706,6 +1706,46 @@ input:focus {
 }
 #mob-menu:hover { background: var(--color-bg-hover); }
 
+/* ============================================================
+   SIDEBAR COLLAPSE (desktop toggle)
+   ============================================================ */
+
+#side-collapse {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+  margin-top: var(--space-3);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+#side-collapse:hover { color: var(--color-atrium); border-color: var(--color-atrium); }
+
+/* Collapsed state */
+body.side-coll .side { width: var(--sidebar-w-coll); }
+body.side-coll .brand .sub,
+body.side-coll .fundsw { display: none; }
+body.side-coll .brand .mark { font-size: 8px; letter-spacing: 0.06em; }
+body.side-coll #side-collapse { padding: 4px 0; text-align: center; font-size: 13px; letter-spacing: 0; }
+body.side-coll .nav { padding: var(--space-2) 0; justify-content: center; font-size: 0; gap: 0; }
+body.side-coll .nav::before { display: none !important; }
+body.side-coll .nav::after { content: attr(data-icon); font-family: var(--font-mono); font-size: 12px; color: inherit; }
+body.side-coll .nav .badge { display: none; }
+body.side-coll .side-foot .ver,
+body.side-coll .side-foot .auth-email,
+body.side-coll .side-foot .signout-link,
+body.side-coll .side-foot a[href*="atrium" i] { display: none; }
+body.side-coll #theme-toggle { font-size: 0; padding: 4px 0; width: 100%; }
+body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
+
 #side-scrim {
   display: none;
   position: fixed;
@@ -1783,14 +1823,15 @@ input:focus {
       <div class="mark">OPERATOR_</div>
       <div class="sub">Legacy Value Partners</div>
       <div class="fundsw" id="fundsw"><button class="on" data-v="cayman">&#127464;&#127486; Cayman</button><button data-v="israel">&#127470;&#127473; Israel</button></div>
+      <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
-      <div class="nav on" data-view="board">Board</div>
-      <div class="nav" data-view="messages">Messages</div>
-      <div class="nav" data-view="activity">Activity</div>
-      <div class="nav" data-view="attention">Needs attention<span class="badge" id="attention-badge" style="display:none"></span></div>
-      <div class="nav" data-view="w8">W-8 renewals</div>
-      <div class="nav" data-view="settings">Settings</div>
+      <div class="nav on" data-view="board" data-icon="B">Board</div>
+      <div class="nav" data-view="messages" data-icon="M">Messages</div>
+      <div class="nav" data-view="activity" data-icon="A">Activity</div>
+      <div class="nav" data-view="attention" data-icon="!">Needs attention<span class="badge" id="attention-badge" style="display:none"></span></div>
+      <div class="nav" data-view="w8" data-icon="W">W-8 renewals</div>
+      <div class="nav" data-view="settings" data-icon="S">Settings</div>
     </nav>
     <div class="side-foot">
       <div class="ver" id="ver-side">GAS @167</div>
@@ -1920,19 +1961,21 @@ input:focus {
     <input id="foEmail" placeholder="fo@family.com">
     <div class="hint">Family office contact. Gets a cc on the invite.</div>
 
+    <div id="revShareSection">
     <label>Rev share % <span class="opt">optional</span></label>
     <select id="revShareSel" onchange="(function(v){document.getElementById('revShareCustomWrap').style.display=v==='custom'?'block':'none';})(this.value)" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink);cursor:pointer;appearance:auto">
       <option value="">None</option>
-      <option value="20">20% — Ashri families</option>
-      <option value="25">25% — Standard</option>
+      <option value="20">20% - Ashri families</option>
+      <option value="25">25% - Standard</option>
       <option value="26.667">26.667%</option>
       <option value="33.333">33.333%</option>
-      <option value="custom">Custom…</option>
+      <option value="custom">Custom...</option>
     </select>
     <div id="revShareCustomWrap" style="display:none;margin-top:8px">
       <input id="revShareCustom" type="number" min="0" max="100" step="0.01" placeholder="Enter %" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
     </div>
-    <div class="hint">Standard tiers preloaded. Pick "Custom" to enter any value.</div>
+    <div class="hint">Only for new subscriptions. Pick "Custom" to enter any value.</div>
+    </div>
 
     <button class="cta" id="createBtn">Send invite</button>
     <div id="msg" style="margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
@@ -2125,6 +2168,14 @@ input:focus {
   // mobile sidebar
   document.getElementById('mob-menu').onclick=function(){document.body.classList.toggle('side-open');};
   document.getElementById('side-scrim').onclick=function(){document.body.classList.remove('side-open');};
+  // desktop sidebar collapse
+  (function(){
+    var btn=document.getElementById('side-collapse');
+    function syncLabel(){btn.innerHTML=document.body.classList.contains('side-coll')?'&#187;':'&#171; collapse';}
+    btn.onclick=function(){document.body.classList.toggle('side-coll');try{localStorage.setItem('lvp_side_coll',document.body.classList.contains('side-coll')?'1':'');}catch(e){}syncLabel();};
+    if(localStorage.getItem('lvp_side_coll')==='1'){document.body.classList.add('side-coll');}
+    syncLabel();
+  })();
   var currentPid=null;
   function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   function renderDrawer(d){
@@ -2210,6 +2261,14 @@ input:focus {
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
+  // show rev share only for subscription
+  (function(){
+    var sec=document.getElementById('revShareSection');
+    function syncRevShare(){if(sec)sec.style.display=(state.process==='subscription')?'':'none';}
+    var orig=document.getElementById('segProc').onclick;
+    document.getElementById('segProc').onclick=function(e){orig&&orig.call(this,e);setTimeout(syncRevShare,0);};
+    syncRevShare();
+  })();
   // create
   function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"#2A0808":"#071B22";m.style.color=isErr?"#F87171":"#22D3EE";m.style.border=isErr?"1px solid #3D0F0F":"1px solid #0C2A35";}
   document.getElementById("createBtn").onclick=function(){
