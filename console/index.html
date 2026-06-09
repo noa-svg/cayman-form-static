@@ -345,22 +345,23 @@ nav {
 
 #theme-toggle {
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.10em;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
-  background: transparent;
-  border: 1px solid var(--color-border);
+  color: var(--color-ink-sub);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  padding: 3px 7px;
+  padding: 4px 8px;
   cursor: pointer;
   align-self: flex-start;
-  margin-top: 2px;
-  transition: color var(--dur-fast), border-color var(--dur-fast);
+  margin-top: 4px;
+  transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
 }
 #theme-toggle:hover {
   color: var(--color-atrium);
   border-color: var(--color-atrium);
+  background: var(--color-atrium-tint);
 }
 
 /* ============================================================
@@ -1633,7 +1634,7 @@ input:focus {
     </nav>
     <div class="side-foot">
       <div class="ver" id="ver-line">GAS @165</div>
-      <button id="theme-toggle" onclick="toggleTheme()">&#9788; LIGHT</button>
+      <button id="theme-toggle" onclick="toggleTheme()">[ LIGHT ]</button>
       <div class="auth-email" id="auth-status">not signed in</div>
       <a class="signout-link" id="sign-out-btn" style="display:none" href="#" onclick="clearGsiAuth();return false">Sign out</a>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top:4px">Atrium</a>
@@ -1785,7 +1786,7 @@ input:focus {
   function updateThemeBtn(t){
     var b=document.getElementById('theme-toggle');
     if(!b)return;
-    b.textContent=t==='light'?'☾ DARK':'☀ LIGHT';
+    b.textContent=t==='light'?'[ DARK ]':'[ LIGHT ]';
   }
   function toggleTheme(){
     var cur=document.documentElement.getAttribute('data-theme')||'dark';
