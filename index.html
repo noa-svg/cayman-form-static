@@ -1346,6 +1346,9 @@
         }
         rebuild();
       }
+      // Restore prefill fields when CFG (including session snapshot) arrives after init.
+      if (newCfg.prefill && Object.keys(newCfg.prefill).length > 1 &&
+          typeof restoreFormData === 'function') restoreFormData(newCfg.prefill);
     };
 
     function applicant() { return state.applicantType || readRadio('applicantType') || ''; }
@@ -2208,6 +2211,39 @@
       });
     }
 
+    // ---- restore form data from prefill (save-and-resume + test links) ----
+    // Walks CFG.prefill and sets input/select/checkbox/radio values so the LP
+    // can resume where they left off, or so a test link arrives pre-populated.
+    // Skips file inputs (uploads can never be restored from state). Must be called
+    // AFTER ensureMinRows + populateCountries so repeating rows and select options exist.
+    function restoreFormData(prefill) {
+      if (!prefill || typeof prefill !== 'object') return;
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
+        if (inp.type === 'file' || inp.hasAttribute('data-upload')) return;
+        var val = getPath(prefill, inp.name);
+        if (val === undefined || val === null) return;
+        if (inp.type === 'radio') {
+          if (String(val) === inp.value) inp.checked = true;
+          return;
+        }
+        if (inp.type === 'checkbox') {
+          if (inp.name === 'qualification.conditions') {
+            inp.checked = Array.isArray(val) && val.indexOf(inp.value) >= 0;
+          } else {
+            inp.checked = (val === true || val === 'true' || String(val) === inp.value);
+          }
+          return;
+        }
+        var strVal = String(val);
+        if (!strVal) return;
+        if (inp.tagName === 'SELECT' && !Array.prototype.some.call(inp.options, function (o) { return o.value === strVal; })) {
+          inp.appendChild(new Option(strVal, strVal));
+        }
+        inp.value = strVal;
+      });
+      applyConditionals();
+    }
+
     // ---- init ----
     populateCountries();
     ensureMinRows();
@@ -2216,6 +2252,8 @@
     loadPhoneInputs();
     initUploadBlocks();
     applyConditionals();
+    // Restore prefill data into form fields (resume or test link).
+    if (CFG.prefill && Object.keys(CFG.prefill).length > 1) restoreFormData(CFG.prefill);
     // Amount: whole-number, grouped with thousands separators on blur, so the LP
     // sees exactly what is submitted and no decimal/locale ambiguity reaches the doc.
     (function () {
