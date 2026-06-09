@@ -289,6 +289,9 @@
     .lvp-id-group__hdr { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; }
     .lvp-id-group__title { font-size: 14px; font-weight: 600; color: var(--lvp-text); }
     .lvp-id-group .lvp-upload { margin-bottom: 8px; }
+    /* ID group header turns red when any required slot has an error */
+    .lvp-id-group:has(.lvp-field--error) .lvp-id-group__title { color: var(--lvp-error); }
+    .lvp-id-group:has(.lvp-field--error) .lvp-id-group__hdr { border-bottom-color: var(--lvp-error); }
     .lvp-upload__slot-num { width: 28px; height: 28px; flex-shrink: 0; border: 1.5px solid #D1D5DB; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #B0B7C3; background: #fff; }
     .lvp-upload--slot-req .lvp-upload__slot-num { border-color: var(--lvp-navy); color: var(--lvp-navy); }
     .lvp-upload--slot-req .lvp-upload__btn { border-width: 1.5px; }
@@ -405,7 +408,7 @@
 
             <div class="lvp-id-group">
               <div class="lvp-id-group__hdr"><span class="lvp-id-group__title">ID card</span></div>
-              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req">
+              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req" data-required>
                 <button type="button" class="lvp-upload__remove" aria-label="Remove file">&times;</button>
                 <div class="lvp-upload__btn">
                   <span class="lvp-upload__slot-num">1</span>
@@ -417,7 +420,7 @@
                 </div>
                 <input type="file" data-upload="nationalIdFront" accept="image/*,application/pdf">
               </div>
-              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req">
+              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req" data-required>
                 <button type="button" class="lvp-upload__remove" aria-label="Remove file">&times;</button>
                 <div class="lvp-upload__btn">
                   <span class="lvp-upload__slot-num">2</span>
@@ -1579,7 +1582,7 @@
     function validatePage(pageEl) {
       var ok = true;
       var firstError = null;
-      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--value-error'); });
+      pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error, .lvp-field--value-error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--value-error'); });
       pageEl.querySelectorAll('[data-required]').forEach(function (holder) {
         if (isHidden(holder)) return;
         var inputs = holder.querySelectorAll('input, select, textarea');
