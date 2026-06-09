@@ -1553,7 +1553,7 @@ input:focus {
       <div class="nav" data-view="settings">Settings</div>
     </nav>
     <div class="side-foot">
-      <div class="ver" id="ver-line">GAS @159</div>
+      <div class="ver" id="ver-line">GAS @161</div>
       <div class="auth-email" id="auth-status">not signed in</div>
       <a class="signout-link" id="sign-out-btn" style="display:none" href="#" onclick="clearGsiAuth();return false">Sign out</a>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top:4px">Atrium</a>
@@ -1773,7 +1773,7 @@ input:focus {
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @159<br><span style="opacity:.6;font-size:10px">synced '+t+'</span>';}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @161<br><span style="opacity:.6;font-size:10px">synced '+t+'</span>';}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
     refreshAttentionBadge();
   }
