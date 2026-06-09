@@ -95,7 +95,24 @@
     .spinner { width:40px; height:40px; border:4px solid #dce3eb; border-top-color:var(--navy);
       border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 12px; }
     @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Error summary block at the top of the form (a11y: announced via role="alert") */
+    .err-summary { background:#fdecea; border:1px solid var(--error); border-radius:8px; padding:14px 16px; margin:0 0 20px; }
+    .err-summary h2 { color:var(--error); font-size:15px; margin:0 0 8px; }
+    .err-summary ul { margin:0; padding-inline-start:20px; }
+    .err-summary li { font-size:14px; margin:4px 0; }
+    .err-summary a { color:var(--error); font-weight:700; cursor:pointer; }
+
     [hidden] { display:none !important; }
+
+    /* Vestibular safety: quiet continuous animations for users who opt out (WCAG 2.3.3) */
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation:none; }
+      .doc__title::after { transition:none; }
+      .btn { transition:none; }
+      .lvp-lang__btn { transition:none; }
+      *, *::before, *::after { animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+    }
     @media (max-width:480px){ .card{ padding:22px 18px; } .header img{ height:44px; } }
 
     .lvp-lang { position:fixed; top:14px; right:16px; z-index:50; display:inline-flex; align-items:stretch;
@@ -165,6 +182,12 @@
         <h1 id="form-title">Complete and sign</h1>
         <p class="hint" id="form-hint">Please review the details below, complete your section, review the subscription documents, and sign.</p>
 
+        <!-- Error summary (populated on submit when fields are invalid; a11y live region) -->
+        <div class="err-summary" id="err-summary" role="alert" aria-live="assertive" hidden>
+          <h2 id="err-summary-title">Please complete the highlighted fields.</h2>
+          <ul id="err-summary-list"></ul>
+        </div>
+
         <!-- Locked/greyed primary context -->
         <div id="locked-context"></div>
 
@@ -193,7 +216,7 @@
           <div class="row">
             <button type="button" class="btn btn--secondary" id="clear">Clear</button>
             <span style="flex:1"></span>
-            <button type="button" class="btn btn--primary" id="done" disabled>Sign and submit</button>
+            <button type="button" class="btn btn--primary" id="done">Sign and submit</button>
           </div>
           <div class="err" id="err"></div>
         </div>
@@ -282,6 +305,9 @@
       "I independently confirm the accredited-investor qualification *": "הריני לאשר באופן בלתי תלוי את כשירות המשקיע/ה",
       "This detail needs to be completed with Legacy Value Partners.": "יש להשלים פרט זה מול Legacy Value Partners.",
       "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
+      "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
+      "Please enter a valid email address.": "יש להזין כתובת מייל תקינה.",
+      "This field is required.": "שדה חובה.",
       "Taking a moment": "רגע...",
       "The server is warming up. Please tap to try again.": "השרת מתחמם. נא להקיש לנסות שוב.",
       "Try again": "נסה שוב",
@@ -399,36 +425,42 @@
 
       // Editable fields
       var ef = ctx.editableFields || {};
+      // autocomplete: standard WHATWG token per field meaning so password managers
+      // and mobile autofill can populate identity/contact/address fields. Hebrew-name
+      // fields N/A here (this form's names are English). inputmode: digit-only fields
+      // get 'numeric' so mobile shows a number pad; tel uses 'tel'. SWIFT stays text
+      // (alphanumeric) with no inputmode override; account/registration/postal/TIN are
+      // digit-dominant so they get 'numeric'.
       var fieldDefs = {
-        firstName:    { label: 'First name *', type: 'text' },
-        lastName:     { label: 'Last name *', type: 'text' },
-        email:        { label: 'Email *', type: 'email' },
-        phone:        { label: 'Phone *', type: 'tel' },
-        idNumber:     { label: 'ID or passport number *', type: 'text' },
+        firstName:    { label: 'First name *', type: 'text', autocomplete: 'given-name' },
+        lastName:     { label: 'Last name *', type: 'text', autocomplete: 'family-name' },
+        email:        { label: 'Email *', type: 'email', autocomplete: 'email' },
+        phone:        { label: 'Phone *', type: 'tel', autocomplete: 'tel', inputmode: 'tel' },
+        idNumber:     { label: 'ID or passport number *', type: 'text', autocomplete: 'off', inputmode: 'numeric' },
         idType:       { label: 'ID type *', type: 'select', options: ['National ID', 'Passport', 'Company Registration Number'] },
-        title:        { label: 'Title or position *', type: 'text' },
-        dateOfBirth:  { label: 'Date of birth *', type: 'date' },
-        nationality:  { label: 'Nationality *', type: 'text' },
-        address:      { label: 'Address *', type: 'text' },
-        city:         { label: 'City *', type: 'text' },
-        country:      { label: 'Country *', type: 'text' },
-        postalCode:   { label: 'Postal code *', type: 'text' },
+        title:        { label: 'Title or position *', type: 'text', autocomplete: 'organization-title' },
+        dateOfBirth:  { label: 'Date of birth *', type: 'date', autocomplete: 'bday' },
+        nationality:  { label: 'Nationality *', type: 'text', autocomplete: 'country-name' },
+        address:      { label: 'Address *', type: 'text', autocomplete: 'street-address' },
+        city:         { label: 'City *', type: 'text', autocomplete: 'address-level2' },
+        country:      { label: 'Country *', type: 'text', autocomplete: 'country-name' },
+        postalCode:   { label: 'Postal code *', type: 'text', autocomplete: 'postal-code', inputmode: 'numeric' },
         // F10: these were returned by the server for joint/CP/lawyer signers but
         // had no client def, so they silently never rendered. Added with sensible
         // controls. Structured validation + routing into each schedule is M5/F22.
-        taxResidency: { label: 'Country of tax residence *', type: 'text' },
-        taxId:        { label: 'Tax ID / TIN', type: 'text' },
+        taxResidency: { label: 'Country of tax residence *', type: 'text', autocomplete: 'country-name' },
+        taxId:        { label: 'Tax ID / TIN', type: 'text', autocomplete: 'off', inputmode: 'numeric' },
         fatcaStatus:  { label: 'U.S. tax status *', type: 'select', options: ['Not a U.S. person', 'U.S. person'] },
         qualification:{ label: 'Accredited-investor qualification basis *', type: 'text' },
         bankName:     { label: 'Bank name', type: 'text' },
-        bankBranch:   { label: 'Bank branch', type: 'text' },
-        bankAccount:  { label: 'Bank account number', type: 'text' },
+        bankBranch:   { label: 'Bank branch', type: 'text', inputmode: 'numeric' },
+        bankAccount:  { label: 'Bank account number', type: 'text', inputmode: 'numeric' },
         bankSwift:    { label: 'SWIFT', type: 'text' },
         beneficiaries:{ label: 'Beneficiaries (if any)', type: 'textarea' },
-        licenseNumber:{ label: 'License number *', type: 'text' },
-        firmName:     { label: 'Firm name', type: 'text' },
+        licenseNumber:{ label: 'License number *', type: 'text', inputmode: 'numeric' },
+        firmName:     { label: 'Firm name', type: 'text', autocomplete: 'organization' },
         controlType:  { label: 'Control type *', type: 'text' },
-        ownershipPercentage: { label: 'Ownership percentage *', type: 'text' },
+        ownershipPercentage: { label: 'Ownership percentage *', type: 'text', inputmode: 'decimal' },
         attestationConfirmed: { label: 'I independently confirm the accredited-investor qualification *', type: 'checkbox' }
       };
       // Build the control markup for a field by type. Falls through to a visible
@@ -436,21 +468,30 @@
       // declared-but-unrenderable field can never silently vanish (F10).
       function controlMarkup(f, def) {
         var isReq = def.label.indexOf('*') >= 0;
-        var reqAttr = isReq ? ' required' : '';
+        // aria-required mirrors the visual asterisk so screen readers announce it
+        // reliably; the native `required` attr drives our own validation. F-a11y.
+        var reqAttr = isReq ? ' required aria-required="true"' : '';
         var nm = esc(f);
+        var msgId = 'err-' + nm; // per-field error message element, tied via aria-describedby
+        var descAttr = ' aria-describedby="' + msgId + '"';
+        // inputmode hints the mobile keypad; only emit when defined.
+        var imAttr = def.inputmode ? ' inputmode="' + esc(def.inputmode) + '"' : '';
+        // autocomplete token per field meaning; default 'off' when unspecified so we
+        // never mis-autofill a non-standard field (bank/qualification/etc).
+        var acAttr = ' autocomplete="' + esc(def.autocomplete || 'off') + '"';
         if (def.type === 'select') {
           var opts = '<option value=""></option>' + (def.options || []).map(function (o) {
             return '<option value="' + esc(o) + '">' + esc(tHe(o)) + '</option>';
           }).join('');
-          return '<select name="' + nm + '"' + reqAttr + '>' + opts + '</select>';
+          return '<select name="' + nm + '"' + reqAttr + descAttr + '>' + opts + '</select><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
         if (def.type === 'textarea') {
-          return '<textarea name="' + nm + '" rows="2"' + reqAttr + '></textarea>';
+          return '<textarea name="' + nm + '" rows="2"' + reqAttr + descAttr + '></textarea><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
         if (def.type === 'checkbox') {
-          return '<label class="signer-check"><input type="checkbox" name="' + nm + '"' + reqAttr + '> ' + esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReq ? ' <span class="req">*</span>' : '') + '</label>';
+          return '<label class="signer-check"><input type="checkbox" name="' + nm + '"' + reqAttr + descAttr + '> ' + esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReq ? ' <span class="req">*</span>' : '') + '</label><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
-        return '<input type="' + esc(def.type) + '" name="' + nm + '" autocomplete="on"' + reqAttr + '>';
+        return '<input type="' + esc(def.type) + '" name="' + nm + '"' + acAttr + imAttr + reqAttr + descAttr + '><span class="signer-note" id="' + msgId + '" hidden></span>';
       }
       // Build the label markup for a field. Required-ness is derived from the
       // '*' in the English def label; the asterisk is rendered separately so the
@@ -494,11 +535,15 @@
           var lbl = field.querySelector('label');
           if (lbl && def.type !== 'checkbox') lbl.innerHTML = labelMarkup(def);
           else if (def.type === 'checkbox' && lbl) {
-            // rebuild the inline checkbox label, preserving the checked state
+            // rebuild the inline checkbox label, preserving the checked state.
+            // Preserve aria-required + aria-describedby so the a11y wiring survives
+            // a language toggle (the error span sits outside the label, untouched).
             var cb = lbl.querySelector('input');
             var wasChecked = cb && cb.checked;
-            lbl.innerHTML = '<input type="checkbox" name="' + esc(f) + '"' + (def.label.indexOf('*') >= 0 ? ' required' : '') + '> ' +
-              esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (def.label.indexOf('*') >= 0 ? ' <span class="req">*</span>' : '');
+            var isReqCb = def.label.indexOf('*') >= 0;
+            var reqCbAttr = isReqCb ? ' required aria-required="true"' : '';
+            lbl.innerHTML = '<input type="checkbox" name="' + esc(f) + '"' + reqCbAttr + ' aria-describedby="err-' + esc(f) + '"> ' +
+              esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReqCb ? ' <span class="req">*</span>' : '');
             if (wasChecked) lbl.querySelector('input').checked = true;
           }
           // re-translate select option text, preserving the chosen value
@@ -592,10 +637,15 @@
       canvas.addEventListener('touchmove', move, { passive: false });
       canvas.addEventListener('touchend', endDraw);
 
-      function updateBtn() {
-        doneBtn.disabled = !(dirty && points >= MIN_POINTS && consentBox.checked);
-      }
-      consentBox.addEventListener('change', updateBtn);
+      // Tognazzini: do not disable the submit button. It stays enabled; the click
+      // handler guides the user to whatever is missing (signature / consent /
+      // required field) and refuses to submit until all are satisfied. updateBtn
+      // is kept as a no-op hook so the draw/consent listeners need no rewiring.
+      function updateBtn() { /* button intentionally always enabled */ }
+      consentBox.addEventListener('change', function () {
+        // Clearing the consent error mark as soon as the box is checked (reward early).
+        if (consentBox.checked) errEl.textContent = '';
+      });
 
       clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
@@ -603,30 +653,113 @@
         updateBtn();
       });
 
-      doneBtn.addEventListener('click', function () {
-        if (doneBtn.disabled) return;
+      // ---- Per-field validation (reward early, punish late) -------------------
+      // Returns an error message (translated) for an invalid required/format field,
+      // or '' when the field is valid. Used by blur validation, submit validation,
+      // and the error-summary builder so the rules live in one place.
+      function fieldError(inp) {
+        var isReq = inp.hasAttribute('required');
+        var empty = (inp.type === 'checkbox') ? !inp.checked : !String(inp.value).trim();
+        if (isReq && empty) return tHe('This field is required.');
+        if (inp.type === 'email' && String(inp.value).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inp.value.trim())) {
+          return tHe('Please enter a valid email address.');
+        }
+        return '';
+      }
+      // Apply or clear the invalid state for one field: error class, aria-invalid,
+      // and the per-field message element tied via aria-describedby.
+      function markField(inp, msg) {
+        var field = inp.closest('.field');
+        var msgEl = document.getElementById('err-' + inp.name);
+        if (msg) {
+          if (field) field.classList.add('field--error');
+          inp.setAttribute('aria-invalid', 'true');
+          if (msgEl) { msgEl.textContent = msg; msgEl.hidden = false; }
+        } else {
+          if (field) field.classList.remove('field--error');
+          inp.removeAttribute('aria-invalid');
+          if (msgEl) { msgEl.textContent = ''; msgEl.hidden = true; }
+        }
+      }
+      // Validate a field on blur: mark immediately if invalid, clear when corrected.
+      var formEl = document.getElementById('signer-form');
+      formEl.addEventListener('focusout', function (e) {
+        var inp = e.target;
+        if (!inp || !inp.name || !(inp.matches('input, select, textarea'))) return;
+        markField(inp, fieldError(inp));
+        rebuildErrSummary();
+      });
 
-        // Validate required fields (inputs, selects, textareas, checkboxes)
-        var reqInputs = document.querySelectorAll('#signer-form input[required], #signer-form select[required], #signer-form textarea[required]');
-        var firstInvalid = null;
-        reqInputs.forEach(function (inp) {
-          var field = inp.closest('.field');
-          var empty = (inp.type === 'checkbox') ? !inp.checked : !String(inp.value).trim();
-          if (empty) {
-            if (field) field.classList.add('field--error');
-            if (!firstInvalid) firstInvalid = inp;
-          } else {
-            if (field) field.classList.remove('field--error');
-          }
+      // Human-readable field name for the error-summary link text. Reads the
+      // field's own label (translated), falling back to the input name.
+      function fieldLabelText(inp) {
+        var field = inp.closest('.field');
+        if (field) {
+          var lbl = field.querySelector('label');
+          if (lbl) return lbl.textContent.replace(/\*/g, '').trim();
+        }
+        return inp.name;
+      }
+      // Rebuild the top-of-page error summary from the current invalid fields.
+      // Each entry is a link that focuses + scrolls to its field. Hidden when clean.
+      function rebuildErrSummary() {
+        var summary = document.getElementById('err-summary');
+        var list = document.getElementById('err-summary-list');
+        if (!summary || !list) return;
+        var fields = document.querySelectorAll('#signer-form input[name], #signer-form select[name], #signer-form textarea[name]');
+        var items = [];
+        fields.forEach(function (inp) {
+          if (fieldError(inp)) items.push(inp);
         });
+        if (!items.length) { summary.hidden = true; list.innerHTML = ''; return; }
+        document.getElementById('err-summary-title').textContent = tHe('Please complete the highlighted fields.');
+        list.innerHTML = '';
+        items.forEach(function (inp) {
+          var li = document.createElement('li');
+          var a = document.createElement('a');
+          a.href = '#';
+          a.textContent = fieldLabelText(inp);
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            inp.focus();
+            if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' });
+          });
+          li.appendChild(a);
+          list.appendChild(li);
+        });
+        summary.hidden = false;
+      }
+
+      doneBtn.addEventListener('click', function () {
+        // Validate required + format fields (inputs, selects, textareas, checkboxes).
+        // Button is never disabled (Tognazzini); we guide to the first problem here.
+        var allInputs = document.querySelectorAll('#signer-form input[name], #signer-form select[name], #signer-form textarea[name]');
+        var firstInvalid = null;
+        allInputs.forEach(function (inp) {
+          var msg = fieldError(inp);
+          markField(inp, msg);
+          if (msg && !firstInvalid) firstInvalid = inp;
+        });
+        rebuildErrSummary();
         if (firstInvalid) {
           errEl.textContent = tHe('Please fill in all required fields.');
           firstInvalid.focus();
+          if (firstInvalid.scrollIntoView) firstInvalid.scrollIntoView({ block: 'center' });
           return;
         }
 
-        if (!consentBox.checked) { errEl.textContent = tHe('Please confirm that you have reviewed the documents.'); return; }
-        if (!dirty || points < MIN_POINTS) { errEl.textContent = tHe('Please draw your signature before submitting.'); return; }
+        // Consent + signature are required to submit; guide to whichever is missing.
+        if (!consentBox.checked) {
+          errEl.textContent = tHe('Please confirm that you have reviewed the documents.');
+          consentBox.focus();
+          if (consentBox.scrollIntoView) consentBox.scrollIntoView({ block: 'center' });
+          return;
+        }
+        if (!dirty || points < MIN_POINTS) {
+          errEl.textContent = tHe('Please draw your signature before submitting.');
+          if (canvas.scrollIntoView) canvas.scrollIntoView({ block: 'center' });
+          return;
+        }
 
         doneBtn.disabled = true; clearBtn.disabled = true; errEl.textContent = '';
         doneBtn.textContent = tHe('Recording...');
@@ -678,10 +811,15 @@
         p.send(body);
       });
 
-      // Clear field-error styling on input
-      document.addEventListener('input', function (e) {
-        if (e.target && e.target.closest && e.target.closest('.field--error')) {
-          if (e.target.value.trim()) e.target.closest('.field').classList.remove('field--error');
+      // Clear field-error state as soon as the value becomes valid (reward early).
+      // Reuses fieldError/markField so the aria-invalid + per-field message clear
+      // in lockstep with the visual error class, then refresh the summary.
+      formEl.addEventListener('input', function (e) {
+        var inp = e.target;
+        if (!inp || !inp.name || !(inp.matches('input, select, textarea'))) return;
+        if (inp.closest('.field--error') && !fieldError(inp)) {
+          markField(inp, '');
+          rebuildErrSummary();
         }
       });
     }
