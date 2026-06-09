@@ -317,9 +317,6 @@ nav {
   text-decoration: underline;
 }
 
-#gsi-container {
-  margin-top: var(--space-2);
-}
 
 /* ============================================================
    THEME TOGGLE
@@ -500,10 +497,26 @@ nav {
   opacity: 0.8;
 }
 
-#login-gsi-wrap {
-  display: flex;
+.google-signin-btn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  padding: 10px 24px;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3c4043;
+  cursor: pointer;
+  width: 240px;
+  direction: rtl;
+  transition: background 120ms, box-shadow 120ms;
 }
+.google-signin-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+.google-signin-btn:active { background: #f1f3f4; }
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -1688,9 +1701,8 @@ input:focus {
       <div class="ver" id="ver-side">GAS @167</div>
       <button id="theme-toggle" onclick="toggleTheme()">[ LIGHT ]</button>
       <div class="auth-email" id="auth-status">not signed in</div>
-      <a class="signout-link" id="sign-out-btn" style="display:none" href="#" onclick="clearGsiAuth();return false">Sign out</a>
+      <a class="signout-link" id="sign-out-btn" style="display:none" href="#" onclick="clearAuth();return false">Sign out</a>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top:4px">Atrium</a>
-      <div id="gsi-container"></div>
     </div>
   </aside>
   <div class="main">
@@ -1861,66 +1873,64 @@ input:focus {
 
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
-  var TOKEN_KEY='lvp_op_token_v1'; // localStorage -- persists across tabs, cleared on sign-out
+  var TOKEN_KEY='lvp_op_token_v1';
   var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
   var OP_FALLBACK=(new URLSearchParams(location.search)).get('op')||'';
+
+  // Pick up id_token from URL hash after Google redirect-back
+  (function(){
+    var hash=window.location.hash;
+    if(hash&&hash.indexOf('id_token=')>=0){
+      history.replaceState(null,'',window.location.pathname+window.location.search);
+      try{
+        var p=new URLSearchParams(hash.replace(/^#/,''));
+        var t=p.get('id_token');
+        if(t){ID_TOKEN=t;localStorage.setItem(TOKEN_KEY,t);}
+      }catch(e){}
+    }
+  })();
+
   function apiFetch(qs){
     var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
     return fetch(GW+qs+auth).then(function(r){return r.json();}).then(function(d){
-      if(d&&d.ok===false&&d.error==='unauthorized'){clearGsiAuth();throw new Error('unauthorized');}
+      if(d&&d.ok===false&&d.error==='unauthorized'){clearAuth();throw new Error('unauthorized');}
       return d;
     });
   }
-  function handleCredential(resp){
-    try{
-      var pl=JSON.parse(atob(resp.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-      ID_TOKEN=resp.credential;
-      localStorage.setItem(TOKEN_KEY,ID_TOKEN);
-      document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
-      document.getElementById('sign-out-btn').style.display='inline';
-      document.getElementById('gsi-container').style.display='none';
-      document.getElementById('login-screen').classList.add('off');
-      load();
-    }catch(e){}
-  }
-  function clearGsiAuth(){
+  function clearAuth(){
     ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
-    if(typeof google!=='undefined'&&google.accounts) google.accounts.id.disableAutoSelect();
     document.getElementById('auth-status').textContent='🔒 not signed in';
     document.getElementById('sign-out-btn').style.display='none';
-    document.getElementById('gsi-container').style.display='block';
     document.getElementById('login-screen').classList.remove('off');
   }
-  function initGsi(){
-    var ready=GSI_CLIENT_ID&&GSI_CLIENT_ID!=='PENDING_GCP_SETUP';
-    if(!ready){document.getElementById('gsi-container').innerHTML='<span style="font-size:10px;opacity:.5">Sign-in pending setup</span>';return;}
-    google.accounts.id.initialize({client_id:GSI_CLIENT_ID,callback:handleCredential,auto_select:true,use_fedcm_for_prompt:false});
+  function startGoogleSignIn(){
+    var nonce=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    sessionStorage.setItem('gsi_nonce',nonce);
+    var p=new URLSearchParams({
+      client_id:GSI_CLIENT_ID,
+      redirect_uri:'https://sign.legacyvpartners.com/console/',
+      response_type:'id_token',
+      scope:'openid email profile',
+      nonce:nonce,
+      hd:'legacyvpartners.com',
+      prompt:'select_account'
+    });
+    window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
+  }
+  function initAuth(){
     if(ID_TOKEN){
       try{
         var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
         var exp=Number(pl.exp||0);
-        var nowMs=Date.now();
-        if(exp&&exp*1000<nowMs){localStorage.removeItem(TOKEN_KEY);ID_TOKEN='';showLogin();return;}
+        if(exp&&exp*1000<Date.now()){localStorage.removeItem(TOKEN_KEY);ID_TOKEN='';document.getElementById('login-screen').classList.remove('off');return;}
         document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
-        document.getElementById('gsi-container').style.display='none';
         document.getElementById('login-screen').classList.add('off');
         load();
-        // If token expires in < 10 min, silently prompt for a fresh one in the background.
-        // auto_select:true means Google fires handleCredential without any UI if the account
-        // is already signed in to Chrome. No visible overlay unless auto-select fails.
-        if(exp&&(exp*1000-nowMs)<600000){
-          google.accounts.id.prompt(function(n){if(n.isSkippedMoment&&n.isSkippedMoment()){}});
-        }
-      }catch(e){showLogin();}
+      }catch(e){document.getElementById('login-screen').classList.remove('off');}
     }else{
-      showLogin();
+      document.getElementById('login-screen').classList.remove('off');
     }
-  }
-  function showLogin(){
-    document.getElementById('login-screen').classList.remove('off');
-    google.accounts.id.renderButton(document.getElementById('login-gsi-wrap'),{theme:'outline',size:'large',width:240,text:'signin_with'});
-    google.accounts.id.prompt();
   }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
@@ -2337,8 +2347,16 @@ input:focus {
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
     <div class="lsub">Operator Console</div>
-    <div id="login-gsi-wrap"></div>
+    <button class="google-signin-btn" onclick="startGoogleSignIn()">
+      <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      <span>כניסה באמצעות Google</span>
+    </button>
   </div>
 </div>
-<script src="https://accounts.google.com/gsi/client" async onload="initGsi()"></script>
+<script>initAuth();</script>
 </body></html>
