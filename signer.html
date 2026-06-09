@@ -59,6 +59,7 @@
     .signer-check { display:flex; align-items:flex-start; gap:8px; font-size:14px; font-weight:500; color:var(--navy); cursor:pointer; }
     .signer-check input { width:auto; margin-top:3px; flex:0 0 auto; }
     .signer-note { font-size:13px; color:var(--error); margin:4px 0 0; }
+    .save-status { font-size:13px; color:#5a6b7b; margin:8px 0 0; }
 
     /* Doc preview */
     .doc-preview { margin-top:24px; }
@@ -198,6 +199,7 @@
         <form id="signer-form" autocomplete="on" novalidate>
           <div id="editable-fields"></div>
         </form>
+        <p id="save-status" class="save-status" aria-live="polite" hidden></p>
 
         <!-- Inline doc preview -->
         <div class="doc-preview">
@@ -310,6 +312,7 @@
       "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
       "Please enter a valid email address.": "יש להזין כתובת מייל תקינה.",
       "This field is required.": "שדה חובה.",
+      "Progress saved.": "ההתקדמות נשמרה.",
       "Taking a moment": "רגע...",
       "The server is warming up. Please tap to try again.": "השרת מתחמם. נא להקיש לנסות שוב.",
       "Try again": "נסה שוב",
@@ -601,8 +604,26 @@
       CTX = ctx;
       applyLang('he');
       renderDynamic(ctx, true);
+      prefillSavedData(ctx.savedData);
       show('form');
       initPad(ctx);
+    }
+
+    // Save-and-resume: restore any partial field values the signer saved earlier.
+    // The values come from the server (keyed to this signer link), never from
+    // client storage, so reopening the link on any device recovers the data and
+    // a shared device is never left holding the signer's PII.
+    function prefillSavedData(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      var formEl = document.getElementById('signer-form');
+      Object.keys(saved).forEach(function (name) {
+        var sel = (window.CSS && CSS.escape) ? CSS.escape(name) : name;
+        var inp = formEl.querySelector('[name="' + sel + '"]');
+        if (!inp) return;
+        var val = saved[name];
+        if (inp.type === 'checkbox') inp.checked = (val === 'true' || val === true);
+        else inp.value = (val == null ? '' : val);
+      });
     }
 
     function initPad(ctx) {
@@ -683,6 +704,56 @@
           if (msgEl) { msgEl.textContent = ''; msgEl.hidden = true; }
         }
       }
+      // ---- Autosave (server-side save-and-resume) -----------------------------
+      // Persist the signer's partial field values to the server (keyed to this
+      // signer link) so an interruption never loses entered data. Debounced and
+      // silent unless it succeeds; a failed background save never alarms the signer
+      // (the values are still in the page and the final submit carries them). Saving
+      // is suppressed once the final submit begins so it cannot race the signature.
+      var saveStatusEl = document.getElementById('save-status');
+      var autosaveTimer = null, submitting = false, lastSavedJson = '';
+      function collectFormData() {
+        var data = {};
+        document.querySelectorAll('#signer-form input, #signer-form select, #signer-form textarea').forEach(function (inp) {
+          if (!inp.name) return;
+          data[inp.name] = (inp.type === 'checkbox') ? (inp.checked ? 'true' : 'false') : inp.value;
+        });
+        return data;
+      }
+      function autosave() {
+        if (submitting) return;
+        var data = collectFormData();
+        var json = JSON.stringify(data);
+        if (json === lastSavedJson) return; // nothing changed since the last save
+        var anyValue = Object.keys(data).some(function (k) { return data[k] && data[k] !== 'false'; });
+        if (!anyValue) return;              // do not persist an all-empty form
+        var body = JSON.stringify({
+          action: 'save_signer_progress',
+          token: TOKEN,
+          lane: 'cayman',
+          payload: { signToken: TOKEN, signerFormData: data }
+        });
+        var x = new XMLHttpRequest();
+        x.open('POST', GW + '?source=lp', true);
+        x.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        x.timeout = 15000;
+        x.onreadystatechange = function () {
+          if (x.readyState !== 4) return;
+          var res = {};
+          try { res = JSON.parse(x.responseText); } catch (e) { res = { ok: false }; }
+          if (res && res.ok) {
+            lastSavedJson = json;
+            if (saveStatusEl) { saveStatusEl.textContent = tHe('Progress saved.'); saveStatusEl.hidden = false; }
+          }
+        };
+        x.ontimeout = function () {}; x.onerror = function () {};
+        x.send(body);
+      }
+      function scheduleAutosave() {
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(autosave, 800);
+      }
+
       // Validate a field on blur: mark immediately if invalid, clear when corrected.
       var formEl = document.getElementById('signer-form');
       formEl.addEventListener('focusout', function (e) {
@@ -690,6 +761,7 @@
         if (!inp || !inp.name || !(inp.matches('input, select, textarea'))) return;
         markField(inp, fieldError(inp));
         rebuildErrSummary();
+        scheduleAutosave();
       });
 
       // Human-readable field name for the error-summary link text. Reads the
@@ -763,6 +835,8 @@
           return;
         }
 
+        submitting = true; // suppress autosave so it cannot race the signature POST
+        if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
         doneBtn.disabled = true; clearBtn.disabled = true; errEl.textContent = '';
         doneBtn.textContent = tHe('Recording...');
         var png = canvas.toDataURL('image/png');
@@ -794,6 +868,7 @@
           errEl.textContent = tHe('We could not record your signature. Please try again.');
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
+          submitting = false; // allow autosave again on retry
         }
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
@@ -823,6 +898,7 @@
           markField(inp, '');
           rebuildErrSummary();
         }
+        scheduleAutosave();
       });
     }
   })();
