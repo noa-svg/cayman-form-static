@@ -26,6 +26,9 @@
   .side-foot{padding:14px 22px;border-top:1px solid var(--side-line);font-size:11px;color:#475569;line-height:1.6}
   .auth-row{display:flex;align-items:center;gap:8px;margin-top:8px}
   .auth-row button{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
+  #auth-input-row{margin-top:7px;display:none}
+  #auth-input{width:100%;padding:7px 9px;font-size:11px;border:1px solid #334155;background:#1E293B;color:#94A3B8;border-radius:5px;font-family:inherit}
+  #auth-input:focus{outline:none;border-color:var(--blue);box-shadow:none}
   .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:var(--side-muted);cursor:pointer;font-weight:500;transition:all .15s}
   .nav:hover{background:#1E293B;color:#fff}
   .nav.on{background:#1E3A8A;color:#93C5FD;font-weight:700}
@@ -141,6 +144,7 @@
     </nav>
     <div class="side-foot" id="side-foot"><span id="ver-line">GAS @156</span>
       <div class="auth-row"><span id="auth-status">🔒 not signed in</span><button id="auth-btn">Sign in</button></div>
+      <div id="auth-input-row"><input type="password" id="auth-input" placeholder="operator secret" autocomplete="off"></div>
     </div>
   </aside>
   <div class="main">
@@ -207,6 +211,15 @@
 
     <label>Investor email <span class="tag">required</span></label>
     <input id="email" placeholder="investor@example.com">
+
+    <label>FO email <span class="opt">optional</span></label>
+    <input id="foEmail" placeholder="fo@family.com">
+    <div class="hint">Family office contact. Gets a cc when the invite is sent.</div>
+
+    <label>Rev share % <span class="opt">optional</span></label>
+    <input id="revShare" type="number" min="0" max="100" step="0.1" placeholder="20">
+    <div class="hint">Referrer's revenue share percentage (leave blank if none).</div>
+
     <button class="cta" id="createBtn">Send invite</button>
     <div class="hint" id="msg"></div>
     <div class="res" id="res">Link created. <div class="lk" id="lk"></div></div>
@@ -299,7 +312,14 @@
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
-  document.getElementById('auth-btn').onclick=function(){if(OP){clearAuth();}else{var s=prompt('Operator secret:');if(s)setAuth(s);}};
+  document.getElementById('auth-btn').onclick=function(){
+    if(OP){clearAuth();document.getElementById('auth-input-row').style.display='none';}
+    else{var r=document.getElementById('auth-input-row');var show=r.style.display==='none'||!r.style.display;r.style.display=show?'block':'none';if(show)document.getElementById('auth-input').focus();}
+  };
+  document.getElementById('auth-input').addEventListener('keydown',function(e){
+    if(e.key==='Enter'){var v=this.value.trim();if(v){setAuth(v);document.getElementById('auth-input-row').style.display='none';this.value='';}}
+    if(e.key==='Escape'){document.getElementById('auth-input-row').style.display='none';}
+  });
   // create
   document.getElementById("createBtn").onclick=function(){
     var msg=document.getElementById("msg");
@@ -307,7 +327,9 @@
     if(!name&&!nameHebrew){msg.textContent="Enter at least one name, English or Hebrew.";return}
     if(email.indexOf("@")<0){msg.textContent="Enter a valid investor email.";return}
     msg.textContent="Creating...";
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)).then(function(res){
+    var foEmail=document.getElementById('foEmail').value.trim();
+    var revShare=document.getElementById('revShare').value.trim();
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')).then(function(res){
       if(!res||!res.ok){msg.textContent=(res&&res.error)||"Could not create.";return}
       msg.textContent=""; document.getElementById("res").classList.add("on");
       document.getElementById("lk").textContent=res.url||""; load();
