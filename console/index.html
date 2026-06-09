@@ -340,7 +340,113 @@ nav {
 }
 
 /* ============================================================
-   LOGIN SCREEN
+   THEME TOGGLE
+   ============================================================ */
+
+#theme-toggle {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 2px;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+#theme-toggle:hover {
+  color: var(--color-atrium);
+  border-color: var(--color-atrium);
+}
+
+/* ============================================================
+   LIGHT THEME OVERRIDES
+   ============================================================ */
+
+:root[data-theme="light"] {
+  --color-bg-page:        #F8FAFC;
+  --color-bg-sidebar:     #F1F5F9;
+  --color-bg-card:        #FFFFFF;
+  --color-bg-panel:       #FFFFFF;
+  --color-bg-input:       #FFFFFF;
+  --color-bg-hover:       #E8EFF7;
+  --color-bg-strip:       #F1F5F9;
+  --color-bg-drawer:      #FFFFFF;
+  --color-bg-overlay:     rgba(15,23,42,0.50);
+  --color-atrium:         #0891B2;
+  --color-atrium-deep:    #0E7490;
+  --color-atrium-tint:    #E0F9FF;
+  --color-atrium-tint-md: #BAF3FF;
+  --color-atrium-muted:   rgba(8,145,178,0.12);
+  --color-ink:            #0F172A;
+  --color-ink-sub:        #334155;
+  --color-ink-muted:      #64748B;
+  --color-ink-disabled:   #CBD5E1;
+  --color-ink-inverse:    #FFFFFF;
+  --color-border:         #CBD5E1;
+  --color-border-subtle:  #E2E8F0;
+  --color-border-strong:  #94A3B8;
+  --color-border-focus:   #0891B2;
+  --color-gold:           #D97706;
+  --color-gold-tint:      #FFFBEB;
+  --color-coral:          #DC2626;
+  --color-coral-tint:     #FEF2F2;
+  --color-green:          #16A34A;
+  --color-green-tint:     #F0FDF4;
+  --color-plum:           #7C3AED;
+  --color-plum-tint:      #F5F3FF;
+  --color-success:        #16A34A;
+  --color-success-bg:     #F0FDF4;
+  --color-warning:        #D97706;
+  --color-warning-bg:     #FFFBEB;
+  --color-danger:         #DC2626;
+  --color-danger-bg:      #FEF2F2;
+  --color-info:           #0891B2;
+  --color-info-bg:        #E0F9FF;
+  --color-neutral:        #64748B;
+  --color-neutral-bg:     #F1F5F9;
+  --shadow-card:          0 1px 3px rgba(15,23,42,0.08);
+  --shadow-hover:         0 2px 8px rgba(15,23,42,0.10), 0 0 0 1px #CBD5E1;
+  --shadow-panel:         0 4px 24px rgba(15,23,42,0.12);
+  --shadow-drawer:        -2px 0 24px rgba(15,23,42,0.10);
+  --shadow-modal:         0 8px 40px rgba(15,23,42,0.16);
+}
+
+:root[data-theme="light"] .brand .mark {
+  text-shadow: none;
+}
+:root[data-theme="light"] .nav.on {
+  text-shadow: none;
+}
+:root[data-theme="light"] .st.hot .ct {
+  text-shadow: none;
+}
+:root[data-theme="light"] .lc .lmark {
+  color: var(--color-atrium);
+  text-shadow: none;
+}
+
+/* light act-chip overrides */
+:root[data-theme="light"] .act-chip.ok   { background:#F0FDF4; color:#16A34A; border-color:#BBF7D0; }
+:root[data-theme="light"] .act-chip.off  { background:#F1F5F9; color:#94A3B8; border-color:#E2E8F0; }
+:root[data-theme="light"] .act-chip.warn { background:#FEF2F2; color:#DC2626; border-color:#FECACA; }
+:root[data-theme="light"] .act-chip.live { background:#E0F9FF; color:#0891B2; border-color:#BAF3FF; }
+:root[data-theme="light"] .act-date-group { color: #94A3B8; }
+:root[data-theme="light"] .act-date-group::before { color: #0891B2; opacity: 0.5; }
+:root[data-theme="light"] .act-date-group::after  { color: #E2E8F0; }
+:root[data-theme="light"] .act-row { border-bottom-color: #E2E8F0; }
+:root[data-theme="light"] .act-row:hover { background: #F1F5F9; }
+:root[data-theme="light"] .act-row.hdr  { background: #F8FAFC; color: #94A3B8; border-bottom-color: #CBD5E1; }
+:root[data-theme="light"] .act-row.hdr:hover { background: #F8FAFC; }
+:root[data-theme="light"] .act-nm  { color: #1E293B; }
+:root[data-theme="light"] .act-lane { color: #94A3B8; }
+:root[data-theme="light"] .act-terminal { background: var(--color-bg-page); }
+
+/* LOGIN SCREEN
    ============================================================ */
 
 #login-screen {
@@ -1526,7 +1632,8 @@ input:focus {
       <div class="nav" data-view="settings">Settings</div>
     </nav>
     <div class="side-foot">
-      <div class="ver" id="ver-line">GAS @161</div>
+      <div class="ver" id="ver-line">GAS @165</div>
+      <button id="theme-toggle" onclick="toggleTheme()">&#9788; LIGHT</button>
       <div class="auth-email" id="auth-status">not signed in</div>
       <a class="signout-link" id="sign-out-btn" style="display:none" href="#" onclick="clearGsiAuth();return false">Sign out</a>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top:4px">Atrium</a>
@@ -1668,6 +1775,27 @@ input:focus {
   </div>
 
 <script>
+  // ---- THEME ----
+  (function(){
+    var t=localStorage.getItem('lvp_theme')||'dark';
+    document.documentElement.setAttribute('data-theme',t);
+    // update button label after DOM ready
+    document.addEventListener('DOMContentLoaded',function(){updateThemeBtn(t);});
+  })();
+  function updateThemeBtn(t){
+    var b=document.getElementById('theme-toggle');
+    if(!b)return;
+    b.textContent=t==='light'?'☾ DARK':'☀ LIGHT';
+  }
+  function toggleTheme(){
+    var cur=document.documentElement.getAttribute('data-theme')||'dark';
+    var next=cur==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('lvp_theme',next);
+    updateThemeBtn(next);
+  }
+  // ---- END THEME ----
+
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var ID_TOKEN = sessionStorage.getItem('lvp_id_token') || '';
