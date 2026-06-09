@@ -420,13 +420,13 @@
                 </div>
                 <input type="file" data-upload="nationalIdFront" accept="image/*,application/pdf">
               </div>
-              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req" data-required>
+              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-opt">
                 <button type="button" class="lvp-upload__remove" aria-label="Remove file">&times;</button>
                 <div class="lvp-upload__btn">
                   <span class="lvp-upload__slot-num">2</span>
                   <span class="lvp-upload__content">
                     <span class="lvp-upload__doc-title">Appendix (ספח)</span>
-                    <span class="lvp-upload__slot-sub">Separate appendix page</span>
+                    <span class="lvp-upload__slot-sub">Separate appendix page (if applicable)</span>
                     <span class="lvp-upload__name" data-upload-name="nationalIdAppendix"></span>
                   </span>
                 </div>
@@ -1143,6 +1143,8 @@
               if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
             }
             try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
+            // Re-route type + URLs if the main IIFE initialized before this fetch resolved.
+            if (typeof window.__caymanOnCfgUpdate === 'function') window.__caymanOnCfgUpdate(cfg);
           })
           .catch(function() {});
       } catch(err) {
@@ -1324,6 +1326,27 @@
       var __chooser = document.getElementById('applicant-chooser');
       if (__chooser) __chooser.hidden = true;
     }
+
+    // Called by the async CFG loader when the fetch resolves after this IIFE ran.
+    // Updates routing state so an entity token on a cold start gets the entity
+    // flow, and gateway() always has a real URL + token.
+    window.__caymanOnCfgUpdate = function (newCfg) {
+      if (!newCfg) return;
+      CFG.gatewayUrl = newCfg.gatewayUrl || CFG.gatewayUrl;
+      CFG.token = newCfg.token || CFG.token;
+      if (newCfg.applicantType && newCfg.applicantType !== CFG.applicantType) {
+        CFG.applicantType = newCfg.applicantType;
+        state.applicantType = (newCfg.applicantType === 'entity') ? 'entity' : 'individual';
+        TYPE_PRESET = (newCfg.applicantType === 'individual' || newCfg.applicantType === 'entity');
+        if (TYPE_PRESET) {
+          var r = form.querySelector('input[name="applicantType"][value="' + newCfg.applicantType + '"]');
+          if (r) r.checked = true;
+          var ch = document.getElementById('applicant-chooser');
+          if (ch) ch.hidden = true;
+        }
+        rebuild();
+      }
+    };
 
     function applicant() { return state.applicantType || readRadio('applicantType') || ''; }
 
@@ -1839,10 +1862,15 @@
 
     // ---- gateway calls (Foundation source=lp envelope) ----
     function gateway(action, payload) {
-      var body = { action: action, token: CFG.token, lane: 'cayman', payload: payload || {} };
+      // Read live CFG at call time: async fetch may have resolved after init captured CFG.
+      var liveCfg = window.CAYMAN_CFG || CFG;
+      var gUrl = liveCfg.gatewayUrl || CFG.gatewayUrl || '';
+      var gToken = liveCfg.token || CFG.token || '';
+      if (!gUrl) return Promise.reject(new Error('Form is still loading. Please wait a moment and try again.'));
+      var body = { action: action, token: gToken, lane: 'cayman', payload: payload || {} };
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 30000) : null;
-      return fetch(CFG.gatewayUrl + '?source=lp', {
+      return fetch(gUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body),
         signal: ctrl ? ctrl.signal : undefined

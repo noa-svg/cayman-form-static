@@ -1355,7 +1355,7 @@
       }
       req('enFirstName', function (v) { return EN_RE.test(v) && v.length >= 2 && v.length <= 20; });
       req('enLastName',  function (v) { return EN_RE.test(v) && v.length >= 2 && v.length <= 20; });
-      req('enCity',   function (v) { return EN_RE.test(v); });
+      req('enCity',   function (v) { return EN_DIGITS_RE.test(v); });
       req('enStreet', function (v) { return EN_DIGITS_RE.test(v); });
     }
 
