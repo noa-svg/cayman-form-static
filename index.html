@@ -114,6 +114,9 @@
       outline: none; transition: border-color 150ms ease;
     }
     .lvp-input:focus, .lvp-input--select:focus { border-bottom-color: var(--lvp-input-line-active); border-bottom-width: 2px; padding-bottom: 7px; }
+    /* Visible keyboard focus for everyone (WCAG 2.4.7). Mouse focus stays clean via :focus-visible. */
+    .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; border-radius: 3px; }
+    .lvp-upload:focus-within .lvp-upload__btn { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
 
     .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
     .lvp-actions--solo { justify-content: center; }       /* welcome page: only Continue, center it */
