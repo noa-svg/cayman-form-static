@@ -2189,8 +2189,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   })();
 
   function apiFetch(qs){
-    var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
-    return fetch(GW+qs+auth).then(function(r){return r.json();}).then(function(d){
+    // F20: POST so the id_token + params ride in the body, not the URL. The
+    // server (?source=op) rebuilds the param map and delegates to the same router.
+    // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
+    var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
+    return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok===false&&d.error==='unauthorized'){clearAuth(d.reason);throw new Error('unauthorized');}
       return d;
     });
