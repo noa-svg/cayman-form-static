@@ -28,6 +28,12 @@
   .auth-row button{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
   #sign-out-btn{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer;border:1px solid var(--side-line);background:#1E293B;color:var(--side-muted)}
   #gsi-container{margin-top:7px}
+  #login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000}
+  #login-screen.off{display:none}
+  .lc{text-align:center;max-width:340px;padding:48px 40px;background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 24px rgba(15,23,42,.08)}
+  .lc .lmark{font-size:20px;font-weight:700;letter-spacing:.01em;color:var(--ink);margin-bottom:4px}
+  .lc .lsub{font-size:13px;color:var(--muted);margin-bottom:28px}
+  #login-gsi-wrap{display:flex;justify-content:center}
   .nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:var(--side-muted);cursor:pointer;font-weight:500;transition:all .15s}
   .nav:hover{background:#1E293B;color:#fff}
   .nav.on{background:#1E3A8A;color:#93C5FD;font-weight:700}
@@ -177,7 +183,20 @@
         <div id="w8list"></div>
       </div>
     </div>
-    <div class="view" id="v-settings" hidden><div class="top"><h1>Settings</h1><div class="sub">The soft config.</div></div><div class="content"><div class="soon">Recipients, wire details, language default, integrations. Lands here next.</div></div></div>
+    <div class="view" id="v-settings" hidden>
+      <div class="top"><div><h1>Settings</h1><div class="sub">Console access and configuration.</div></div></div>
+      <div class="content">
+        <div style="max-width:520px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">Access allowlist</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Anyone with a <strong>@legacyvpartners.com</strong> email can always sign in. Add outside emails here (one per line or comma-separated).</div>
+          <textarea id="allowlist-input" style="width:100%;height:120px;padding:10px 12px;font-size:13px;font-family:inherit;border:1px solid var(--line);border-radius:6px;resize:vertical" placeholder="guest@example.com"></textarea>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+            <button id="allowlist-save" class="btn" style="font-size:13px;padding:9px 20px">Save</button>
+            <span id="allowlist-status" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="scrim" id="dscrim"></div>
@@ -241,6 +260,7 @@
       document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
       document.getElementById('sign-out-btn').style.display='inline';
       document.getElementById('gsi-container').style.display='none';
+      document.getElementById('login-screen').classList.add('off');
       load();
     }catch(e){}
   }
@@ -250,6 +270,7 @@
     document.getElementById('auth-status').textContent='🔒 not signed in';
     document.getElementById('sign-out-btn').style.display='none';
     document.getElementById('gsi-container').style.display='block';
+    document.getElementById('login-screen').classList.remove('off');
   }
   function initGsi(){
     var ready=GSI_CLIENT_ID&&GSI_CLIENT_ID!=='PENDING_GCP_SETUP';
@@ -261,11 +282,17 @@
         document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
         document.getElementById('gsi-container').style.display='none';
-      }catch(e){clearGsiAuth();google.accounts.id.renderButton(document.getElementById('gsi-container'),{theme:'outline',size:'small',width:180});google.accounts.id.prompt();}
+        document.getElementById('login-screen').classList.add('off');
+        load();
+      }catch(e){showLogin();}
     }else{
-      google.accounts.id.renderButton(document.getElementById('gsi-container'),{theme:'outline',size:'small',width:180});
-      google.accounts.id.prompt();
+      showLogin();
     }
+  }
+  function showLogin(){
+    document.getElementById('login-screen').classList.remove('off');
+    google.accounts.id.renderButton(document.getElementById('login-gsi-wrap'),{theme:'outline',size:'large',width:260,text:'signin_with'});
+    google.accounts.id.prompt();
   }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
@@ -289,10 +316,9 @@
       var src=(d&&d.processes)||(d&&d.items)||[];
       var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
       render(rows);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @157<br><span style="color:#64748b">synced '+t+'</span>';}
+      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.innerHTML='GAS @158<br><span style="color:#64748b">synced '+t+'</span>';}
     }).catch(function(){document.getElementById("list").innerHTML='<div class="empty" style="color:var(--err)">Could not load. Refresh or check auth.</div>';});
   }
-  load();
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
   function open(){scrim.classList.add("on");panel.classList.add("on")}
@@ -369,6 +395,7 @@
       });
       if(v==="messages"&&!MSGS) loadMsgs();
       if(v==="w8"&&!W8) loadW8();
+      if(v==="settings") loadSettings();
     };
   });
 
@@ -391,6 +418,22 @@
   function loadW8(){
     apiFetch('?api=w8renewals').then(function(d){W8=d||{counts:{valid:0,expiring:0,expired:0},due:[]};renderW8(W8);}).catch(function(){renderW8({counts:{valid:0,expiring:0,expired:0},due:[]});});
   }
+
+  // ---- Settings ----
+  function loadSettings(){
+    apiFetch('?admin=getConsoleSettings').then(function(d){
+      if(d&&d.ok) document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
+    }).catch(function(){});
+  }
+  document.getElementById('allowlist-save').onclick=function(){
+    var raw=document.getElementById('allowlist-input').value;
+    var st=document.getElementById('allowlist-status');
+    st.textContent='Saving...';st.style.color='var(--muted)';
+    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw)).then(function(d){
+      if(d&&d.ok){st.textContent='Saved';st.style.color='var(--ok)';}
+      else{st.textContent=(d&&d.error)||'Error';st.style.color='var(--err)';}
+    }).catch(function(){st.textContent='Error';st.style.color='var(--err)';});
+  };
 
   // ---- Messages ----
   var MSGS=null, curMsg=null, curLang="he";
@@ -437,5 +480,12 @@
     };
   }
 </script>
+<div id="login-screen">
+  <div class="lc">
+    <div class="lmark">Legacy Value Partners</div>
+    <div class="lsub">Operator Console</div>
+    <div id="login-gsi-wrap"></div>
+  </div>
+</div>
 <script src="https://accounts.google.com/gsi/client" async onload="initGsi()"></script>
 </body></html>
