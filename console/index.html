@@ -166,6 +166,17 @@
   .kv{display:flex;gap:8px;padding:5px 0;font-size:13px}
   .kv .k{color:var(--muted);min-width:130px;flex-shrink:0;font-size:12px}
   .kv .v{font-weight:600}
+  /* LOGIN LOGO */
+  .llogo{width:80px;height:80px;margin-bottom:18px;display:block;margin-left:auto;margin-right:auto}
+  .lc .lsub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:32px;font-weight:500}
+  /* MESSAGES SIDE-BY-SIDE */
+  .medit-wrap{display:grid;grid-template-columns:minmax(320px,1fr) minmax(300px,1fr);gap:28px;align-items:start}
+  .medit-left{min-width:0}
+  .medit-right{min-width:0;position:sticky;top:24px}
+  .medit-right .preview{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--paper)}
+  .medit-right .ph-h{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--faint);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--sky-12)}
+  .medit-right .ph-s{padding:10px 14px;font-weight:600;border-bottom:1px solid var(--line);font-size:14px}
+  .medit-right .ph-b{padding:14px;font-size:14px;line-height:1.7;min-height:120px}
 </style></head>
 <body>
   <aside class="side">
@@ -492,21 +503,39 @@
     Array.prototype.forEach.call(document.querySelectorAll(".msgitem"),function(el){el.onclick=function(){openMsg(el.getAttribute("data-k"));};});
   }
   function openMsg(key){curMsg=MSGS.filter(function(m){return m.key===key;})[0];curLang="he";renderMsgList();renderEditor();}
+  function updatePreview(){
+    var rtl=(curLang==="he");
+    var sub=document.getElementById("m-sub"); var body=document.getElementById("m-body");
+    var ps=document.getElementById("m-prev-s"); var pb=document.getElementById("m-prev-b");
+    if(ps&&sub) ps.textContent=interp(sub.value);
+    if(pb&&body){var bv=interp(body.value); if(/</.test(bv)){pb.innerHTML=bv;}else{pb.innerHTML=esc(bv).replace(/\n/g,"<br>");}}
+  }
   function renderEditor(){
     var m=curMsg; if(!m)return;
     var L=m[curLang]||{subject:"",body:""};
     var phs=(m.placeholders||[]).map(function(p){return '<span class="ph">{{'+esc(p)+"}}</span>";}).join("");
     var rtl=(curLang==="he");
+    var dir=rtl?"rtl":"ltr";
     document.getElementById("msgedit").innerHTML=
-      "<h2>"+esc(m.label)+'</h2><div class="to">Goes to: '+esc(m.to)+"</div>"+
-      "<div>"+phs+"</div>"+
-      '<div class="msgtabs"><button data-l="he" class="'+(rtl?"on":"")+'">Hebrew</button><button data-l="en" class="'+(rtl?"":"on")+'">English</button></div>'+
-      '<div class="lbl">Subject</div><input id="m-sub" value="'+esc(L.subject)+'">'+
-      '<div class="lbl">Body</div><textarea id="m-body">'+esc(L.body)+"</textarea>"+
-      '<div class="msgbtns"><button class="save" id="m-save">Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved"></span></div>'+
-      '<div class="preview"><div class="ph-h">Live preview</div><div class="ph-s" dir="'+(rtl?"rtl":"ltr")+'">'+esc(interp(L.subject))+'</div><div class="ph-b" dir="'+(rtl?"rtl":"ltr")+'" id="m-prev"></div></div>';
-    var bodyPrev=interp(L.body), pv=document.getElementById("m-prev");
-    if(/</.test(bodyPrev)){pv.innerHTML=bodyPrev;}else{pv.innerHTML=esc(bodyPrev).replace(/\n/g,"<br>");}
+      '<div class="medit-wrap">'+
+        '<div class="medit-left">'+
+          "<h2>"+esc(m.label)+'</h2><div class="to">Goes to: '+esc(m.to)+"</div>"+
+          "<div style='margin-bottom:10px'>"+phs+"</div>"+
+          '<div class="msgtabs"><button data-l="he" class="'+(rtl?"on":"")+'">Hebrew</button><button data-l="en" class="'+(rtl?"":"on")+'">English</button></div>'+
+          '<div class="lbl">Subject</div><input id="m-sub" value="'+esc(L.subject)+'" dir="'+dir+'" oninput="updatePreview()">'+
+          '<div class="lbl">Body</div><textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+"</textarea>"+
+          '<div class="msgbtns"><button class="save" id="m-save">Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved"></span></div>'+
+        '</div>'+
+        '<div class="medit-right">'+
+          '<div class="preview">'+
+            '<div class="ph-h">Live preview</div>'+
+            '<div class="ph-s" dir="'+dir+'" id="m-prev-s">'+esc(interp(L.subject))+'</div>'+
+            '<div class="ph-b" dir="'+dir+'" id="m-prev-b"></div>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    var bv=interp(L.body), pb=document.getElementById("m-prev-b");
+    if(/</.test(bv)){pb.innerHTML=bv;}else{pb.innerHTML=esc(bv).replace(/\n/g,"<br>");}
     Array.prototype.forEach.call(document.querySelectorAll(".msgtabs button"),function(b){b.onclick=function(){curLang=b.getAttribute("data-l");renderEditor();};});
     document.getElementById("m-save").onclick=function(){
       var sub=document.getElementById("m-sub").value, body=document.getElementById("m-body").value, sv=document.getElementById("m-saved");
@@ -523,7 +552,7 @@
 </script>
 <div id="login-screen">
   <div class="lc">
-    <div class="lmark">Legacy Value Partners</div>
+    <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
     <div class="lsub">Operator Console</div>
     <div id="login-gsi-wrap"></div>
   </div>
