@@ -1906,15 +1906,18 @@ input:focus {
   function apiFetch(qs){
     var auth=ID_TOKEN?('&idToken='+encodeURIComponent(ID_TOKEN)):(OP_FALLBACK?('&op='+encodeURIComponent(OP_FALLBACK)):'');
     return fetch(GW+qs+auth).then(function(r){return r.json();}).then(function(d){
-      if(d&&d.ok===false&&d.error==='unauthorized'){clearAuth();throw new Error('unauthorized');}
+      if(d&&d.ok===false&&d.error==='unauthorized'){clearAuth(d.reason);throw new Error('unauthorized');}
       return d;
     });
   }
-  function clearAuth(){
+  function clearAuth(reason){
     ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
-    document.getElementById('auth-status').textContent='🔒 not signed in';
+    var statusEl=document.getElementById('auth-status');
+    if(statusEl)statusEl.textContent='🔒 '+(reason?'auth failed: '+reason:'not signed in');
     document.getElementById('sign-out-btn').style.display='none';
     document.getElementById('login-screen').classList.remove('off');
+    var dbg=document.getElementById('login-debug');
+    if(dbg&&reason)dbg.textContent='reason: '+reason;
   }
   function startGoogleSignIn(){
     var nonce=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
@@ -2375,6 +2378,7 @@ input:focus {
       </svg>
       <span>כניסה באמצעות Google</span>
     </button>
+    <div id="login-debug" style="margin-top:10px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
 </div>
 <script>initAuth();</script>
