@@ -334,12 +334,26 @@
       padding: 10px 0 8px; font-weight: 700; font-size: 15px;
       color: var(--lvp-navy); border-bottom: 1px solid #dce3eb; margin-bottom: 14px;
     }
+    /* The doc body holds an English subscription document even when the chrome is
+       Hebrew RTL, so force LTR + left align (otherwise it inherits the card's
+       dir="rtl"/text-align:right and the text is pushed off the right edge, leaving
+       only clipped word-fragments). buildDocBody_() has already stripped the Google
+       export's print-page geometry, so here we only set readable defaults and a
+       belt-and-braces cap so nothing can exceed the container width. */
     .lvp-doc-preview__doc-body {
       padding: 0; font-size: 13px; line-height: 1.6; background: #fff;
-      direction: ltr; text-align: left; unicode-bidi: isolate; overflow-wrap: break-word;
+      direction: ltr; text-align: left; unicode-bidi: isolate;
+      overflow-wrap: break-word; overflow-x: auto;
     }
-    .lvp-doc-preview__doc-body * { direction: ltr; }
+    .lvp-doc-preview__doc-body * { direction: ltr; max-width: 100%; }
     .lvp-doc-preview__doc-body img { max-width: 100%; height: auto; }
+    .lvp-doc-preview__doc-body ol, .lvp-doc-preview__doc-body ul { padding-left: 24px; }
+    .lvp-doc-preview__doc-body table {
+      width: 100%; max-width: 100%; table-layout: auto; border-collapse: collapse;
+    }
+    .lvp-doc-preview__doc-body td, .lvp-doc-preview__doc-body th {
+      vertical-align: top; padding: 4px 6px; border: 1px solid #e6ebf1; overflow-wrap: break-word;
+    }
     .lvp-doc-preview__acro-note {
       padding: 14px 16px; color: var(--lvp-text-muted); font-size: 13px; font-style: italic;
     }
@@ -2043,6 +2057,39 @@
     var sigPadReady = false;
     var sigPadPng = null;
 
+    // The gateway returns each subscription document as the raw Google Docs HTML
+    // export (docs.google.com/.../export?format=html). That export carries its own
+    // <style> block plus inline pixel/point widths, margins and heights sized for a
+    // printed A4 page. Injected into the narrower review container those fixed
+    // dimensions overflow and the text collapses into an unreadable overlapping
+    // strip. We strip the export's print geometry so the prose reflows cleanly to
+    // the container width, then style it with our own .lvp-doc-preview__doc-body
+    // rules. The legal sealed PDF is built server-side from the same template, so
+    // changing the on-screen preview layout never touches what the LP signs.
+    function buildDocBody_(rawHtml) {
+      var body = document.createElement('div');
+      body.className = 'lvp-doc-preview__doc-body';
+      body.innerHTML = rawHtml;
+      // Drop the export's own document-level chrome.
+      var chrome = body.querySelectorAll('style, meta, link, title, base');
+      for (var i = 0; i < chrome.length; i++) chrome[i].parentNode.removeChild(chrome[i]);
+      // Strip inline geometry props that were sized for the print page. We keep
+      // text styling (bold/italic/underline/align) and only remove the layout
+      // dimensions that cause the overflow + overlap.
+      var geom = /(^|;)\s*(width|min-width|max-width|height|min-height|max-height|margin|margin-left|margin-right|margin-top|margin-bottom|padding-left|padding-right|position|top|left|right|bottom|float)\s*:[^;]*/gi;
+      var styled = body.querySelectorAll('[style]');
+      for (var j = 0; j < styled.length; j++) {
+        var s = styled[j].getAttribute('style') || '';
+        s = s.replace(geom, '').replace(/^;+|;+$/g, '').trim();
+        if (s) { styled[j].setAttribute('style', s); } else { styled[j].removeAttribute('style'); }
+      }
+      // Strip legacy width/height ATTRIBUTES on tables and cells (images keep theirs;
+      // the CSS caps them to the container anyway).
+      var sized = body.querySelectorAll('table[width], table[height], td[width], td[height], th[width], th[height], col[width], tr[height]');
+      for (var k = 0; k < sized.length; k++) { sized[k].removeAttribute('width'); sized[k].removeAttribute('height'); }
+      return body;
+    }
+
     function loadDocPreview() {
       var wrap = form.querySelector('[data-doc-preview]');
       var loading = form.querySelector('[data-doc-preview-loading]');
@@ -2076,9 +2123,8 @@
               '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>' +
               '<div class="lvp-doc-preview__acro-note">' + esc(doc.note || 'This tax form will be completed from your answers.') + '</div>';
           } else if (doc.html) {
-            el.innerHTML =
-              '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>' +
-              '<div class="lvp-doc-preview__doc-body">' + doc.html + '</div>';
+            el.innerHTML = '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>';
+            el.appendChild(buildDocBody_(doc.html));
           } else {
             el.innerHTML =
               '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>' +
