@@ -1523,18 +1523,29 @@
   function buildSubmission() {
     var qualType = val('qualificationType');
     var isQualified = (qualType === 'isLiquidAssets' || qualType === 'isIncomeLevel' || qualType === 'isBoth');
+    // P0-10: updateConditionals only toggles visibility, it never clears a value,
+    // so a field filled while visible then hidden (e.g. PEP description after the
+    // LP flips PEP to No) would otherwise ship stale into an AML/KYC payload. Gate
+    // every conditional value on its OWN gating condition here, the single point
+    // the payload is built. Gating mirrors the show() conditions in updateConditionals.
+    var birthCountryV = val('birthCountry');
+    var residencyCountryV = val('residencyCountry');
+    var isUSctz = val('citizenship') === 'ארצות הברית'
+      || (val('isAdditionalCitizenship') === 'true' && val('additionalCitizenship') === 'ארצות הברית');
+    var isIsraelResident = residencyCountryV === 'ישראל';
     var investor = {
       firstName: val('firstName'), lastName: val('lastName'), gender: val('gender'),
       idNumber: val('idNumber'), birthCountry: val('birthCountry'), birthDate: val('birthDate'),
       citizenship: val('citizenship'),
       isAdditionalCitizenship: val('isAdditionalCitizenship') === 'true',
       additionalCitizenship: val('isAdditionalCitizenship') === 'true' ? val('additionalCitizenship') : '',
-      aliyaDate: val('aliyaDate'), ssn: val('ssn'), occupation: val('occupation'),
+      aliyaDate: (birthCountryV && birthCountryV !== 'ישראל') ? val('aliyaDate') : '',
+      ssn: isUSctz ? val('ssn') : '', occupation: val('occupation'),
       residencyCountry: val('residencyCountry'), email: val('email'), phoneNumber: val('phoneNumber'),
-      israelAddress: {
+      israelAddress: isIsraelResident ? {
         city: val('city'), street: val('street'),
         houseNumber: val('houseNumber'), postalCode: val('postalCode')
-      },
+      } : { city: '', street: '', houseNumber: '', postalCode: '' },
       englishDetails: {
         firstName: val('enFirstName'), lastName: val('enLastName'),
         englishAddress: { city: val('enCity'), street: val('enStreet') }
@@ -1563,7 +1574,7 @@
       isForMyself: benefType === 'isForMyself',
       isUnknownBeneficies: benefType === 'isUnknownBeneficies',
       isBeneficiaries: benefType === 'isBeneficiaries',
-      reasonUnknown: val('reasonUnknown'),
+      reasonUnknown: benefType === 'isUnknownBeneficies' ? val('reasonUnknown') : '',
       beneficiariesDetails: {
         beneficiariesArray: benefType === 'isBeneficiaries' ? [{
           fullName: val('benFullName'),
@@ -1584,15 +1595,20 @@
         investedAmountArray: [{ investedAmount: String(amtRaw), investedCurrency: val('investedCurrency') }],
         investedAmount: String(amtRaw), investmentDate: val('investmentDate'),
         bankDetails: {
-          bankNameIsrael: val('bankNameIsrael'), branchNumberIsrael: val('branchNumberIsrael'),
-          bankName: val('bankName'), branchNumber: val('branchNumber'),
+          // Israel-bank pair shows only for Israeli residents; foreign-bank pair
+          // only for foreign residents. accountNumber is shared (always shown).
+          bankNameIsrael: isIsraelResident ? val('bankNameIsrael') : '',
+          branchNumberIsrael: isIsraelResident ? val('branchNumberIsrael') : '',
+          bankName: !isIsraelResident ? val('bankName') : '',
+          branchNumber: !isIsraelResident ? val('branchNumber') : '',
           accountNumber: val('accountNumber')
         },
-        moneySource: val('moneySource'), otherSource: val('otherSource'),
+        moneySource: val('moneySource'),
+        otherSource: val('moneySource') === 'אחר' ? val('otherSource') : '',
         publicOrPoliticalActivity: val('publicOrPoliticalActivity'),
-        publicOrPoliticalActivityDescription: val('pepDesc'),
+        publicOrPoliticalActivityDescription: val('publicOrPoliticalActivity') === 'כן' ? val('pepDesc') : '',
         legalOrAdministrativeProceedings: val('legalOrAdministrativeProceedings'),
-        legalOrAdministrativeProceedingsDescription: val('legalDesc')
+        legalOrAdministrativeProceedingsDescription: val('legalOrAdministrativeProceedings') === 'כן' ? val('legalDesc') : ''
       },
       beneficiaryStatement: beneficiaryStatement,
       taxDeclaration: { isNonBusinessIncome: document.getElementById('isNonBusinessIncome').checked },

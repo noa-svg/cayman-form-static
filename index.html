@@ -1996,11 +1996,19 @@
           if (!errors.some(function (e) { return e.holder === holder; })) errors.push({ holder: holder, label: holderLabel(holder) });
           setStatus(curLang === 'he' ? 'התאריך לא יכול להיות בעתיד.' : 'The date cannot be in the future.', true);
         } else {
-          var threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-          if (d < threeMonthsAgo) {
+          // P0-4: the pre-signed qualification form's own hint promises 12 months,
+          // but the shared validator floored every documentDate at 3 months, so a
+          // valid 4-to-12-month-old qualification form was falsely rejected. Use a
+          // 12-month window for that one field; proof-of-address dates stay at 3.
+          var monthsBack = (inp.name === 'qualification.preSignedUpload.documentDate') ? 12 : 3;
+          var windowStart = new Date(now); windowStart.setMonth(windowStart.getMonth() - monthsBack);
+          if (d < windowStart) {
             ok = false; holder.classList.add('lvp-field--value-error'); if (!firstError) firstError = holder;
             if (!errors.some(function (e) { return e.holder === holder; })) errors.push({ holder: holder, label: holderLabel(holder) });
-            setStatus(curLang === 'he' ? 'המסמך צריך להיות בתוקף מ-3 החודשים האחרונים.' : 'The document must be dated within the last 3 months.', true);
+            var lateMsg = (monthsBack === 12)
+              ? (curLang === 'he' ? 'הטופס החתום צריך להיות מ-12 החודשים האחרונים.' : 'The signed form must be dated within the last 12 months.')
+              : (curLang === 'he' ? 'המסמך צריך להיות בתוקף מ-3 החודשים האחרונים.' : 'The document must be dated within the last 3 months.');
+            setStatus(lateMsg, true);
           }
         }
       });
@@ -2666,6 +2674,20 @@
     // AFTER ensureMinRows + populateCountries so repeating rows and select options exist.
     function restoreFormData(prefill) {
       if (!prefill || typeof prefill !== 'object') return;
+      // P0-3: rebuild repeating rows to the saved array lengths FIRST, so every
+      // saved row (2nd+ beneficiary / controlling person / tax jurisdiction /
+      // substantial US owner / additional email) has a DOM target to restore
+      // into. ensureMinRows only builds to data-repeating-min, so without this
+      // resume silently dropped every row past the minimum, permanently after
+      // the next save. Math.min clamps to the cap so we never trip the at-cap toast.
+      form.querySelectorAll('[data-repeating-typed-path]').forEach(function (host) {
+        var rpath = host.getAttribute('data-repeating-typed-path');
+        var arr = getPath(prefill, rpath);
+        if (!Array.isArray(arr)) return;
+        var rmax = parseInt(host.getAttribute('data-repeating-max'), 10);
+        var target = isNaN(rmax) ? arr.length : Math.min(arr.length, rmax);
+        while (host.querySelectorAll('[data-row-index]').length < target) addRow(rpath);
+      });
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
         if (inp.type === 'file' || inp.hasAttribute('data-upload')) return;
         // Qualification single-select radio: the "none" radio keys off
