@@ -2145,7 +2145,11 @@
         chip.addEventListener('click', function () {
           var target = document.getElementById(it.id);
           if (target && target.scrollIntoView) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Instant jump, not smooth: Chrome silently drops smooth scrollIntoView
+            // over very long distances (this page is ~29k px), and a multi-second
+            // smooth animation over that span would disorient anyway. Instant
+            // respects the scroll-margin-top set for the sticky bar.
+            target.scrollIntoView({ block: 'start' });
           }
         });
         nav.appendChild(chip);
