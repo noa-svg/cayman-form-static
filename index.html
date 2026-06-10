@@ -1135,7 +1135,7 @@
           <h2 class="lvp-page__title">Review and sign</h2>
 
           <div data-doc-preview class="lvp-doc-preview" hidden>
-            <div data-doc-preview-loading class="lvp-doc-preview__loading">
+            <div data-doc-preview-loading class="lvp-doc-preview__loading" role="status">
               <div class="lvp-result__spinner" aria-hidden="true"></div>
               <p>Preparing your documents for review...</p>
             </div>
@@ -1367,7 +1367,7 @@
         '.lvp-fieldset__legend, .lvp-page__hint, .lvp-hint-small, .lvp-note, ' +
         '.lvp-repeating-row__title, span[data-upload-label], .lvp-upload__doc-title, ' +
         '.lvp-id-group__title, .lvp-upload__slot-badge, .lvp-upload__slot-sub, ' +
-        '.lvp-or-separator';
+        '.lvp-or-separator, .lvp-doc-preview__loading p, .lvp-sig-section__title, .lvp-consent-check span';
       root.querySelectorAll(blockSel).forEach(function (el) { swapTextContent(el, lang); });
       root.querySelectorAll('option').forEach(function (op) { swapTextContent(op, lang); });
       root.querySelectorAll('label.lvp-radio, label.lvp-checkbox').forEach(function (lbl) { swapTrailingTextNode(lbl, lang); });
@@ -2164,22 +2164,36 @@
       var sigSection = form.querySelector('[data-sig-section]');
       if (!wrap) return;
       wrap.hidden = false;
+
+      if (previewLoaded) {
+        // Already rendered on a prior visit. The docs are still in the DOM
+        // (pages hide, they do not unmount), so do NOT clear docsHost here:
+        // the old clear-then-return wiped the pack on Back-and-return, leaving
+        // a blank review with no signature section and no way to submit.
+        loading.hidden = true;
+        if (sigSection) { sigSection.hidden = false; }
+        submitBtn.hidden = false;
+        return;
+      }
+
       loading.hidden = false;
       docsHost.innerHTML = '';
       if (sigSection) sigSection.hidden = true;
-
-      if (previewLoaded) {
-        // Already loaded from a prior visit to the review page. Show cached.
-        loading.hidden = true;
-        return;
-      }
+      // While the pack is loading there is nothing to sign or submit yet: hide
+      // the submit button in lockstep with the signature section so the LP is
+      // not invited to act on documents that have not rendered.
+      submitBtn.hidden = true;
 
       var snapshot = collectAll();
       gateway('render_preview', { submission: snapshot }).then(function (res) {
         loading.hidden = true;
         previewLoaded = true;
         if (!res.docs || !res.docs.length) {
-          docsHost.innerHTML = '<p style="color:var(--lvp-text-muted);font-size:14px;">No documents to preview.</p>';
+          docsHost.innerHTML = '<p style="color:var(--lvp-text-muted);font-size:14px;">' + esc(displayFor('No documents to preview.', curLang)) + '</p>';
+          // Never strand the LP: even with no preview docs, reveal the signature
+          // section + submit (the sealed PDF is built server-side either way).
+          if (sigSection) { sigSection.hidden = false; if (!sigPadReady) initSigPad(); }
+          submitBtn.hidden = false;
           return;
         }
         var jumpItems = [];
@@ -2206,11 +2220,12 @@
         // Build the sticky schedule jump-nav from the actual rendered docs (never a
         // hardcoded list, so it can't drift). Each chip scrolls to its document.
         buildJumpNav_(jumpItems);
-        // Show signature section after docs load.
+        // Show signature section + submit button after docs load.
         if (sigSection) {
           sigSection.hidden = false;
           if (!sigPadReady) initSigPad();
         }
+        submitBtn.hidden = false;
       }).catch(function (err) {
         loading.hidden = true;
         docsHost.innerHTML = '<p style="color:var(--lvp-error);font-size:14px;">' +
@@ -2223,6 +2238,7 @@
           sigSection.hidden = false;
           if (!sigPadReady) initSigPad();
         }
+        submitBtn.hidden = false;
       });
     }
 
