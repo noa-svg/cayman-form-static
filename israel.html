@@ -1190,9 +1190,12 @@
     var el = document.querySelector('[name="' + name + '"]:checked');
     if (el) return el.value;
     el = document.querySelector('[name="' + name + '"]');
-    if (el && el.tagName !== 'INPUT') return el.value;
-    if (el) return el.value;
-    return '';
+    if (!el) return '';
+    // Radio group with nothing checked: return '' (NOT the first radio's
+    // value). The old fallthrough made every radio-required check inert and
+    // let conditionals/buildSubmission read a never-selected value.
+    if (el.tagName === 'INPUT' && el.type === 'radio') return '';
+    return el.value;
   }
 
   /* A11y wiring (ported from signer.html:475 / index.html initAria):

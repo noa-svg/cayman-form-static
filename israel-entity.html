@@ -829,9 +829,12 @@ function vc(name){
   var el = document.querySelector('[name="'+name+'"]:checked');
   if(el) return el.value;
   el = document.querySelector('[name="'+name+'"]');
-  if(el && el.tagName !== 'INPUT') return el.value;
-  if(el) return el.value;
-  return '';
+  if(!el) return '';
+  /* Radio group with nothing checked: return '' (NOT the first radio's
+     value). The old fallthrough made every radio-required check inert and
+     let conditionals/buildSubmission read a never-selected value. */
+  if(el.tagName === 'INPUT' && el.type === 'radio') return '';
+  return el.value;
 }
 function gid(id){ return document.getElementById(id); }
 function showEl(id, v){ var e = gid(id); if(e) e.classList.toggle('show', !!v); }
