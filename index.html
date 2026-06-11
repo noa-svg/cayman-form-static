@@ -346,14 +346,18 @@
       padding: 0 14px 14px;
     }
     .lvp-doc-preview__docs:empty { display: none; border: 0; min-height: 0; }
-    .lvp-doc-preview__doc { margin-top: 28px; }
-    .lvp-doc-preview__doc:first-child { margin-top: 0; }
+    /* With the per-doc letterhead stripped, each document is its own quiet
+       section. Generous space between sections (not a heavy rule) does the
+       separating; the title is the anchor. Ive/Friedman: let whitespace and a
+       calm label carry the structure, no decoration. */
+    .lvp-doc-preview__doc { margin-top: 44px; padding-top: 36px; border-top: 1px solid #e8edf2; }
+    .lvp-doc-preview__doc:first-child { margin-top: 6px; padding-top: 0; border-top: 0; }
     /* The document is English LTR; align its heading left to match the body even
        when the surrounding card is dir="rtl" (otherwise the title sits right). */
     .lvp-doc-preview__doc-title {
-      padding: 10px 0 8px; font-weight: 700; font-size: 15px;
-      color: var(--lvp-navy); border-bottom: 1px solid #dce3eb; margin-bottom: 14px;
-      direction: ltr; text-align: left;
+      padding: 0 0 14px; font-weight: 600; font-size: 13px; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--lvp-text-muted); margin-bottom: 18px;
+      border-bottom: 1px solid #eef2f6; direction: ltr; text-align: left;
     }
     /* The doc body holds an English subscription document even when the chrome is
        Hebrew RTL, so force LTR + left align (otherwise it inherits the card's
@@ -2185,6 +2189,41 @@
       // the CSS caps them to the container anyway).
       var sized = body.querySelectorAll('table[width], table[height], td[width], td[height], th[width], th[height], col[width], tr[height]');
       for (var k = 0; k < sized.length; k++) { sized[k].removeAttribute('width'); sized[k].removeAttribute('height'); }
+
+      // Drop the print letterhead from the PREVIEW (Noa 2026-06-11, Ive/Friedman
+      // pass): every schedule's GDoc export opens with a full-page firm logo +
+      // address band (~1,100px of mostly whitespace) and closes with a footer
+      // contact strip. That letterhead is right on the sealed PDF but on screen,
+      // in a single scroll of 9 documents, nine repeated letterheads bury the
+      // text the LP is here to read. The review should read as CONTENT: each doc
+      // is its own titled section already, so the per-doc letterhead is pure
+      // chrome here. Sealed PDF is built server-side from the untouched template.
+      // Leading letterhead = image-only block(s) before the first real text.
+      function isChromeBand_(el) {
+        if (!el || el.nodeType !== 1) return false;
+        var hasImg = el.querySelector && el.querySelector('img');
+        var txt = (el.textContent || '').replace(/\s+/g, '');
+        return !!hasImg && txt.length === 0;
+      }
+      while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
+        body.removeChild(body.firstElementChild);
+      }
+      // Footer contact strip: the centered line carrying the firm URL / email /
+      // phone (+ its Hebrew GP line). Match on those tokens and keep the cut to a
+      // short line so a real clause that merely mentions the domain is never hit.
+      var FOOT_RE = /legacyvpartners\.com|info@legacy|\+972[\s-]*505[\s-]*880013/i;
+      [].slice.call(body.querySelectorAll('p, div, td')).forEach(function (el) {
+        if (!el.parentNode) return;
+        var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t && t.length < 170 && FOOT_RE.test(t) && !el.querySelector('input, [name]')) {
+          el.parentNode.removeChild(el);
+        }
+      });
+      // Collapse any now-empty leading wrappers the strips left behind, so the
+      // first line of real prose sits at the top of the section.
+      while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
+        body.removeChild(body.firstElementChild);
+      }
       return body;
     }
 
