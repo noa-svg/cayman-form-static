@@ -687,13 +687,32 @@
       var consentBox = document.getElementById('consent');
       var errEl = document.getElementById('err');
       var ctx2 = canvas.getContext('2d');
-      var ratio = window.devicePixelRatio || 1;
       function size() {
+        // Read devicePixelRatio each call (it changes on a rotate or a move
+        // between displays) and reset the transform to identity BEFORE scaling,
+        // so re-running size() never compounds the ctx scale.
+        var ratio = window.devicePixelRatio || 1;
         var r = canvas.getBoundingClientRect();
         canvas.width = r.width * ratio; canvas.height = r.height * ratio;
+        ctx2.setTransform(1, 0, 0, 1, 0, 0);
         ctx2.scale(ratio, ratio); ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
       }
       size();
+      // Re-fit the pad when the mobile signer rotates the phone (Friedman P1):
+      // the pad had no resize handler, so after a rotate the bitmap stayed sized
+      // to the old orientation and strokes landed off the fingertip. Re-fit only
+      // when the display WIDTH actually changes, so the on-screen keyboard opening
+      // (height-only change) never wipes a half-drawn signature. Assigning
+      // canvas.width clears it, so a rotate does reset the stroke, which is the
+      // right call over a smeared remap.
+      var _sigW = canvas.getBoundingClientRect().width, _sigT = null;
+      function refitSig() {
+        var w = canvas.getBoundingClientRect().width;
+        if (Math.abs(w - _sigW) < 2) return;
+        _sigW = w; size(); dirty = false; points = 0; updateBtn();
+      }
+      window.addEventListener('orientationchange', function () { clearTimeout(_sigT); _sigT = setTimeout(refitSig, 200); });
+      window.addEventListener('resize', function () { clearTimeout(_sigT); _sigT = setTimeout(refitSig, 200); });
       var drawing = false, dirty = false, last = { x:0, y:0 }, points = 0;
       var MIN_POINTS = 8;
       function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
