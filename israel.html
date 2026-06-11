@@ -57,15 +57,9 @@
       background: #ffffff;
       min-height: 100vh;
     }
-    body::before {
-      content: "";
-      position: fixed; inset: 0;
-      background: url('https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/background.png') no-repeat center center;
-      background-size: 100% 100%;
-      opacity: 0.5;
-      z-index: -1;
-      pointer-events: none;
-    }
+    /* Skyline removed 2026-06-11 (Ive/Friedman, Noa: across every form): the
+       photographic backdrop lowered contrast on text the LP must read carefully
+       and added presence where there should be calm. The body is clean white. */
 
     /* Greeting page (page-0) */
     #page-greeting {
@@ -1086,11 +1080,7 @@
             document.getElementById('logo-greeting').src = c.brandLogoUrl;
             document.getElementById('logo-shell').src = c.brandLogoUrl;
           }
-          if (c.brandBgUrl) {
-            var s = document.createElement('style');
-            s.textContent = 'body::before{background-image:url("' + c.brandBgUrl + '")}';
-            document.head.appendChild(s);
-          }
+          // Skyline backdrop intentionally not injected (removed 2026-06-11).
           if (c.prefill) applyPrefill(c.prefill);
         }
       }
