@@ -875,7 +875,12 @@
           var res = {};
           try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
           if (res && res.ok) {
-            document.getElementById('done-msg').textContent = res.completed
+            // The source=lp gateway envelope is { ok, stage, nextUrl, detail };
+            // it never carries `completed`. The FINAL signer's response is
+            // stage 'all_signed' (incl. the deferred-seal path); a mid-roster
+            // signer gets stage 'signing'. Key the done message off the stage
+            // so the last signer sees the completion wording, not "next signer".
+            document.getElementById('done-msg').textContent = (res.stage === 'all_signed')
               ? tHe('All signatures are in. We will assemble the documents and email a confirmation.')
               : tHe('Your signature has been recorded. We will notify the next signer.');
             show('done');

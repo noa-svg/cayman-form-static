@@ -65,6 +65,11 @@
       font-size:16px;font-family:inherit;color:var(--navy-b);background:transparent;
       outline:none;transition:border-color .15s;direction:rtl;text-align:right}
     .f input:focus,.f select:focus,.f textarea:focus{border-bottom-color:var(--act)}
+    /* Bidi: data inputs (email/phone/ID/date/amount/bank) carry dir="ltr" so
+       digits and separators keep logical order inside the RTL page. The
+       direction:rtl in the base input rule above outranks the dir attribute's
+       UA style, so re-assert it here. */
+    .f input[dir="ltr"],.f textarea[dir="ltr"]{direction:ltr}
     .f select{appearance:none;cursor:pointer}
     .f textarea{resize:vertical;min-height:72px;padding-top:16px}
     .fe{font-size:13px;color:var(--err);margin-top:4px;display:none}
@@ -113,6 +118,16 @@
       animation:spin 700ms linear infinite;vertical-align:middle;margin-left:6px}
     @keyframes spin{to{transform:rotate(360deg)}}
     @media(max-width:520px){.card{padding:24px 18px}}
+    /* Vestibular safety (WCAG 2.3.3): quiet the progress bar, floating labels,
+       and the saving spinner under OS reduced-motion. Ported from index.html. */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.001ms !important;
+        animation-iteration-count:1 !important;
+        transition-duration:.001ms !important;
+        scroll-behavior:auto !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -148,12 +163,12 @@
             <div class="fe">נא לבחור סוג תאגיד</div>
           </div>
           <div class="f" id="f-companyNumber">
-            <input type="text" id="companyNumber" inputmode="numeric" maxlength="9">
+            <input type="text" id="companyNumber" inputmode="numeric" maxlength="9" dir="ltr">
             <label for="companyNumber">מספר חברה (ח.פ.) - 9 ספרות</label>
             <div class="fe">נא להזין מספר חברה תקין (9 ספרות)</div>
           </div>
           <div class="f" id="f-incDate">
-            <input type="text" id="incDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <input type="text" id="incDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
             <label for="incDate">תאריך התאגדות (dd/mm/yyyy)</label>
             <div class="fe">נא להזין תאריך התאגדות תקין (בעבר)</div>
           </div>
@@ -175,12 +190,12 @@
         <div class="sec">
           <div class="st">פרטי קשר ומגורים</div>
           <div class="f" id="f-corpEmail">
-            <input type="email" id="corpEmail" autocomplete="email">
+            <input type="email" id="corpEmail" autocomplete="email" dir="ltr">
             <label for="corpEmail">כתובת דוא"ל של החברה</label>
             <div class="fe">נא להזין כתובת דוא"ל תקינה</div>
           </div>
           <div class="f" id="f-corpPhone">
-            <input type="tel" id="corpPhone" placeholder="05X-XXXXXXX" maxlength="12">
+            <input type="tel" id="corpPhone" placeholder="05X-XXXXXXX" maxlength="12" dir="ltr">
             <label for="corpPhone">טלפון נייד</label>
             <div class="fe">נא להזין מספר טלפון ישראלי תקין</div>
           </div>
@@ -195,7 +210,7 @@
           <div class="f" id="f-corpCity"><input type="text" id="corpCity"><label for="corpCity">עיר</label><div class="fe">נא להזין עיר</div></div>
           <div class="f" id="f-corpStreet"><input type="text" id="corpStreet"><label for="corpStreet">רחוב</label><div class="fe">נא להזין רחוב</div></div>
           <div class="f" id="f-corpHouseNum"><input type="text" id="corpHouseNum" maxlength="10"><label for="corpHouseNum">מספר בית</label><div class="fe">נא להזין מספר בית</div></div>
-          <div class="f" id="f-corpPostal"><input type="text" id="corpPostal" inputmode="numeric" maxlength="7"><label for="corpPostal">מיקוד (אופציונלי)</label></div>
+          <div class="f" id="f-corpPostal"><input type="text" id="corpPostal" inputmode="numeric" maxlength="7" dir="ltr"><label for="corpPostal">מיקוד (אופציונלי)</label></div>
         </div>
         <div class="sec">
           <div class="st">פרטים באנגלית</div>
@@ -270,8 +285,8 @@
           <div class="st">מורשה חתימה ראשון</div>
           <div class="f" id="f-a1fn"><input type="text" id="a1fn"><label for="a1fn">שם פרטי (עברית)</label><div class="fe">נא להזין שם פרטי (2-20 תווים, עברית)</div></div>
           <div class="f" id="f-a1ln"><input type="text" id="a1ln"><label for="a1ln">שם משפחה (עברית)</label><div class="fe">נא להזין שם משפחה (2-20 תווים, עברית)</div></div>
-          <div class="f" id="f-a1id"><input type="text" id="a1id" inputmode="numeric" maxlength="9"><label for="a1id">מספר תעודת זהות</label><div class="fe">נא להזין מספר תעודת זהות ישראלי תקין</div></div>
-          <div class="f" id="f-a1email"><input type="email" id="a1email"><label for="a1email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
+          <div class="f" id="f-a1id"><input type="text" id="a1id" inputmode="numeric" maxlength="9" dir="ltr"><label for="a1id">מספר תעודת זהות</label><div class="fe">נא להזין מספר תעודת זהות ישראלי תקין</div></div>
+          <div class="f" id="f-a1email"><input type="email" id="a1email" dir="ltr"><label for="a1email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
           <div class="f" id="f-a1enFn"><input type="text" id="a1enFn" dir="ltr" style="text-align:left"><label for="a1enFn" style="right:auto;left:0;transform-origin:left top">First name (English)</label><div class="fe">נא להזין שם פרטי באנגלית</div></div>
           <div class="f" id="f-a1enLn"><input type="text" id="a1enLn" dir="ltr" style="text-align:left"><label for="a1enLn" style="right:auto;left:0;transform-origin:left top">Last name (English)</label><div class="fe">נא להזין שם משפחה באנגלית</div></div>
           <div class="cg">
@@ -293,8 +308,8 @@
           <div class="cond" id="cond-a2">
             <div class="f" id="f-a2fn"><input type="text" id="a2fn"><label for="a2fn">שם פרטי (עברית)</label><div class="fe">נא להזין שם פרטי</div></div>
             <div class="f" id="f-a2ln"><input type="text" id="a2ln"><label for="a2ln">שם משפחה (עברית)</label><div class="fe">נא להזין שם משפחה</div></div>
-            <div class="f" id="f-a2id"><input type="text" id="a2id" inputmode="numeric" maxlength="9"><label for="a2id">מספר תעודת זהות</label><div class="fe">נא להזין ת.ז. תקין</div></div>
-            <div class="f" id="f-a2email"><input type="email" id="a2email"><label for="a2email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
+            <div class="f" id="f-a2id"><input type="text" id="a2id" inputmode="numeric" maxlength="9" dir="ltr"><label for="a2id">מספר תעודת זהות</label><div class="fe">נא להזין ת.ז. תקין</div></div>
+            <div class="f" id="f-a2email"><input type="email" id="a2email" dir="ltr"><label for="a2email">כתובת דוא"ל</label><div class="fe">נא להזין דוא"ל תקין</div></div>
             <div class="f" id="f-a2enFn"><input type="text" id="a2enFn" dir="ltr" style="text-align:left"><label for="a2enFn" style="right:auto;left:0;transform-origin:left top">First name (English)</label><div class="fe">נא להזין שם פרטי באנגלית</div></div>
             <div class="f" id="f-a2enLn"><input type="text" id="a2enLn" dir="ltr" style="text-align:left"><label for="a2enLn" style="right:auto;left:0;transform-origin:left top">Last name (English)</label><div class="fe">נא להזין שם משפחה באנגלית</div></div>
             <div class="cg">
@@ -377,7 +392,7 @@
       <div id="p6" data-p="6" hidden>
         <div class="sec">
           <div class="st">פרטי השקעה</div>
-          <div class="f" id="f-invAmt"><input type="text" id="invAmt" inputmode="numeric" placeholder="מעל 50,000"><label for="invAmt">סכום השקעה (מעל 50,000)</label><div class="fe">סכום ההשקעה חייב לעלות על 50,000</div></div>
+          <div class="f" id="f-invAmt"><input type="text" id="invAmt" inputmode="numeric" placeholder="מעל 50,000" dir="ltr"><label for="invAmt">סכום השקעה (מעל 50,000)</label><div class="fe">סכום ההשקעה חייב לעלות על 50,000</div></div>
           <div class="rg" id="rg-invCur">
             <div class="gl">מטבע *</div>
             <div class="ro h">
@@ -387,7 +402,7 @@
             </div>
             <div class="ge" id="err-invCur">נא לבחור מטבע</div>
           </div>
-          <div class="f" id="f-invDate"><input type="text" id="invDate" placeholder="dd/mm/yyyy" maxlength="10"><label for="invDate">תאריך השקעה</label><div class="fe">נא להזין תאריך עתידי תקין</div></div>
+          <div class="f" id="f-invDate"><input type="text" id="invDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr"><label for="invDate">תאריך השקעה</label><div class="fe">נא להזין תאריך עתידי תקין</div></div>
         </div>
         <div class="sec">
           <div class="st">פרטי חשבון בנק</div>
@@ -408,13 +423,13 @@
               <label for="bankILName">שם בנק</label>
               <div class="fe">נא לבחור בנק</div>
             </div>
-            <div class="f" id="f-bankILBranch"><input type="text" id="bankILBranch" inputmode="numeric" maxlength="6"><label for="bankILBranch">מספר סניף</label><div class="fe">נא להזין מספר סניף</div></div>
+            <div class="f" id="f-bankILBranch"><input type="text" id="bankILBranch" inputmode="numeric" maxlength="6" dir="ltr"><label for="bankILBranch">מספר סניף</label><div class="fe">נא להזין מספר סניף</div></div>
           </div>
           <div class="cond" id="cond-bankForeign">
             <div class="f" id="f-bankFName"><input type="text" id="bankFName" dir="ltr" style="text-align:left"><label for="bankFName" style="right:auto;left:0;transform-origin:left top">Bank name</label><div class="fe">נא להזין שם בנק</div></div>
             <div class="f" id="f-bankFBranch"><input type="text" id="bankFBranch" dir="ltr" style="text-align:left"><label for="bankFBranch" style="right:auto;left:0;transform-origin:left top">Branch / Sort code</label><div class="fe">נא להזין מספר סניף</div></div>
           </div>
-          <div class="f" id="f-bankAcct"><input type="text" id="bankAcct" inputmode="numeric" maxlength="15"><label for="bankAcct">מספר חשבון</label><div class="fe">נא להזין מספר חשבון (ספרות בלבד)</div></div>
+          <div class="f" id="f-bankAcct"><input type="text" id="bankAcct" inputmode="numeric" maxlength="15" dir="ltr"><label for="bankAcct">מספר חשבון</label><div class="fe">נא להזין מספר חשבון (ספרות בלבד)</div></div>
         </div>
       </div><!-- /p6 -->
 
@@ -480,11 +495,11 @@
           </div>
           <div class="cond" id="cond-taxILOther">
             <div class="f" id="f-taxOC1"><select id="taxOC1"><option value=""></option></select><label for="taxOC1">מדינה נוספת</label><div class="fe">נא לבחור מדינה</div></div>
-            <div class="f" id="f-taxOT1"><input type="text" id="taxOT1" inputmode="numeric"><label for="taxOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
+            <div class="f" id="f-taxOT1"><input type="text" id="taxOT1" inputmode="numeric" dir="ltr"><label for="taxOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
           </div>
           <div class="cond" id="cond-taxOther">
             <div class="f" id="f-taxOOC1"><select id="taxOOC1"><option value=""></option></select><label for="taxOOC1">מדינת תושבות</label><div class="fe">נא לבחור מדינה</div></div>
-            <div class="f" id="f-taxOOT1"><input type="text" id="taxOOT1" inputmode="numeric"><label for="taxOOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
+            <div class="f" id="f-taxOOT1"><input type="text" id="taxOOT1" inputmode="numeric" dir="ltr"><label for="taxOOT1">מספר זיהוי לצרכי מס (TIN)</label><div class="fe">נא להזין TIN (ספרות בלבד)</div></div>
           </div>
         </div>
 
@@ -610,7 +625,7 @@
       <button class="btn bp" id="btn-next">המשך</button>
       <button class="btn bp" id="btn-submit" hidden>הגשה ומעבר לחתימה</button>
     </div>
-    <div class="sl" id="sl"></div>
+    <div class="sl" id="sl" role="alert"></div>
   </div>
 </div>
 
@@ -679,12 +694,12 @@ function buildCpFields(n){
     radioG(p+'gender', 'מגדר *', [['זכר','זכר'],['נקבה','נקבה']]) +
     fld(p+'id', 'מספר תעודת זהות', 'text', 'numeric', '9') +
     selFld(p+'birthCtry', 'ארץ לידה') +
-    fld(p+'birthDate', 'תאריך לידה (dd/mm/yyyy)', 'text', '', '10') +
+    fld(p+'birthDate', 'תאריך לידה (dd/mm/yyyy)', 'text', '', '10', 'data') +
     selFld(p+'citizenship', 'אזרחות') +
     radioG(p+'addCitz', 'אזרחות נוספת?', [['true','כן'],['false','לא']]) +
     '<div class="cond" id="cond-'+p+'addCitz"><div class="f" id="f-'+p+'addCitzVal"><select id="'+p+'addCitzVal">'+cOpts()+'</select><label for="'+p+'addCitzVal">אזרחות נוספת</label><div class="fe">נא לבחור</div></div></div>' +
-    '<div class="cond" id="cond-'+p+'aliya"><div class="f" id="f-'+p+'aliya"><input type="text" id="'+p+'aliya" maxlength="10" placeholder="dd/mm/yyyy"><label for="'+p+'aliya">תאריך עלייה</label><div class="fe">נא להזין תאריך תקין</div></div></div>' +
-    '<div class="cond" id="cond-'+p+'ssn"><div class="f" id="f-'+p+'ssn"><input type="text" id="'+p+'ssn" maxlength="11" placeholder="XXX-XX-XXXX"><label for="'+p+'ssn">SSN (אזרחים אמריקאיים)</label><div class="fe">נא להזין SSN תקני</div></div></div>' +
+    '<div class="cond" id="cond-'+p+'aliya"><div class="f" id="f-'+p+'aliya"><input type="text" id="'+p+'aliya" maxlength="10" placeholder="dd/mm/yyyy" dir="ltr"><label for="'+p+'aliya">תאריך עלייה</label><div class="fe">נא להזין תאריך תקין</div></div></div>' +
+    '<div class="cond" id="cond-'+p+'ssn"><div class="f" id="f-'+p+'ssn"><input type="text" id="'+p+'ssn" maxlength="11" placeholder="XXX-XX-XXXX" dir="ltr"><label for="'+p+'ssn">SSN (אזרחים אמריקאיים)</label><div class="fe">נא להזין SSN תקני</div></div></div>' +
     fld(p+'occ', 'עיסוק', 'text', '', '20') +
     selFld(p+'res', 'ארץ מגורים') +
     fld(p+'email', 'דוא"ל', 'email') +
@@ -730,6 +745,9 @@ function buildCpFields(n){
     });
   });
 
+  /* a11y: wire the just-injected CP fields (aria-describedby + role=alert) */
+  wireA11y(c);
+
   /* wire file inputs for this CP */
   var cpIdx = n - 1;
   ['id','idFront','idBack','pass'].forEach(function(key){
@@ -756,9 +774,14 @@ function buildCpFields(n){
 function fld(id, lbl, type, im, ml, ltr){
   var imA = im ? ' inputmode="'+im+'"' : '';
   var mlA = ml ? ' maxlength="'+ml+'"' : '';
-  var dir = ltr ? ' dir="ltr" style="text-align:left"' : '';
-  var lblStyle = ltr ? ' style="right:auto;left:0;transform-origin:left top"' : '';
-  var err = ltr ? 'נא להזין' : 'שדה חובה';
+  /* ltr === true: English-labeled field (LTR + left-aligned, label flipped).
+     ltr === 'data' or email/tel/numeric/decimal: Hebrew-labeled DATA field;
+     dir="ltr" keeps digit/separator order logical in the RTL page (the
+     .f input[dir="ltr"] CSS rule re-asserts direction over the base rtl). */
+  var isData = (ltr === 'data' || type === 'email' || type === 'tel' || im === 'numeric' || im === 'decimal');
+  var dir = ltr === true ? ' dir="ltr" style="text-align:left"' : (isData ? ' dir="ltr"' : '');
+  var lblStyle = ltr === true ? ' style="right:auto;left:0;transform-origin:left top"' : '';
+  var err = ltr === true ? 'נא להזין' : 'שדה חובה';
   return '<div class="f" id="f-'+id+'"><input type="'+type+'" id="'+id+'"'+imA+mlA+dir+'><label for="'+id+'"'+lblStyle+'>'+lbl+'</label><div class="fe">'+err+'</div></div>';
 }
 function selFld(id, lbl){
@@ -878,9 +901,82 @@ function updateConds(){
   });
 }
 
+/* A11y wiring (ported from signer.html:475 / index.html initAria): tie each
+   control to its visible error message via aria-describedby so a screen
+   reader announces it on focus while invalid. aria-invalid flips in lockstep
+   with the visual .inv class (fe/ge/clearE below). Group/upload errors get
+   role="alert" so the announcement fires when they become visible. Scoped so
+   buildCpFields can wire the dynamically injected CP fields too. */
+var a11ySeq = 0;
+function wireA11y(scope){
+  (scope || document).querySelectorAll('.f').forEach(function(f){
+    var ctl = f.querySelector('input, select, textarea');
+    var msg = f.querySelector('.fe');
+    if(!ctl || !msg) return;
+    if(!msg.id) msg.id = 'fee-' + (ctl.id || (++a11ySeq));
+    var db = (ctl.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    if(db.indexOf(msg.id) === -1){ db.push(msg.id); ctl.setAttribute('aria-describedby', db.join(' ')); }
+  });
+  (scope || document).querySelectorAll('.ge, .uerr').forEach(function(e){
+    e.setAttribute('role', 'alert');
+  });
+}
+wireA11y(document);
+
 document.addEventListener('input', updateConds);
 document.addEventListener('change', updateConds);
 updateConds();
+
+/* Autosave (client-side draft). The Israeli lane gateway registers no
+   save_page route (LpGatewayRegistry: submit / record_signature / resume
+   only), so drafts persist in localStorage keyed by the operator link
+   identity (?item= Monday id). Files are NOT persisted (base64 too large);
+   they are re-uploaded after a reload and page-9 / per-CP validation prompts
+   for them. Cleared on successful submit. Restore runs in two passes so CP
+   fields injected by updateConds (after cpNum is restored) get values too. */
+var AUTOSAVE_KEY = 'lvp_il_ent_' + (mondayItemId || 'anon');
+var autosaveTimer = null;
+function collectDraft(){
+  var d = { __page: cur, v: {}, r: {}, c: {} };
+  document.querySelectorAll('input, select, textarea').forEach(function(el){
+    if(el.type === 'file') return;
+    if(el.type === 'radio'){ if(el.checked) d.r[el.name] = el.value; return; }
+    if(el.type === 'checkbox'){ if(el.id) d.c[el.id] = el.checked; return; }
+    if(el.id) d.v[el.id] = el.value;
+  });
+  return d;
+}
+function saveDraft(){
+  try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(collectDraft())); }catch(e){}
+}
+function scheduleDraftSave(){
+  if(autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(saveDraft, 600);
+}
+function clearDraft(){ try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){} }
+function applyDraft(d){
+  Object.keys(d.v || {}).forEach(function(id){ var e = gid(id); if(e) e.value = (d.v[id] == null ? '' : d.v[id]); });
+  Object.keys(d.c || {}).forEach(function(id){ var e = gid(id); if(e && e.type === 'checkbox') e.checked = !!d.c[id]; });
+  Object.keys(d.r || {}).forEach(function(nm){
+    var els = document.querySelectorAll('[name="' + nm + '"]');
+    Array.prototype.forEach.call(els, function(r){ r.checked = (r.value === d.r[nm]); });
+  });
+}
+/* Returns the saved page number (0 = no draft). */
+function restoreDraft(){
+  var raw = null;
+  try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(e){}
+  if(!raw) return 0;
+  var d; try{ d = JSON.parse(raw); }catch(e){ return 0; }
+  if(!d) return 0;
+  applyDraft(d);
+  updateConds();   /* builds CP boxes if cpNum was restored */
+  applyDraft(d);   /* second pass fills the just-injected CP fields */
+  updateConds();
+  return d.__page || 0;
+}
+document.addEventListener('input', scheduleDraftSave);
+document.addEventListener('change', scheduleDraftSave);
 document.addEventListener('blur', function(e){
   var field = e.target && e.target.closest && e.target.closest('.f');
   if(field) field.classList.toggle('hv', !!e.target.value);
@@ -943,12 +1039,32 @@ function ilId(v){ var s=String(v||'').replace(/\D/g,''); if(s.length!==9) return
 function clearE(pg){
   var e = gid('p'+pg);
   if(!e) return;
-  e.querySelectorAll('.f.inv').forEach(function(f){f.classList.remove('inv');});
-  e.querySelectorAll('.ge.vis').forEach(function(g){g.classList.remove('vis');});
+  e.querySelectorAll('.f.inv').forEach(function(f){
+    f.classList.remove('inv');
+    var c = f.querySelector('input, select, textarea');
+    if(c) c.removeAttribute('aria-invalid');
+  });
+  e.querySelectorAll('.ge.vis').forEach(function(g){
+    g.classList.remove('vis');
+    var grp = g.closest('.rg, .cg');
+    if(grp) grp.querySelectorAll('input').forEach(function(c){ c.removeAttribute('aria-invalid'); });
+  });
   e.querySelectorAll('.uerr.vis').forEach(function(u){u.classList.remove('vis');});
 }
-function fe(id){ var f=gid(id); if(f) f.classList.add('inv'); }
-function ge(id){ var e=gid(id); if(e) e.classList.add('vis'); }
+function fe(id){
+  var f=gid(id);
+  if(!f) return;
+  f.classList.add('inv');
+  var c = f.querySelector('input, select, textarea');
+  if(c) c.setAttribute('aria-invalid','true');
+}
+function ge(id){
+  var e=gid(id);
+  if(!e) return;
+  e.classList.add('vis');
+  var grp = e.closest('.rg, .cg');
+  if(grp) grp.querySelectorAll('input').forEach(function(c){ c.setAttribute('aria-invalid','true'); });
+}
 function ue(id){ var e=gid(id); if(e) e.classList.add('vis'); }
 
 function validatePage(n){
@@ -1123,9 +1239,11 @@ gid('btn-submit').addEventListener('click', function(){
   .then(function(r){ if(timer) clearTimeout(timer); return r.json(); })
   .then(function(res){
     if(res&&res.ok&&res.nextUrl){
+      clearDraft();
       setStatus('הטופס הוגש! מעביר לחתימה...','');
       setTimeout(function(){window.location.href=res.nextUrl;},800);
     } else if(res&&res.ok){
+      clearDraft();
       document.open();document.write(tyPage());document.close();
     } else {
       var msg=(res&&res.error)?res.error:'שגיאה בהגשת הטופס. אנא נסו שוב.';
@@ -1301,7 +1419,9 @@ function esc(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-showPage(1);
+/* Boot: restore any autosaved draft and resume at the saved page. */
+var draftPage = restoreDraft();
+showPage(draftPage > 1 && draftPage <= TOTAL ? draftPage : 1);
 })();
 </script>
 </body>

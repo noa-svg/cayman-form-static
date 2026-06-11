@@ -150,6 +150,13 @@
     .field input:focus, .field select:focus, .field textarea:focus {
       border-bottom-color: var(--line-active);
     }
+    /* Bidi: data inputs (email/phone/ID/date/amount/bank) carry dir="ltr" so
+       digits and separators keep logical order inside the RTL page. The
+       direction:rtl in the base input rule above outranks the dir attribute's
+       UA style, so re-assert it here. text-align stays right (base rule) for
+       Hebrew-labeled fields; English-labeled fields keep their inline
+       text-align:left. */
+    .field input[dir="ltr"], .field textarea[dir="ltr"] { direction: ltr; }
     .field select { appearance: none; cursor: pointer; }
     .field textarea { resize: vertical; min-height: 72px; padding-top: 16px; }
     .field-error { font-size: 13px; color: var(--error); margin-top: 4px; display: none; }
@@ -254,6 +261,18 @@
       .greeting-inner p { font-size: 18px; }
       #page-greeting { padding: 32px 6vw; }
     }
+
+    /* Vestibular safety (WCAG 2.3.3): quiet the progress bar, floating labels,
+       and the saving spinner for users who ask the OS for reduced motion.
+       Ported from index.html. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -324,7 +343,7 @@
           </div>
 
           <div class="field" id="f-idNumber">
-            <input type="text" id="idNumber" name="idNumber" inputmode="numeric" maxlength="9">
+            <input type="text" id="idNumber" name="idNumber" inputmode="numeric" maxlength="9" dir="ltr">
             <label for="idNumber">מספר תעודת זהות</label>
             <div class="field-error">נא להזין מספר תעודת זהות ישראלי תקין (9 ספרות)</div>
           </div>
@@ -338,7 +357,7 @@
           </div>
 
           <div class="field" id="f-birthDate">
-            <input type="text" id="birthDate" name="birthDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <input type="text" id="birthDate" name="birthDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
             <label for="birthDate">תאריך לידה (dd/mm/yyyy)</label>
             <div class="field-error">נא להזין תאריך לידה תקין (גיל מינימלי 18)</div>
           </div>
@@ -376,7 +395,7 @@
           <!-- aliyaDate: shown if birthCountry != ישראל -->
           <div class="cond" id="cond-aliyaDate">
             <div class="field" id="f-aliyaDate">
-              <input type="text" id="aliyaDate" name="aliyaDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <input type="text" id="aliyaDate" name="aliyaDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
               <label for="aliyaDate">תאריך עלייה (dd/mm/yyyy)</label>
               <div class="field-error">נא להזין תאריך עלייה תקין</div>
             </div>
@@ -385,7 +404,7 @@
           <!-- SSN: shown if citizenship = USA -->
           <div class="cond" id="cond-ssn">
             <div class="field" id="f-ssn">
-              <input type="text" id="ssn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11">
+              <input type="text" id="ssn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11" dir="ltr">
               <label for="ssn">מספר ביטוח לאומי אמריקאי (SSN)</label>
               <div class="field-error">נא להזין מספר SSN תקני</div>
             </div>
@@ -420,13 +439,13 @@
           <div class="section-title">פרטי קשר</div>
 
           <div class="field" id="f-email">
-            <input type="email" id="email" name="email" autocomplete="email">
+            <input type="email" id="email" name="email" autocomplete="email" dir="ltr">
             <label for="email">כתובת דוא"ל</label>
             <div class="field-error">נא להזין כתובת דוא"ל תקינה</div>
           </div>
 
           <div class="field" id="f-phoneNumber">
-            <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="05X-XXXXXXX" maxlength="12">
+            <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="05X-XXXXXXX" maxlength="12" dir="ltr">
             <label for="phoneNumber">טלפון נייד ישראלי</label>
             <div class="field-error">נא להזין מספר טלפון נייד ישראלי תקין (05X)</div>
           </div>
@@ -455,7 +474,7 @@
           </div>
 
           <div class="field" id="f-postalCode">
-            <input type="text" id="postalCode" name="israelAddress.postalCode" inputmode="numeric" maxlength="7">
+            <input type="text" id="postalCode" name="israelAddress.postalCode" inputmode="numeric" maxlength="7" dir="ltr">
             <label for="postalCode">מיקוד (אופציונלי)</label>
           </div>
         </div>
@@ -553,7 +572,7 @@
           <!-- liquidDate: shown if isLiquidAssets -->
           <div class="cond" id="cond-liquidDate">
             <div class="field" id="f-liquidDate">
-              <input type="text" id="liquidDate" name="qualification.lawyerApprove.liquidDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <input type="text" id="liquidDate" name="qualification.lawyerApprove.liquidDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
               <label for="liquidDate">תאריך אישור נכסים (3 חודשים אחרונים)</label>
               <div class="field-error">נא להזין תאריך תקין בטווח 3 החודשים האחרונים</div>
             </div>
@@ -570,7 +589,7 @@
           <div class="section-title">פרטי השקעה</div>
 
           <div class="field" id="f-investedAmount">
-            <input type="text" id="investedAmount" name="investedAmount" inputmode="numeric" placeholder="מעל 50,000">
+            <input type="text" id="investedAmount" name="investedAmount" inputmode="numeric" placeholder="מעל 50,000" dir="ltr">
             <label for="investedAmount">סכום השקעה (מעל 50,000)</label>
             <div class="field-error">סכום ההשקעה חייב לעלות על 50,000</div>
           </div>
@@ -586,7 +605,7 @@
           </div>
 
           <div class="field" id="f-investmentDate">
-            <input type="text" id="investmentDate" name="investmentDate" placeholder="dd/mm/yyyy" maxlength="10">
+            <input type="text" id="investmentDate" name="investmentDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
             <label for="investmentDate">תאריך השקעה</label>
             <div class="field-error">נא להזין תאריך עתידי תקין</div>
           </div>
@@ -618,7 +637,7 @@
               <div class="field-error">נא לבחור בנק</div>
             </div>
             <div class="field" id="f-branchNumberIsrael">
-              <input type="text" id="branchNumberIsrael" name="bankDetails.branchNumberIsrael" inputmode="numeric" maxlength="6">
+              <input type="text" id="branchNumberIsrael" name="bankDetails.branchNumberIsrael" inputmode="numeric" maxlength="6" dir="ltr">
               <label for="branchNumberIsrael">מספר סניף</label>
               <div class="field-error">נא להזין מספר סניף</div>
             </div>
@@ -639,7 +658,7 @@
           </div>
 
           <div class="field" id="f-accountNumber">
-            <input type="text" id="accountNumber" name="bankDetails.accountNumber" inputmode="numeric" maxlength="15">
+            <input type="text" id="accountNumber" name="bankDetails.accountNumber" inputmode="numeric" maxlength="15" dir="ltr">
             <label for="accountNumber">מספר חשבון</label>
             <div class="field-error">נא להזין מספר חשבון (ספרות בלבד)</div>
           </div>
@@ -744,12 +763,12 @@
               <div class="field-error">נא להזין שם מלא (2-35 תווים)</div>
             </div>
             <div class="field" id="f-benIdOrCompany">
-              <input type="text" id="benIdOrCompany" name="beneficiariesDetails.beneficiariesArray.0.idOrCompanyNumber">
+              <input type="text" id="benIdOrCompany" name="beneficiariesDetails.beneficiariesArray.0.idOrCompanyNumber" inputmode="numeric" dir="ltr">
               <label for="benIdOrCompany">מספר תעודת זהות / ח.פ.</label>
               <div class="field-error">נא להזין מספר זיהוי</div>
             </div>
             <div class="field" id="f-benBirthDate">
-              <input type="text" id="benBirthDate" name="beneficiariesDetails.beneficiariesArray.0.birthOrIncorporationDate" placeholder="dd/mm/yyyy" maxlength="10">
+              <input type="text" id="benBirthDate" name="beneficiariesDetails.beneficiariesArray.0.birthOrIncorporationDate" placeholder="dd/mm/yyyy" maxlength="10" dir="ltr">
               <label for="benBirthDate">תאריך לידה / התאגדות</label>
               <div class="field-error">נא להזין תאריך תקין</div>
             </div>
@@ -798,7 +817,7 @@
               <div class="field-error">נא לבחור מדינה</div>
             </div>
             <div class="field" id="f-taxOtherTin1">
-              <input type="text" id="taxOtherTin1" name="taxResidency.israelAndOtherCountries.countriesArray.0.tin" inputmode="numeric">
+              <input type="text" id="taxOtherTin1" name="taxResidency.israelAndOtherCountries.countriesArray.0.tin" inputmode="numeric" dir="ltr">
               <label for="taxOtherTin1">מספר זיהוי לצרכי מס (TIN)</label>
               <div class="field-error">נא להזין מספר TIN (ספרות בלבד)</div>
             </div>
@@ -815,7 +834,7 @@
               <div class="field-error">נא לבחור מדינה</div>
             </div>
             <div class="field" id="f-taxOtherOnlyTin1">
-              <input type="text" id="taxOtherOnlyTin1" name="taxResidency.otherCountries.countriesArray.0.tin" inputmode="numeric">
+              <input type="text" id="taxOtherOnlyTin1" name="taxResidency.otherCountries.countriesArray.0.tin" inputmode="numeric" dir="ltr">
               <label for="taxOtherOnlyTin1">מספר זיהוי לצרכי מס (TIN)</label>
               <div class="field-error">נא להזין מספר TIN (ספרות בלבד)</div>
             </div>
@@ -999,7 +1018,7 @@
       <button class="btn btn-primary" id="btn-next">המשך</button>
       <button class="btn btn-primary" id="btn-submit" hidden>הגשה ומעבר לחתימה</button>
     </div>
-    <div class="status-line" id="status-line"></div>
+    <div class="status-line" id="status-line" role="alert"></div>
 
   </div><!-- /shell-inner -->
 </div><!-- /shell -->
@@ -1097,11 +1116,12 @@
     });
   })();
 
-  /* Greeting -> shell */
+  /* Greeting -> shell. Resume at the autosaved page when a draft exists
+     (draftPage is restored below, before any user interaction). */
   btnStart.addEventListener('click', function () {
     greeting.hidden = true;
     shell.hidden = false;
-    showPage(1);
+    showPage(draftPage > 1 && draftPage <= TOTAL_PAGES ? draftPage : 1);
   });
 
   /* Conditional visibility */
@@ -1175,9 +1195,83 @@
     return '';
   }
 
+  /* A11y wiring (ported from signer.html:475 / index.html initAria):
+     tie each control to its visible error message via aria-describedby, so a
+     screen reader announces the message when the field is focused while
+     invalid. aria-invalid flips in lockstep with the visual .invalid class
+     (fieldErr/clearErrors below). Group/upload errors get role="alert" so the
+     announcement fires when they become visible. */
+  (function wireA11y() {
+    var seq = 0;
+    document.querySelectorAll('.field').forEach(function (f) {
+      var ctl = f.querySelector('input, select, textarea');
+      var msg = f.querySelector('.field-error');
+      if (!ctl || !msg) return;
+      if (!msg.id) msg.id = 'fee-' + (ctl.id || (++seq));
+      var db = (ctl.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      if (db.indexOf(msg.id) === -1) { db.push(msg.id); ctl.setAttribute('aria-describedby', db.join(' ')); }
+    });
+    document.querySelectorAll('.group-error, .upload-error').forEach(function (e) {
+      e.setAttribute('role', 'alert');
+    });
+  })();
+
   document.addEventListener('input', updateConditionals);
   document.addEventListener('change', updateConditionals);
   updateConditionals();
+
+  /* Autosave (client-side draft). The Israeli lane gateway registers no
+     save_page route (LpGatewayRegistry: submit / record_signature / resume
+     only), so drafts persist in localStorage keyed by the operator link
+     identity (?item= Monday id). Files are NOT persisted (base64 too large);
+     the LP re-uploads after a reload and page-7 validation prompts for them.
+     The draft is cleared on successful submit. */
+  var AUTOSAVE_KEY = 'lvp_il_onb_' + (mondayItemId || resumeToken || 'anon');
+  var autosaveTimer = null;
+  function collectDraft() {
+    var d = { __page: currentPage, v: {}, c: {} };
+    document.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (el) {
+      if (el.type === 'file') return;
+      if (el.type === 'radio') { if (el.checked) d.v[el.name] = el.value; return; }
+      if (el.type === 'checkbox') { d.c[el.id || el.name] = el.checked; return; }
+      d.v[el.name] = el.value;
+    });
+    return d;
+  }
+  function saveDraft() {
+    try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(collectDraft())); } catch (e) {}
+  }
+  function scheduleDraftSave() {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveDraft, 600);
+  }
+  function clearDraft() { try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) {} }
+  /* Returns the saved page number (0 = no draft). */
+  function restoreDraft() {
+    var raw = null;
+    try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (e) {}
+    if (!raw) return 0;
+    var d; try { d = JSON.parse(raw); } catch (e) { return 0; }
+    if (!d || !d.v) return 0;
+    Object.keys(d.v).forEach(function (k) {
+      var els = document.querySelectorAll('[name="' + k + '"]');
+      if (!els.length) return;
+      if (els[0].type === 'radio') {
+        Array.prototype.forEach.call(els, function (r) { r.checked = (r.value === d.v[k]); });
+      } else {
+        els[0].value = (d.v[k] == null ? '' : d.v[k]);
+      }
+    });
+    Object.keys(d.c || {}).forEach(function (k) {
+      var cb = document.getElementById(k) || document.querySelector('[name="' + k + '"]');
+      if (cb && cb.type === 'checkbox') cb.checked = !!d.c[k];
+    });
+    updateConditionals();
+    return d.__page || 0;
+  }
+  document.addEventListener('input', scheduleDraftSave);
+  document.addEventListener('change', scheduleDraftSave);
+  var draftPage = restoreDraft();
 
   document.addEventListener('blur', function (e) {
     var field = e.target && e.target.closest && e.target.closest('.field');
@@ -1262,13 +1356,33 @@
   function clearErrors(pageNum) {
     var pg = document.getElementById('page-' + pageNum);
     if (!pg) return;
-    pg.querySelectorAll('.field.invalid').forEach(function (f) { f.classList.remove('invalid'); });
-    pg.querySelectorAll('.group-error.visible').forEach(function (e) { e.classList.remove('visible'); });
+    pg.querySelectorAll('.field.invalid').forEach(function (f) {
+      f.classList.remove('invalid');
+      var c = f.querySelector('input, select, textarea');
+      if (c) c.removeAttribute('aria-invalid');
+    });
+    pg.querySelectorAll('.group-error.visible').forEach(function (e) {
+      e.classList.remove('visible');
+      var g = e.closest('.radio-group, .checkbox-group');
+      if (g) g.querySelectorAll('input').forEach(function (c) { c.removeAttribute('aria-invalid'); });
+    });
     pg.querySelectorAll('.upload-error.visible').forEach(function (e) { e.classList.remove('visible'); });
   }
 
-  function fieldErr(id) { var f = document.getElementById(id); if (f) f.classList.add('invalid'); }
-  function groupErr(id) { var e = document.getElementById(id); if (e) e.classList.add('visible'); }
+  function fieldErr(id) {
+    var f = document.getElementById(id);
+    if (!f) return;
+    f.classList.add('invalid');
+    var c = f.querySelector('input, select, textarea');
+    if (c) c.setAttribute('aria-invalid', 'true');
+  }
+  function groupErr(id) {
+    var e = document.getElementById(id);
+    if (!e) return;
+    e.classList.add('visible');
+    var g = e.closest('.radio-group, .checkbox-group');
+    if (g) g.querySelectorAll('input').forEach(function (c) { c.setAttribute('aria-invalid', 'true'); });
+  }
   function uploadErr(id) { var e = document.getElementById(id); if (e) e.classList.add('visible'); }
 
   function isDateValid(s, opts) {
@@ -1497,9 +1611,11 @@
     .then(function (r) { if (timer) clearTimeout(timer); return r.json(); })
     .then(function (res) {
       if (res && res.ok && res.nextUrl) {
+        clearDraft();
         setStatus('הטופס הוגש! מעביר לחתימה...', '');
         setTimeout(function () { window.location.href = res.nextUrl; }, 800);
       } else if (res && res.ok) {
+        clearDraft();
         document.open();
         document.write(thankYouPage());
         document.close();

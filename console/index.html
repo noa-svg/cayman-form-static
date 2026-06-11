@@ -1649,18 +1649,6 @@ input:focus {
   border-color: var(--color-gold);
 }
 
-.dact .resend {
-  background: var(--color-atrium);
-  color: var(--color-ink-inverse);
-  border-color: var(--color-atrium);
-}
-
-.dact .nudge {
-  background: transparent;
-  color: var(--color-ink);
-  border-color: var(--color-border-strong);
-}
-
 .dact .dvoid {
   background: transparent;
   color: var(--color-red);
@@ -2169,7 +2157,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div id="msg" role="status" aria-live="polite" style="margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
     <div class="res" id="res">
       <div style="font-weight:600;font-size:14px;color:var(--color-atrium);margin-bottom:6px">Invite sent.</div>
-      <div style="font-size:12px;color:var(--color-ink-muted);margin-bottom:6px">Copy the link to share manually, or use Resend in the process drawer.</div>
+      <div style="font-size:12px;color:var(--color-ink-muted);margin-bottom:6px">Copy the link to share manually.</div>
       <div style="display:flex;gap:8px;align-items:center">
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size:12px;padding:6px 14px;white-space:nowrap">Copy link</button>
@@ -2438,7 +2426,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top:2px">'+esc2(d.nameHebrew)+'</div>';
     h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
     // F44: gate lifecycle actions on stage so a footgun (reseal with no docs,
-    // resend on a completed sub) can never be clicked.
+    // void on a completed sub) can never be clicked.
+    // 2026-06-11 Noa decision: Resend invite + Nudge signer buttons removed.
+    // Resend called caymanNotifySigner_ which does not exist (dead button);
+    // Nudge duplicated the automatic caymanReminderScan invite_reminder.
+    // The automatic reminder stays as-is.
     var dstage=String(d.stage||d.currentStage||'');
     var isComplete=(dstage==='complete');
     var isVoided=(dstage==='voided'||dstage==='void');
@@ -2446,9 +2438,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     // Docs exist once signing has produced a sealed pack.
     var docsExist=(dstage==='all_signed'||dstage==='docs_assembled'||dstage==='dispatched'||dstage==='complete');
     var dactBtns='';
-    if(!isTerminal){
-      dactBtns+='<button class="resend" data-act="resendCurrent">Resend invite</button><button class="nudge" data-act="nudge">Nudge signer</button>';
-    }
     if(docsExist&&!isVoided){
       dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
     }
@@ -2484,8 +2473,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       var act=b.getAttribute("data-act");
       b.onclick=function(){
         if(act==='void'&&!confirm('Void this process? Signer links will stop working.'))return;
-        if(act==='resendCurrent'&&!confirm('Resend the invite email to the current signer?'))return;
-        if(act==='nudge'&&!confirm('Send a nudge email to the current signer?'))return;
         b.disabled=true;
         apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
           b.disabled=false;
