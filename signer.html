@@ -71,9 +71,12 @@
       border-right:2px solid var(--navy); border-bottom:2px solid var(--navy);
       transform:rotate(45deg); transition:transform 200ms ease; flex-shrink:0; margin-left:12px; }
     .doc.collapsed .doc__title::after { transform:rotate(-45deg); }
-    .doc__body { max-height:400px; overflow-y:auto; padding:16px; font-size:13px; line-height:1.6; background:#fff; }
+    .doc__body { max-height:400px; overflow-y:auto; padding:16px; font-size:13px; line-height:1.6; background:#fff;
+      direction:ltr; text-align:left; unicode-bidi:isolate; overflow-wrap:break-word; }
     .doc.collapsed .doc__body { max-height:0; padding:0 16px; overflow:hidden; }
+    .doc__body * { direction:ltr; max-width:100%; }
     .doc__body img { max-width:100%; height:auto; }
+    .doc__body table { width:100%; max-width:100%; table-layout:auto; border-collapse:collapse; }
     .doc__note { padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
 
     /* Signature */
@@ -563,6 +566,57 @@
         });
       }
 
+      // Build a clean document body from the raw Google Docs HTML export, the
+      // SAME way the LP review page does (index.html buildDocBody_). Ported here
+      // 2026-06-11: signer.html had been injecting doc.html RAW, so every
+      // downstream signer (2nd authorized, joint holders, controlling persons,
+      // lawyer) saw literal seal anchors ("Sign here (sig 1):" / "Date .. (dd/mm/yyyy)"),
+      // the full-page print letterhead repeated per schedule, and overlapping
+      // print-width text. Strip the seal anchors, the letterhead + footer chrome,
+      // and the print geometry for DISPLAY only. The sealed PDF is built server-
+      // side from the untouched template, so this never changes what is signed.
+      function buildDocBody_(rawHtml) {
+        rawHtml = String(rawHtml || '')
+          .replace(/Sign here(\s*\([^)<]{1,40}\))?:?/g, '')
+          .replace(/Date [A-Za-z0-9 ]{1,30}\(dd\/mm\/yyyy\)/g, '____________');
+        var body = document.createElement('div');
+        body.className = 'doc__body';
+        body.innerHTML = rawHtml;
+        var chrome = body.querySelectorAll('style, meta, link, title, base');
+        for (var i = 0; i < chrome.length; i++) chrome[i].parentNode.removeChild(chrome[i]);
+        var geom = /(^|;)\s*(width|min-width|max-width|height|min-height|max-height|margin|margin-left|margin-right|margin-top|margin-bottom|padding-left|padding-right|position|top|left|right|bottom|float)\s*:[^;]*/gi;
+        var styled = body.querySelectorAll('[style]');
+        for (var j = 0; j < styled.length; j++) {
+          if (styled[j].tagName === 'IMG') continue;
+          var s = styled[j].getAttribute('style') || '';
+          s = s.replace(geom, '').replace(/^;+|;+$/g, '').trim();
+          if (s) { styled[j].setAttribute('style', s); } else { styled[j].removeAttribute('style'); }
+        }
+        var sized = body.querySelectorAll('table[width], table[height], td[width], td[height], th[width], th[height], col[width], tr[height]');
+        for (var k = 0; k < sized.length; k++) { sized[k].removeAttribute('width'); sized[k].removeAttribute('height'); }
+        function isChromeBand_(el) {
+          if (!el || el.nodeType !== 1) return false;
+          var hasImg = el.querySelector && el.querySelector('img');
+          var txt = (el.textContent || '').replace(/\s+/g, '');
+          return !!hasImg && txt.length === 0;
+        }
+        while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
+          body.removeChild(body.firstElementChild);
+        }
+        var FOOT_RE = /legacyvpartners\.com|info@legacy|\+972[\s-]*505[\s-]*880013/i;
+        [].slice.call(body.querySelectorAll('p, div, td')).forEach(function (el) {
+          if (!el.parentNode) return;
+          var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          if (t && t.length < 170 && FOOT_RE.test(t) && !el.querySelector('input, [name]')) {
+            el.parentNode.removeChild(el);
+          }
+        });
+        while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
+          body.removeChild(body.firstElementChild);
+        }
+        return body;
+      }
+
       // Doc titles: server-provided text, re-translated on each pass so a
       // language toggle does not strand them in the first-rendered language. F5.
       var docList = document.getElementById('doc-list');
@@ -574,8 +628,8 @@
             el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
               '<div class="doc__note">' + esc(tHe(doc.note || 'This tax form will be completed from your answers.')) + '</div>';
           } else if (doc.html) {
-            el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
-              '<div class="doc__body">' + doc.html + '</div>';
+            el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>';
+            el.appendChild(buildDocBody_(doc.html));
           } else {
             el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
               '<div class="doc__note">' + esc(tHe(doc.error || 'Document preview not available.')) + '</div>';
