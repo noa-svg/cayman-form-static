@@ -327,7 +327,25 @@
        surrounding chrome is Hebrew RTL, so the doc body forces LTR + left align;
        without this it inherits the card's dir="rtl"/text-align:right and the
        English text gets pushed off the right edge (only word-fragments show). */
-    .lvp-doc-preview__docs { margin-top: 8px; }
+    /* The document pack scrolls INSIDE a fixed-height frame (Noa 2026-06-11):
+       the docs used to render into the page itself, making it ~29,000px tall and
+       hijacking the whole window scroll. The frame keeps the page its normal
+       height; the jump-nav and signature section stay reachable; the pack
+       scrolls within. overscroll-behavior keeps the page from rubber-banding
+       when the frame's scroll ends. */
+    .lvp-doc-preview__docs {
+      margin-top: 8px;
+      max-height: calc(100vh - 250px);
+      min-height: 340px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      border: 1px solid #dce3eb;
+      border-radius: 10px;
+      background: #fff;
+      padding: 0 14px 14px;
+    }
+    .lvp-doc-preview__docs:empty { display: none; border: 0; min-height: 0; }
     .lvp-doc-preview__doc { margin-top: 28px; }
     .lvp-doc-preview__doc:first-child { margin-top: 0; }
     /* The document is English LTR; align its heading left to match the body even
@@ -385,9 +403,10 @@
     }
     .lvp-doc-jumpnav__chip:hover { background: #e0eaf8; }
     .lvp-doc-jumpnav__chip:focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
-    /* Scroll-margin so a jumped-to heading clears the sticky bar instead of
-       hiding behind it. */
-    .lvp-doc-preview__doc { scroll-margin-top: 60px; }
+    /* Scroll-margin inside the frame: the jump-nav sits ABOVE the frame now
+       (not overlaying the docs), so a jumped-to heading needs only a breath of
+       clearance from the frame's top edge. */
+    .lvp-doc-preview__doc { scroll-margin-top: 10px; }
 
     /* ---- Signature section (review page) ---- */
     .lvp-sig-section { margin-top: 28px; }
@@ -2070,6 +2089,9 @@
         progBar.style.width = pct + '%';
         progBar.setAttribute('aria-valuenow', pct);
       }
+      // One page before review (comms is always last before it): start the
+      // pack render in the background so review opens already loaded.
+      if (page.getAttribute('data-page') === 'comms') { prefetchDocPreview(); }
       if (page.getAttribute('data-page') === 'review') { loadDocPreview(); }
       setStatus('');
       window.scrollTo(0, 0);
@@ -2113,6 +2135,30 @@
     var sigPadReady = false;
     var sigPadPng = null;
 
+    // ---- Review-pack prefetch (perf, Noa 2026-06-11) ----
+    // The render used to start only when the LP LANDED on review, so they stared
+    // at the loading line for the full server render. We now kick the same
+    // render_preview call one page early (entering comms); by review the result
+    // is usually already here. The snapshot hash guards staleness: if anything
+    // changed since the prefetch, review fetches fresh (fast anyway, the server
+    // warmed its template cache on the prefetch).
+    var previewFetch = null, previewFetchHash = null;
+    function snapshotHash_(s) {
+      var str = JSON.stringify(s), h = 0;
+      for (var i = 0; i < str.length; i++) { h = ((h * 31) + str.charCodeAt(i)) | 0; }
+      return String(h);
+    }
+    function prefetchDocPreview() {
+      if (previewLoaded) return;
+      var snap;
+      try { snap = collectAll(); } catch (e) { return; }
+      var h = snapshotHash_(snap);
+      if (previewFetch && previewFetchHash === h) return;
+      previewFetchHash = h;
+      previewFetch = gateway('render_preview', { submission: snap })
+        .catch(function () { previewFetch = null; });
+    }
+
     // The gateway returns each subscription document as the raw Google Docs HTML
     // export (docs.google.com/.../export?format=html). That export carries its own
     // <style> block plus inline pixel/point widths, margins and heights sized for a
@@ -2123,6 +2169,14 @@
     // rules. The legal sealed PDF is built server-side from the same template, so
     // changing the on-screen preview layout never touches what the LP signs.
     function buildDocBody_(rawHtml) {
+      // Strip the seal-time placement anchors from the PREVIEW only. "Sign here
+      // (sig 1):" / "Date fund (dd/mm/yyyy)" are machine labels the seal consumes
+      // when placing signatures; the LP reviewing the unsigned doc should see a
+      // blank signature line, not internal tokens. The sealed PDF is built
+      // server-side from the untouched template, so this changes display only.
+      rawHtml = String(rawHtml || '')
+        .replace(/Sign here \([^)<]{1,40}\):?/g, '')
+        .replace(/Date [A-Za-z0-9 ]{1,30}\(dd\/mm\/yyyy\)/g, '____________');
       var body = document.createElement('div');
       body.className = 'lvp-doc-preview__doc-body';
       body.innerHTML = rawHtml;
@@ -2208,7 +2262,24 @@
       submitBtn.hidden = true;
 
       var snapshot = collectAll();
-      gateway('render_preview', { submission: snapshot }).then(function (res) {
+      // Consume the comms-page prefetch when the snapshot is unchanged; any
+      // edit since (Back + change) falls through to a fresh fetch, which is
+      // fast because the prefetch already warmed the server's template cache.
+      var usedPrefetch = false;
+      var pending;
+      if (previewFetch && previewFetchHash === snapshotHash_(snapshot)) {
+        pending = previewFetch; usedPrefetch = true;
+      } else {
+        pending = gateway('render_preview', { submission: snapshot });
+      }
+      pending.then(function (res) {
+        // A failed/empty prefetch must never strand review on the empty state:
+        // retry fresh once before handing the result on.
+        if (usedPrefetch && (!res || !res.docs || !res.docs.length)) {
+          return gateway('render_preview', { submission: snapshot });
+        }
+        return res;
+      }).then(function (res) {
         loading.hidden = true;
         previewLoaded = true;
         if (!res.docs || !res.docs.length) {
