@@ -63,6 +63,19 @@
 
     /* Doc preview */
     .doc-preview { margin-top:24px; }
+    /* Sticky jump-nav so a CP / 2nd signatory / lawyer can reach any document or
+       the signature without scrolling the whole pack. Mirrors the LP review page. */
+    .doc-jumpnav { position:-webkit-sticky; position:sticky; top:0; z-index:5;
+      display:flex; flex-wrap:nowrap; gap:8px; align-items:center; overflow-x:auto;
+      -webkit-overflow-scrolling:touch; padding:10px 2px; margin:0 -2px 6px;
+      background:#fff; border-bottom:1px solid #dce3eb; scrollbar-width:thin; }
+    .doc-jumpnav__chip { flex:0 0 auto; cursor:pointer; white-space:nowrap; font-size:12px;
+      line-height:1; font-weight:600; color:var(--navy); background:#eef3fb;
+      border:1px solid #d4e0f0; border-radius:999px; padding:7px 12px; font-family:inherit; direction:ltr; }
+    .doc-jumpnav__chip:hover { background:#e0eaf8; }
+    .doc-jumpnav__chip:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
+    .doc-jumpnav__chip--sign { background:var(--navy); color:#fff; border-color:var(--navy); }
+    .doc { scroll-margin-top:56px; }
     .doc { margin-top:16px; border:1px solid #dce3eb; border-radius:8px; overflow:hidden; }
     .doc__title { background:#f4f7fb; padding:10px 16px; font-weight:700; font-size:14px;
       color:var(--navy); border-bottom:1px solid #dce3eb; cursor:pointer; user-select:none;
@@ -207,6 +220,7 @@
         <!-- Inline doc preview -->
         <div class="doc-preview">
           <h2>Subscription documents</h2>
+          <nav id="doc-jumpnav" class="doc-jumpnav" aria-label="Jump to document" hidden></nav>
           <div id="doc-list"></div>
         </div>
 
@@ -323,7 +337,8 @@
       "Primary signatory": "חותם/ת ראשי/ת",
       "Country": "מדינה",
       "This tax form will be completed from your answers.": "טופס המס הזה ימולא מתוך התשובות שלך.",
-      "Document preview not available.": "תצוגה מקדימה של המסמך אינה זמינה."
+      "Document preview not available.": "תצוגה מקדימה של המסמך אינה זמינה.",
+      "Go to signature": "מעבר לחתימה"
     };
 
     var curLang = 'en';
@@ -621,9 +636,10 @@
       // language toggle does not strand them in the first-rendered language. F5.
       var docList = document.getElementById('doc-list');
       if (isInitial) {
-        (ctx.docs || []).forEach(function (doc) {
+        (ctx.docs || []).forEach(function (doc, di) {
           var el = document.createElement('div');
           el.className = 'doc';
+          el.id = 'signerdoc-' + di;
           if (doc.acroFill) {
             el.innerHTML = '<div class="doc__title">' + esc(tHe(doc.title)) + '</div>' +
               '<div class="doc__note">' + esc(tHe(doc.note || 'This tax form will be completed from your answers.')) + '</div>';
@@ -638,6 +654,7 @@
           if (titleEl) titleEl.addEventListener('click', function () { el.classList.toggle('collapsed'); });
           docList.appendChild(el);
         });
+        buildSignerJumpNav_(ctx);
       } else {
         var docEls = docList.querySelectorAll('.doc');
         (ctx.docs || []).forEach(function (doc, i) {
@@ -651,7 +668,39 @@
             else noteEl.textContent = tHe(doc.error || 'Document preview not available.');
           }
         });
+        buildSignerJumpNav_(ctx); // re-translate chips on language toggle
       }
+    }
+
+    // Sticky jump-nav: one chip per document + a final "go to signature" chip,
+    // so a CP / 2nd signatory / lawyer never has to scroll the full pack.
+    function buildSignerJumpNav_(ctx) {
+      var nav = document.getElementById('doc-jumpnav');
+      if (!nav) return;
+      nav.innerHTML = '';
+      var docs = ctx.docs || [];
+      if (docs.length < 2) { nav.hidden = true; return; }
+      docs.forEach(function (doc, di) {
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'doc-jumpnav__chip';
+        chip.textContent = tHe(doc.title);
+        chip.addEventListener('click', function () {
+          var t = document.getElementById('signerdoc-' + di);
+          if (t && t.scrollIntoView) t.scrollIntoView({ block: 'start' });
+        });
+        nav.appendChild(chip);
+      });
+      var signChip = document.createElement('button');
+      signChip.type = 'button';
+      signChip.className = 'doc-jumpnav__chip doc-jumpnav__chip--sign';
+      signChip.textContent = tHe('Go to signature');
+      signChip.addEventListener('click', function () {
+        var sig = document.querySelector('.sig-section');
+        if (sig && sig.scrollIntoView) sig.scrollIntoView({ block: 'start' });
+      });
+      nav.appendChild(signChip);
+      nav.hidden = false;
     }
 
     function renderSignerForm(ctx) {
