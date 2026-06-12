@@ -49,6 +49,15 @@
     .lockline { display:flex; align-items:center; justify-content:center; gap:6px; color:var(--muted); font-size:12px; margin-top:14px; }
     .pad-shell { border:1px solid #d0d4d8; border-radius:8px; padding:14px; background:#fff; }
     canvas { width:100%; height:200px; border:1px dashed #b9c2cb; border-radius:8px; touch-action:none; background:#fff; display:block; }
+    /* Signature method: two quiet equal options. */
+    .sig-mode { display:inline-flex; gap:4px; background:#F0F3F8; border-radius:8px; padding:4px; margin:12px 0 0; }
+    .sig-mode__opt { border:none; background:transparent; font:inherit; font-size:14px; color:var(--muted); padding:8px 20px; border-radius:6px; cursor:pointer; min-height:40px; }
+    .sig-mode__opt:focus-visible { outline:2px solid var(--navy); outline-offset:2px; }
+    .sig-mode__opt.is-active { background:#fff; color:var(--navy); font-weight:600; box-shadow:0 1px 3px rgba(13,64,107,.12); }
+    .sig-typed { margin:14px 0 0; }
+    .sig-typed__label { display:block; color:var(--muted); font-size:13px; margin-bottom:6px; }
+    .sig-typed__input { width:100%; font:inherit; font-size:16px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; box-sizing:border-box; }
+    .sig-typed__hint { display:block; color:var(--muted); font-size:12px; margin-top:6px; line-height:1.5; }
     .row { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
     .btn { font:inherit; font-weight:700; font-size:15px; padding:13px 32px; border-radius:999px; border:none; cursor:pointer; transition:background 120ms ease; }
     .btn--primary { background:var(--navy); color:#fff; }
@@ -135,10 +144,20 @@
         <p class="hint">Please sign in the box below and confirm. Your signature will be placed on the documents above.</p>
         <div class="pad-shell">
           <canvas id="pad"></canvas>
+          <div class="sig-mode" role="group" aria-label="Signature method">
+            <button type="button" class="sig-mode__opt is-active" data-sig-mode="draw" aria-pressed="true">Draw</button>
+            <button type="button" class="sig-mode__opt" data-sig-mode="type" aria-pressed="false">Type</button>
+          </div>
+          <div class="sig-typed" id="sig-typed" hidden>
+            <label class="sig-typed__label" for="sig-typed-input">Type your full name to sign</label>
+            <input class="sig-typed__input" id="sig-typed-input" type="text" autocomplete="name" placeholder="Your full name">
+            <span class="sig-typed__hint">We will use your typed name as your signature on these documents.</span>
+          </div>
           <div class="row">
-            <button class="btn btn--primary" id="done" disabled>Confirm signature</button>
+            <button class="btn btn--primary" id="done" disabled aria-describedby="done-help">Confirm signature</button>
             <button class="btn btn--secondary" id="clear">Clear</button>
           </div>
+          <p class="hint" id="done-help">Add your signature above to enable Confirm.</p>
           <div class="err" id="err"></div>
         </div>
         <p class="consent">By tapping Confirm, I agree that my electronic signature above is the legal equivalent of my handwritten signature and is binding on these documents.</p>
@@ -180,6 +199,13 @@
     // tokens (Continue/Back, firm name, Velvert GP entity) reuse the Cayman copy.
     // ===================================================================
     var HE_MAP = {
+      "Draw": "לצייר",
+      "Type": "להקליד",
+      "Signature method": "אופן החתימה",
+      "Type your full name to sign": "הקלידו את שמכם המלא לחתימה",
+      "Your full name": "שמכם המלא",
+      "We will use your typed name as your signature on these documents.": "נשתמש בשם שהקלדתם כחתימה שלכם על המסמכים.",
+      "Add your signature above to enable Confirm.": "הוסיפו חתימה למעלה כדי לאפשר את האישור.",
       "Loading...": "טוען...",
       "This link has expired": "תוקף הקישור פג",
       "This signing link is no longer valid. Please use the most recent link from your email, or contact Legacy Value Partners.":
@@ -243,7 +269,7 @@
     }
 
     function swapScopeText(root, lang) {
-      var blockSel = 'h1, .hint, .consent, .lockline';
+      var blockSel = 'h1, .hint, .consent, .lockline, .sig-mode__opt, .sig-typed__label, .sig-typed__hint';
       root.querySelectorAll(blockSel).forEach(function (el) {
         // Skip nodes filled dynamically (signbox/done-msg) so we never clobber
         // server-built content; those are translated at build time via tHe.
@@ -348,14 +374,20 @@
       // enable Confirm past a minimum stroke. A tap/dot produces 0-2 segments.
       var points = 0;
       var MIN_POINTS = 8;
+      // One signature, two means: 'draw' (the pad) or 'type' (a rendered name).
+      var sigMode = 'draw';
+      var SIG_SCRIPT_FONT = "'Snell Roundhand','Brush Script MT','Segoe Script',cursive";
+      var typedWrap = document.getElementById('sig-typed');
+      var typedInput = document.getElementById('sig-typed-input');
+      var modeBtns = document.querySelectorAll('[data-sig-mode]');
       function pos(e) {
         var r = canvas.getBoundingClientRect();
         var t = e.touches ? e.touches[0] : e;
         return { x: t.clientX - r.left, y: t.clientY - r.top };
       }
-      function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+      function start(e) { if (sigMode !== 'draw') return; drawing = true; last = pos(e); e.preventDefault(); }
       function move(e) {
-        if (!drawing) return;
+        if (sigMode !== 'draw' || !drawing) return;
         var p = pos(e);
         ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
         last = p; dirty = true; points++;
@@ -373,7 +405,47 @@
       clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
         dirty = false; points = 0; done.disabled = true; errEl.textContent = '';
+        if (sigMode === 'type' && typedInput) { typedInput.value = ''; typedInput.focus(); }
       });
+
+      // Typed-name signature: render the typed name into the SAME canvas in a
+      // script face, so the existing toDataURL path is unchanged. A non-empty name
+      // enables Confirm exactly like a drawn signature past MIN_POINTS.
+      function renderTypedName() {
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        var name = typedInput ? String(typedInput.value || '').trim() : '';
+        if (!name) { dirty = false; points = 0; done.disabled = true; return; }
+        var r = canvas.getBoundingClientRect();
+        ctx2.save();
+        ctx2.fillStyle = '#0D3F6A';
+        ctx2.textBaseline = 'middle';
+        ctx2.textAlign = 'center';
+        var fs = 54;
+        ctx2.font = fs + 'px ' + SIG_SCRIPT_FONT;
+        while (fs > 20 && ctx2.measureText(name).width > r.width - 32) { fs -= 2; ctx2.font = fs + 'px ' + SIG_SCRIPT_FONT; }
+        ctx2.fillText(name, r.width / 2, r.height / 2);
+        ctx2.restore();
+        dirty = true; points = MIN_POINTS; done.disabled = false;
+      }
+      function setSigMode(mode) {
+        sigMode = (mode === 'type') ? 'type' : 'draw';
+        modeBtns.forEach(function (b) {
+          var on = b.getAttribute('data-sig-mode') === sigMode;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (typedWrap) typedWrap.hidden = (sigMode !== 'type');
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        dirty = false; points = 0; done.disabled = true; errEl.textContent = '';
+        if (sigMode === 'type') {
+          renderTypedName();
+          if (typedInput) setTimeout(function () { typedInput.focus(); }, 0);
+        }
+      }
+      modeBtns.forEach(function (b) {
+        b.addEventListener('click', function () { setSigMode(b.getAttribute('data-sig-mode')); });
+      });
+      if (typedInput) typedInput.addEventListener('input', function () { if (sigMode === 'type') renderTypedName(); });
 
       done.addEventListener('click', function () {
         if (!dirty || done.disabled) return;
