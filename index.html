@@ -115,8 +115,10 @@
     }
     .lvp-input:focus, .lvp-input--select:focus { border-bottom-color: var(--lvp-input-line-active); border-bottom-width: 2px; padding-bottom: 7px; }
     /* Visible keyboard focus for everyone (WCAG 2.4.7). Mouse focus stays clean via :focus-visible. */
-    .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; border-radius: 3px; }
-    .lvp-upload:focus-within .lvp-upload__btn { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
+    /* No border-radius here: forcing 3px squashed every round control's own
+       radius when focused (2026-06-12 gate audit). Outline follows the
+       element's existing radius in all supported browsers. */
+    .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
     /* Segmented date of birth: numeric keypad, no native far-past-date picker, no DD/MM ambiguity. */
     .lvp-dob__row { display: flex; align-items: baseline; gap: 8px; max-width: 280px; }
     .lvp-dob__seg { width: 3.2em; text-align: center; }
@@ -267,7 +269,7 @@
     .lvp-field--error:has(input[type="file"]) .lvp-field__label::after { content: "" !important; }
     .lvp-field--error:has(input[type="file"])::after { content: "Document required"; display: block; font-size: 12px; color: var(--lvp-error); margin-top: 6px; }
     .lvp-card[dir="rtl"] .lvp-field--error:has(input[type="file"])::after { content: "יש להעלות את המסמך הנדרש"; direction: rtl; }
-    .lvp-doc-block__date { border-top: 1px solid #E9EBF0; padding: 8px 16px 10px 28px; display: flex; flex-direction: row; align-items: center; gap: 12px; }
+    .lvp-doc-block__date { border-top: 1px solid #E9EBF0; padding: 8px 16px 10px 28px; display: flex; flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap; }
     .lvp-card[dir="rtl"] .lvp-doc-block__date { padding: 8px 28px 10px 16px; }
     .lvp-doc-block__date .lvp-field__label { font-size: 12px; color: var(--lvp-text-muted); white-space: nowrap; flex-shrink: 0; margin: 0; }
     .lvp-doc-block__date .lvp-input { max-width: 148px; margin: 0; }
@@ -289,17 +291,17 @@
     .lvp-upload.has-file .lvp-upload__doc-title { color: #16A34A; }
     .lvp-upload.has-file .lvp-upload__slot-num { border-color: #16A34A !important; color: #16A34A !important; background: #F0FDF4; }
     .lvp-doc-block:has(.lvp-upload.has-file) { border-color: #16A34A !important; }
-    /* Remove button: appears on filled cards so the LP can clear a wrong file */
-    .lvp-upload__remove { display: none; position: absolute; top: 8px; right: 8px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(13,63,106,0.08); color: var(--lvp-text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; transition: background 0.15s; }
+    /* Remove button: appears on filled cards so the LP can clear a wrong file.
+       40px tap target (was 24px, below the touch minimum), anchored with a
+       LOGICAL inset so LTR and RTL both work without per-direction overrides.
+       The filled card reserves padding on that side so the ✓ icon (at the flex
+       row end) and the × can never collide (2026-06-12, Noa's screenshot). */
+    .lvp-upload__remove { display: none; position: absolute; top: 6px; inset-inline-end: 6px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(13,63,106,0.08); color: var(--lvp-text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; transition: background 0.15s; }
     .lvp-upload__remove:hover { background: rgba(13,63,106,0.18); color: var(--lvp-error); }
     .lvp-upload.has-file .lvp-upload__remove { display: flex; align-items: center; justify-content: center; }
-    /* JS fallback class for :has() (pre-2023 browsers) */
+    .lvp-upload.has-file .lvp-upload__btn { padding-inline-end: 54px; }
     /* Focus ring for keyboard navigation */
-    .lvp-upload:focus-within .lvp-upload__btn { outline: 2px solid var(--lvp-navy); outline-offset: 2px; }
-    .lvp-card[dir="rtl"] .lvp-upload__remove { right: auto; left: 8px; }
-    /* RTL: checkmark ::after lands at the same left-edge as the × button -- hide it;
-       green background + filename already show the uploaded state. */
-    .lvp-card[dir="rtl"] .lvp-upload.has-file .lvp-upload__btn::after { display: none; }
+    .lvp-upload:focus-within .lvp-upload__btn { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
     /* ---- Numbered ID card slot group ---- */
     .lvp-id-group { margin-bottom: 20px; }
     .lvp-id-group__hdr { padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid #E5E7EB; }
@@ -312,7 +314,7 @@
     .lvp-upload--slot-req .lvp-upload__btn { border-width: 1.5px; }
     /* All required upload blocks (slots + converted label wrappers): red asterisk */
     .lvp-upload[data-required] .lvp-upload__doc-title::after { content: " *"; color: var(--lvp-error); font-weight: 700; }
-    .lvp-upload__slot-badge { font-size: 11px; font-weight: 600; color: var(--lvp-navy); display: block; margin-top: 2px; display: none; }
+    .lvp-upload__slot-badge { display: none; }
     .lvp-upload__slot-sub { font-size: 12px; color: var(--lvp-text-muted); display: block; margin-top: 2px; }
     /* Field width constraints for short inputs (ID, SWIFT, dates) */
     .lvp-field--short { max-width: 280px; }
@@ -518,7 +520,11 @@
 
             <div class="lvp-id-group">
               <div class="lvp-id-group__hdr"><span class="lvp-id-group__title">ID card</span></div>
-              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req" data-required>
+              <!-- Israeli-ID slots carry NO client data-required: foreign passport
+                   holders have no teudat zehut and were hard-blocked here
+                   (2026-06-12 gate audit). The server enforces front+appendix at
+                   submit when citizenship is Israel (CaymanValidation.js). -->
+              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req">
                 <button type="button" class="lvp-upload__remove" aria-label="Remove file">&times;</button>
                 <div class="lvp-upload__btn">
                   <span class="lvp-upload__slot-num">1</span>
@@ -530,7 +536,7 @@
                 </div>
                 <input type="file" data-upload="nationalIdFront" accept="image/*,application/pdf">
               </div>
-              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req" data-required>
+              <div class="lvp-upload lvp-upload--slot lvp-upload--slot-req">
                 <button type="button" class="lvp-upload__remove" aria-label="Remove file">&times;</button>
                 <div class="lvp-upload__btn">
                   <span class="lvp-upload__slot-num">2</span>
@@ -1478,6 +1484,17 @@
       if (newCfg.applicantType && newCfg.applicantType !== CFG.applicantType) {
         CFG.applicantType = newCfg.applicantType;
         state.applicantType = (newCfg.applicantType === 'entity') ? 'entity' : 'individual';
+        // Lane flip invalidates uploads picked under the other lane: slots that
+        // share a name across lanes (bankAccountConfirmation) would satisfy the
+        // new lane's required gate with a stale key (2026-06-12 gate audit).
+        Object.keys(pendingUploads).forEach(function (k) { delete pendingUploads[k]; });
+        Array.prototype.forEach.call(form.querySelectorAll('.lvp-upload.has-file'), function (w) {
+          w.classList.remove('has-file');
+          var nm = w.querySelector('[data-upload-name]');
+          if (nm) { nm.textContent = ''; nm.removeAttribute('data-has-file'); }
+          var fi = w.querySelector('input[type="file"]');
+          if (fi) fi.value = '';
+        });
         rebuild();
       }
       // Restore prefill fields when CFG (including session snapshot) arrives after init.
@@ -1680,7 +1697,21 @@
       // slot_3, each stored to the KYC folder by the generic server router.
       if (!files || !files.length) { Object.keys(pendingUploads).forEach(function (k) { if (k === slot || k.indexOf(slot + '_') === 0) delete pendingUploads[k]; }); return; }
       Array.prototype.forEach.call(files, function (f, i) {
-        if (f.size > 10 * 1024 * 1024) { setStatus('A file is larger than 10 MB. Please upload smaller files.', true); return; }
+        if (f.size > 10 * 1024 * 1024) {
+          // Reject visibly: the card must NOT stay green with no gate key set
+          // (looked filled, blocked at Next with no visible reason).
+          setStatus(curLang === 'he' ? 'קובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.' : 'A file is larger than 10 MB. Please upload smaller files.', true);
+          var wrapBig = inp.closest('.lvp-upload');
+          if (wrapBig) {
+            wrapBig.classList.remove('has-file');
+            var nmBig = wrapBig.querySelector('[data-upload-name]');
+            if (nmBig) { nmBig.textContent = ''; nmBig.removeAttribute('data-has-file'); }
+            var holderBig = wrapBig.closest('.lvp-field') || wrapBig;
+            holderBig.classList.add('lvp-field--error');
+          }
+          inp.value = '';
+          return;
+        }
         var key = i === 0 ? slot : slot + '_' + (i + 1);
         var reader = new FileReader();
         reader.onload = function () {
@@ -2835,6 +2866,15 @@
       // each gets a placeholder entry in pendingUploads and a green "has-file" UI state
       // so all upload validation passes without the LP needing to select real files.
       if (Array.isArray(prefill.__testUploads)) {
+        // A test link must never be mistakable for a live LP link: pin a TEST
+        // banner whenever upload stubs are active (2026-06-12 gate audit).
+        if (!document.getElementById('lvp-test-banner')) {
+          var tb = document.createElement('div');
+          tb.id = 'lvp-test-banner';
+          tb.textContent = 'TEST LINK · קישור בדיקה';
+          tb.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#B45309;color:#fff;text-align:center;font:600 12px/24px ui-sans-serif,sans-serif;letter-spacing:1.5px;';
+          document.body.appendChild(tb);
+        }
         // Minimal valid 1x1 PNG (68 bytes) used as the stub payload for all slots.
         var STUB_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
         prefill.__testUploads.forEach(function (slot) {
