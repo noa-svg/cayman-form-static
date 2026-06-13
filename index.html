@@ -396,6 +396,9 @@
        what was entered, distinct from the boilerplate. The server (CaymanHtmlRender)
        wraps each bound token value in span.lvp-filled for the preview only. */
     .lvp-doc-preview__doc-body .lvp-filled { color: #0D406B; font-weight: 700; }
+    /* Signing blanks: one consistent styled underline, never a raw underscore run. */
+    .lvp-doc-preview__doc-body .lvp-sign-blank { display: inline-block; width: 240px; max-width: 60%; height: 0.9em; border-bottom: 1px solid var(--lvp-navy, #0D406B); vertical-align: baseline; margin: 0 2px; }
+    .lvp-doc-preview__doc-body .lvp-sign-blank--date { width: 130px; }
     .lvp-doc-preview__doc-body img { max-width: 100%; height: auto; }
     .lvp-doc-preview__doc-body ol, .lvp-doc-preview__doc-body ul { padding-left: 24px; }
     .lvp-doc-preview__doc-body table {
@@ -2372,9 +2375,12 @@
       // when placing signatures; the LP reviewing the unsigned doc should see a
       // blank signature line, not internal tokens. The sealed PDF is built
       // server-side from the untouched template, so this changes display only.
+      // Convert seal anchors to ONE consistent styled blank line (not an empty gap,
+      // not a raw underscore run of arbitrary length). Same weight + fixed width
+      // every time, so signing blanks read as deliberate lines across all schedules.
       rawHtml = String(rawHtml || '')
-        .replace(/Sign here(\s*\([^)<]{1,40}\))?:?/g, '')
-        .replace(/Date [A-Za-z0-9 ]{1,30}\(dd\/mm\/yyyy\)/g, '____________');
+        .replace(/Sign here(\s*\([^)<]{1,40}\))?:?/g, '<span class="lvp-sign-blank" aria-hidden="true"></span>')
+        .replace(/Date [A-Za-z0-9 ]{1,30}\(dd\/mm\/yyyy\)/g, '<span class="lvp-sign-blank lvp-sign-blank--date" aria-hidden="true"></span>');
       var body = document.createElement('div');
       body.className = 'lvp-doc-preview__doc-body';
       body.innerHTML = rawHtml;
