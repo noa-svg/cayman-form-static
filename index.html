@@ -392,6 +392,10 @@
       overflow-wrap: break-word; overflow-x: auto;
     }
     .lvp-doc-preview__doc-body * { direction: ltr; max-width: 100%; }
+    /* Form-filled / variable values rendered bold navy so the reviewer sees exactly
+       what was entered, distinct from the boilerplate. The server (CaymanHtmlRender)
+       wraps each bound token value in span.lvp-filled for the preview only. */
+    .lvp-doc-preview__doc-body .lvp-filled { color: #0D406B; font-weight: 700; }
     .lvp-doc-preview__doc-body img { max-width: 100%; height: auto; }
     .lvp-doc-preview__doc-body ol, .lvp-doc-preview__doc-body ul { padding-left: 24px; }
     .lvp-doc-preview__doc-body table {
