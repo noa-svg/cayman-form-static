@@ -914,7 +914,7 @@
           <h2 class="lvp-page__title">Additional investors</h2>
           <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Will there be additional investors in this subscription (including spouse)?</legend>
-            <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="true" data-show-when-trigger="hasAdditionalInvestors"> Yes</label>
+            <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="true" data-show-when-trigger="hasAdditionalInvestors" data-joint-gate disabled> Yes</label>
             <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="false"> No</label>
           </fieldset>
           <div data-show-when="hasAdditionalInvestors=true">
@@ -941,6 +941,51 @@
               <div class="lvp-grid-2">
                 <div class="lvp-field lvp-dob" data-required><span class="lvp-field__label">Date of birth</span><div class="lvp-dob__row" dir="ltr" role="group" aria-label="Date of birth"><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" data-dob-d autocomplete="off"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Month" data-dob-m autocomplete="off"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg lvp-dob__seg--y" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year" data-dob-y autocomplete="off"></div><input type="hidden" name="additionalInvestors[${i}].birthDate" data-dob-iso></div>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="additionalInvestors[${i}].citizenship" data-country></select></label>
+              </div>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="additionalInvestors[${i}].birthCountry" data-country></select></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.street" autocomplete="off"></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.city" autocomplete="off"></label>
+                <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.state" autocomplete="off"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.postCode" inputmode="numeric" autocomplete="off"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="additionalInvestors[${i}].address.country" data-country></select></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field" data-required><span class="lvp-field__label">Source of funds</span>
+                  <select class="lvp-input--select" name="additionalInvestors[${i}].sourceOfFunds.category">
+                    <option value="">Select</option>
+                    <option value="salary">Salary or employment income</option>
+                    <option value="savings">Savings</option>
+                    <option value="saleOfAssets">Sale of assets (property, business, etc.)</option>
+                    <option value="inheritance">Inheritance</option>
+                    <option value="investmentReturns">Investment returns</option>
+                    <option value="gift">Gift</option>
+                    <option value="other">Other</option>
+                  </select></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Occupation</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].occupation" autocomplete="off" data-help="In English, as it will appear in the documents"></label>
+              </div>
+              <label class="lvp-field" data-show-when="additionalInvestors[${i}].sourceOfFunds.category=other" data-required><span class="lvp-field__label">Please specify the source of funds</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].sourceOfFunds.otherDescription" autocomplete="off"></label>
+              <fieldset class="lvp-fieldset" data-required>
+                <legend class="lvp-fieldset__legend">Is this investor a U.S. person for tax purposes?</legend>
+                <label class="lvp-radio"><input type="radio" name="additionalInvestors[${i}].usPersonStatus" value="specified" data-show-when-trigger="additionalInvestors[${i}].usPersonStatus"> Yes. A U.S. citizen or resident for tax purposes.</label>
+                <label class="lvp-radio"><input type="radio" name="additionalInvestors[${i}].usPersonStatus" value="notSpecified" data-show-when-trigger="additionalInvestors[${i}].usPersonStatus"> Born in the U.S. but has surrendered citizenship.</label>
+                <label class="lvp-radio"><input type="radio" name="additionalInvestors[${i}].usPersonStatus" value="notUs" data-show-when-trigger="additionalInvestors[${i}].usPersonStatus"> No. Not a U.S. person.</label>
+              </fieldset>
+              <label class="lvp-field" data-required data-show-when="additionalInvestors[${i}].usPersonStatus=specified"><span class="lvp-field__label">U.S. TIN</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].usTin" inputmode="numeric" autocomplete="off" placeholder="SSN, ITIN, or EIN"></label>
+              <h4 class="lvp-subhead">Tax residency</h4>
+              <p class="lvp-hint-small">This investor's country of tax residence and tax reference number.</p>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Jurisdiction</span><select class="lvp-input--select" name="additionalInvestors[${i}].taxResidency.jurisdiction" data-country></select></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference type</span>
+                  <select class="lvp-input--select" name="additionalInvestors[${i}].taxResidency.taxRefType">
+                    <option value="">Select</option>
+                    <option value="National ID">National ID</option>
+                    <option value="Passport">Passport</option>
+                    <option value="TIN">TIN / Tax Reference Number</option>
+                  </select></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].taxResidency.taxRefNumber" autocomplete="off"></label>
               </div>
             </div>
           </template>
