@@ -2270,6 +2270,21 @@
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();
       if (!validatePage(page)) { if (!statusEl.textContent) setStatus('Please complete the required fields.', true); return; }
+      // Defense-in-depth (2026-06-13): submit validates EVERY page, not just the
+      // review page. Forward-nav already gates each page and the stage rail is
+      // back-only, so an empty earlier field is unreachable today; but submit must
+      // not depend on that (a future jump/resume-to-review path would otherwise let
+      // a server-unchecked KYC field through). Temporarily unhide each page so its
+      // fields are seen (within-page data-show-when conditionals still respected via
+      // each element's own hidden), and jump to the first incomplete page.
+      var allPages = visiblePages();
+      for (var pi = 0; pi < allPages.length; pi++) {
+        var pg = allPages[pi];
+        if (pg === page) continue;
+        var wasHidden = pg.hidden; pg.hidden = false;
+        var pageOk = validatePage(pg); pg.hidden = wasHidden;
+        if (!pageOk) { showPage(pi); if (!statusEl.textContent) setStatus('Please complete the required fields.', true); return; }
+      }
       // On the review+sign page, validate the signature before submit. The
       // button is never disabled (Tognazzini): the click is allowed to land and we
       // guide the LP to whatever is missing rather than greying the control out.
