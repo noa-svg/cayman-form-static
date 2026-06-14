@@ -264,7 +264,9 @@
     .lvp-card[dir="rtl"] .lvp-upload__content { text-align: right; }
     .lvp-card[dir="rtl"] .lvp-input[name="individual.firstNameHebrew"],
     .lvp-card[dir="rtl"] .lvp-input[name="individual.lastNameHebrew"],
-    .lvp-card[dir="rtl"] .lvp-input[name="entity.fullNameHebrew"] { direction: rtl; text-align: right; }
+    .lvp-card[dir="rtl"] .lvp-input[name="entity.fullNameHebrew"],
+    .lvp-card[dir="rtl"] .lvp-input[name*="firstNameHebrew"],
+    .lvp-card[dir="rtl"] .lvp-input[name*="lastNameHebrew"] { direction: rtl; text-align: right; }
     /* RTL: dir=rtl alone places Back at the right and Continue at the left (Hebrew convention); do NOT row-reverse. */
     .lvp-card[dir="rtl"] .lvp-note { border-left: none; border-right: 3px solid var(--lvp-navy); }
     .lvp-card[dir="rtl"] .lvp-wire dl { direction: rtl; }
@@ -933,6 +935,10 @@
               <div class="lvp-grid-2">
                 <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].firstName" autocomplete="off"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastName" autocomplete="off"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field" data-required><span class="lvp-field__label">First name in Hebrew</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].firstNameHebrew" dir="rtl" autocomplete="off" data-help="השם הפרטי בעברית לרישומים שלנו ולדיווח לבנק."></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Last name in Hebrew</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastNameHebrew" dir="rtl" autocomplete="off" data-help="שם המשפחה בעברית."></label>
               </div>
               <div class="lvp-grid-2">
                 <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber" inputmode="numeric" autocomplete="off"></label>
@@ -2613,6 +2619,56 @@
       }, { passive: true });
     })();
 
+    // Build an inline PDF viewer from a base64 string (the filled official W-8/W-9,
+    // filled without a signature ahead of review). base64 -> bytes -> Blob -> object URL
+    // -> iframe, which renders reliably across browsers (a data: URI in an iframe does
+    // not in Chrome). The signed copy is produced server-side at seal time.
+    function buildPdfFrame_(base64) {
+      var wrap = document.createElement('div');
+      try {
+        var bin = atob(base64), len = bin.length, bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+        var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+        var iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.title = 'Tax form';
+        iframe.style.cssText = 'width:100%;height:900px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;';
+        wrap.appendChild(iframe);
+      } catch (e) {
+        var note = document.createElement('div');
+        note.className = 'lvp-doc-preview__acro-note';
+        note.textContent = displayFor('Document preview not available.', curLang);
+        wrap.appendChild(note);
+      }
+      return wrap;
+    }
+
+    // While a W-8/W-9 is still filling on the server, poll render_preview and swap the
+    // filled official PDF in for the spinner the moment it is ready. Bounded so a stuck
+    // fill never polls forever; the signed copy is built at seal regardless.
+    function pollW8Preview_(snapshot, keys, attempt) {
+      if (!keys.length || attempt > 40) return;
+      setTimeout(function () {
+        gateway('render_preview', { submission: snapshot }).then(function (res) {
+          if (!res || !res.docs) { pollW8Preview_(snapshot, keys, attempt + 1); return; }
+          var still = [];
+          keys.forEach(function (key) {
+            var doc = res.docs.filter(function (d) { return d.key === key; })[0];
+            if (doc && doc.acroFill && doc.ready && doc.pdfBase64) {
+              var el = form.querySelector('[data-doc-key="' + key + '"]');
+              if (el) {
+                el.innerHTML = '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>';
+                el.appendChild(buildPdfFrame_(doc.pdfBase64));
+              }
+            } else {
+              still.push(key);
+            }
+          });
+          if (still.length) pollW8Preview_(snapshot, still, attempt + 1);
+        }).catch(function () { pollW8Preview_(snapshot, keys, attempt + 1); });
+      }, 4000);
+    }
+
     function loadDocPreview() {
       var wrap = form.querySelector('[data-doc-preview]');
       var loading = form.querySelector('[data-doc-preview-loading]');
@@ -2670,15 +2726,26 @@
           return;
         }
         var jumpItems = [];
+        var preparingKeys = [];
         res.docs.forEach(function (doc, idx) {
           var el = document.createElement('div');
           el.className = 'lvp-doc-preview__doc';
           el.id = 'lvp-doc-' + idx;
+          el.setAttribute('data-doc-key', doc.key || ('doc' + idx));
           jumpItems.push({ id: el.id, title: doc.title || ('Document ' + (idx + 1)) });
           if (doc.acroFill) {
-            el.innerHTML =
-              '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>' +
-              '<div class="lvp-doc-preview__acro-note">' + esc(doc.note || 'This tax form will be completed from your answers.') + '</div>';
+            el.innerHTML = '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>';
+            if (doc.ready && doc.pdfBase64) {
+              // The official IRS PDF, filled from the LP's answers (no signature yet),
+              // shown so the LP reviews the real form before signing.
+              el.appendChild(buildPdfFrame_(doc.pdfBase64));
+            } else {
+              var prepNote = document.createElement('div');
+              prepNote.className = 'lvp-doc-preview__acro-note';
+              prepNote.textContent = displayFor('Preparing your documents for review...', curLang);
+              el.appendChild(prepNote);
+              preparingKeys.push(doc.key);
+            }
           } else if (doc.html) {
             el.innerHTML = '<div class="lvp-doc-preview__doc-title">' + esc(doc.title) + '</div>';
             el.appendChild(buildDocBody_(doc.html));
@@ -2693,6 +2760,9 @@
         // Build the sticky schedule jump-nav from the actual rendered docs (never a
         // hardcoded list, so it can't drift). Each chip scrolls to its document.
         buildJumpNav_(jumpItems);
+        // The W-8 is filled (no signature) on a server trigger ahead of review; poll
+        // until the filled official PDF is ready, then swap it in for the spinner.
+        if (preparingKeys.length) pollW8Preview_(snapshot, preparingKeys.slice(), 0);
         // Show signature section + submit button after docs load.
         if (sigSection) {
           sigSection.hidden = false;
