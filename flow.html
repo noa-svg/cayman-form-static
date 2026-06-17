@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Value Partners</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="favicon.ico">
+  <style>
+    /* lvp- design system, lifted from index.html so this page is self-contained.
+       The Israeli increase/redemption flow is its own static page (flow.html),
+       not a branch of the onboarding form.                                   */
+    :root {
+      --lvp-navy: #0D3F6A; --lvp-navy-700: #0a3257;
+      --lvp-yellow: #FFB42C;
+      --lvp-text: #1d1d1d; --lvp-text-muted: #545454;
+      --lvp-input-line: #C2C2C2; --lvp-input-line-active: #0D3F6A;
+      --lvp-card-bg: #FFFFFF; --lvp-error: #c0392b;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Assistant', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      color: var(--lvp-text);
+      background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 60%);
+      min-height: 100vh;
+    }
+    .lvp-app { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+    .lvp-brand { display: flex; align-items: center; justify-content: center; padding: 8px 0 16px; }
+    .lvp-brand img { max-width: 140px; height: auto; }
+    .lvp-card {
+      background: var(--lvp-card-bg); width: 100%;
+      border: 1px solid #ECECEC; border-radius: 12px;
+      padding: 28px 28px 32px;
+      box-shadow: 0 1px 0 rgba(13,63,106,0.04);
+    }
+    .lvp-progress { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; }
+    .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
+    .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
+    .lvp-progress__count { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; }
+    .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 6px; }
+    .lvp-page__title::after { content: ""; display: block; width: 90px; height: 4px; border-radius: 2px; margin-top: 8px;
+      background: linear-gradient(to left, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    .lvp-page__hint { color: var(--lvp-text-muted); font-size: 15px; margin: 0 0 22px; }
+    .lvp-section { margin: 18px 0 8px; }
+    .lvp-section__title { color: var(--lvp-navy); font-size: 18px; font-weight: 700; margin: 0 0 6px; }
+    .lvp-prose { color: var(--lvp-text-muted); font-size: 14px; line-height: 1.6; margin: 0 0 12px; }
+    .lvp-field { display: block; margin: 0 0 14px; }
+    .lvp-field__label { display: block; color: var(--lvp-text); font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+    .lvp-field__hint { display: block; color: var(--lvp-text-muted); font-size: 12px; margin: 4px 0 0; }
+    .lvp-input, .lvp-select {
+      width: 100%; padding: 10px 12px; font-size: 15px; font-family: inherit;
+      border: 1px solid var(--lvp-input-line); border-radius: 8px;
+      background: #fff; color: var(--lvp-text);
+      direction: rtl; text-align: right;
+    }
+    .lvp-input:focus, .lvp-select:focus {
+      outline: none; border-color: var(--lvp-input-line-active);
+      box-shadow: 0 0 0 3px rgba(13,63,106,0.10);
+    }
+    .lvp-input[readonly] { background: #F7F8FA; color: var(--lvp-text-muted); }
+    .lvp-input--ltr { direction: ltr; text-align: left; }
+    .lvp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .lvp-amount-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: end; margin: 0 0 8px; }
+    .lvp-amount-row .lvp-field { margin: 0; }
+    .lvp-amount-rm { background: transparent; border: 1px solid var(--lvp-input-line); border-radius: 8px; color: var(--lvp-text-muted); padding: 9px 12px; cursor: pointer; height: 40px; }
+    .lvp-amount-rm:hover { color: var(--lvp-navy); border-color: var(--lvp-navy); }
+    .lvp-amount-add {
+      background: transparent; border: 1px dashed var(--lvp-navy); border-radius: 8px;
+      color: var(--lvp-navy); padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 14px;
+    }
+    .lvp-radios { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+    .lvp-radios--inline { flex-direction: row; flex-wrap: wrap; gap: 14px; }
+    .lvp-radio { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+    .lvp-radio input { margin: 4px 0 0; flex-shrink: 0; }
+    .lvp-radio span { font-size: 15px; }
+    .lvp-upload {
+      border: 1px dashed var(--lvp-input-line); border-radius: 10px;
+      padding: 14px; margin: 0 0 12px; background: #FAFBFC;
+    }
+    .lvp-upload__label { color: var(--lvp-text); font-weight: 600; font-size: 14px; margin: 0 0 4px; }
+    .lvp-upload__hint { color: var(--lvp-text-muted); font-size: 12px; margin: 0 0 8px; }
+    .lvp-upload input[type="file"] { font-size: 13px; }
+    .lvp-upload__name { display: block; color: var(--lvp-navy); font-size: 13px; font-weight: 600; margin: 6px 0 0; }
+    .lvp-nav { display: flex; gap: 10px; margin: 22px 0 0; justify-content: space-between; }
+    .lvp-btn {
+      font-family: inherit; font-size: 15px; font-weight: 700; padding: 11px 22px;
+      border-radius: 8px; border: none; cursor: pointer; min-width: 110px;
+    }
+    .lvp-btn--primary { background: var(--lvp-navy); color: #fff; }
+    .lvp-btn--primary:hover { background: var(--lvp-navy-700); }
+    .lvp-btn--ghost { background: transparent; color: var(--lvp-navy); border: 1px solid var(--lvp-navy); }
+    .lvp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .lvp-error {
+      background: #FBECEA; border: 1px solid var(--lvp-error); color: var(--lvp-error);
+      padding: 10px 14px; border-radius: 8px; font-size: 14px; margin: 0 0 12px;
+    }
+    .lvp-loading { color: var(--lvp-text-muted); font-size: 14px; padding: 28px 0; text-align: center; }
+    .lvp-page { display: none; }
+    .lvp-page.is-active { display: block; }
+    /* The user-agent display:none for [hidden] loses against any later
+       .lvp-field/.lvp-upload display rule. Force the hide. */
+    [hidden] { display: none !important; }
+    .lvp-currency-display { display: inline-block; width: 24px; text-align: center; color: var(--lvp-text-muted); font-size: 18px; }
+    @media (max-width: 540px) {
+      .lvp-amount-row { grid-template-columns: 1fr; gap: 6px; }
+      .lvp-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="lvp-app">
+    <div class="lvp-brand"><img src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners"></div>
+    <div class="lvp-card" id="lvp-card">
+      <div class="lvp-loading" id="lvp-loading">טוען...</div>
+      <div id="lvp-form" hidden>
+        <div class="lvp-progress" aria-label="התקדמות">
+          <span class="lvp-progress__count" id="lvp-progress-count">שלב 1 מתוך 4</span>
+          <div class="lvp-progress__bar"><span id="lvp-progress-bar" style="width: 25%"></span></div>
+        </div>
+
+        <!-- PAGE 1: התחלה -->
+        <section class="lvp-page is-active" data-page="start">
+          <h1 class="lvp-page__title" id="welcome-title"></h1>
+          <p class="lvp-prose">בתהליך זה באפשרותך למלא, לחתום ולשלוח טפסים ישירות מהמחשב או הנייד.</p>
+          <p class="lvp-prose"><strong>לתשומת ליבך,</strong></p>
+          <p class="lvp-prose">בסיום התהליך יישלחו אליך הודעת טקסט והודעת דואר אלקטרוני המאשרות כי הטפסים בטיפול. לאחר השלמת התהליך יתקבל עותק חתום.</p>
+          <div class="lvp-nav">
+            <span></span>
+            <button type="button" class="lvp-btn lvp-btn--primary" data-go="personal">הבא</button>
+          </div>
+        </section>
+
+        <!-- PAGE 2: פרטים אישיים -->
+        <section class="lvp-page" data-page="personal">
+          <h1 class="lvp-page__title">פרטים אישיים</h1>
+          <div id="lvp-personal-error" class="lvp-error" hidden></div>
+
+          <div id="personal-individual">
+            <div class="lvp-row">
+              <label class="lvp-field">
+                <span class="lvp-field__label">שם פרטי</span>
+                <input class="lvp-input" type="text" id="ind-firstName" autocomplete="given-name">
+              </label>
+              <label class="lvp-field">
+                <span class="lvp-field__label">שם משפחה</span>
+                <input class="lvp-input" type="text" id="ind-lastName" autocomplete="family-name">
+              </label>
+            </div>
+            <label class="lvp-field">
+              <span class="lvp-field__label">מספר תעודת זהות</span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="ind-idNumber" inputmode="numeric" autocomplete="off">
+            </label>
+          </div>
+
+          <div id="personal-entity" hidden>
+            <label class="lvp-field">
+              <span class="lvp-field__label">שם התאגיד</span>
+              <input class="lvp-input" type="text" id="ent-name">
+            </label>
+            <label class="lvp-field">
+              <span class="lvp-field__label">מספר ח.פ</span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="ent-number" inputmode="numeric" autocomplete="off">
+            </label>
+          </div>
+
+          <label class="lvp-field">
+            <span class="lvp-field__label">כתובת דוא"ל</span>
+            <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" autocomplete="email">
+            <span class="lvp-field__hint">כתובת זו תשמש אותנו לתקשורת</span>
+          </label>
+          <label class="lvp-field">
+            <span class="lvp-field__label">טלפון נייד</span>
+            <input class="lvp-input lvp-input--ltr" type="tel" id="lp-phone" autocomplete="tel" inputmode="tel">
+          </label>
+
+          <div class="lvp-nav">
+            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="start">הקודם</button>
+            <button type="button" class="lvp-btn lvp-btn--primary" data-go="request">הבא</button>
+          </div>
+        </section>
+
+        <!-- PAGE 3: פרטי הבקשה (increase: פרטי בקשת ההגדלה / redemption: פרטי הפדיון) -->
+        <section class="lvp-page" data-page="request">
+          <h1 class="lvp-page__title" id="request-title"></h1>
+          <div id="lvp-request-error" class="lvp-error" hidden></div>
+
+          <!-- INCREASE-ONLY block -->
+          <div id="block-increase" hidden>
+            <div class="lvp-section">
+              <h2 class="lvp-section__title">סכום ההשקעה הנוספת</h2>
+            </div>
+            <div id="amount-rows-increase"></div>
+            <button type="button" class="lvp-amount-add" data-add-currency="increase">+ הוספת מטבע</button>
+            <p class="lvp-prose" style="margin-top: 18px;">ידוע לי כי שמורה לכם הזכות לדחות את הצעתי או לקבל את הצעתי תוך הקטנת סכום ההשקעה הנוספת, הכול לפי שיקול דעתכם הבלעדי והמוחלט, ללא צורך בהנמקה. אם לא תתקבל בקשה זאת, במלואה או בחלקה, על ידכם עד למועד כפי שייקבע על ידכם, תפקע בקשתי זאת, לרבות יפוי הכוח הכלול בה, מאליה.</p>
+          </div>
+
+          <!-- REDEMPTION-ONLY block -->
+          <div id="block-redemption" hidden>
+            <div class="lvp-section">
+              <h2 class="lvp-section__title">סכום הפדיון</h2>
+            </div>
+            <p class="lvp-prose">סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים.</p>
+            <p class="lvp-prose">ידוע לנו כי אם יתרת חשבון ההון שלנו, לאחר הפדיון, נמוכה מחמישים אלף (50,000) שקלים חדשים, השותף הכללי רשאי, אך לא חייב, לקבוע כי סכום הפדיון יעמוד על מלוא היתרה בחשבון ההון שלנו. כמו כן ידוע לנו כי עם פדיון כל היתרה בחשבון ההון שלנו, נחדל, ביום הפדיון המבוקש, להיות שותף בשותפות ולא תהיה לנו כל זכות שהיא בשותפות ו/או בנכסיה, ואולם נמשיך לחוב בחובת הסודיות על פי הסכם השותפות, ובקשר עם התקופה בה היינו שותף מוגבל בכל התחייבויותינו לפי הסכם השותפות.</p>
+
+            <div class="lvp-field">
+              <span class="lvp-field__label">סכום הפדיון המבוקש</span>
+              <div class="lvp-radios">
+                <label class="lvp-radio"><input type="radio" name="wd-mode" value="full"><span>כל יתרת חשבון ההון</span></label>
+                <label class="lvp-radio"><input type="radio" name="wd-mode" value="partial"><span>סכום (ברוטו) מתוך החשבון</span></label>
+              </div>
+            </div>
+
+            <div id="redemption-partial-block" hidden>
+              <div class="lvp-section"><h3 class="lvp-section__title" style="font-size:16px;">סכום הפדיון (ברוטו)</h3></div>
+              <div id="amount-rows-redemption"></div>
+              <button type="button" class="lvp-amount-add" data-add-currency="redemption">+ הוספת מטבע</button>
+            </div>
+
+            <div class="lvp-section">
+              <h2 class="lvp-section__title">יום הפדיון</h2>
+            </div>
+            <p class="lvp-prose">יש לנקוב ביום שהינו היום הראשון בכל חודש קלנדרי ובלבד שהיום האמור לא יחול פחות מ-14 ימים לפני מסירת הודעה זו לשותף הכללי; יש לנקוב בחשבון זהה לחשבון ממנו הועברה קרן ההשקעה לשותפות; הכל בכפוף לתקופת ההתניה הקבועה בהסכם השותפות;</p>
+            <div class="lvp-field">
+              <span class="lvp-field__label">יום הפדיון המבוקש</span>
+              <div class="lvp-radios">
+                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate"><span>פדיון מיידי - הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
+                <label class="lvp-radio"><input type="radio" name="wd-timing" value="future"><span>ברצוני לבחור תאריך פדיון עתידי</span></label>
+              </div>
+            </div>
+            <label class="lvp-field" id="wd-future-date-field" hidden>
+              <span class="lvp-field__label">תאריך הפדיון</span>
+              <input class="lvp-input lvp-input--ltr" type="date" id="wd-requestedDate">
+            </label>
+          </div>
+
+          <!-- BANK (both) -->
+          <div class="lvp-section">
+            <h2 class="lvp-section__title">פרטי חשבון</h2>
+          </div>
+          <p class="lvp-prose" id="bank-prose-redemption" hidden>ידוע לי כי סכום הפדיון יועבר בהתאם לתנאי הסכם השותפות, במטבע בו בוצעה ההשקעה בחשבון השותפות, ועלויות המרה למטבע אחר, אם יחולו, יחולו על חשבוני וכי הודעת פדיון זו לא תהיה ניתנת לביטול אלא אם הסכים השותף הכללי מראש ובכתב לביטולה.</p>
+          <label class="lvp-field">
+            <span class="lvp-field__label">בנק</span>
+            <input class="lvp-input" type="text" id="bank-name">
+          </label>
+          <div class="lvp-row">
+            <label class="lvp-field">
+              <span class="lvp-field__label">מספר סניף</span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric">
+            </label>
+            <label class="lvp-field">
+              <span class="lvp-field__label">מספר חשבון</span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric">
+            </label>
+          </div>
+
+          <div class="lvp-nav">
+            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="personal">הקודם</button>
+            <button type="button" class="lvp-btn lvp-btn--primary" data-go="uploads">הבא</button>
+          </div>
+        </section>
+
+        <!-- PAGE 4: העלאת קבצים -->
+        <section class="lvp-page" data-page="uploads">
+          <h1 class="lvp-page__title">העלאת קבצים</h1>
+          <div id="lvp-uploads-error" class="lvp-error" hidden></div>
+
+          <div class="lvp-upload">
+            <div class="lvp-upload__label">אישור ניהול חשבון</div>
+            <input type="file" data-upload="accountManagementApproval" accept="image/*,application/pdf">
+            <span class="lvp-upload__name" data-upload-name></span>
+          </div>
+
+          <div class="lvp-upload" id="upload-stamp-wrap" hidden>
+            <div class="lvp-upload__label">חותמת החברה</div>
+            <div class="lvp-upload__hint">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא עמוד רקע כדי לוודא שהיא תופיע כראוי במסמכים.</div>
+            <input type="file" data-upload="companyStamp" accept="image/*">
+            <span class="lvp-upload__name" data-upload-name></span>
+          </div>
+
+          <div class="lvp-nav">
+            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="request">הקודם</button>
+            <button type="button" class="lvp-btn lvp-btn--primary" id="lvp-submit-btn">סיום ושליחה</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ---- bootstrap (token + config) ---------------------------------------
+      var qs = new URLSearchParams(location.search);
+      var token = qs.get('t') || '';
+      var GW = '';   // gateway URL, filled from config
+      var CFG = null;
+      var flowType = '';
+      var applicantType = 'individual';
+      var pendingUploads = {};
+      // Lifted to the top of the IIFE so the mock-mode bootstrap path (which fires
+      // before later var declarations execute) can use them.
+      var CURRENCIES = [
+        { code: 'שקל', symbol: '₪' },
+        { code: 'דולר', symbol: '$' },
+        { code: 'יורו', symbol: '€' }
+      ];
+      var PAGE_ORDER = ['start', 'personal', 'request', 'uploads'];
+
+      var $loading = document.getElementById('lvp-loading');
+      var $form = document.getElementById('lvp-form');
+
+      if (!token && !qs.get('mock')) {
+        $loading.textContent = 'הקישור אינו תקין. נא לפנות למשרד.';
+        return;
+      }
+
+      // Best-effort config fetch. EasySend-style XHR with CORS-friendly script
+      // tag (the GAS /exec endpoint serves JSON). The gateway URL is itself in
+      // the response, so we hit a hard-coded /exec discovery: assume the form
+      // is hosted at the static domain and the gateway is the prod web app URL.
+      // Embed the gateway URL inline; the static repo's deploy pipeline injects
+      // it at publish time. For now read from a meta tag the static repo sets,
+      // OR a fallback /api/gateway file. The simplest path: hard-code below.
+      var GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      GW = GATEWAY_URL;
+
+      function stubConfigForMock(m) {
+        var ind = { legalName: 'משקיע בדיקה', idNumber: '123456782', email: 'noa+test@legacyvpartners.com', phone: '050-1234567' };
+        var ent = { legalName: 'וולקם הום נדל״ן בע״מ', idNumber: '514524859', email: 'noa+test@legacyvpartners.com', phone: '03-5550000' };
+        var pick = {
+          'inc-ind': { flowType: 'cayman_increase',   applicantType: 'individual', lp: ind },
+          'inc-ent': { flowType: 'cayman_increase',   applicantType: 'entity',     lp: ent },
+          'red-ind': { flowType: 'cayman_withdrawal', applicantType: 'individual', lp: ind },
+          'red-ent': { flowType: 'cayman_withdrawal', applicantType: 'entity',     lp: ent }
+        }[m] || null;
+        if (!pick) return { flowType: '' };
+        return { flowType: pick.flowType, lane: 'israeli', language: 'he', applicantType: pick.applicantType, prefill: { lp: pick.lp } };
+      }
+
+      // Render-verify mode: ?mock=inc-ind | inc-ent | red-ind | red-ent bypasses
+      // the GAS config fetch with a fixed stub. Do NOT return from the IIFE after
+      // bootstrapping; the click/change handlers below still need to register.
+      var mock = qs.get('mock') || '';
+      if (mock) {
+        CFG = stubConfigForMock(mock);
+        flowType = CFG.flowType;
+        applicantType = CFG.applicantType;
+        bootstrapForm();
+      } else {
+        var x = new XMLHttpRequest();
+        x.open('GET', GW + '?api=config&t=' + encodeURIComponent(token), true);
+        x.onreadystatechange = function () {
+          if (x.readyState !== 4) return;
+          if (x.status !== 200) { $loading.textContent = 'שגיאה בטעינת הטופס. נא לרענן.'; return; }
+          try { CFG = JSON.parse(x.responseText); }
+          catch (e) { $loading.textContent = 'שגיאה בטעינת הטופס. נא לרענן.'; return; }
+          if (!CFG.flowType) { $loading.textContent = 'הקישור אינו תקין או פג תוקפו.'; return; }
+          flowType = CFG.flowType;
+          applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
+          bootstrapForm();
+        };
+        x.send();
+      }
+
+      function bootstrapForm() {
+        var isIncrease = (flowType === 'cayman_increase');
+        var isRedemption = (flowType === 'cayman_withdrawal');
+
+        // Welcome title verbatim from EasySend per flow.
+        document.getElementById('welcome-title').textContent = isIncrease
+          ? 'ברוכים הבאים לבקשה להגדלת השקעה.'
+          : 'ברוכים הבאים לתהליך בקשת פדיון.';
+
+        // Request-page title.
+        document.getElementById('request-title').textContent = isIncrease
+          ? 'פרטי בקשת ההגדלה' : 'פרטי הפדיון';
+
+        // Page 2 entity vs individual.
+        document.getElementById('personal-individual').hidden = (applicantType === 'entity');
+        document.getElementById('personal-entity').hidden = (applicantType !== 'entity');
+
+        // Page 3 block.
+        document.getElementById('block-increase').hidden = !isIncrease;
+        document.getElementById('block-redemption').hidden = !isRedemption;
+
+        // Bank prose only on redemption.
+        document.getElementById('bank-prose-redemption').hidden = !isRedemption;
+
+        // Entity stamp upload only for entity.
+        document.getElementById('upload-stamp-wrap').hidden = (applicantType !== 'entity');
+
+        // Prefill from the session snapshot (read-only when known; LP confirms / edits).
+        var pre = (CFG.prefill && CFG.prefill.lp) || {};
+        if (applicantType === 'entity') {
+          var nm = pre.legalName || '';
+          var num = pre.idNumber || '';
+          if (nm) document.getElementById('ent-name').value = nm;
+          if (num) document.getElementById('ent-number').value = num;
+        } else {
+          var parts = String(pre.legalName || '').trim().split(/\s+/);
+          if (parts[0]) document.getElementById('ind-firstName').value = parts[0];
+          if (parts.length > 1) document.getElementById('ind-lastName').value = parts.slice(1).join(' ');
+          if (pre.idNumber) document.getElementById('ind-idNumber').value = pre.idNumber;
+        }
+        if (pre.email) document.getElementById('lp-email').value = pre.email;
+        if (pre.phone) document.getElementById('lp-phone').value = pre.phone;
+
+        // Seed one amount row per flow.
+        addAmountRow(isIncrease ? 'increase' : 'redemption');
+
+        $loading.hidden = true;
+        $form.hidden = false;
+      }
+
+      // ---- multi-page nav ---------------------------------------------------
+      function goToPage(key) {
+        var idx = PAGE_ORDER.indexOf(key);
+        if (idx < 0) return;
+        document.querySelectorAll('.lvp-page').forEach(function (el) {
+          el.classList.toggle('is-active', el.getAttribute('data-page') === key);
+        });
+        document.getElementById('lvp-progress-count').textContent = 'שלב ' + (idx + 1) + ' מתוך 4';
+        document.getElementById('lvp-progress-bar').style.width = ((idx + 1) * 25) + '%';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-go]');
+        if (!b) return;
+        var target = b.getAttribute('data-go');
+        var curIdx = PAGE_ORDER.indexOf(getCurrentPage());
+        var nextIdx = PAGE_ORDER.indexOf(target);
+        if (nextIdx > curIdx && !validateCurrentPage()) return;
+        goToPage(target);
+      });
+      function getCurrentPage() {
+        var act = document.querySelector('.lvp-page.is-active');
+        return act ? act.getAttribute('data-page') : 'start';
+      }
+
+      // ---- amount rows ------------------------------------------------------
+      function addAmountRow(kind) {
+        var hostId = (kind === 'increase') ? 'amount-rows-increase' : 'amount-rows-redemption';
+        var host = document.getElementById(hostId);
+        var row = document.createElement('div');
+        row.className = 'lvp-amount-row';
+        // Section title above the rows carries the "סכום ההשקעה הנוספת" / "סכום
+        // הפדיון (ברוטו)" heading; each row needs only the currency label, since
+        // EasySend gave each amount input a per-row currency selector + amount.
+        var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
+        row.innerHTML =
+          '<label class="lvp-field"><span class="lvp-field__label">סכום</span>' +
+          '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="numeric"></label>' +
+          '<label class="lvp-field"><span class="lvp-field__label">' + curLabel + '</span>' +
+          '<select class="lvp-select" data-currency>' +
+          CURRENCIES.map(function (c) { return '<option value="' + c.code + '">' + c.code + '</option>'; }).join('') +
+          '</select></label>' +
+          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע">&times;</button>';
+        host.appendChild(row);
+        row.querySelector('.lvp-amount-rm').addEventListener('click', function () {
+          if (host.children.length <= 1) return;  // never remove the only row
+          row.remove();
+        });
+      }
+      document.addEventListener('click', function (e) {
+        var add = e.target.closest('[data-add-currency]');
+        if (add) addAmountRow(add.getAttribute('data-add-currency'));
+      });
+
+      // ---- redemption conditionals ------------------------------------------
+      document.addEventListener('change', function (e) {
+        if (e.target.name === 'wd-mode') {
+          document.getElementById('redemption-partial-block').hidden = (e.target.value !== 'partial');
+        }
+        if (e.target.name === 'wd-timing') {
+          document.getElementById('wd-future-date-field').hidden = (e.target.value !== 'future');
+        }
+      });
+
+      // ---- uploads ----------------------------------------------------------
+      document.addEventListener('change', function (e) {
+        var inp = e.target.closest('input[type="file"][data-upload]');
+        if (!inp) return;
+        var slot = inp.getAttribute('data-upload');
+        var f = inp.files && inp.files[0];
+        if (!f) { delete pendingUploads[slot]; renderFileName(inp, ''); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          var b64 = String(reader.result).split(',')[1] || '';
+          pendingUploads[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+          renderFileName(inp, f.name);
+        };
+        reader.readAsDataURL(f);
+      });
+      function renderFileName(inp, name) {
+        var wrap = inp.closest('.lvp-upload');
+        if (!wrap) return;
+        var span = wrap.querySelector('[data-upload-name]');
+        if (span) span.textContent = name;
+      }
+
+      // ---- validation -------------------------------------------------------
+      function showErr(pageKey, msg) {
+        var ids = { personal: 'lvp-personal-error', request: 'lvp-request-error', uploads: 'lvp-uploads-error' };
+        var el = document.getElementById(ids[pageKey]);
+        if (!el) return;
+        el.textContent = msg;
+        el.hidden = false;
+      }
+      function clearErr(pageKey) {
+        var ids = { personal: 'lvp-personal-error', request: 'lvp-request-error', uploads: 'lvp-uploads-error' };
+        var el = document.getElementById(ids[pageKey]);
+        if (el) el.hidden = true;
+      }
+      function validateCurrentPage() {
+        var page = getCurrentPage();
+        clearErr(page);
+        if (page === 'personal') {
+          if (applicantType === 'entity') {
+            if (!val('ent-name'))   return showErr(page, 'נא להזין את שם התאגיד.'), false;
+            if (!val('ent-number')) return showErr(page, 'נא להזין מספר ח.פ.'), false;
+          } else {
+            if (!val('ind-firstName')) return showErr(page, 'נא להזין שם פרטי.'), false;
+            if (!val('ind-lastName'))  return showErr(page, 'נא להזין שם משפחה.'), false;
+            if (!val('ind-idNumber'))  return showErr(page, 'נא להזין מספר תעודת זהות.'), false;
+          }
+          var em = val('lp-email');
+          if (!em || em.indexOf('@') < 0) return showErr(page, 'נא להזין כתובת דוא"ל תקינה.'), false;
+          if (!val('lp-phone'))           return showErr(page, 'נא להזין מספר טלפון נייד.'), false;
+          return true;
+        }
+        if (page === 'request') {
+          var isIncrease = (flowType === 'cayman_increase');
+          var rowsHost = document.getElementById(isIncrease ? 'amount-rows-increase' : 'amount-rows-redemption');
+          if (flowType === 'cayman_withdrawal') {
+            var mode = document.querySelector('input[name="wd-mode"]:checked');
+            if (!mode) return showErr(page, 'נא לבחור היקף פדיון.'), false;
+            if (mode.value === 'partial') {
+              if (!validateRows(rowsHost, 'מטבע פדיון')) return false;
+            }
+            var timing = document.querySelector('input[name="wd-timing"]:checked');
+            if (!timing) return showErr(page, 'נא לבחור יום פדיון.'), false;
+            if (timing.value === 'future') {
+              var d = val('wd-requestedDate');
+              if (!d) return showErr(page, 'נא להזין תאריך פדיון.'), false;
+              var today = new Date(); today.setHours(0,0,0,0);
+              if (new Date(d) <= today) return showErr(page, 'תאריך הפדיון חייב להיות עתידי.'), false;
+            }
+          } else {
+            if (!validateRows(rowsHost, 'מטבע השקעה')) return false;
+          }
+          if (!val('bank-name'))    return showErr(page, 'נא להזין את שם הבנק.'), false;
+          if (!val('bank-branch'))  return showErr(page, 'נא להזין מספר סניף.'), false;
+          if (!val('bank-account')) return showErr(page, 'נא להזין מספר חשבון.'), false;
+          return true;
+        }
+        return true;
+      }
+      function validateRows(host, currencyLabel) {
+        var rows = host.querySelectorAll('.lvp-amount-row');
+        if (!rows.length) return showErr('request', 'נא להזין סכום.'), false;
+        var seen = {};
+        for (var i = 0; i < rows.length; i++) {
+          var a = rows[i].querySelector('[data-amount]').value.trim();
+          var c = rows[i].querySelector('[data-currency]').value;
+          if (!a) return showErr('request', 'נא להזין סכום.'), false;
+          var n = Number(a.replace(/[, ]/g, ''));
+          if (!isFinite(n) || n <= 0) return showErr('request', 'נא להזין סכום תקין.'), false;
+          if (seen[c]) return showErr('request', 'יש לבחור ' + currencyLabel + ' שונה'), false;
+          seen[c] = 1;
+        }
+        return true;
+      }
+      function val(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+
+      // ---- submit -----------------------------------------------------------
+      document.getElementById('lvp-submit-btn').addEventListener('click', function () {
+        // Final-page validation: the upload gate.
+        clearErr('uploads');
+        if (!pendingUploads.accountManagementApproval) {
+          return showErr('uploads', 'יש להעלות אישור ניהול חשבון.');
+        }
+        if (applicantType === 'entity' && !pendingUploads.companyStamp) {
+          return showErr('uploads', 'יש להעלות חותמת חברה.');
+        }
+
+        var submission = buildSubmission();
+        var btn = document.getElementById('lvp-submit-btn');
+        btn.disabled = true; btn.textContent = 'שולח...';
+
+        var body = {
+          action: 'submit',
+          token: token,
+          lane: 'israeli',
+          payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
+        };
+        var p = new XMLHttpRequest();
+        p.open('POST', GW + '?source=lp', true);
+        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        p.onreadystatechange = function () {
+          if (p.readyState !== 4) return;
+          if (p.status !== 200) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return showErr('uploads', 'שגיאה בשליחה. נא לנסות שוב.'); }
+          var res;
+          try { res = JSON.parse(p.responseText); }
+          catch (e) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return showErr('uploads', 'שגיאה בשליחה. נא לנסות שוב.'); }
+          if (!res.ok) {
+            btn.disabled = false; btn.textContent = 'סיום ושליחה';
+            var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || 'שגיאה בשליחה.';
+            return showErr('uploads', msg);
+          }
+          if (res.nextUrl) { window.location.href = res.nextUrl; return; }
+          showErr('uploads', 'הטופס התקבל. ממתינים לקישור החתימה.');
+        };
+        p.send(JSON.stringify(body));
+      });
+
+      function buildSubmission() {
+        var s = { applicantType: applicantType, meta: { language: 'he' } };
+        if (applicantType === 'entity') {
+          s.entity = {
+            legalName: val('ent-name'),
+            registrationNumber: val('ent-number'),
+            email: val('lp-email'),
+            phone: val('lp-phone')
+          };
+        } else {
+          s.individual = {
+            firstName: val('ind-firstName'),
+            lastName: val('ind-lastName'),
+            idNumber: val('ind-idNumber'),
+            email: val('lp-email'),
+            phone: val('lp-phone')
+          };
+        }
+        s.lp = {
+          legalName: (applicantType === 'entity')
+            ? val('ent-name')
+            : (val('ind-firstName') + ' ' + val('ind-lastName')).trim(),
+          idNumber: (applicantType === 'entity') ? val('ent-number') : val('ind-idNumber'),
+          email: val('lp-email'),
+          phone: val('lp-phone')
+        };
+        var isIncrease = (flowType === 'cayman_increase');
+        if (isIncrease) {
+          s.investment = { amounts: collectAmounts('amount-rows-increase') };
+        } else {
+          var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value || '';
+          var timing = (document.querySelector('input[name="wd-timing"]:checked') || {}).value || '';
+          s.withdrawal = {
+            mode: mode,
+            timing: timing,
+            requestedDate: val('wd-requestedDate'),
+            amounts: (mode === 'partial') ? collectAmounts('amount-rows-redemption') : []
+          };
+        }
+        s.lpBank = {
+          bankName: val('bank-name'),
+          branch: val('bank-branch'),
+          accountNumber: val('bank-account')
+        };
+        return s;
+      }
+      function collectAmounts(hostId) {
+        var rows = document.getElementById(hostId).querySelectorAll('.lvp-amount-row');
+        var out = [];
+        for (var i = 0; i < rows.length; i++) {
+          var a = Number(String(rows[i].querySelector('[data-amount]').value || '').replace(/[, ]/g, ''));
+          var c = rows[i].querySelector('[data-currency]').value;
+          if (isFinite(a) && a > 0 && c) out.push({ amount: a, currency: c });
+        }
+        return out;
+      }
+    })();
+  </script>
+</body>
+</html>
