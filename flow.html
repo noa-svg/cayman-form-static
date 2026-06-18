@@ -413,6 +413,120 @@
         x.send();
       }
 
+      // ---- save & resume ---------------------------------------------------
+      // Snapshot shape (form-internal): fields { id: value }, radios { name: value },
+      // amounts { increase: [...], redemption: [...] }, uploadsMeta { slot: meta }, page.
+      // Persisted server-side via action=save_page. The gateway returns it back as
+      // cfg.prefill on resume so the LP picks up where they left off.
+      var SAVE_DEBOUNCE_MS = 1200;
+      var saveTimer = null;
+      var savingNow = false;
+      function buildPageSnapshot() {
+        var snap = { fields: {}, radios: {}, amounts: { increase: [], redemption: [] }, uploadsMeta: {} };
+        document.querySelectorAll('input[id], select[id]').forEach(function (el) {
+          if (el.type === 'radio' || el.type === 'file') return;
+          if (el.value) snap.fields[el.id] = el.value;
+        });
+        ['wd-mode', 'wd-timing'].forEach(function (n) {
+          var r = document.querySelector('input[name="' + n + '"]:checked');
+          if (r) snap.radios[n] = r.value;
+        });
+        ['increase', 'redemption'].forEach(function (kind) {
+          var host = document.getElementById('amount-rows-' + kind);
+          if (!host) return;
+          host.querySelectorAll('.lvp-amount-row').forEach(function (row) {
+            var a = row.querySelector('[data-amount]').value;
+            var c = row.querySelector('[data-currency]').value;
+            if (a || c) snap.amounts[kind].push({ amount: a, currency: c });
+          });
+        });
+        Object.keys(pendingUploads).forEach(function (slot) {
+          var u = pendingUploads[slot];
+          snap.uploadsMeta[slot] = { slot: slot, fileName: u.fileName, mimeType: u.mimeType, fileSizeBytes: u.fileSizeBytes };
+        });
+        return snap;
+      }
+      function savePage(page) {
+        if (!token || savingNow) return;
+        var snap = buildPageSnapshot();
+        snap.page = page || getCurrentPage();
+        savingNow = true;
+        var body = { action: 'save_page', token: token, lane: 'israeli',
+          payload: { flowType: flowType, snapshot: snap, page: snap.page } };
+        var p = new XMLHttpRequest();
+        p.open('POST', GW + '?source=lp', true);
+        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        p.onreadystatechange = function () {
+          if (p.readyState !== 4) return;
+          savingNow = false;
+        };
+        try { p.send(JSON.stringify(body)); } catch (e) { savingNow = false; }
+      }
+      function scheduleSave() {
+        if (!token) return;
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () { saveTimer = null; savePage(); }, SAVE_DEBOUNCE_MS);
+      }
+      // Save on every input event (debounced) and on change (radio/select/file).
+      document.addEventListener('input', function (e) {
+        if (e.target.closest('[data-field], .lvp-amount-row')) scheduleSave();
+      });
+      document.addEventListener('change', function (e) {
+        if (e.target.closest('[data-field], .lvp-amount-row, .lvp-radios')) scheduleSave();
+      });
+
+      function applyResumeSnapshot(snap) {
+        if (!snap || typeof snap !== 'object') return;
+        // Identity prefill (the route's snapshot.lp shape) is handled by the
+        // legacy prefill block in bootstrapForm. Only restore the rich save_page
+        // shape here, which carries `fields`.
+        if (snap.lp && !snap.fields) return;
+        if (snap.fields) {
+          Object.keys(snap.fields).forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && (el.type === 'text' || el.type === 'email' || el.type === 'tel' || el.type === 'date' || el.tagName === 'SELECT')) {
+              el.value = snap.fields[id];
+            }
+          });
+        }
+        if (snap.radios) {
+          Object.keys(snap.radios).forEach(function (name) {
+            var r = document.querySelector('input[name="' + name + '"][value="' + snap.radios[name] + '"]');
+            if (r) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+          });
+        }
+        if (snap.amounts) {
+          ['increase', 'redemption'].forEach(function (kind) {
+            var rows = (snap.amounts[kind] || []);
+            if (!rows.length) return;
+            var host = document.getElementById('amount-rows-' + kind);
+            if (!host) return;
+            host.innerHTML = '';
+            rows.forEach(function (r) {
+              addAmountRow(kind);
+              var last = host.lastElementChild;
+              if (!last) return;
+              last.querySelector('[data-amount]').value = r.amount || '';
+              last.querySelector('[data-currency]').value = r.currency || 'שקל';
+            });
+          });
+        }
+        if (snap.uploadsMeta) {
+          // The bytes weren't persisted server-side. Show "previously uploaded:
+          // filename" so the LP knows they need to re-attach.
+          Object.keys(snap.uploadsMeta).forEach(function (slot) {
+            var meta = snap.uploadsMeta[slot] || {};
+            if (!meta.fileName) return;
+            var inp = document.querySelector('input[type="file"][data-upload="' + slot + '"]');
+            if (!inp) return;
+            var wrap = inp.closest('.lvp-upload');
+            if (!wrap) return;
+            var span = wrap.querySelector('[data-upload-name]');
+            if (span) span.textContent = 'הקובץ הקודם: ' + meta.fileName + ' (יש להעלות מחדש)';
+          });
+        }
+      }
+
       function bootstrapForm() {
         var isIncrease = (flowType === 'cayman_increase');
         var isRedemption = (flowType === 'cayman_withdrawal');
@@ -459,6 +573,16 @@
         // Seed one amount row per flow.
         addAmountRow(isIncrease ? 'increase' : 'redemption');
 
+        // Resume: apply the rich save_page snapshot (fields / radios / amounts /
+        // uploadsMeta) if the LP had partially filled before. Identity prefill is
+        // already applied above; this layer carries everything else.
+        try { applyResumeSnapshot(CFG.prefill || {}); } catch (e) {}
+
+        // Resume page: jump straight to where the LP left off, if not page 1.
+        if (CFG.resumePage && CFG.resumePage !== 'start') {
+          try { goToPage(CFG.resumePage); } catch (e) {}
+        }
+
         $loading.hidden = true;
         $form.hidden = false;
       }
@@ -481,6 +605,9 @@
         var curIdx = PAGE_ORDER.indexOf(getCurrentPage());
         var nextIdx = PAGE_ORDER.indexOf(target);
         if (nextIdx > curIdx && !validateCurrentPage()) return;
+        // Save the snapshot at the page boundary so a refresh on the next page
+        // restores the state we just left. Fire-and-forget; never blocks nav.
+        try { savePage(target); } catch (err) {}
         goToPage(target);
       });
       function getCurrentPage() {
