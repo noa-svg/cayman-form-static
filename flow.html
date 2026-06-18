@@ -747,7 +747,7 @@
         var w = fieldWrap(name); if (!w) return;
         w.classList.add('is-invalid');
         var err = w.querySelector('.lvp-field__error');
-        if (err) err.textContent = msg;
+        if (err) err.textContent = msg || '';   // silent = no text, just red border
         var inp = w.querySelector('input, select');
         if (inp) inp.setAttribute('aria-invalid', 'true');
       }
@@ -778,20 +778,23 @@
       // VALIDATORS per field. Each returns { ok:true } or { ok:false, msg:'...' }.
       var EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       var PHONE_RX = /^[0-9 +()-]{7,20}$/;
-      function vRequired(id, msg) { return val(id) ? { ok: true } : { ok: false, msg: msg }; }
+      // Empty required = silent red border (Noa: "it's obvious"). The label + the
+      // red * already tell the LP this is required; a text error would be noise.
+      // Format / length / dup errors KEEP their message so the LP knows the fix.
+      function vRequired(id) { return val(id) ? { ok: true } : { ok: false, silent: true }; }
       function vEmail(id) {
         var v = val(id);
-        if (!v) return { ok: false, msg: 'נא להזין כתובת דוא"ל.' };
+        if (!v) return { ok: false, silent: true };
         return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה.' };
       }
       function vPhone(id) {
         var v = val(id);
-        if (!v) return { ok: false, msg: 'נא להזין מספר טלפון נייד.' };
+        if (!v) return { ok: false, silent: true };
         return PHONE_RX.test(v) ? { ok: true } : { ok: false, msg: 'נא להזין ספרות בלבד.' };
       }
-      function vDigits(id, minLen, maxLen, label) {
+      function vDigits(id, minLen, maxLen) {
         var v = val(id).replace(/[ -]/g, '');
-        if (!v) return { ok: false, msg: 'נא להזין ' + label + '.' };
+        if (!v) return { ok: false, silent: true };
         if (!/^[0-9]+$/.test(v)) return { ok: false, msg: 'נא להזין ספרות בלבד.' };
         var ranged = (minLen === maxLen) ? (minLen + ' ספרות') : ('בין ' + minLen + ' ל-' + maxLen + ' ספרות');
         if (v.length < minLen || v.length > maxLen) return { ok: false, msg: 'נא להזין ' + ranged + '.' };
@@ -799,28 +802,28 @@
       }
       function validateField(name) {
         switch (name) {
-          case 'ind-firstName':  return vRequired('ind-firstName', 'נא להזין שם פרטי.');
-          case 'ind-lastName':   return vRequired('ind-lastName',  'נא להזין שם משפחה.');
-          case 'ind-idNumber':   return vDigits('ind-idNumber', 9, 9, 'מספר תעודת זהות');
-          case 'ent-name':       return vRequired('ent-name', 'נא להזין את שם התאגיד.');
-          case 'ent-number':     return vDigits('ent-number', 9, 9, 'מספר ח.פ');
+          case 'ind-firstName':  return vRequired('ind-firstName');
+          case 'ind-lastName':   return vRequired('ind-lastName');
+          case 'ind-idNumber':   return vDigits('ind-idNumber', 9, 9);
+          case 'ent-name':       return vRequired('ent-name');
+          case 'ent-number':     return vDigits('ent-number', 9, 9);
           case 'lp-email':       return vEmail('lp-email');
           case 'lp-phone':       return vPhone('lp-phone');
-          case 'bank-name':      return vRequired('bank-name', 'נא להזין את שם הבנק.');
-          case 'bank-branch':    return vDigits('bank-branch', 2, 4, 'מספר סניף');
-          case 'bank-account':   return vDigits('bank-account', 4, 15, 'מספר חשבון');
-          case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, msg: 'נא לבחור היקף פדיון.' };
-          case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, msg: 'נא לבחור יום פדיון.' };
+          case 'bank-name':      return vRequired('bank-name');
+          case 'bank-branch':    return vDigits('bank-branch', 2, 4);
+          case 'bank-account':   return vDigits('bank-account', 4, 15);
+          case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
+          case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-requestedDate':
             var d = val('wd-requestedDate');
-            if (!d) return { ok: false, msg: 'נא להזין תאריך פדיון.' };
+            if (!d) return { ok: false, silent: true };
             var today = new Date(); today.setHours(0,0,0,0);
             if (new Date(d) <= today) return { ok: false, msg: 'תאריך הפדיון חייב להיות עתידי.' };
             return { ok: true };
           case 'accountManagementApproval':
-            return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, msg: 'יש להעלות אישור ניהול חשבון.' };
+            return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
           case 'companyStamp':
-            return pendingUploads.companyStamp ? { ok: true } : { ok: false, msg: 'יש להעלות חותמת חברה.' };
+            return pendingUploads.companyStamp ? { ok: true } : { ok: false, silent: true };
         }
         return { ok: true };
       }
@@ -902,7 +905,7 @@
         }
         var res = validateField(name);
         if (res.ok) clearFieldErr(name);
-        else markFieldErr(name, res.msg);
+        else markFieldErr(name, res.silent ? '' : res.msg);
         return res;
       }
 
@@ -921,14 +924,23 @@
           }
           var res = validateField(name);
           if (res.ok) { clearFieldErr(name); }
-          else { markFieldErr(name, res.msg); errs.push({ name: name, msg: res.msg, label: fieldLabel(name) }); }
+          else {
+            markFieldErr(name, res.silent ? '' : res.msg);
+            // Silent errors (empty required) skip the summary list. Red border
+            // is the signal. Format/length/dup errors still populate the summary
+            // so the LP can jump to the specific issue.
+            if (!res.silent) errs.push({ name: name, msg: res.msg, label: fieldLabel(name) });
+            else errs.push({ name: name, silent: true });
+          }
         });
         if (!errs.length) return true;
-        // Build the summary with jump links.
-        if (summary) {
-          var first = errs[0];
-          var html = '<p class="lvp-error-summary__title">' + (errs.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + errs.length + ' שגיאות:') + '</p><ul>';
-          errs.forEach(function (e, i) {
+        // Build the summary with jump links, skipping silent errors (those
+        // already show up as red borders alone). If every error is silent the
+        // summary stays hidden; the red highlights speak.
+        var verbose = errs.filter(function (e) { return !e.silent; });
+        if (summary && verbose.length) {
+          var html = '<p class="lvp-error-summary__title">' + (verbose.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + verbose.length + ' שגיאות:') + '</p><ul>';
+          verbose.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
             html += '<li><a href="#" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</a></li>';
           });
