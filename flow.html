@@ -362,8 +362,9 @@
       var $loading = document.getElementById('lvp-loading');
       var $form = document.getElementById('lvp-form');
 
+      var BROKEN_LINK_MSG = '🔗 נראה שהקישור שבור.';
       if (!token && !qs.get('mock')) {
-        $loading.textContent = 'הקישור אינו תקין. נא לפנות למשרד.';
+        $loading.textContent = BROKEN_LINK_MSG;
         return;
       }
 
@@ -404,10 +405,10 @@
         x.open('GET', GW + '?api=config&t=' + encodeURIComponent(token), true);
         x.onreadystatechange = function () {
           if (x.readyState !== 4) return;
-          if (x.status !== 200) { $loading.textContent = 'שגיאה בטעינת הטופס. נא לרענן.'; return; }
+          if (x.status !== 200) { $loading.textContent = BROKEN_LINK_MSG; return; }
           try { CFG = JSON.parse(x.responseText); }
-          catch (e) { $loading.textContent = 'שגיאה בטעינת הטופס. נא לרענן.'; return; }
-          if (!CFG.flowType) { $loading.textContent = 'הקישור אינו תקין או פג תוקפו.'; return; }
+          catch (e) { $loading.textContent = BROKEN_LINK_MSG; return; }
+          if (!CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
           flowType = CFG.flowType;
           applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
           bootstrapForm();
