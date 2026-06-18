@@ -212,7 +212,7 @@
           <div id="personal-entity" hidden>
             <label class="lvp-field" data-field="ent-name">
               <span class="lvp-field__label">שם התאגיד<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input" type="text" id="ent-name" autocomplete="organization" required aria-describedby="err-ent-name">
+              <input class="lvp-input" type="text" id="ent-name" autocomplete="organization" required maxlength="60" aria-describedby="err-ent-name">
               <span class="lvp-field__error" id="err-ent-name"></span>
             </label>
             <label class="lvp-field" data-field="ent-number">
@@ -356,7 +356,7 @@
     </div>
   </div>
 
-  <div id="lvp-busy" class="lvp-busy" role="status" aria-live="polite" aria-busy="true">
+  <div id="lvp-busy" class="lvp-busy" role="status" aria-live="polite" aria-busy="true" aria-modal="true">
     <div class="lvp-busy__spinner" aria-hidden="true"></div>
     <p class="lvp-busy__title" id="lvp-busy-title">מכינים את מסמכי החתימה.</p>
     <p class="lvp-busy__warn">נא לא לסגור את החלון.</p>
@@ -607,6 +607,15 @@
         document.getElementById('lvp-progress-meta').setAttribute('aria-valuenow', String(idx + 1));
         document.getElementById('lvp-progress-bar').style.width = ((idx + 1) * 25) + '%';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        // A11y: move focus to the new page's title so a screen reader announces
+        // the heading instead of leaving the user on the previous Continue
+        // button. tabindex=-1 keeps it out of the Tab order; programmatic focus
+        // still works. WCAG 2.4.3 (Focus Order).
+        var title = document.querySelector('.lvp-page.is-active .lvp-page__title');
+        if (title) {
+          if (!title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1');
+          try { title.focus({ preventScroll: true }); } catch (e) { title.focus(); }
+        }
       }
       document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-go]');
@@ -626,9 +635,14 @@
       }
 
       // ---- amount rows ------------------------------------------------------
+      // Hard cap: 4 currencies per request. Above this, the tracker NAME cell
+      // and the email subject wrap in unreadable ways, and the sealed PDF
+      // layout overflows. 4 covers ILS/USD/EUR/GBP, the realistic LP set.
+      var AMOUNT_ROWS_MAX = 4;
       function addAmountRow(kind) {
         var hostId = (kind === 'increase') ? 'amount-rows-increase' : 'amount-rows-redemption';
         var host = document.getElementById(hostId);
+        if (host.children.length >= AMOUNT_ROWS_MAX) { refreshAddVisibility(host, kind); return; }
         var rowId = 'amt-' + kind + '-' + (host.children.length + 1);
         var row = document.createElement('div');
         row.className = 'lvp-amount-row';
@@ -651,8 +665,10 @@
           if (host.children.length <= 1) return;
           row.remove();
           refreshRmVisibility(host);
+          refreshAddVisibility(host, kind);
         });
         refreshRmVisibility(host);
+        refreshAddVisibility(host, kind);
       }
       function refreshRmVisibility(host) {
         var rows = host.querySelectorAll('.lvp-amount-row');
@@ -660,6 +676,10 @@
           var btn = r.querySelector('.lvp-amount-rm');
           if (btn) btn.hidden = (rows.length <= 1);
         });
+      }
+      function refreshAddVisibility(host, kind) {
+        var addBtn = document.querySelector('[data-add-currency="' + kind + '"]');
+        if (addBtn) addBtn.hidden = (host.children.length >= AMOUNT_ROWS_MAX);
       }
       document.addEventListener('click', function (e) {
         var add = e.target.closest('[data-add-currency]');
@@ -805,8 +825,13 @@
           case 'wd-requestedDate':
             var d = val('wd-requestedDate');
             if (!d) return { ok: false, silent: true };
+            var parsed = new Date(d);
+            // Reject invalid dates (eg Feb 29 in a non-leap year). Without
+            // isNaN the comparison silently passes and the server then
+            // auto-corrects to March 1, sealing the wrong date.
+            if (isNaN(parsed.getTime())) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
             var today = new Date(); today.setHours(0,0,0,0);
-            if (new Date(d) <= today) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
+            if (parsed <= today) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
             return { ok: true };
           case 'accountManagementApproval':
             return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
