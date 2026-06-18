@@ -155,7 +155,7 @@
         <!-- PAGE 1: התחלה -->
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
-          <p class="lvp-prose">בתהליך זה באפשרותך למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
+          <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
           <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
           <div class="lvp-nav">
             <span></span>
@@ -198,7 +198,7 @@
             <label class="lvp-field" data-field="ent-number">
               <span class="lvp-field__label">מספר ח.פ<span class="lvp-req" aria-hidden="true">*</span></span>
               <input class="lvp-input lvp-input--ltr" type="text" id="ent-number" inputmode="numeric" autocomplete="off" required pattern="[0-9]{8,9}" maxlength="9" aria-describedby="err-ent-number hint-ent-number">
-              <span class="lvp-field__hint" id="hint-ent-number">9 ספרות (כולל ספרת ביקורת)</span>
+              <span class="lvp-field__hint" id="hint-ent-number">9 ספרות, כולל ספרת ביקורת</span>
               <span class="lvp-field__error" id="err-ent-number"></span>
             </label>
           </div>
@@ -265,7 +265,7 @@
             <fieldset class="lvp-field" data-field="wd-timing">
               <legend class="lvp-field__label">יום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
               <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-timing">
-                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי - הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
+                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי. הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
                 <label class="lvp-radio"><input type="radio" name="wd-timing" value="future"><span>ברצוני לבחור תאריך פדיון עתידי</span></label>
               </div>
               <span class="lvp-field__error" id="err-wd-timing"></span>
@@ -751,9 +751,9 @@
       function vDigits(id, minLen, maxLen, label) {
         var v = val(id).replace(/[ -]/g, '');
         if (!v) return { ok: false, msg: 'נא להזין ' + label + '.' };
-        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: label + ' חייב להיות ספרות בלבד.' };
-        if (v.length < minLen) return { ok: false, msg: label + ' קצר מדי (לפחות ' + minLen + ' ספרות).' };
-        if (v.length > maxLen) return { ok: false, msg: label + ' ארוך מדי (עד ' + maxLen + ' ספרות).' };
+        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: label + ' צריך להכיל ספרות בלבד.' };
+        var ranged = (minLen === maxLen) ? (minLen + ' ספרות') : ('בין ' + minLen + ' ל-' + maxLen + ' ספרות');
+        if (v.length < minLen || v.length > maxLen) return { ok: false, msg: label + ' צריך להיות ' + ranged + '.' };
         return { ok: true };
       }
       function validateField(name) {
@@ -886,7 +886,7 @@
         // Build the summary with jump links.
         if (summary) {
           var first = errs[0];
-          var html = '<p class="lvp-error-summary__title">' + (errs.length === 1 ? 'יש שגיאה אחת לתקן:' : 'יש ' + errs.length + ' שגיאות לתקן:') + '</p><ul>';
+          var html = '<p class="lvp-error-summary__title">' + (errs.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + errs.length + ' שגיאות:') + '</p><ul>';
           errs.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
             html += '<li><a href="#" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</a></li>';
@@ -947,7 +947,7 @@
         var submission = buildSubmission();
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
-        submitStatus('הטופס נשלח, נא להמתין.');
+        submitStatus('שולחים את הטופס, נא להמתין.');
 
         var body = {
           action: 'submit',
