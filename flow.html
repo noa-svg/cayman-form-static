@@ -533,20 +533,9 @@
             });
           });
         }
-        if (snap.uploadsMeta) {
-          // The bytes weren't persisted server-side. Show "previously uploaded:
-          // filename" so the LP knows they need to re-attach.
-          Object.keys(snap.uploadsMeta).forEach(function (slot) {
-            var meta = snap.uploadsMeta[slot] || {};
-            if (!meta.fileName) return;
-            var inp = document.querySelector('input[type="file"][data-upload="' + slot + '"]');
-            if (!inp) return;
-            var wrap = inp.closest('.lvp-upload');
-            if (!wrap) return;
-            var span = wrap.querySelector('[data-upload-name]');
-            if (span) span.textContent = 'הקובץ הקודם: ' + meta.fileName + ' (יש להעלות מחדש)';
-          });
-        }
+        // Upload metadata intentionally NOT restored on resume. Files don't
+        // persist across refresh in any form (browser security on file inputs),
+        // LPs expect to re-attach. No hint needed; the field label says enough.
       }
 
       function bootstrapForm() {
