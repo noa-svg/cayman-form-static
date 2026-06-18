@@ -985,6 +985,12 @@
       }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
         if (!validateCurrentPage()) return;
+        // Cancel any in-flight save_page debounce. Without this, the timer that
+        // was queued by the LP's last keystroke fires AFTER the submit lands,
+        // and the server processes a save_page on a session that just got
+        // submittedAt set. Server-side caymanHandleSavePage_ also rejects this
+        // case (defence in depth) but the client cancel is the cheaper guard.
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
         var submission = buildSubmission();
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
