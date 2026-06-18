@@ -34,6 +34,33 @@
       padding: 28px 28px 32px;
       box-shadow: 0 1px 0 rgba(13,63,106,0.04);
     }
+    @media (max-width: 540px) { .lvp-card { padding: 20px 16px 24px; } }
+    .lvp-req { color: var(--lvp-error); margin-inline-start: 4px; }
+    .lvp-field__error {
+      display: none;
+      color: var(--lvp-error); font-size: 13px;
+      margin: 4px 0 0; font-weight: 500;
+    }
+    .lvp-field.is-invalid .lvp-field__error { display: block; }
+    .lvp-field.is-invalid .lvp-input,
+    .lvp-field.is-invalid .lvp-select {
+      border-color: var(--lvp-error);
+      box-shadow: 0 0 0 3px rgba(192,57,43,0.10);
+    }
+    .lvp-error-summary {
+      background: #FBECEA; border: 1px solid var(--lvp-error); color: var(--lvp-error);
+      padding: 12px 16px; border-radius: 8px; margin: 0 0 14px;
+      font-size: 14px;
+    }
+    .lvp-error-summary__title { font-weight: 700; margin: 0 0 6px; }
+    .lvp-error-summary ul { margin: 0; padding-inline-start: 18px; }
+    .lvp-error-summary a {
+      color: var(--lvp-error); text-decoration: underline; cursor: pointer;
+    }
+    .lvp-sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
     .lvp-progress { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; }
     .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
@@ -86,6 +113,12 @@
     .lvp-btn {
       font-family: inherit; font-size: 15px; font-weight: 700; padding: 11px 22px;
       border-radius: 8px; border: none; cursor: pointer; min-width: 110px;
+      min-height: 44px;
+    }
+    .lvp-amount-add { min-height: 44px; }
+    .lvp-radio { min-height: 32px; padding: 4px 0; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
     .lvp-btn--primary { background: var(--lvp-navy); color: #fff; }
     .lvp-btn--primary:hover { background: var(--lvp-navy-700); }
@@ -133,44 +166,53 @@
         <!-- PAGE 2: פרטים אישיים -->
         <section class="lvp-page" data-page="personal">
           <h1 class="lvp-page__title">פרטים אישיים</h1>
-          <div id="lvp-personal-error" class="lvp-error" hidden></div>
+          <div id="lvp-personal-summary" class="lvp-error-summary" hidden role="alert"></div>
 
           <div id="personal-individual">
             <div class="lvp-row">
-              <label class="lvp-field">
-                <span class="lvp-field__label">שם פרטי</span>
-                <input class="lvp-input" type="text" id="ind-firstName" autocomplete="given-name">
+              <label class="lvp-field" data-field="ind-firstName">
+                <span class="lvp-field__label">שם פרטי<span class="lvp-req" aria-hidden="true">*</span></span>
+                <input class="lvp-input" type="text" id="ind-firstName" autocomplete="given-name" required aria-describedby="err-ind-firstName">
+                <span class="lvp-field__error" id="err-ind-firstName"></span>
               </label>
-              <label class="lvp-field">
-                <span class="lvp-field__label">שם משפחה</span>
-                <input class="lvp-input" type="text" id="ind-lastName" autocomplete="family-name">
+              <label class="lvp-field" data-field="ind-lastName">
+                <span class="lvp-field__label">שם משפחה<span class="lvp-req" aria-hidden="true">*</span></span>
+                <input class="lvp-input" type="text" id="ind-lastName" autocomplete="family-name" required aria-describedby="err-ind-lastName">
+                <span class="lvp-field__error" id="err-ind-lastName"></span>
               </label>
             </div>
-            <label class="lvp-field">
-              <span class="lvp-field__label">מספר תעודת זהות</span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="ind-idNumber" inputmode="numeric" autocomplete="off">
+            <label class="lvp-field" data-field="ind-idNumber">
+              <span class="lvp-field__label">מספר תעודת זהות<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="ind-idNumber" inputmode="numeric" autocomplete="off" required pattern="[0-9]{5,9}" maxlength="9" aria-describedby="err-ind-idNumber hint-ind-idNumber">
+              <span class="lvp-field__hint" id="hint-ind-idNumber">9 ספרות, כולל ספרת ביקורת</span>
+              <span class="lvp-field__error" id="err-ind-idNumber"></span>
             </label>
           </div>
 
           <div id="personal-entity" hidden>
-            <label class="lvp-field">
-              <span class="lvp-field__label">שם התאגיד</span>
-              <input class="lvp-input" type="text" id="ent-name">
+            <label class="lvp-field" data-field="ent-name">
+              <span class="lvp-field__label">שם התאגיד<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input" type="text" id="ent-name" autocomplete="organization" required aria-describedby="err-ent-name">
+              <span class="lvp-field__error" id="err-ent-name"></span>
             </label>
-            <label class="lvp-field">
-              <span class="lvp-field__label">מספר ח.פ</span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="ent-number" inputmode="numeric" autocomplete="off">
+            <label class="lvp-field" data-field="ent-number">
+              <span class="lvp-field__label">מספר ח.פ<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="ent-number" inputmode="numeric" autocomplete="off" required pattern="[0-9]{8,9}" maxlength="9" aria-describedby="err-ent-number hint-ent-number">
+              <span class="lvp-field__hint" id="hint-ent-number">9 ספרות (כולל ספרת ביקורת)</span>
+              <span class="lvp-field__error" id="err-ent-number"></span>
             </label>
           </div>
 
-          <label class="lvp-field">
-            <span class="lvp-field__label">כתובת דוא"ל</span>
-            <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" autocomplete="email">
-            <span class="lvp-field__hint">כתובת זו תשמש אותנו לתקשורת</span>
+          <label class="lvp-field" data-field="lp-email">
+            <span class="lvp-field__label">כתובת דוא"ל<span class="lvp-req" aria-hidden="true">*</span></span>
+            <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" autocomplete="email" required aria-describedby="err-lp-email hint-lp-email">
+            <span class="lvp-field__hint" id="hint-lp-email">כתובת זו תשמש אותנו לתקשורת</span>
+            <span class="lvp-field__error" id="err-lp-email"></span>
           </label>
-          <label class="lvp-field">
-            <span class="lvp-field__label">טלפון נייד</span>
-            <input class="lvp-input lvp-input--ltr" type="tel" id="lp-phone" autocomplete="tel" inputmode="tel">
+          <label class="lvp-field" data-field="lp-phone">
+            <span class="lvp-field__label">טלפון נייד<span class="lvp-req" aria-hidden="true">*</span></span>
+            <input class="lvp-input lvp-input--ltr" type="tel" id="lp-phone" autocomplete="tel" inputmode="tel" required aria-describedby="err-lp-phone">
+            <span class="lvp-field__error" id="err-lp-phone"></span>
           </label>
 
           <div class="lvp-nav">
@@ -182,7 +224,7 @@
         <!-- PAGE 3: פרטי הבקשה (increase: פרטי בקשת ההגדלה / redemption: פרטי הפדיון) -->
         <section class="lvp-page" data-page="request">
           <h1 class="lvp-page__title" id="request-title"></h1>
-          <div id="lvp-request-error" class="lvp-error" hidden></div>
+          <div id="lvp-request-summary" class="lvp-error-summary" hidden role="alert"></div>
 
           <!-- INCREASE-ONLY block -->
           <div id="block-increase" hidden>
@@ -201,13 +243,14 @@
             <p class="lvp-prose">סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים.</p>
             <p class="lvp-prose">ידוע לנו כי אם יתרת חשבון ההון שלנו, לאחר הפדיון, נמוכה מחמישים אלף (50,000) שקלים חדשים, השותף הכללי רשאי, אך לא חייב, לקבוע כי סכום הפדיון יעמוד על מלוא היתרה בחשבון ההון שלנו. כמו כן ידוע לנו כי עם פדיון כל היתרה בחשבון ההון שלנו, נחדל, ביום הפדיון המבוקש, להיות שותף בשותפות ולא תהיה לנו כל זכות שהיא בשותפות ו/או בנכסיה, ואולם נמשיך לחוב בחובת הסודיות על פי הסכם השותפות, ובקשר עם התקופה בה היינו שותף מוגבל בכל התחייבויותינו לפי הסכם השותפות.</p>
 
-            <div class="lvp-field">
-              <span class="lvp-field__label">סכום הפדיון המבוקש</span>
-              <div class="lvp-radios">
-                <label class="lvp-radio"><input type="radio" name="wd-mode" value="full"><span>כל יתרת חשבון ההון</span></label>
+            <fieldset class="lvp-field" data-field="wd-mode">
+              <legend class="lvp-field__label">סכום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
+              <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-mode">
+                <label class="lvp-radio"><input type="radio" name="wd-mode" value="full" required><span>כל יתרת חשבון ההון</span></label>
                 <label class="lvp-radio"><input type="radio" name="wd-mode" value="partial"><span>סכום (ברוטו) מתוך החשבון</span></label>
               </div>
-            </div>
+              <span class="lvp-field__error" id="err-wd-mode"></span>
+            </fieldset>
 
             <div id="redemption-partial-block" hidden>
               <div class="lvp-section"><h3 class="lvp-section__title" style="font-size:16px;">סכום הפדיון (ברוטו)</h3></div>
@@ -219,16 +262,18 @@
               <h2 class="lvp-section__title">יום הפדיון</h2>
             </div>
             <p class="lvp-prose">יש לנקוב ביום שהינו היום הראשון בכל חודש קלנדרי ובלבד שהיום האמור לא יחול פחות מ-14 ימים לפני מסירת הודעה זו לשותף הכללי; יש לנקוב בחשבון זהה לחשבון ממנו הועברה קרן ההשקעה לשותפות; הכל בכפוף לתקופת ההתניה הקבועה בהסכם השותפות;</p>
-            <div class="lvp-field">
-              <span class="lvp-field__label">יום הפדיון המבוקש</span>
-              <div class="lvp-radios">
-                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate"><span>פדיון מיידי - הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
+            <fieldset class="lvp-field" data-field="wd-timing">
+              <legend class="lvp-field__label">יום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
+              <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-timing">
+                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי - הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
                 <label class="lvp-radio"><input type="radio" name="wd-timing" value="future"><span>ברצוני לבחור תאריך פדיון עתידי</span></label>
               </div>
-            </div>
-            <label class="lvp-field" id="wd-future-date-field" hidden>
-              <span class="lvp-field__label">תאריך הפדיון</span>
-              <input class="lvp-input lvp-input--ltr" type="date" id="wd-requestedDate">
+              <span class="lvp-field__error" id="err-wd-timing"></span>
+            </fieldset>
+            <label class="lvp-field" id="wd-future-date-field" data-field="wd-requestedDate" hidden>
+              <span class="lvp-field__label">תאריך הפדיון<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input lvp-input--ltr" type="date" id="wd-requestedDate" aria-describedby="err-wd-requestedDate">
+              <span class="lvp-field__error" id="err-wd-requestedDate"></span>
             </label>
           </div>
 
@@ -237,18 +282,21 @@
             <h2 class="lvp-section__title">פרטי חשבון</h2>
           </div>
           <p class="lvp-prose" id="bank-prose-redemption" hidden>ידוע לי כי סכום הפדיון יועבר בהתאם לתנאי הסכם השותפות, במטבע בו בוצעה ההשקעה בחשבון השותפות, ועלויות המרה למטבע אחר, אם יחולו, יחולו על חשבוני וכי הודעת פדיון זו לא תהיה ניתנת לביטול אלא אם הסכים השותף הכללי מראש ובכתב לביטולה.</p>
-          <label class="lvp-field">
-            <span class="lvp-field__label">בנק</span>
-            <input class="lvp-input" type="text" id="bank-name">
+          <label class="lvp-field" data-field="bank-name">
+            <span class="lvp-field__label">בנק<span class="lvp-req" aria-hidden="true">*</span></span>
+            <input class="lvp-input" type="text" id="bank-name" autocomplete="off" required aria-describedby="err-bank-name">
+            <span class="lvp-field__error" id="err-bank-name"></span>
           </label>
           <div class="lvp-row">
-            <label class="lvp-field">
-              <span class="lvp-field__label">מספר סניף</span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric">
+            <label class="lvp-field" data-field="bank-branch">
+              <span class="lvp-field__label">מספר סניף<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric" autocomplete="off" required pattern="[0-9]{2,4}" maxlength="4" aria-describedby="err-bank-branch">
+              <span class="lvp-field__error" id="err-bank-branch"></span>
             </label>
-            <label class="lvp-field">
-              <span class="lvp-field__label">מספר חשבון</span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric">
+            <label class="lvp-field" data-field="bank-account">
+              <span class="lvp-field__label">מספר חשבון<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,15}" maxlength="15" aria-describedby="err-bank-account">
+              <span class="lvp-field__error" id="err-bank-account"></span>
             </label>
           </div>
 
@@ -261,25 +309,28 @@
         <!-- PAGE 4: העלאת קבצים -->
         <section class="lvp-page" data-page="uploads">
           <h1 class="lvp-page__title">העלאת קבצים</h1>
-          <div id="lvp-uploads-error" class="lvp-error" hidden></div>
+          <div id="lvp-uploads-summary" class="lvp-error-summary" hidden role="alert"></div>
 
-          <div class="lvp-upload">
-            <div class="lvp-upload__label">אישור ניהול חשבון</div>
-            <input type="file" data-upload="accountManagementApproval" accept="image/*,application/pdf">
-            <span class="lvp-upload__name" data-upload-name></span>
+          <div class="lvp-upload" data-field="accountManagementApproval">
+            <div class="lvp-upload__label"><label for="file-accountManagementApproval">אישור ניהול חשבון<span class="lvp-req" aria-hidden="true">*</span></label></div>
+            <input type="file" id="file-accountManagementApproval" data-upload="accountManagementApproval" accept="image/*,application/pdf" aria-describedby="err-accountManagementApproval">
+            <span class="lvp-upload__name" data-upload-name aria-live="polite"></span>
+            <span class="lvp-field__error" id="err-accountManagementApproval"></span>
           </div>
 
-          <div class="lvp-upload" id="upload-stamp-wrap" hidden>
-            <div class="lvp-upload__label">חותמת החברה</div>
-            <div class="lvp-upload__hint">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא עמוד רקע כדי לוודא שהיא תופיע כראוי במסמכים.</div>
-            <input type="file" data-upload="companyStamp" accept="image/*">
-            <span class="lvp-upload__name" data-upload-name></span>
+          <div class="lvp-upload" id="upload-stamp-wrap" data-field="companyStamp" hidden>
+            <div class="lvp-upload__label"><label for="file-companyStamp">חותמת החברה<span class="lvp-req" aria-hidden="true">*</span></label></div>
+            <div class="lvp-upload__hint" id="hint-companyStamp">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא עמוד רקע כדי לוודא שהיא תופיע כראוי במסמכים.</div>
+            <input type="file" id="file-companyStamp" data-upload="companyStamp" accept="image/*" aria-describedby="hint-companyStamp err-companyStamp">
+            <span class="lvp-upload__name" data-upload-name aria-live="polite"></span>
+            <span class="lvp-field__error" id="err-companyStamp"></span>
           </div>
 
           <div class="lvp-nav">
             <button type="button" class="lvp-btn lvp-btn--ghost" data-go="request">הקודם</button>
             <button type="button" class="lvp-btn lvp-btn--primary" id="lvp-submit-btn">סיום ושליחה</button>
           </div>
+          <div id="lvp-submit-status" class="lvp-sr-only" aria-live="polite"></div>
         </section>
       </div>
     </div>
@@ -441,21 +492,23 @@
       function addAmountRow(kind) {
         var hostId = (kind === 'increase') ? 'amount-rows-increase' : 'amount-rows-redemption';
         var host = document.getElementById(hostId);
+        var rowId = 'amt-' + kind + '-' + (host.children.length + 1);
         var row = document.createElement('div');
         row.className = 'lvp-amount-row';
-        // Each row carries an amount + currency dropdown. No per-row label
-        // (section heading above carries it). Remove button only surfaces when
-        // there's more than one row to choose from; the only-row case has nothing
-        // to remove, so the X is hidden.
+        row.setAttribute('data-amount-row', kind);
+        // Each row carries an amount + currency dropdown + labelled error. No
+        // per-row "amount" heading; the section heading carries it. The remove
+        // button surfaces only when more than one row exists.
         var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
         row.innerHTML =
-          '<label class="lvp-field"><span class="lvp-field__label">סכום</span>' +
-          '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="numeric"></label>' +
-          '<label class="lvp-field"><span class="lvp-field__label">' + curLabel + '</span>' +
-          '<select class="lvp-select" data-currency>' +
+          '<label class="lvp-field"><span class="lvp-field__label">סכום<span class="lvp-req" aria-hidden="true">*</span></span>' +
+          '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="סכום" aria-describedby="err-' + rowId + '"></label>' +
+          '<label class="lvp-field"><span class="lvp-field__label">' + curLabel + '<span class="lvp-req" aria-hidden="true">*</span></span>' +
+          '<select class="lvp-select" data-currency required aria-label="' + curLabel + '">' +
           CURRENCIES.map(function (c) { return '<option value="' + c.code + '">' + c.code + '</option>'; }).join('') +
           '</select></label>' +
-          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע" hidden>&times;</button>';
+          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע" hidden>&times;</button>' +
+          '<span class="lvp-field__error" id="err-' + rowId + '" style="grid-column:1/-1;"></span>';
         host.appendChild(row);
         row.querySelector('.lvp-amount-rm').addEventListener('click', function () {
           if (host.children.length <= 1) return;
@@ -480,9 +533,11 @@
       document.addEventListener('change', function (e) {
         if (e.target.name === 'wd-mode') {
           document.getElementById('redemption-partial-block').hidden = (e.target.value !== 'partial');
+          clearFieldErr('wd-mode');
         }
         if (e.target.name === 'wd-timing') {
           document.getElementById('wd-future-date-field').hidden = (e.target.value !== 'future');
+          clearFieldErr('wd-timing');
         }
       });
 
@@ -498,6 +553,7 @@
           var b64 = String(reader.result).split(',')[1] || '';
           pendingUploads[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
           renderFileName(inp, f.name);
+          clearFieldErr(slot);
         };
         reader.readAsDataURL(f);
       });
@@ -508,94 +564,269 @@
         if (span) span.textContent = name;
       }
 
-      // ---- validation -------------------------------------------------------
-      function showErr(pageKey, msg) {
-        var ids = { personal: 'lvp-personal-error', request: 'lvp-request-error', uploads: 'lvp-uploads-error' };
-        var el = document.getElementById(ids[pageKey]);
-        if (!el) return;
-        el.textContent = msg;
-        el.hidden = false;
+      // ---- per-field validation engine -------------------------------------
+      // Friedman discipline: validate on blur (reward early, punish late), clear
+      // on input once the field has erred, summary + focus on submit-fail, every
+      // field carries aria-invalid + aria-describedby so screen readers announce.
+      function val(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+      function fieldWrap(name) {
+        // name = field id ('ind-firstName') or radio-group name ('wd-mode') or
+        // upload slot ('accountManagementApproval'). Resolves to the wrapper.
+        return document.querySelector('[data-field="' + name + '"]');
       }
-      function clearErr(pageKey) {
-        var ids = { personal: 'lvp-personal-error', request: 'lvp-request-error', uploads: 'lvp-uploads-error' };
-        var el = document.getElementById(ids[pageKey]);
-        if (el) el.hidden = true;
+      function fieldLabel(name) {
+        var w = fieldWrap(name); if (!w) return '';
+        var lab = w.querySelector('.lvp-field__label, legend.lvp-field__label, .lvp-upload__label');
+        if (!lab) return '';
+        var txt = (lab.firstChild && lab.firstChild.textContent ? lab.firstChild.textContent : lab.textContent) || '';
+        return String(txt).replace(/\*/g, '').trim();
       }
-      function validateCurrentPage() {
-        var page = getCurrentPage();
-        clearErr(page);
+      function markFieldErr(name, msg) {
+        var w = fieldWrap(name); if (!w) return;
+        w.classList.add('is-invalid');
+        var err = w.querySelector('.lvp-field__error');
+        if (err) err.textContent = msg;
+        var inp = w.querySelector('input, select');
+        if (inp) inp.setAttribute('aria-invalid', 'true');
+      }
+      function clearFieldErr(name) {
+        var w = fieldWrap(name); if (!w) return;
+        w.classList.remove('is-invalid');
+        var err = w.querySelector('.lvp-field__error');
+        if (err) err.textContent = '';
+        var inp = w.querySelector('input, select');
+        if (inp) inp.removeAttribute('aria-invalid');
+      }
+      function clearAllErrs(page) {
+        var summary = document.getElementById('lvp-' + page + '-summary');
+        if (summary) { summary.hidden = true; summary.innerHTML = ''; }
+        var wraps = currentPageElement(page).querySelectorAll('[data-field]');
+        wraps.forEach(function (w) {
+          w.classList.remove('is-invalid');
+          var err = w.querySelector('.lvp-field__error');
+          if (err) err.textContent = '';
+          var inp = w.querySelector('input, select');
+          if (inp) inp.removeAttribute('aria-invalid');
+        });
+      }
+      function currentPageElement(page) {
+        return document.querySelector('.lvp-page[data-page="' + page + '"]') || document;
+      }
+
+      // VALIDATORS per field. Each returns { ok:true } or { ok:false, msg:'...' }.
+      var EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      var PHONE_RX = /^[0-9 +()-]{7,20}$/;
+      function vRequired(id, msg) { return val(id) ? { ok: true } : { ok: false, msg: msg }; }
+      function vEmail(id) {
+        var v = val(id);
+        if (!v) return { ok: false, msg: 'נא להזין כתובת דוא"ל.' };
+        return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה. דוגמה: name@example.com' };
+      }
+      function vPhone(id) {
+        var v = val(id);
+        if (!v) return { ok: false, msg: 'נא להזין מספר טלפון נייד.' };
+        return PHONE_RX.test(v) ? { ok: true } : { ok: false, msg: 'מספר טלפון לא תקין. רק ספרות, רווחים, פלוס וסוגריים.' };
+      }
+      function vDigits(id, minLen, maxLen, label) {
+        var v = val(id).replace(/[ -]/g, '');
+        if (!v) return { ok: false, msg: 'נא להזין ' + label + '.' };
+        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: label + ' חייב להיות ספרות בלבד.' };
+        if (v.length < minLen) return { ok: false, msg: label + ' קצר מדי (לפחות ' + minLen + ' ספרות).' };
+        if (v.length > maxLen) return { ok: false, msg: label + ' ארוך מדי (עד ' + maxLen + ' ספרות).' };
+        return { ok: true };
+      }
+      function validateField(name) {
+        switch (name) {
+          case 'ind-firstName':  return vRequired('ind-firstName', 'נא להזין שם פרטי.');
+          case 'ind-lastName':   return vRequired('ind-lastName',  'נא להזין שם משפחה.');
+          case 'ind-idNumber':   return vDigits('ind-idNumber', 5, 9, 'מספר תעודת זהות');
+          case 'ent-name':       return vRequired('ent-name', 'נא להזין את שם התאגיד.');
+          case 'ent-number':     return vDigits('ent-number', 8, 9, 'מספר ח.פ');
+          case 'lp-email':       return vEmail('lp-email');
+          case 'lp-phone':       return vPhone('lp-phone');
+          case 'bank-name':      return vRequired('bank-name', 'נא להזין את שם הבנק.');
+          case 'bank-branch':    return vDigits('bank-branch', 2, 4, 'מספר סניף');
+          case 'bank-account':   return vDigits('bank-account', 4, 15, 'מספר חשבון');
+          case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, msg: 'נא לבחור היקף פדיון.' };
+          case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, msg: 'נא לבחור יום פדיון.' };
+          case 'wd-requestedDate':
+            var d = val('wd-requestedDate');
+            if (!d) return { ok: false, msg: 'נא להזין תאריך פדיון.' };
+            var today = new Date(); today.setHours(0,0,0,0);
+            if (new Date(d) <= today) return { ok: false, msg: 'תאריך הפדיון חייב להיות עתידי.' };
+            return { ok: true };
+          case 'accountManagementApproval':
+            return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, msg: 'יש להעלות אישור ניהול חשבון.' };
+          case 'companyStamp':
+            return pendingUploads.companyStamp ? { ok: true } : { ok: false, msg: 'יש להעלות חותמת חברה.' };
+        }
+        return { ok: true };
+      }
+      function fieldsForPage(page) {
         if (page === 'personal') {
-          if (applicantType === 'entity') {
-            if (!val('ent-name'))   return showErr(page, 'נא להזין את שם התאגיד.'), false;
-            if (!val('ent-number')) return showErr(page, 'נא להזין מספר ח.פ.'), false;
-          } else {
-            if (!val('ind-firstName')) return showErr(page, 'נא להזין שם פרטי.'), false;
-            if (!val('ind-lastName'))  return showErr(page, 'נא להזין שם משפחה.'), false;
-            if (!val('ind-idNumber'))  return showErr(page, 'נא להזין מספר תעודת זהות.'), false;
-          }
-          var em = val('lp-email');
-          if (!em || em.indexOf('@') < 0) return showErr(page, 'נא להזין כתובת דוא"ל תקינה.'), false;
-          if (!val('lp-phone'))           return showErr(page, 'נא להזין מספר טלפון נייד.'), false;
-          return true;
+          var f = (applicantType === 'entity')
+            ? ['ent-name', 'ent-number']
+            : ['ind-firstName', 'ind-lastName', 'ind-idNumber'];
+          return f.concat(['lp-email', 'lp-phone']);
         }
         if (page === 'request') {
-          var isIncrease = (flowType === 'cayman_increase');
-          var rowsHost = document.getElementById(isIncrease ? 'amount-rows-increase' : 'amount-rows-redemption');
+          var bank = ['bank-name', 'bank-branch', 'bank-account'];
           if (flowType === 'cayman_withdrawal') {
-            var mode = document.querySelector('input[name="wd-mode"]:checked');
-            if (!mode) return showErr(page, 'נא לבחור היקף פדיון.'), false;
-            if (mode.value === 'partial') {
-              if (!validateRows(rowsHost, 'מטבע פדיון')) return false;
-            }
-            var timing = document.querySelector('input[name="wd-timing"]:checked');
-            if (!timing) return showErr(page, 'נא לבחור יום פדיון.'), false;
-            if (timing.value === 'future') {
-              var d = val('wd-requestedDate');
-              if (!d) return showErr(page, 'נא להזין תאריך פדיון.'), false;
-              var today = new Date(); today.setHours(0,0,0,0);
-              if (new Date(d) <= today) return showErr(page, 'תאריך הפדיון חייב להיות עתידי.'), false;
-            }
-          } else {
-            if (!validateRows(rowsHost, 'מטבע השקעה')) return false;
+            var fs = ['wd-mode', 'wd-timing'];
+            var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value;
+            var timing = (document.querySelector('input[name="wd-timing"]:checked') || {}).value;
+            if (mode === 'partial') fs.push('__rows-redemption');
+            if (timing === 'future') fs.push('wd-requestedDate');
+            return fs.concat(bank);
           }
-          if (!val('bank-name'))    return showErr(page, 'נא להזין את שם הבנק.'), false;
-          if (!val('bank-branch'))  return showErr(page, 'נא להזין מספר סניף.'), false;
-          if (!val('bank-account')) return showErr(page, 'נא להזין מספר חשבון.'), false;
-          return true;
+          return ['__rows-increase'].concat(bank);
         }
-        return true;
+        if (page === 'uploads') {
+          var f2 = ['accountManagementApproval'];
+          if (applicantType === 'entity') f2.push('companyStamp');
+          return f2;
+        }
+        return [];
       }
-      function validateRows(host, currencyLabel) {
+      function validateRowsBlock(kind) {
+        var hostId = (kind === 'increase') ? 'amount-rows-increase' : 'amount-rows-redemption';
+        var host = document.getElementById(hostId);
         var rows = host.querySelectorAll('.lvp-amount-row');
-        if (!rows.length) return showErr('request', 'נא להזין סכום.'), false;
+        if (!rows.length) return [{ name: '__rows-' + kind, msg: 'נא להזין סכום.', label: 'סכום', anchor: host }];
+        var errs = [];
         var seen = {};
+        var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
         for (var i = 0; i < rows.length; i++) {
-          var a = rows[i].querySelector('[data-amount]').value.trim();
-          var c = rows[i].querySelector('[data-currency]').value;
-          if (!a) return showErr('request', 'נא להזין סכום.'), false;
+          var amtInp = rows[i].querySelector('[data-amount]');
+          var curSel = rows[i].querySelector('[data-currency]');
+          var errSpan = rows[i].querySelector('.lvp-field__error');
+          var a = amtInp.value.trim();
+          var c = curSel.value;
           var n = Number(a.replace(/[, ]/g, ''));
-          if (!isFinite(n) || n <= 0) return showErr('request', 'נא להזין סכום תקין.'), false;
-          if (seen[c]) return showErr('request', 'יש לבחור ' + currencyLabel + ' שונה'), false;
+          rows[i].classList.remove('is-invalid');
+          if (errSpan) errSpan.textContent = '';
+          amtInp.removeAttribute('aria-invalid');
+          if (!a) {
+            rows[i].classList.add('is-invalid');
+            if (errSpan) errSpan.textContent = 'נא להזין סכום בשורה ' + (i + 1) + '.';
+            amtInp.setAttribute('aria-invalid', 'true');
+            errs.push({ name: '__rows-' + kind, msg: 'נא להזין סכום.', label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            continue;
+          }
+          if (!isFinite(n) || n <= 0) {
+            rows[i].classList.add('is-invalid');
+            if (errSpan) errSpan.textContent = 'נא להזין סכום תקין בשורה ' + (i + 1) + '.';
+            amtInp.setAttribute('aria-invalid', 'true');
+            errs.push({ name: '__rows-' + kind, msg: 'סכום לא תקין.', label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            continue;
+          }
+          if (seen[c]) {
+            rows[i].classList.add('is-invalid');
+            if (errSpan) errSpan.textContent = 'יש לבחור ' + curLabel + ' שונה.';
+            curSel.setAttribute('aria-invalid', 'true');
+            errs.push({ name: '__rows-' + kind, msg: 'יש לבחור ' + curLabel + ' שונה.', label: curLabel + ' (שורה ' + (i + 1) + ')', anchor: curSel });
+            continue;
+          }
           seen[c] = 1;
         }
-        return true;
+        return errs;
       }
-      function val(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+
+      function runFieldValidation(name) {
+        if (name === '__rows-increase' || name === '__rows-redemption') {
+          var kind = name.split('-')[1];
+          var rowErrs = validateRowsBlock(kind);
+          return { ok: rowErrs.length === 0, msg: rowErrs.length ? rowErrs[0].msg : '' };
+        }
+        var res = validateField(name);
+        if (res.ok) clearFieldErr(name);
+        else markFieldErr(name, res.msg);
+        return res;
+      }
+
+      function validateCurrentPage() {
+        var page = getCurrentPage();
+        var summary = document.getElementById('lvp-' + page + '-summary');
+        if (summary) { summary.hidden = true; summary.innerHTML = ''; }
+        var fields = fieldsForPage(page);
+        var errs = [];
+        fields.forEach(function (name) {
+          if (name === '__rows-increase' || name === '__rows-redemption') {
+            var kind = name.split('-')[1];
+            var rowErrs = validateRowsBlock(kind);
+            rowErrs.forEach(function (e) { errs.push(e); });
+            return;
+          }
+          var res = validateField(name);
+          if (res.ok) { clearFieldErr(name); }
+          else { markFieldErr(name, res.msg); errs.push({ name: name, msg: res.msg, label: fieldLabel(name) }); }
+        });
+        if (!errs.length) return true;
+        // Build the summary with jump links.
+        if (summary) {
+          var first = errs[0];
+          var html = '<p class="lvp-error-summary__title">' + (errs.length === 1 ? 'יש שגיאה אחת לתקן:' : 'יש ' + errs.length + ' שגיאות לתקן:') + '</p><ul>';
+          errs.forEach(function (e, i) {
+            var id = 'sumlnk-' + page + '-' + i;
+            html += '<li><a href="#" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</a></li>';
+          });
+          html += '</ul>';
+          summary.innerHTML = html;
+          summary.hidden = false;
+        }
+        // Focus the first invalid field for a one-thumb keyboard user.
+        var firstWrap = errs[0].anchor || fieldWrap(errs[0].name);
+        var firstInp = firstWrap ? (firstWrap.tagName ? (firstWrap.querySelector ? firstWrap.querySelector('input,select') : firstWrap) : null) : null;
+        if (firstInp && firstInp.focus) { setTimeout(function () { firstInp.focus({ preventScroll: false }); if (firstInp.scrollIntoView) firstInp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 0); }
+        return false;
+      }
+
+      // Blur validation: validate the field as the user leaves it. Re-clear on
+      // input so an erred field clears the moment it's correct.
+      document.addEventListener('focusout', function (e) {
+        var w = e.target && e.target.closest && e.target.closest('[data-field]');
+        if (!w) return;
+        var name = w.getAttribute('data-field');
+        // Don't blur-validate fields not yet in scope (entity branch hidden, etc).
+        if (w.hidden) return;
+        runFieldValidation(name);
+      }, true);
+      document.addEventListener('input', function (e) {
+        var w = e.target && e.target.closest && e.target.closest('[data-field]');
+        if (!w || !w.classList.contains('is-invalid')) return;
+        var name = w.getAttribute('data-field');
+        var res = validateField(name);
+        if (res.ok) clearFieldErr(name);
+      });
+      // Jump links in the summary.
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('[data-jump]');
+        if (!a) return;
+        e.preventDefault();
+        var name = a.getAttribute('data-jump');
+        var w = fieldWrap(name);
+        var inp = w && w.querySelector ? w.querySelector('input,select') : null;
+        if (inp) { inp.focus(); if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      });
 
       // ---- submit -----------------------------------------------------------
+      function submitTopErr(msg) {
+        var summary = document.getElementById('lvp-uploads-summary');
+        if (summary) {
+          summary.innerHTML = '<p class="lvp-error-summary__title">' + msg + '</p>';
+          summary.hidden = false;
+        }
+      }
+      function submitStatus(msg) {
+        var s = document.getElementById('lvp-submit-status');
+        if (s) s.textContent = msg;
+      }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
-        // Final-page validation: the upload gate.
-        clearErr('uploads');
-        if (!pendingUploads.accountManagementApproval) {
-          return showErr('uploads', 'יש להעלות אישור ניהול חשבון.');
-        }
-        if (applicantType === 'entity' && !pendingUploads.companyStamp) {
-          return showErr('uploads', 'יש להעלות חותמת חברה.');
-        }
-
+        if (!validateCurrentPage()) return;
         var submission = buildSubmission();
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
+        submitStatus('הטופס נשלח, נא להמתין.');
 
         var body = {
           action: 'submit',
@@ -608,17 +839,17 @@
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
-          if (p.status !== 200) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return showErr('uploads', 'שגיאה בשליחה. נא לנסות שוב.'); }
+          if (p.status !== 200) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
           var res;
           try { res = JSON.parse(p.responseText); }
-          catch (e) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return showErr('uploads', 'שגיאה בשליחה. נא לנסות שוב.'); }
+          catch (e) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
           if (!res.ok) {
             btn.disabled = false; btn.textContent = 'סיום ושליחה';
             var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || 'שגיאה בשליחה.';
-            return showErr('uploads', msg);
+            return submitTopErr(msg);
           }
-          if (res.nextUrl) { window.location.href = res.nextUrl; return; }
-          showErr('uploads', 'הטופס התקבל. ממתינים לקישור החתימה.');
+          if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
+          submitTopErr('הטופס התקבל. ממתינים לקישור החתימה.');
         };
         p.send(JSON.stringify(body));
       });
