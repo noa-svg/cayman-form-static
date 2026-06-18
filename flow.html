@@ -973,14 +973,21 @@
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        // 90s timeout: GAS doPost can take 20-60s for the increase/redemption
+        // submit (pack render + signature engine mint). Without a timeout the
+        // LP would sit on the disabled button forever if the network drops.
+        p.timeout = 90000;
+        function restoreSubmitBtn() { btn.disabled = false; btn.textContent = 'סיום ושליחה'; }
+        p.ontimeout = function () { restoreSubmitBtn(); submitTopErr('השליחה ארכה זמן רב. נא לנסות שוב.'); };
+        p.onerror = function () { restoreSubmitBtn(); submitTopErr('בעיית חיבור. נא לבדוק את החיבור לאינטרנט ולנסות שוב.'); };
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
-          if (p.status !== 200) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
+          if (p.status !== 200) { restoreSubmitBtn(); return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
           var res;
           try { res = JSON.parse(p.responseText); }
-          catch (e) { btn.disabled = false; btn.textContent = 'סיום ושליחה'; return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
+          catch (e) { restoreSubmitBtn(); return submitTopErr('שגיאה בשליחה. נא לנסות שוב.'); }
           if (!res.ok) {
-            btn.disabled = false; btn.textContent = 'סיום ושליחה';
+            restoreSubmitBtn();
             var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || 'שגיאה בשליחה.';
             return submitTopErr(msg);
           }
