@@ -420,7 +420,6 @@
       // cfg.prefill on resume so the LP picks up where they left off.
       var SAVE_DEBOUNCE_MS = 1200;
       var saveTimer = null;
-      var savingNow = false;
       function buildPageSnapshot() {
         var snap = { fields: {}, radios: {}, amounts: { increase: [], redemption: [] }, uploadsMeta: {} };
         document.querySelectorAll('input[id], select[id]').forEach(function (el) {
@@ -447,20 +446,15 @@
         return snap;
       }
       function savePage(page) {
-        if (!token || savingNow) return;
+        if (!token) return;
         var snap = buildPageSnapshot();
         snap.page = page || getCurrentPage();
-        savingNow = true;
         var body = { action: 'save_page', token: token, lane: 'israeli',
           payload: { flowType: flowType, snapshot: snap, page: snap.page } };
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-        p.onreadystatechange = function () {
-          if (p.readyState !== 4) return;
-          savingNow = false;
-        };
-        try { p.send(JSON.stringify(body)); } catch (e) { savingNow = false; }
+        try { p.send(JSON.stringify(body)); } catch (e) {}
       }
       function scheduleSave() {
         if (!token) return;
