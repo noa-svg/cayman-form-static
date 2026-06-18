@@ -168,8 +168,7 @@
     <div class="lvp-card" id="lvp-card">
       <div class="lvp-loading" id="lvp-loading">טוען...</div>
       <div id="lvp-form" hidden>
-        <div class="lvp-progress" aria-label="התקדמות">
-          <span class="lvp-progress__count" id="lvp-progress-count">שלב 1 מתוך 4</span>
+        <div class="lvp-progress" aria-label="התקדמות" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" id="lvp-progress-meta">
           <div class="lvp-progress__bar"><span id="lvp-progress-bar" style="width: 25%"></span></div>
         </div>
 
@@ -605,7 +604,7 @@
         document.querySelectorAll('.lvp-page').forEach(function (el) {
           el.classList.toggle('is-active', el.getAttribute('data-page') === key);
         });
-        document.getElementById('lvp-progress-count').textContent = 'שלב ' + (idx + 1) + ' מתוך 4';
+        document.getElementById('lvp-progress-meta').setAttribute('aria-valuenow', String(idx + 1));
         document.getElementById('lvp-progress-bar').style.width = ((idx + 1) * 25) + '%';
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
