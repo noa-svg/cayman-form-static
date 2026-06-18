@@ -133,6 +133,25 @@
     .lvp-loading { color: var(--lvp-text-muted); font-size: 14px; padding: 28px 0; text-align: center; }
     .lvp-page { display: none; }
     .lvp-page.is-active { display: block; }
+    .lvp-busy {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(255, 255, 255, 0.96);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 24px; text-align: center;
+    }
+    .lvp-busy.is-active { display: flex; }
+    .lvp-busy__spinner {
+      width: 64px; height: 64px;
+      border: 4px solid #E5EBF1; border-top-color: var(--lvp-navy);
+      border-radius: 50%; animation: lvpSpin 1s linear infinite; margin: 0 auto 24px;
+    }
+    .lvp-busy__title { color: var(--lvp-navy); font-size: 18px; font-weight: 700; margin: 0 0 8px; max-width: 320px; }
+    .lvp-busy__warn  { color: var(--lvp-text-muted); font-size: 14px; margin: 0; max-width: 320px; }
+    @keyframes lvpSpin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .lvp-busy__spinner { animation: none; border-top-color: var(--lvp-navy); border-color: var(--lvp-navy); opacity: 0.5; }
+    }
     /* The user-agent display:none for [hidden] loses against any later
        .lvp-field/.lvp-upload display rule. Force the hide. */
     [hidden] { display: none !important; }
@@ -336,6 +355,12 @@
         </section>
       </div>
     </div>
+  </div>
+
+  <div id="lvp-busy" class="lvp-busy" role="status" aria-live="polite" aria-busy="true">
+    <div class="lvp-busy__spinner" aria-hidden="true"></div>
+    <p class="lvp-busy__title" id="lvp-busy-title">מכינים את מסמכי החתימה.</p>
+    <p class="lvp-busy__warn">נא לא לסגור את החלון.</p>
   </div>
 
   <script>
@@ -963,7 +988,8 @@
         var submission = buildSubmission();
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
-        submitStatus('שולחים את הטופס, נא להמתין.');
+        document.getElementById('lvp-busy').classList.add('is-active');
+        submitStatus('שולחים את הטופס, נא לא לסגור את החלון.');
 
         var body = {
           action: 'submit',
@@ -974,7 +1000,10 @@
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-        function restoreSubmitBtn() { btn.disabled = false; btn.textContent = 'סיום ושליחה'; }
+        function restoreSubmitBtn() {
+          btn.disabled = false; btn.textContent = 'סיום ושליחה';
+          document.getElementById('lvp-busy').classList.remove('is-active');
+        }
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
           if (p.status !== 200) { restoreSubmitBtn(); return submitTopErr(BROKEN_LINK_MSG); }
