@@ -794,16 +794,16 @@
         if (!v) return { ok: false, msg: 'נא להזין ' + label + '.' };
         if (!/^[0-9]+$/.test(v)) return { ok: false, msg: 'נא להזין ספרות בלבד.' };
         var ranged = (minLen === maxLen) ? (minLen + ' ספרות') : ('בין ' + minLen + ' ל-' + maxLen + ' ספרות');
-        if (v.length < minLen || v.length > maxLen) return { ok: false, msg: label + ' צריך להיות ' + ranged + '.' };
+        if (v.length < minLen || v.length > maxLen) return { ok: false, msg: 'נא להזין ' + ranged + '.' };
         return { ok: true };
       }
       function validateField(name) {
         switch (name) {
           case 'ind-firstName':  return vRequired('ind-firstName', 'נא להזין שם פרטי.');
           case 'ind-lastName':   return vRequired('ind-lastName',  'נא להזין שם משפחה.');
-          case 'ind-idNumber':   return vDigits('ind-idNumber', 5, 9, 'מספר תעודת זהות');
+          case 'ind-idNumber':   return vDigits('ind-idNumber', 9, 9, 'מספר תעודת זהות');
           case 'ent-name':       return vRequired('ent-name', 'נא להזין את שם התאגיד.');
-          case 'ent-number':     return vDigits('ent-number', 8, 9, 'מספר ח.פ');
+          case 'ent-number':     return vDigits('ent-number', 9, 9, 'מספר ח.פ');
           case 'lp-email':       return vEmail('lp-email');
           case 'lp-phone':       return vPhone('lp-phone');
           case 'bank-name':      return vRequired('bank-name', 'נא להזין את שם הבנק.');
