@@ -818,7 +818,7 @@
             var d = val('wd-requestedDate');
             if (!d) return { ok: false, silent: true };
             var today = new Date(); today.setHours(0,0,0,0);
-            if (new Date(d) <= today) return { ok: false, msg: 'תאריך הפדיון חייב להיות עתידי.' };
+            if (new Date(d) <= today) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
             return { ok: true };
           case 'accountManagementApproval':
             return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
