@@ -782,17 +782,17 @@
       function vEmail(id) {
         var v = val(id);
         if (!v) return { ok: false, msg: 'נא להזין כתובת דוא"ל.' };
-        return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה. דוגמה: name@example.com' };
+        return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה.' };
       }
       function vPhone(id) {
         var v = val(id);
         if (!v) return { ok: false, msg: 'נא להזין מספר טלפון נייד.' };
-        return PHONE_RX.test(v) ? { ok: true } : { ok: false, msg: 'מספר טלפון לא תקין. רק ספרות, רווחים, פלוס וסוגריים.' };
+        return PHONE_RX.test(v) ? { ok: true } : { ok: false, msg: 'נא להזין ספרות בלבד.' };
       }
       function vDigits(id, minLen, maxLen, label) {
         var v = val(id).replace(/[ -]/g, '');
         if (!v) return { ok: false, msg: 'נא להזין ' + label + '.' };
-        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: label + ' צריך להכיל ספרות בלבד.' };
+        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: 'נא להזין ספרות בלבד.' };
         var ranged = (minLen === maxLen) ? (minLen + ' ספרות') : ('בין ' + minLen + ' ל-' + maxLen + ' ספרות');
         if (v.length < minLen || v.length > maxLen) return { ok: false, msg: label + ' צריך להיות ' + ranged + '.' };
         return { ok: true };
