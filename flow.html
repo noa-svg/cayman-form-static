@@ -122,9 +122,8 @@
         <!-- PAGE 1: התחלה -->
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
-          <p class="lvp-prose">בתהליך זה באפשרותך למלא, לחתום ולשלוח טפסים ישירות מהמחשב או הנייד.</p>
-          <p class="lvp-prose"><strong>לתשומת ליבך,</strong></p>
-          <p class="lvp-prose">בסיום התהליך תישלח אליך הודעת דואר אלקטרוני המאשרת כי הטפסים בטיפול. לאחר השלמת התהליך יתקבל עותק חתום.</p>
+          <p class="lvp-prose">בתהליך זה באפשרותך למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או הנייד.</p>
+          <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
           <div class="lvp-nav">
             <span></span>
             <button type="button" class="lvp-btn lvp-btn--primary" data-go="personal">הבא</button>
@@ -192,7 +191,6 @@
             </div>
             <div id="amount-rows-increase"></div>
             <button type="button" class="lvp-amount-add" data-add-currency="increase">+ הוספת מטבע</button>
-            <p class="lvp-prose" style="margin-top: 18px;">ידוע לי כי שמורה לכם הזכות לדחות את הצעתי או לקבל את הצעתי תוך הקטנת סכום ההשקעה הנוספת, הכול לפי שיקול דעתכם הבלעדי והמוחלט, ללא צורך בהנמקה. אם לא תתקבל בקשה זאת, במלואה או בחלקה, על ידכם עד למועד כפי שייקבע על ידכם, תפקע בקשתי זאת, לרבות יפוי הכוח הכלול בה, מאליה.</p>
           </div>
 
           <!-- REDEMPTION-ONLY block -->
@@ -445,9 +443,10 @@
         var host = document.getElementById(hostId);
         var row = document.createElement('div');
         row.className = 'lvp-amount-row';
-        // Section title above the rows carries the "סכום ההשקעה הנוספת" / "סכום
-        // הפדיון (ברוטו)" heading; each row needs only the currency label, since
-        // EasySend gave each amount input a per-row currency selector + amount.
+        // Each row carries an amount + currency dropdown. No per-row label
+        // (section heading above carries it). Remove button only surfaces when
+        // there's more than one row to choose from; the only-row case has nothing
+        // to remove, so the X is hidden.
         var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
         row.innerHTML =
           '<label class="lvp-field"><span class="lvp-field__label">סכום</span>' +
@@ -456,11 +455,20 @@
           '<select class="lvp-select" data-currency>' +
           CURRENCIES.map(function (c) { return '<option value="' + c.code + '">' + c.code + '</option>'; }).join('') +
           '</select></label>' +
-          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע">&times;</button>';
+          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע" hidden>&times;</button>';
         host.appendChild(row);
         row.querySelector('.lvp-amount-rm').addEventListener('click', function () {
-          if (host.children.length <= 1) return;  // never remove the only row
+          if (host.children.length <= 1) return;
           row.remove();
+          refreshRmVisibility(host);
+        });
+        refreshRmVisibility(host);
+      }
+      function refreshRmVisibility(host) {
+        var rows = host.querySelectorAll('.lvp-amount-row');
+        rows.forEach(function (r) {
+          var btn = r.querySelector('.lvp-amount-rm');
+          if (btn) btn.hidden = (rows.length <= 1);
         });
       }
       document.addEventListener('click', function (e) {
