@@ -663,12 +663,25 @@
       });
 
       // ---- uploads ----------------------------------------------------------
+      // 10MB cap per file. The submit envelope is one POST containing all upload
+      // base64s plus the form payload; GAS doPost rejects > about 50MB total, and
+      // a 50MB scan from an LP phone reads back as a multi-second base64 hang
+      // followed by an opaque submit fail. Friedman discipline: name the limit,
+      // catch it before the reader spins.
+      var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
       document.addEventListener('change', function (e) {
         var inp = e.target.closest('input[type="file"][data-upload]');
         if (!inp) return;
         var slot = inp.getAttribute('data-upload');
         var f = inp.files && inp.files[0];
         if (!f) { delete pendingUploads[slot]; renderFileName(inp, ''); return; }
+        if (f.size > MAX_UPLOAD_BYTES) {
+          inp.value = '';
+          delete pendingUploads[slot];
+          renderFileName(inp, '');
+          markFieldErr(slot, 'הקובץ גדול מדי. גודל מרבי: 10 מגה-בייט.');
+          return;
+        }
         var reader = new FileReader();
         reader.onload = function () {
           var b64 = String(reader.result).split(',')[1] || '';
