@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -371,7 +371,7 @@
       "Go to signature": "מעבר לחתימה"
     };
 
-    var curLang = 'en';
+    var curLang = 'he';
     function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; }); }
 
@@ -1005,6 +1005,16 @@
       }
 
       doneBtn.addEventListener('click', function () {
+        // Server-declared field with no client renderer (F10 path). The unknown
+        // field renders as a .field--error note but had no input bound, so a
+        // signer was previously able to sign through and the server would catch
+        // it downstream. Hard-block here so the operator must add the renderer
+        // before the signer can proceed (Noa CTO finding 2).
+        var unsupported = document.querySelectorAll('#signer-form .field--error').length;
+        if (unsupported > 0) {
+          errEl.textContent = tHe('This detail needs to be completed with Legacy Value Partners.');
+          return;
+        }
         // Validate required + format fields (inputs, selects, textareas, checkboxes).
         // Button is never disabled (Tognazzini); we guide to the first problem here.
         var allInputs = document.querySelectorAll('#signer-form input[name], #signer-form select[name], #signer-form textarea[name]');

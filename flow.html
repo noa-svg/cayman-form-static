@@ -176,6 +176,7 @@
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
           <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
+          <p class="lvp-prose">לתשומת ליבך, בסיום התהליך תישלח אליך הודעת דואר אלקטרוני המאשרת כי הטפסים בטיפול.</p>
           <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
           <div class="lvp-nav">
             <span></span>
@@ -695,6 +696,17 @@
         if (e.target.name === 'wd-timing') {
           document.getElementById('wd-future-date-field').hidden = (e.target.value !== 'future');
           clearFieldErr('wd-timing');
+          // Set the picker's earliest selectable date to today + 14 days so the
+          // LP cannot pick a date the server would reject. The 1st-of-month
+          // constraint stays in the validator (no native HTML date-input rule
+          // for "day must equal 1"). Noa CTO finding 4 mechanism half.
+          if (e.target.value === 'future') {
+            var dateInp = document.getElementById('wd-requestedDate');
+            if (dateInp && !dateInp.min) {
+              var todayD = new Date(); todayD.setDate(todayD.getDate() + 14);
+              dateInp.min = todayD.toISOString().slice(0, 10);
+            }
+          }
         }
       });
 
@@ -1031,23 +1043,30 @@
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+        // 30s hard ceiling. Without this, a slow/dead /exec leaves the LP on
+        // the spinner forever (Noa CTO finding 1). Gateway dedupes submit on
+        // a per-process key (PERF fix 3) so a retry of the same payload is a
+        // no-op if the first one actually landed.
+        p.timeout = 30000;
         function restoreSubmitBtn() {
           btn.disabled = false; btn.textContent = 'סיום ושליחה';
           document.getElementById('lvp-busy').classList.remove('is-active');
         }
+        function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || BROKEN_LINK_MSG); }
+        p.ontimeout = function () { fail(BROKEN_LINK_MSG); };
+        p.onerror   = function () { fail(BROKEN_LINK_MSG); };
         p.onreadystatechange = function () {
           if (p.readyState !== 4) return;
-          if (p.status !== 200) { restoreSubmitBtn(); return submitTopErr(BROKEN_LINK_MSG); }
+          if (p.status !== 200) return fail(BROKEN_LINK_MSG);
           var res;
           try { res = JSON.parse(p.responseText); }
-          catch (e) { restoreSubmitBtn(); return submitTopErr(BROKEN_LINK_MSG); }
+          catch (e) { return fail(BROKEN_LINK_MSG); }
           if (!res.ok) {
-            restoreSubmitBtn();
             var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || BROKEN_LINK_MSG;
-            return submitTopErr(msg);
+            return fail(msg);
           }
           if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
-          submitTopErr(BROKEN_LINK_MSG);
+          fail(BROKEN_LINK_MSG);
         };
         p.send(JSON.stringify(body));
       });
