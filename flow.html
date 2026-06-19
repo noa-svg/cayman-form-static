@@ -293,7 +293,7 @@
             </fieldset>
             <label class="lvp-field" id="wd-future-date-field" data-field="wd-requestedDate" hidden>
               <span class="lvp-field__label">תאריך הפדיון<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input lvp-input--ltr" type="date" id="wd-requestedDate" aria-describedby="err-wd-requestedDate">
+              <select class="lvp-select" id="wd-requestedDate" aria-describedby="err-wd-requestedDate"></select>
               <span class="lvp-field__error" id="err-wd-requestedDate"></span>
             </label>
           </div>
@@ -702,6 +702,36 @@
         if (add) addAmountRow(add.getAttribute('data-add-currency'));
       });
 
+      // ---- redemption month picker ------------------------------------------
+      // Friedman: only valid options are shown. Each option is the 1st of a
+      // calendar month, and the earliest visible month is the first whose 1st
+      // is >= today + 14 days (the server rule). 2 months horizon (Noa).
+      var REDEMPTION_MONTHS_AHEAD = 2;
+      var REDEMPTION_MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+      function populateRedemptionMonths() {
+        var sel = document.getElementById('wd-requestedDate');
+        if (!sel) return;
+        var prev = sel.value;
+        // Earliest valid 1st-of-month: walk month-by-month from this month's
+        // 1st forward until that 1st is >= today + 14 days.
+        var earliest = new Date(); earliest.setDate(earliest.getDate() + 14);
+        earliest.setHours(0, 0, 0, 0);
+        var cursor = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+        if (cursor < earliest) cursor.setMonth(cursor.getMonth() + 1);
+        var opts = ['<option value=""></option>'];
+        for (var i = 0; i < REDEMPTION_MONTHS_AHEAD; i++) {
+          var y = cursor.getFullYear();
+          var m = cursor.getMonth();
+          var iso = y + '-' + String(m + 1).padStart(2, '0') + '-01';
+          var label = '1 ב' + REDEMPTION_MONTHS_HE[m] + ' ' + y;
+          opts.push('<option value="' + iso + '">' + label + '</option>');
+          cursor.setMonth(m + 1);
+        }
+        sel.innerHTML = opts.join('');
+        if (prev) sel.value = prev;
+      }
+
       // ---- redemption conditionals ------------------------------------------
       document.addEventListener('change', function (e) {
         if (e.target.name === 'wd-mode') {
@@ -711,17 +741,13 @@
         if (e.target.name === 'wd-timing') {
           document.getElementById('wd-future-date-field').hidden = (e.target.value !== 'future');
           clearFieldErr('wd-timing');
-          // Set the picker's earliest selectable date to today + 14 days so the
-          // LP cannot pick a date the server would reject. The 1st-of-month
-          // constraint stays in the validator (no native HTML date-input rule
-          // for "day must equal 1"). Noa CTO finding 4 mechanism half.
-          if (e.target.value === 'future') {
-            var dateInp = document.getElementById('wd-requestedDate');
-            if (dateInp && !dateInp.min) {
-              var todayD = new Date(); todayD.setDate(todayD.getDate() + 14);
-              dateInp.min = todayD.toISOString().slice(0, 10);
-            }
-          }
+          // Friedman: make the wrong choice impossible at the control. The
+          // server rule is "1st of a calendar month, at least 14 days from
+          // today". A month dropdown structurally cannot violate either:
+          // every option IS a valid 1st-of-month with the 14-day buffer
+          // already applied. Show 2 months (Noa). Refresh on each switch
+          // so the available months stay current relative to today.
+          if (e.target.value === 'future') populateRedemptionMonths();
         }
       });
 
@@ -850,15 +876,11 @@
           case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-requestedDate':
-            var d = val('wd-requestedDate');
-            if (!d) return { ok: false, silent: true };
-            var parsed = new Date(d);
-            // Reject invalid dates (eg Feb 29 in a non-leap year). Without
-            // isNaN the comparison silently passes and the server then
-            // auto-corrects to March 1, sealing the wrong date.
-            if (isNaN(parsed.getTime())) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
-            var today = new Date(); today.setHours(0,0,0,0);
-            if (parsed <= today) return { ok: false, msg: 'יש להזין תאריך פדיון עתידי.' };
+            // The control is a server-validated month dropdown: every option
+            // is a 1st-of-month >= today + 14 days. Only failure mode is
+            // empty (LP did not pick one), which is silent-red per house
+            // style for required fields.
+            if (!val('wd-requestedDate')) return { ok: false, silent: true };
             return { ok: true };
           case 'accountManagementApproval':
             return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
