@@ -286,7 +286,7 @@
             <fieldset class="lvp-field" data-field="wd-timing">
               <legend class="lvp-field__label">יום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
               <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-timing">
-                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי. הכסף יועבר עד ה-15 לחודש הקלנדרי הקרוב</span></label>
+                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי. הכסף יועבר עד ה-15 לחודש הקרוב (לפחות 14 ימים מהבקשה).</span></label>
                 <label class="lvp-radio"><input type="radio" name="wd-timing" value="future"><span>ברצוני לבחור תאריך פדיון עתידי</span></label>
               </div>
               <span class="lvp-field__error" id="err-wd-timing"></span>
@@ -680,7 +680,22 @@
       }
       function refreshAddVisibility(host, kind) {
         var addBtn = document.querySelector('[data-add-currency="' + kind + '"]');
-        if (addBtn) addBtn.hidden = (host.children.length >= AMOUNT_ROWS_MAX);
+        var atCap = (host.children.length >= AMOUNT_ROWS_MAX);
+        if (addBtn) addBtn.hidden = atCap;
+        // Replace the silent disappearance with an explicit explanation so the
+        // LP knows the cap is the reason, not a render glitch. CTO finding 4a.
+        var hintId = 'cap-hint-' + kind;
+        var existing = document.getElementById(hintId);
+        if (atCap && !existing) {
+          var hint = document.createElement('p');
+          hint.id = hintId;
+          hint.className = 'lvp-field__hint';
+          hint.style.cssText = 'margin-top:8px;';
+          hint.textContent = 'ניתן להוסיף עד 4 מטבעות לבקשה זו.';
+          if (addBtn && addBtn.parentNode) addBtn.parentNode.insertBefore(hint, addBtn.nextSibling);
+        } else if (!atCap && existing) {
+          existing.remove();
+        }
       }
       document.addEventListener('click', function (e) {
         var add = e.target.closest('[data-add-currency]');
