@@ -917,7 +917,9 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">SWIFT code</span><input class="lvp-input" type="text" name="investment.lpBank.swift" autocomplete="off" data-help="Your bank's SWIFT code for international transfers (8 or 11 letters/digits). A 9-digit U.S. ABA routing number is also accepted."></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber" inputmode="numeric" autocomplete="off"></label>
           </div>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-help="Must match the subscriber name exactly: the entity's legal name (for an entity), or the individual LP's name (for an individual)."></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName"></label>
+          <p class="lvp-hint-small" data-applicant="individual">Must match the individual LP's name exactly.</p>
+          <p class="lvp-hint-small" data-applicant="entity">Must match the entity's legal name exactly.</p>
         </section>
 
         <!-- ========================= PAGE: ADDITIONAL INVESTORS (individual joint holders) ========================= -->
@@ -1037,8 +1039,6 @@
           <p class="lvp-hint-small" data-show-when="qualification.noneOfTheAbove=true">I am joining as a non-qualified investor with the knowledge of the fund manager Omri Velvart.</p>
 
           <div data-show-when="qualification.noneOfTheAbove=false">
-            <h3 class="lvp-subhead">Lawyer or CPA verification</h3>
-            <p class="lvp-page__hint">A lawyer or CPA must independently confirm the accredited-investor qualification. We will send them a signing link after your documents are completed. Please let them know their assistance is required.</p>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">Do you already have a signed qualification form from the past 12 months?</legend>
               <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="true" data-show-when-trigger="qualification.preSignedAvailable"> Yes, I will upload it</label>
@@ -1049,6 +1049,8 @@
               <label class="lvp-field lvp-field--narrow" data-required><span class="lvp-field__label">Document date</span><input class="lvp-input" type="date" name="qualification.preSignedUpload.documentDate"></label>
             </div>
             <div data-show-when="qualification.preSignedAvailable=false">
+              <h3 class="lvp-subhead">Lawyer or CPA verification</h3>
+              <p class="lvp-page__hint">A lawyer or CPA must independently confirm the accredited-investor qualification. We will send them a signing link after your documents are completed. Please let them know their assistance is required.</p>
               <div class="lvp-grid-2">
                 <label class="lvp-field" data-required><span class="lvp-field__label">Lawyer or CPA first name</span><input class="lvp-input" type="text" name="qualification.lawyer.firstName"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="qualification.lawyer.lastName"></label>
@@ -1774,12 +1776,53 @@
     // the gateway supplies one.
     var LVP_COUNTRY_PINNED_ = ['Israel', 'United States', 'United Kingdom', 'Cayman Islands'];
     var LVP_COUNTRY_REST_ = ['Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'British Virgin Islands', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo (Brazzaville)', 'Congo (Kinshasa)', 'Costa Rica', "Cote d'Ivoire", 'Croatia', 'Cuba', 'Curacao', 'Cyprus', 'Czechia', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Greenland', 'Grenada', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Isle of Man', 'Italy', 'Jamaica', 'Japan', 'Jersey', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'];
-    function populateCountries() {
-      // Build the default list: pinned-first, then the rest minus any already pinned.
+    function lvpCountryList_() {
       var pinSet = {};
       LVP_COUNTRY_PINNED_.forEach(function (c) { pinSet[c] = 1; });
       var defaultList = LVP_COUNTRY_PINNED_.concat(LVP_COUNTRY_REST_.filter(function (c) { return !pinSet[c]; }));
-      var list = CFG.countries || defaultList;
+      return (CFG.countries && CFG.countries.length) ? CFG.countries : defaultList;
+    }
+    // Shared datalist all country comboboxes reference. Built once.
+    function ensureCountryDatalist_() {
+      var DATALIST_ID = 'lvp-country-options';
+      if (document.getElementById(DATALIST_ID)) return DATALIST_ID;
+      var dl = document.createElement('datalist');
+      dl.id = DATALIST_ID;
+      lvpCountryList_().forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c;
+        dl.appendChild(o);
+      });
+      document.body.appendChild(dl);
+      return DATALIST_ID;
+    }
+    function populateCountries() {
+      var listId = ensureCountryDatalist_();
+      var list = lvpCountryList_();
+      // Swap each <select data-country> for a typeable <input list> combobox.
+      // 250 options in a native select is unusable; datalist gives type-to-filter.
+      form.querySelectorAll('select[data-country]').forEach(function (sel) {
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'lvp-input';
+        input.setAttribute('list', listId);
+        var ac = sel.getAttribute('autocomplete') || 'country-name';
+        input.setAttribute('autocomplete', ac);
+        if (sel.name) input.name = sel.name;
+        if (sel.value) input.value = sel.value;
+        // Carry data-* attributes so data-country / data-show-when-trigger live on.
+        Array.prototype.forEach.call(sel.attributes, function (a) {
+          if (a.name.indexOf('data-') === 0) input.setAttribute(a.name, a.value);
+        });
+        sel.parentNode.replaceChild(input, sel);
+      });
+      // Legacy fallback: any country input that the swap missed (e.g., one already
+      // marked input by a prior pass) still gets the list attribute hooked up.
+      form.querySelectorAll('input[data-country]:not([list])').forEach(function (input) {
+        input.setAttribute('list', listId);
+      });
+      // Old <select> fill path. Kept for any caller that re-renders a select
+      // before this function runs. Harmless when no <select data-country> exists.
       form.querySelectorAll('select[data-country]').forEach(function (sel) {
         if (sel.options.length > 1) return;
         if (!sel.options.length) sel.appendChild(new Option('Select', ''));
@@ -3167,8 +3210,11 @@
         if (!val) return;
         var el = form.querySelector('[name="' + cssEsc(prefix + '.' + suffix) + '"]');
         if (!el) return;
+        // Country fields are now <input list="lvp-country-options"> after the
+        // datalist swap, so a Places-supplied country sets the value directly.
+        // Legacy <select> branch retained for any caller that still renders one.
         if (el.tagName === 'SELECT' && !Array.prototype.some.call(el.options, function (o) { return o.value === val; })) {
-          el.appendChild(new Option(val, val)); // country not in our short list: add it
+          el.appendChild(new Option(val, val));
         }
         el.value = val;
         el.dispatchEvent(new Event('change', { bubbles: true }));
