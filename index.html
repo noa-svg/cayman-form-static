@@ -2363,6 +2363,14 @@
         if (s.length < 3 || s.length > 10) return 'Enter a valid postal / ZIP code.';
         if (!/^[A-Za-z0-9-]+$/.test(s)) return 'Postal code must be letters, digits, or dashes.';
         return '';
+      } },
+      // Substantial US owner combined type + reference. The form collects "SSN
+      // 123-45-6789" style as a single string. Loose check: must carry a
+      // type token AND a reference body.
+      { match: /substantialUsOwners.*\.taxRefTypeAndNumber$/, validate: function (v) {
+        var s = String(v).trim();
+        if (s.length < 5) return 'Enter the tax reference type and number (e.g., "SSN 123-45-6789").';
+        return '';
       } }
     ];
     function lvpValidateFormat_(name, val) {
