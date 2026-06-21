@@ -717,7 +717,7 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">First name in Hebrew</span><input class="lvp-input" type="text" name="individual.firstNameHebrew" dir="rtl" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Last name in Hebrew</span><input class="lvp-input" type="text" name="individual.lastNameHebrew" dir="rtl" autocomplete="off"></label>
           </div>
-          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="individual.idNumber" inputmode="numeric" autocomplete="off" data-help="National ID number"></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="individual.idNumber" inputmode="text" autocomplete="off"></label>
         </section>
 
         <section class="lvp-page" data-page="individual.address" data-applicant="individual" hidden>
@@ -931,7 +931,7 @@
             <label class="lvp-radio"><input type="radio" name="hasAdditionalInvestors" value="false"> No</label>
           </fieldset>
           <div data-show-when="hasAdditionalInvestors=true">
-            <fieldset class="lvp-fieldset">
+            <fieldset class="lvp-fieldset" data-required>
               <legend class="lvp-fieldset__legend">Joint holder authorization</legend>
               <label class="lvp-radio"><input type="radio" name="jointHolderAuth" value="any"> Any of the joint holders may give instructions on behalf of all</label>
               <label class="lvp-radio"><input type="radio" name="jointHolderAuth" value="all"> All joint holders must sign any instruction</label>
@@ -2204,6 +2204,95 @@
     // empty marks immediately; an email field with bad format marks immediately;
     // anything corrected clears on the next input (the existing input listener) and
     // on the next blur. Submit-time validatePage still runs the full sweep.
+    // ---- format validators (highest-quality per Noa 2026-06-21 decision list) ----
+    // Israeli ת.ז. check digit (Luhn-like). 9 digits, weights alternate 1,2,1,2,...
+    // Each digit*weight; if product >= 10 sum its digits; total mod 10 must be 0.
+    function isValidIsraeliId_(v) {
+      if (!/^\d{9}$/.test(v)) return false;
+      var sum = 0;
+      for (var i = 0; i < 9; i++) {
+        var d = parseInt(v.charAt(i), 10) * ((i % 2) + 1);
+        sum += (d > 9) ? (Math.floor(d / 10) + (d % 10)) : d;
+      }
+      return sum % 10 === 0;
+    }
+    // IBAN mod-97. Strip spaces, move first 4 chars to end, A->10 etc., must mod-97 == 1.
+    function isValidIban_(raw) {
+      var s = String(raw || '').replace(/\s+/g, '').toUpperCase();
+      if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(s)) return false;
+      var moved = s.slice(4) + s.slice(0, 4);
+      var digits = '';
+      for (var i = 0; i < moved.length; i++) {
+        var c = moved.charCodeAt(i);
+        digits += (c >= 65 && c <= 90) ? String(c - 55) : moved.charAt(i);
+      }
+      // big-number mod via chunked reduction
+      var remainder = '';
+      for (var k = 0; k < digits.length; k += 7) {
+        remainder = (parseInt(remainder + digits.slice(k, k + 7), 10) % 97).toString();
+      }
+      return parseInt(remainder, 10) === 1;
+    }
+    // Format gate for each field NAME (matched by suffix so the gate applies to
+    // every repeating-row variant of the same field). Returns '' if valid; the
+    // error string otherwise.
+    var LVP_FIELD_VALIDATORS_ = [
+      // ID or passport: accept either Israeli check-digit-passing ת.ז. (9 digits)
+      // OR a 6-12 alphanumeric passport/registration number.
+      { match: /\.idNumber$|signatories\..*\.idNumber$|^individual\.idNumber$/, validate: function (v) {
+        if (/^\d{9}$/.test(v) && isValidIsraeliId_(v)) return '';
+        if (/^[A-Za-z0-9]{6,12}$/.test(v)) return '';
+        return 'Enter a valid Israeli ת.ז. (9 digits) or a 6-12 character passport / registration number.';
+      } },
+      // Entity registration number: similar but slightly looser (4-20 alphanumeric/dashes).
+      { match: /entity\.registrationNumber$/, validate: function (v) {
+        if (/^\d{9}$/.test(v) && isValidIsraeliId_(v)) return '';
+        if (/^[A-Za-z0-9-]{4,20}$/.test(v)) return '';
+        return 'Enter a valid registration number (Israeli ח.פ 9 digits or 4-20 character foreign reference).';
+      } },
+      // Bank account number: 4-34 chars alphanumeric + spaces. If it looks like an
+      // IBAN by pattern, run mod-97 check and reject hard if it fails.
+      { match: /lpBank\.accountNumber$/, validate: function (v) {
+        var s = v.replace(/\s+/g, '').toUpperCase();
+        if (s.length < 4 || s.length > 34) return 'Bank account number must be 4-34 characters.';
+        if (/^[A-Z]{2}\d{2}/.test(s) && !isValidIban_(s)) return 'IBAN check digit is invalid; please re-check.';
+        if (!/^[A-Z0-9]+$/.test(s)) return 'Bank account number must contain only digits and letters.';
+        return '';
+      } },
+      // SWIFT: 8 or 11 alphanumeric (last 3 optional), OR 9-digit U.S. ABA routing.
+      { match: /lpBank\.swift$/, validate: function (v) {
+        var s = v.replace(/\s+/g, '').toUpperCase();
+        if (/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(s)) return '';
+        if (/^\d{9}$/.test(s)) return '';
+        return 'Enter a valid SWIFT/BIC (8 or 11 alphanumeric) or 9-digit U.S. ABA routing number.';
+      } },
+      // U.S. TIN: 9 digits (SSN/ITIN/EIN), accepts ###-##-#### or ##-####### format.
+      { match: /\.usTin$/, validate: function (v) {
+        var s = v.replace(/[-\s]/g, '');
+        if (/^\d{9}$/.test(s)) return '';
+        return 'U.S. TIN must be 9 digits (SSN, ITIN, or EIN).';
+      } },
+      // GIIN: XXXXXX.XXXXX.XX.NNN. Soft jurisdiction-mismatch flag handled at a
+      // higher level; here we only enforce shape.
+      { match: /\.giin\d*$|mergedGiin$/, validate: function (v) {
+        var s = v.toUpperCase();
+        if (/^[A-Z0-9]{6}\.[A-Z0-9]{5}\.[A-Z]{2}\.\d{3}$/.test(s)) return '';
+        return 'GIIN must match XXXXXX.XXXXX.XX.NNN (19 chars, 3 dots).';
+      } },
+      // Phone: E.164-ish. Accept +country, digits, spaces, dashes, parens. 7-20 chars.
+      { match: /\.phone$/, validate: function (v) {
+        if (/^\+?[\d\s\-().]{7,20}$/.test(v)) return '';
+        return 'Enter a valid phone number (digits, optional + and country code).';
+      } }
+    ];
+    function lvpValidateFormat_(name, val) {
+      for (var i = 0; i < LVP_FIELD_VALIDATORS_.length; i++) {
+        var rule = LVP_FIELD_VALIDATORS_[i];
+        if (rule.match.test(name)) return rule.validate(val);
+      }
+      return '';
+    }
+
     function validateSingleField(ctrl) {
       if (!ctrl || (ctrl.tagName !== 'INPUT' && ctrl.tagName !== 'SELECT' && ctrl.tagName !== 'TEXTAREA')) return;
       if (ctrl.type === 'radio' || ctrl.type === 'checkbox' || ctrl.type === 'file') return;
@@ -2215,9 +2304,21 @@
       // clear any prior error (class + aria + describedby) on this holder first
       clearHolderErrors(holder);
       if (required && !val) { markHolderError(holder, false, 'This field is required.'); return; }
-      if (val && ctrl.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      // Tighter email regex: rejects 'foo@gmail..com' and other multi-dot
+      // pathologies the older regex accepted.
+      if (val && ctrl.type === 'email' && !/^[^\s@.]+(\.[^\s@.]+)*@[^\s@.]+(\.[^\s@.]+)+$/.test(val)) {
         holder.classList.add('lvp-field--value-error');
         markHolderError(holder, false, 'Please enter a valid email address.');
+        return;
+      }
+      // Format gate by field NAME. Only fires when the field has a value (a
+      // required-but-empty case is caught above).
+      if (val && ctrl.name) {
+        var formatErr = lvpValidateFormat_(ctrl.name, val);
+        if (formatErr) {
+          holder.classList.add('lvp-field--value-error');
+          markHolderError(holder, false, formatErr);
+        }
       }
     }
     form.addEventListener('focusout', function (e) { validateSingleField(e.target); });
@@ -2232,8 +2333,17 @@
       if (!iso) return;
       var dd = (d.value || '').replace(/\D/g, ''), mm = (m.value || '').replace(/\D/g, ''), yy = (y.value || '').replace(/\D/g, '');
       var di = parseInt(dd, 10), mi = parseInt(mm, 10), yi = parseInt(yy, 10);
-      var valid = yy.length === 4 && yi >= 1900 && yi <= 2100 && mi >= 1 && mi <= 12 && di >= 1 && di <= 31;
-      var isoVal = valid ? (yy + '-' + ('0' + mm).slice(-2) + '-' + ('0' + dd).slice(-2)) : '';
+      var rangeOk = yy.length === 4 && yi >= 1900 && yi <= 2100 && mi >= 1 && mi <= 12 && di >= 1 && di <= 31;
+      var isoVal = '';
+      if (rangeOk) {
+        var candidate = yy + '-' + ('0' + mm).slice(-2) + '-' + ('0' + dd).slice(-2);
+        // Calendar-valid check: new Date() silently rolls 31/02 to March 3, so
+        // we round-trip and confirm the components survive (Noa 2026-06-21 fix).
+        var dt = new Date(candidate + 'T00:00:00Z');
+        if (dt.getUTCFullYear() === yi && (dt.getUTCMonth() + 1) === mi && dt.getUTCDate() === di) {
+          isoVal = candidate;
+        }
+      }
       // A birth or formation date can never be in the future. Reject it so a
       // mistyped year (2206 for 1960) does not pass as a valid date.
       if (isoVal && isoVal > new Date().toISOString().slice(0, 10)) isoVal = '';
