@@ -2484,6 +2484,11 @@
 
     // ---- validation: required visible fields on the current page ----
     function validatePage(pageEl) {
+      // Form-render matrix bypass (Noa 2026-06-21 #FormRender P3): when the
+      // form runs under ?screenshotMode=1, the headless walker advances
+      // through every page so each can be screenshotted. Without this, file
+      // upload + repeating-row required fields block Next forever.
+      if (CFG.screenshotMode) return { ok: true };
       var ok = true;
       var firstError = null;
       var errors = [];                       // { holder, label } for the summary
