@@ -724,7 +724,7 @@
           <h2 class="lvp-page__title">Residential address</h2>
           <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="individual.address.street" autocomplete="address-line1" data-places="individual.address"></label>
           <div class="lvp-grid-2">
-            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="individual.address.city" autocomplete="address-level2"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="individual.address.city" autocomplete="address-level2" data-places-city="individual.address"></label>
             <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="individual.address.state" autocomplete="address-level1"></label>
           </div>
           <div class="lvp-grid-2">
@@ -795,7 +795,7 @@
           <h2 class="lvp-page__title">Registered address</h2>
           <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="entity.address.street" autocomplete="address-line1" data-places="entity.address"></label>
           <div class="lvp-grid-2">
-            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.address.city" autocomplete="address-level2"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="entity.address.city" autocomplete="address-level2" data-places-city="entity.address"></label>
             <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="entity.address.state" autocomplete="address-level1"></label>
           </div>
           <div class="lvp-grid-2">
@@ -958,13 +958,13 @@
                 <label class="lvp-field" data-required><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="additionalInvestors[${i}].citizenship" data-country></select></label>
               </div>
               <label class="lvp-field" data-required><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="additionalInvestors[${i}].birthCountry" data-country></select></label>
-              <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.street" autocomplete="off"></label>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Number and street</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.street" autocomplete="address-line1" data-places="additionalInvestors[${i}].address"></label>
               <div class="lvp-grid-2">
-                <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.city" autocomplete="off"></label>
-                <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.state" autocomplete="off"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">City</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.city" autocomplete="address-level2" data-places-city="additionalInvestors[${i}].address"></label>
+                <label class="lvp-field"><span class="lvp-field__label">State / province / county</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.state" autocomplete="address-level1"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.postCode" inputmode="numeric" autocomplete="off"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">Post code</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].address.postCode" inputmode="numeric" autocomplete="postal-code"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Country</span><select class="lvp-input--select" name="additionalInvestors[${i}].address.country" data-country></select></label>
               </div>
               <div class="lvp-grid-2">
@@ -1899,6 +1899,11 @@
       initAria(node);       // aria-required / aria-invalid on the new row's required controls
       dobInitAll(node);     // split any restored ISO date into the segmented DD/MM/YYYY widget
       applyConditionals(node);
+      // Bind Places autocomplete on freshly added rows so joint-holder address +
+      // city inputs get the same search-by-typing as the primary applicant.
+      if (typeof bindPlacesInputs === 'function') {
+        try { bindPlacesInputs(node); } catch (e) {}
+      }
     }
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
@@ -3169,25 +3174,41 @@
         el.dispatchEvent(new Event('change', { bubbles: true }));
       });
     }
-    function initPlacesAutocomplete() {
-      var inputs = form.querySelectorAll('input[data-places]');
-      if (!CFG.placesApiKey || !inputs.length) return;
-      window.__lvpInitPlaces = function () {
-        if (!(window.google && google.maps && google.maps.places)) return;
-        Array.prototype.forEach.call(inputs, function (input) {
-          var prefix = input.getAttribute('data-places');
-          var ac = new google.maps.places.Autocomplete(input, { types: ['address'], fields: ['address_components'] });
-          // Places overwrites the placeholder with its own English "Enter a
-          // location" AFTER our language swap ran. Re-set it through the same
-          // cache the swapper uses so it shows Hebrew now and survives toggles.
-          input.dataset.enPlaceholder = 'Enter a location';
-          input.setAttribute('placeholder', displayFor('Enter a location', curLang));
-          ac.addListener('place_changed', function () {
-            var place = ac.getPlace();
-            if (place && place.address_components) fillAddressFromPlace(prefix, place.address_components);
-          });
+    // Bind Google Places autocomplete to every input flagged for it. Address
+    // inputs (data-places) use types=['address'] and autofill street + city +
+    // state + postcode + country. City inputs (data-places-city) use
+    // types=['(cities)'] and autofill city + state + country, leaving street +
+    // postcode untouched. Both branches go through fillAddressFromPlace so
+    // existing field-route logic is shared. Idempotent: bound inputs get
+    // marked with data-places-bound so re-init on dynamic rows skips them.
+    function bindPlacesInputs(scope) {
+      if (!(window.google && google.maps && google.maps.places)) return;
+      var root = scope || form;
+      var addressInputs = root.querySelectorAll('input[data-places]:not([data-places-bound])');
+      var cityInputs    = root.querySelectorAll('input[data-places-city]:not([data-places-bound])');
+      function attach(input, prefix, types) {
+        var ac = new google.maps.places.Autocomplete(input, { types: types, fields: ['address_components'] });
+        input.dataset.enPlaceholder = 'Enter a location';
+        input.setAttribute('placeholder', displayFor('Enter a location', curLang));
+        ac.addListener('place_changed', function () {
+          var place = ac.getPlace();
+          if (place && place.address_components) fillAddressFromPlace(prefix, place.address_components);
         });
-      };
+        input.setAttribute('data-places-bound', '1');
+      }
+      Array.prototype.forEach.call(addressInputs, function (input) {
+        attach(input, input.getAttribute('data-places'), ['address']);
+      });
+      Array.prototype.forEach.call(cityInputs, function (input) {
+        attach(input, input.getAttribute('data-places-city'), ['(cities)']);
+      });
+    }
+    function initPlacesAutocomplete() {
+      if (!CFG.placesApiKey) return;
+      // If the API is already loaded (re-entry after add-row), just bind now.
+      if (window.google && google.maps && google.maps.places) { bindPlacesInputs(); return; }
+      // Defer the bind to the script callback.
+      window.__lvpInitPlaces = function () { bindPlacesInputs(); };
       var sc = document.createElement('script');
       sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(CFG.placesApiKey) +
                '&libraries=places&language=en&callback=__lvpInitPlaces';
