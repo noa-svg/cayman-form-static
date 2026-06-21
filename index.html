@@ -1880,9 +1880,11 @@
       var ap = applicant();
       (scope || form).querySelectorAll('[data-applicant]').forEach(function (el) {
         if (el.classList.contains('lvp-page')) return; // page-level handled by sequence
-        if (el.tagName === 'SPAN' || el.tagName === 'DIV' || el.tagName === 'LABEL') {
-          el.style.display = (el.getAttribute('data-applicant') === ap) ? '' : 'none';
-        }
+        // Any non-page element with data-applicant gets show/hide. Previously
+        // limited to SPAN/DIV/LABEL, which left <p> hints (qualification
+        // instructions, account-holder helper) showing BOTH variants at once.
+        // Noa 2026-06-21 visual review caught it.
+        el.style.display = (el.getAttribute('data-applicant') === ap) ? '' : 'none';
       });
     }
     function currentValueFor(path) {
