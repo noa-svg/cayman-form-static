@@ -740,8 +740,14 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="individual.birthCountry" data-country></select></label>
           </div>
           <label class="lvp-field" data-required><span class="lvp-field__label">Nationality</span><select class="lvp-input--select" name="individual.citizenship" data-country data-show-when-trigger="individual.citizenship"><option value="">Select</option></select></label>
-          <label class="lvp-checkbox"><input type="checkbox" name="individual.isAdditionalCitizenship" value="true" data-show-when-trigger="individual.isAdditionalCitizenship"> I hold an additional citizenship</label>
-          <label class="lvp-field" data-show-when="individual.isAdditionalCitizenship=true"><span class="lvp-field__label">Additional citizenship</span><select class="lvp-input--select" name="individual.additionalCitizenship" data-country></select></label>
+          <div data-repeating-typed-path="individual.additionalCitizenships" data-repeating-min="0" data-repeating-max="2" data-repeating-template="cit"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="individual.additionalCitizenships">+ Add another citizenship</button>
+          <template data-row-template="cit">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Additional citizenship ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+              <label class="lvp-field" data-required><span class="lvp-field__label">Citizenship</span><select class="lvp-input--select" name="individual.additionalCitizenships[${i}]" data-country></select></label>
+            </div>
+          </template>
         </section>
 
         <section class="lvp-page" data-page="individual.background" data-applicant="individual" hidden>
@@ -1138,7 +1144,8 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Jurisdiction ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
               <label class="lvp-field" data-required><span class="lvp-field__label">Jurisdiction</span><select class="lvp-input--select" name="fatcaCrs.taxResidency[${i}].jurisdiction" data-country></select></label>
-              <div class="lvp-grid-2">
+              <label class="lvp-checkbox"><input type="checkbox" name="fatcaCrs.taxResidency[${i}].noTinIssued" value="true" data-show-when-trigger="fatcaCrs.taxResidency[${i}].noTinIssued"> No tax reference number issued for this jurisdiction</label>
+              <div class="lvp-grid-2" data-show-when="fatcaCrs.taxResidency[${i}].noTinIssued=false;fatcaCrs.taxResidency[${i}].noTinIssued=">
                 <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference type</span>
                   <select class="lvp-input--select" name="fatcaCrs.taxResidency[${i}].taxRefType">
                     <option value="">Select</option>
@@ -1149,14 +1156,18 @@
                   </select></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference number</span><input class="lvp-input" type="text" name="fatcaCrs.taxResidency[${i}].taxRefNumber"></label>
               </div>
-              <label class="lvp-field"><span class="lvp-field__label">If no tax reference number, the reason</span><input class="lvp-input" type="text" name="fatcaCrs.taxResidency[${i}].reasonNoTaxRef" data-help="Required only if no tax reference number is available for this jurisdiction."></label>
+              <label class="lvp-field" data-required data-show-when="fatcaCrs.taxResidency[${i}].noTinIssued=true"><span class="lvp-field__label">Reason no tax reference number was issued</span><input class="lvp-input" type="text" name="fatcaCrs.taxResidency[${i}].reasonNoTaxRef" placeholder="e.g., no TIN issued by jurisdiction"></label>
             </div>
           </template>
 
         </section>
 
-        <!-- ========================= PAGE: FATCA CLASSIFICATION (entity, not a U.S. person) ========================= -->
-        <section class="lvp-page" data-page="fatcaCrs.classification" data-applicant="entity" data-page-when="fatcaCrs.usPersonStatus=notUs" hidden>
+        <!-- ========================= PAGE: FATCA + CRS CLASSIFICATION (entity, all) =========================
+             2026-06-21: gate dropped (was "notUs only"). CRS requires entity
+             classification regardless of US-person status; a US-LLC Passive
+             NFE still needs the controlling-persons disclosure for Israeli CRS
+             reporting. -->
+        <section class="lvp-page" data-page="fatcaCrs.classification" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">Entity FATCA and CRS classification</h2>
           <p class="lvp-page__hint">How the entity is classified for tax reporting. For almost every entity FATCA and CRS match, so we ask once.</p>
 
