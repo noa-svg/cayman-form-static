@@ -1428,15 +1428,16 @@
         + '&lane='     + encodeURIComponent(p.get('lane') || '')
         + '&fp='       + encodeURIComponent(p.get('fp')   || '')
         + '&fixture='  + encodeURIComponent(fixtureParam)
-        + '&screenshotMode=' + encodeURIComponent(screenshotMode);
+        + '&screenshotMode=' + encodeURIComponent(screenshotMode)
+        + '&lang='     + encodeURIComponent(p.get('lang') || '');
       try {
         fetch(url)
           .then(function(r) { return r.json(); })
           .then(function(cfg) {
             window.CAYMAN_CFG = cfg;
             applyCfgVisuals(cfg);
-            if (cfg.language === 'en') {
-              var btn = document.querySelector('[data-lang-set="en"]');
+            if (cfg.language === 'en' || cfg.language === 'he') {
+              var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
               if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
             }
             try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
