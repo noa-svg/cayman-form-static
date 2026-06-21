@@ -2486,9 +2486,20 @@
     function validatePage(pageEl) {
       // Form-render matrix bypass (Noa 2026-06-21 #FormRender P3): when the
       // form runs under ?screenshotMode=1, the headless walker advances
-      // through every page so each can be screenshotted. Without this, file
-      // upload + repeating-row required fields block Next forever.
-      if (CFG.screenshotMode) return { ok: true };
+      // through every page so each can be screenshotted. Read from THREE
+      // sources because the static CFG capture races the async config fetch:
+      //   1. the URL itself (most reliable; set the moment the page loads)
+      //   2. the static CFG snapshot captured by the main IIFE
+      //   3. window.CAYMAN_CFG which the async fetch updates last
+      var inScreenshotMode = (function () {
+        try {
+          if (location && location.search && /[?&]screenshotMode=1\b/.test(location.search)) return true;
+        } catch (e) {}
+        if (CFG && CFG.screenshotMode) return true;
+        if (typeof window !== 'undefined' && window.CAYMAN_CFG && window.CAYMAN_CFG.screenshotMode) return true;
+        return false;
+      })();
+      if (inScreenshotMode) return true;
       var ok = true;
       var firstError = null;
       var errors = [];                       // { holder, label } for the summary
