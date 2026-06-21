@@ -2327,6 +2327,42 @@
       { match: /\.phone$/, validate: function (v) {
         if (/^\+?[\d\s\-().]{7,20}$/.test(v)) return '';
         return 'Enter a valid phone number (digits, optional + and country code).';
+      } },
+      // Investment / increase / withdrawal amount. Must be a positive number
+      // with no decimal noise; minimum subscription is 100,000 (fund baseline,
+      // operator-overridable). Soft-floor; the server-side rule is the source
+      // of truth. We reject obviously-wrong values: 0, sub-1000, > 1e9.
+      { match: /investment\.amount$|investedAmount$|withdrawal\.amount$|increase\.amount$/, validate: function (v) {
+        var n = parseFloat(String(v).replace(/[\s,]/g, ''));
+        if (isNaN(n)) return 'Enter a numeric amount.';
+        if (n <= 0) return 'Amount must be greater than zero.';
+        if (n < 1000) return 'Amount looks too small. The fund minimum is at least 100,000.';
+        if (n > 1e9) return 'Amount exceeds the maximum supported value.';
+        return '';
+      } },
+      // Tax-residency reference number (in the FATCA / CRS repeating row). Loose
+      // shape: 4-25 chars, alphanumeric + dashes. Tighter check (Israeli Luhn,
+      // US 9-digit) lives in the server sanitizer when we know the jurisdiction.
+      { match: /taxResidency.*\.taxRefNumber$|taxResidency\.taxRefNumber$/, validate: function (v) {
+        var s = String(v).replace(/\s+/g, '');
+        if (s.length < 4 || s.length > 25) return 'Tax reference number must be 4-25 characters.';
+        if (!/^[A-Za-z0-9-]+$/.test(s)) return 'Tax reference number must be letters, digits, or dashes.';
+        return '';
+      } },
+      // Beneficiary ID / company number. Same shape as the primary ID/passport.
+      { match: /\.idOrCompanyNumber$/, validate: function (v) {
+        if (/^\d{9}$/.test(v) && isValidIsraeliId_(v)) return '';
+        if (/^[A-Za-z0-9-]{4,20}$/.test(v)) return '';
+        return 'Enter a valid Israeli ID (9 digits) or a 4-20 character entity number.';
+      } },
+      // Postal code. Country-conditional in spirit (Israel 7 digits, US 5 or
+      // 5+4, UK alphanumeric); we keep this loose so non-Western LPs are not
+      // blocked, but reject single-digit garbage.
+      { match: /\.postCode$/, validate: function (v) {
+        var s = String(v).replace(/\s+/g, '');
+        if (s.length < 3 || s.length > 10) return 'Enter a valid postal / ZIP code.';
+        if (!/^[A-Za-z0-9-]+$/.test(s)) return 'Postal code must be letters, digits, or dashes.';
+        return '';
       } }
     ];
     function lvpValidateFormat_(name, val) {
