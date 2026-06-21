@@ -734,7 +734,7 @@
         </section>
 
         <section class="lvp-page" data-page="individual.personal" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">Personal details</h2>
+          <h2 class="lvp-page__title">Personal and contact details</h2>
           <div class="lvp-grid-2">
             <div class="lvp-field lvp-dob" data-required><span class="lvp-field__label">Date of birth</span><div class="lvp-dob__row" dir="ltr" role="group" aria-label="Date of birth"><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Day" data-dob-d autocomplete="bday-day"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Month" data-dob-m autocomplete="bday-month"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg lvp-dob__seg--y" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="Year" data-dob-y autocomplete="bday-year"></div><input type="hidden" name="individual.birthDate" data-dob-iso></div>
             <label class="lvp-field" data-required><span class="lvp-field__label">Country of birth</span><select class="lvp-input--select" name="individual.birthCountry" data-country></select></label>
@@ -746,6 +746,19 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Additional citizenship ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
               <label class="lvp-field" data-required><span class="lvp-field__label">Citizenship</span><select class="lvp-input--select" name="individual.additionalCitizenships[${i}]" data-country></select></label>
+            </div>
+          </template>
+          <!-- Contact + CC emails folded in (Noa 2026-06-21 #22 + #23). -->
+          <h3 class="lvp-subhead">Contact</h3>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="individual.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Email address</span><input class="lvp-input" type="email" name="individual.email" inputmode="email" autocomplete="email" data-help="Primary email for regular communication, including monthly yield updates"></label>
+          <p class="lvp-hint-small">Add any additional email addresses for regular communication. Optional.</p>
+          <div data-repeating-typed-path="comms.additionalEmails" data-repeating-min="0" data-repeating-template="email"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="comms.additionalEmails">+ Add an email</button>
+          <template data-row-template="email">
+            <div class="lvp-email-row" data-row-index="${i}">
+              <input class="lvp-input" type="email" name="comms.additionalEmails[${i}]" inputmode="email" autocomplete="off" placeholder="name@example.com">
+              <button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button>
             </div>
           </template>
         </section>
@@ -767,34 +780,31 @@
           <label class="lvp-field" data-required data-show-when="individual.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="individual.sourceOfFunds.otherDescription"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Occupation</span><input class="lvp-input" type="text" name="individual.occupation" data-help="In English, as it will appear in your documents"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="individual.purposeOfInvestment" data-help="In English, as it will appear in your documents"></label>
-        </section>
-
-        <section class="lvp-page" data-page="individual.pep" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">Politically exposed person</h2>
+          <!-- PEP folded into this page (Noa 2026-06-21 #21). A single yes/no does not deserve a full step. -->
           <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Are you a Politically Exposed Person (PEP) or senior political figure?</legend>
             <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
             <label class="lvp-radio"><input type="radio" name="individual.isPep" value="true" data-show-when-trigger="individual.isPep"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="individual.isPep" value="false"> No</label>
           </fieldset>
-          <label class="lvp-field" data-required data-show-when="individual.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="individual.pepDetails" rows="2"></textarea></label>
+          <label class="lvp-field" data-required data-show-when="individual.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="individual.pepDetails" rows="4" maxlength="1000"></textarea></label>
         </section>
 
-        <section class="lvp-page" data-page="individual.contact" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">Contact details</h2>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="individual.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Email address</span><input class="lvp-input" type="email" name="individual.email" inputmode="email" autocomplete="email" data-help="Primary email for regular communication, including monthly yield updates"></label>
-        </section>
 
         <!-- ========================= PAGE: ENTITY DETAILS (ci-spec Page 10-11 entity) ========================= -->
-        <!-- ENTITY: paginated into short pages (no scroll) -->
+        <!-- ENTITY: paginated into short pages (no scroll). Contact folded in
+             here per Noa 2026-06-21 #24. -->
         <section class="lvp-page" data-page="entity.details" data-applicant="entity" hidden>
-          <h2 class="lvp-page__title">Entity details</h2>
+          <h2 class="lvp-page__title">Entity details and contact</h2>
           <p class="lvp-page__hint">Tell us about the entity making this subscription.</p>
           <label class="lvp-field" data-required><span class="lvp-field__label">Legal entity name</span><input class="lvp-input" type="text" name="entity.legalName" autocomplete="organization" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Entity name in Hebrew</span><input class="lvp-input" type="text" name="entity.fullNameHebrew" dir="rtl" autocomplete="off" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
           <label class="lvp-field" data-required data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify)</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
           <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber" inputmode="numeric"></label>
+          <h3 class="lvp-subhead">Contact</h3>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Primary entity email</span><input class="lvp-input" type="email" name="entity.email" inputmode="email" autocomplete="email"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Contact person</span><input class="lvp-input" type="text" name="entity.contactPerson" autocomplete="name"></label>
         </section>
 
         <section class="lvp-page" data-page="entity.address" data-applicant="entity" hidden>
@@ -844,25 +854,17 @@
           <label class="lvp-field" data-required data-show-when="entity.sourceOfFunds.category=other"><span class="lvp-field__label">Please specify</span><input class="lvp-input" type="text" name="entity.sourceOfFunds.otherDescription"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Principal business activity</span><input class="lvp-input" type="text" name="entity.principalActivity" data-help="In English, as it will appear in your documents"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Purpose of investment</span><input class="lvp-input" type="text" name="entity.purposeOfInvestment" data-help="In English, as it will appear in your documents"></label>
-        </section>
-
-        <section class="lvp-page" data-page="entity.pep" data-applicant="entity" hidden>
-          <h2 class="lvp-page__title">Politically exposed person</h2>
+          <!-- Entity PEP folded into this page (Noa 2026-06-21 same pattern as individual #21). -->
           <fieldset class="lvp-fieldset" data-required>
             <legend class="lvp-fieldset__legend">Is the entity a Politically Exposed Person (PEP) or controlled by one?</legend>
             <p class="lvp-hint-small">A PEP is a senior government, military, or judicial official, a senior political party official, a senior executive of a government-owned corporation, or an immediate family member or close associate of such a person.</p>
             <label class="lvp-radio"><input type="radio" name="entity.isPep" value="true" data-show-when-trigger="entity.isPep"> Yes</label>
             <label class="lvp-radio"><input type="radio" name="entity.isPep" value="false"> No</label>
           </fieldset>
-          <label class="lvp-field" data-required data-show-when="entity.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="entity.pepDetails" rows="2"></textarea></label>
+          <label class="lvp-field" data-required data-show-when="entity.isPep=true"><span class="lvp-field__label">Please provide details</span><textarea class="lvp-input--textarea" name="entity.pepDetails" rows="4" maxlength="1000"></textarea></label>
         </section>
 
-        <section class="lvp-page" data-page="entity.contact" data-applicant="entity" hidden>
-          <h2 class="lvp-page__title">Contact details</h2>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Primary entity email</span><input class="lvp-input" type="email" name="entity.email" inputmode="email" autocomplete="email"></label>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Contact person</span><input class="lvp-input" type="text" name="entity.contactPerson" autocomplete="name"></label>
-        </section>
+        <!-- entity.pep and entity.contact pages folded into entity.details / entity.incorporation (Noa 2026-06-21). -->
 
         <!-- ========================= PAGE: ENTITY AUTHORIZED SIGNATORIES (ci-spec Pages 13-14) ========================= -->
         <section class="lvp-page" data-page="entity.signatories" data-applicant="entity" hidden>
@@ -923,7 +925,7 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">SWIFT code</span><input class="lvp-input" type="text" name="investment.lpBank.swift" autocomplete="off" data-help="Your bank's SWIFT code for international transfers (8 or 11 letters/digits). A 9-digit U.S. ABA routing number is also accepted."></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber" inputmode="numeric" autocomplete="off"></label>
           </div>
-          <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName"></label>
+          <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-autofill-holder></label>
           <p class="lvp-hint-small" data-applicant="individual">Must match the individual LP's name exactly.</p>
           <p class="lvp-hint-small" data-applicant="entity">Must match the entity's legal name exactly.</p>
         </section>
@@ -1311,20 +1313,7 @@
           </template>
         </section>
 
-        <!-- ========================= PAGE: COMMS (additional emails) ========================= -->
-        <section class="lvp-page" data-page="comms">
-          <h2 class="lvp-page__title">Communication contacts</h2>
-          <p class="lvp-page__hint">Add any additional email addresses for regular communication, including monthly yield updates. These are copied on the completion email to Legacy Value Partners.</p>
-          <p class="lvp-hint-small">No additional contacts? Just press Continue.</p>
-          <div data-repeating-typed-path="comms.additionalEmails" data-repeating-min="0" data-repeating-template="email"></div>
-          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="comms.additionalEmails">+ Add an email</button>
-          <template data-row-template="email">
-            <div class="lvp-email-row" data-row-index="${i}">
-              <input class="lvp-input" type="email" name="comms.additionalEmails[${i}]" inputmode="email" autocomplete="off" placeholder="name@example.com">
-              <button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button>
-            </div>
-          </template>
-        </section>
+        <!-- Communication contacts page folded into Personal + contact (Noa 2026-06-21 #23). -->
 
         <!-- ========================= PAGE: REVIEW + SUBMIT ========================= -->
         <section class="lvp-page" data-page="review">
@@ -1925,6 +1914,31 @@
       applyConditionals();
     });
     form.addEventListener('input', function () { clearError(currentPageEl()); });
+
+    // Account holder auto-prefill (Noa 2026-06-21 #20). When the bank page
+    // renders the holder field, prefill it from the names already collected:
+    // individual = firstName + " " + lastName; entity = legalName. We never
+    // overwrite a value the LP has typed; only fill an empty input.
+    function syncAccountHolderPrefill_() {
+      var fld = form.querySelector('input[data-autofill-holder]');
+      if (!fld) return;
+      if ((fld.value || '').trim()) return;
+      var ap = applicant();
+      var val = '';
+      if (ap === 'individual') {
+        var fn = (form.querySelector('input[name="individual.firstName"]') || {}).value || '';
+        var ln = (form.querySelector('input[name="individual.lastName"]')  || {}).value || '';
+        val = (fn + ' ' + ln).trim();
+      } else if (ap === 'entity') {
+        val = ((form.querySelector('input[name="entity.legalName"]') || {}).value || '').trim();
+      }
+      if (val) fld.value = val;
+    }
+    form.addEventListener('focusin', function (e) {
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-autofill-holder')) {
+        syncAccountHolderPrefill_();
+      }
+    });
 
     // ---- repeating rows ----
     function templateFor(name) {
