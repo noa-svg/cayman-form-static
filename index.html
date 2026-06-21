@@ -307,7 +307,10 @@
     @media (hover: hover) { .lvp-upload:hover .lvp-upload__btn { border-color: var(--lvp-navy); } }
     .lvp-upload__btn::after { content: ''; display: block; width: 20px; height: 20px; flex-shrink: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23B0B7C3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E") no-repeat center/contain; }
     .lvp-upload.has-file .lvp-upload__btn { border-color: #16A34A; background: #F0FDF4; }
-    .lvp-upload.has-file .lvp-upload__btn::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2316A34A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E"); }
+    /* Noa 2026-06-21: drop the green check on filled cards. The green border +
+       green filename already signal success, and pairing the check with the X
+       made the X read as a status glyph instead of a delete button. */
+    .lvp-upload.has-file .lvp-upload__btn::after { display: none; }
     .lvp-upload.has-file .lvp-upload__name { display: block; color: #16A34A; }
     .lvp-upload.has-file .lvp-upload__doc-title { color: #16A34A; }
     .lvp-upload.has-file .lvp-upload__slot-num { border-color: #16A34A !important; color: #16A34A !important; background: #F0FDF4; }
@@ -315,8 +318,8 @@
     /* Remove button: appears on filled cards so the LP can clear a wrong file.
        40px tap target (was 24px, below the touch minimum), anchored with a
        LOGICAL inset so LTR and RTL both work without per-direction overrides.
-       The filled card reserves padding on that side so the ✓ icon (at the flex
-       row end) and the × can never collide (2026-06-12, Noa's screenshot). */
+       The check icon is hidden on filled cards (Noa 2026-06-21) so the X has
+       the right side of the card to itself. */
     .lvp-upload__remove { display: none; position: absolute; top: 6px; inset-inline-end: 6px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(13,63,106,0.08); color: var(--lvp-text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; transition: background 0.15s; }
     .lvp-upload__remove:hover { background: rgba(13,63,106,0.18); color: var(--lvp-error); }
     .lvp-upload.has-file .lvp-upload__remove { display: flex; align-items: center; justify-content: center; }
