@@ -3686,13 +3686,19 @@
         var STUB_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
         prefill.__testUploads.forEach(function (slot) {
           pendingUploads[slot] = { slot: slot, fileName: 'test-doc.png', mimeType: 'image/png', fileSizeBytes: 68, base64: STUB_B64, isTestStub: true };
-          var inp = form.querySelector('input[data-upload="' + slot + '"]');
-          if (!inp) return;
-          var wrap = inp.closest('.lvp-upload');
-          if (!wrap) return;
-          var nm = wrap.querySelector('[data-upload-name]');
-          if (nm) { nm.textContent = 'test-doc.png'; nm.setAttribute('data-has-file', '1'); }
-          wrap.classList.add('has-file');
+          // Slot names that appear in BOTH the individual and entity DOM
+          // sub-trees (e.g. bankAccountConfirmation, listed twice at lines
+          // 672/712) require querySelectorAll: the entity-only copy was
+          // left visually empty under entity fixtures because querySelector
+          // returned the hidden individual copy. Caught by the form-render
+          // matrix 2026-06-21.
+          form.querySelectorAll('input[data-upload="' + slot + '"]').forEach(function (inp) {
+            var wrap = inp.closest('.lvp-upload');
+            if (!wrap) return;
+            var nm = wrap.querySelector('[data-upload-name]');
+            if (nm) { nm.textContent = 'test-doc.png'; nm.setAttribute('data-has-file', '1'); }
+            wrap.classList.add('has-file');
+          });
         });
       }
     }
