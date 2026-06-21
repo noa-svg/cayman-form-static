@@ -88,6 +88,14 @@
       margin-bottom: 24px; gap: 10px;
     }
     .lvp-progress[hidden] { display: none; }
+    /* Form-render matrix mask (Noa 2026-06-21). When the body carries
+       data-screenshot-mode=1 (set by the URL ?screenshotMode=1 used by the
+       Playwright walker), any element flagged data-screenshot-mask becomes
+       invisible to the screenshot. Keeps visit-volatile chrome (progress
+       indicator, focus rings, timestamps) from making baselines cry wolf
+       on every run. */
+    body[data-screenshot-mode="1"] [data-screenshot-mask] { visibility: hidden; }
+    body[data-screenshot-mode="1"] :focus-visible { outline: none !important; }
     .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; }
     .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
@@ -581,7 +589,7 @@
     </header>
 
     <main class="lvp-card">
-      <div class="lvp-progress" aria-label="Progress" data-progress hidden>
+      <div class="lvp-progress" aria-label="Progress" data-progress data-screenshot-mask hidden>
         <div class="lvp-stagerail__caption">
           <span class="lvp-stagerail__name" data-stage-name></span>
           <span class="lvp-stagerail__count" data-stage-count></span>
@@ -1406,11 +1414,21 @@
       } catch(e) {}
 
       // Always fetch fresh in background; update cache + apply language if needed
+      var fixtureParam = p.get('fixture') || '';
+      var screenshotMode = p.get('screenshotMode') || '';
+      if (fixtureParam) {
+        // Form-render-matrix mode: tag the body so the screenshot-mask CSS
+        // hides visit-volatile chrome (progress, focus rings, timestamps) and
+        // baselines stay stable.
+        try { document.body.setAttribute('data-screenshot-mode', '1'); } catch(e) {}
+      }
       var url = gasUrl + '?api=config'
-        + '&t='    + encodeURIComponent(p.get('t')    || '')
-        + '&type=' + encodeURIComponent(p.get('type') || '')
-        + '&lane=' + encodeURIComponent(p.get('lane') || '')
-        + '&fp='   + encodeURIComponent(p.get('fp')   || '');
+        + '&t='        + encodeURIComponent(p.get('t')    || '')
+        + '&type='     + encodeURIComponent(p.get('type') || '')
+        + '&lane='     + encodeURIComponent(p.get('lane') || '')
+        + '&fp='       + encodeURIComponent(p.get('fp')   || '')
+        + '&fixture='  + encodeURIComponent(fixtureParam)
+        + '&screenshotMode=' + encodeURIComponent(screenshotMode);
       try {
         fetch(url)
           .then(function(r) { return r.json(); })
