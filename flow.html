@@ -165,7 +165,7 @@
 </head>
 <body>
   <div class="lvp-app">
-    <div class="lvp-brand"><img src="https://legacy-value-partners.easysend.app/player/static/legacy-value-partners/web_flow_themes/OUjQTvLvshw-2026-04-26T11_41_53/logo_1.png" alt="Legacy Value Partners"></div>
+    <div class="lvp-brand"><img src="brand-logo.png" alt="Legacy Value Partners"></div>
     <div class="lvp-card" id="lvp-card">
       <div class="lvp-loading" id="lvp-loading">טוען...</div>
       <div id="lvp-form" hidden>
@@ -190,18 +190,11 @@
           <div id="lvp-personal-summary" class="lvp-error-summary" hidden role="alert"></div>
 
           <div id="personal-individual">
-            <div class="lvp-row">
-              <label class="lvp-field" data-field="ind-firstName">
-                <span class="lvp-field__label">שם פרטי<span class="lvp-req" aria-hidden="true">*</span></span>
-                <input class="lvp-input" type="text" id="ind-firstName" autocomplete="given-name" required aria-describedby="err-ind-firstName">
-                <span class="lvp-field__error" id="err-ind-firstName"></span>
-              </label>
-              <label class="lvp-field" data-field="ind-lastName">
-                <span class="lvp-field__label">שם משפחה<span class="lvp-req" aria-hidden="true">*</span></span>
-                <input class="lvp-input" type="text" id="ind-lastName" autocomplete="family-name" required aria-describedby="err-ind-lastName">
-                <span class="lvp-field__error" id="err-ind-lastName"></span>
-              </label>
-            </div>
+            <label class="lvp-field" data-field="ind-fullName">
+              <span class="lvp-field__label">שם מלא<span class="lvp-req" aria-hidden="true">*</span></span>
+              <input class="lvp-input" type="text" id="ind-fullName" autocomplete="name" required aria-describedby="err-ind-fullName">
+              <span class="lvp-field__error" id="err-ind-fullName"></span>
+            </label>
             <label class="lvp-field" data-field="ind-idNumber">
               <span class="lvp-field__label">מספר תעודת זהות<span class="lvp-req" aria-hidden="true">*</span></span>
               <input class="lvp-input lvp-input--ltr" type="text" id="ind-idNumber" inputmode="numeric" autocomplete="off" required pattern="[0-9]{5,9}" maxlength="9" aria-describedby="err-ind-idNumber hint-ind-idNumber">
@@ -229,11 +222,6 @@
             <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" autocomplete="email" required aria-describedby="err-lp-email hint-lp-email">
             <span class="lvp-field__hint" id="hint-lp-email">כתובת זו תשמש אותנו לתקשורת</span>
             <span class="lvp-field__error" id="err-lp-email"></span>
-          </label>
-          <label class="lvp-field" data-field="lp-phone">
-            <span class="lvp-field__label">טלפון נייד<span class="lvp-req" aria-hidden="true">*</span></span>
-            <input class="lvp-input lvp-input--ltr" type="tel" id="lp-phone" autocomplete="tel" inputmode="tel" required aria-describedby="err-lp-phone">
-            <span class="lvp-field__error" id="err-lp-phone"></span>
           </label>
 
           <div class="lvp-nav">
@@ -572,21 +560,24 @@
         // Entity stamp upload only for entity.
         document.getElementById('upload-stamp-wrap').hidden = (applicantType !== 'entity');
 
-        // Prefill from the session snapshot (read-only when known; LP confirms / edits).
+        // Prefill from the session snapshot. For an existing LP the identity is
+        // authoritative (read off Monday), so name + ID land READ-ONLY when known
+        // and the LP only confirms. An empty cell stays editable so the LP can
+        // supply a missing value (some board rows lack a Hebrew name or ID).
         var pre = (CFG.prefill && CFG.prefill.lp) || {};
+        function prefillRO(id, value) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          if (value) { el.value = value; el.readOnly = true; el.classList.add('is-prefilled'); }
+        }
         if (applicantType === 'entity') {
-          var nm = pre.legalName || '';
-          var num = pre.idNumber || '';
-          if (nm) document.getElementById('ent-name').value = nm;
-          if (num) document.getElementById('ent-number').value = num;
+          prefillRO('ent-name', pre.legalName || '');
+          prefillRO('ent-number', pre.idNumber || '');
         } else {
-          var parts = String(pre.legalName || '').trim().split(/\s+/);
-          if (parts[0]) document.getElementById('ind-firstName').value = parts[0];
-          if (parts.length > 1) document.getElementById('ind-lastName').value = parts.slice(1).join(' ');
-          if (pre.idNumber) document.getElementById('ind-idNumber').value = pre.idNumber;
+          prefillRO('ind-fullName', pre.legalName || '');
+          prefillRO('ind-idNumber', pre.idNumber || '');
         }
         if (pre.email) document.getElementById('lp-email').value = pre.email;
-        if (pre.phone) document.getElementById('lp-phone').value = pre.phone;
 
         // Seed one amount row per flow.
         addAmountRow(isIncrease ? 'increase' : 'redemption');
@@ -895,7 +886,6 @@
 
       // VALIDATORS per field. Each returns { ok:true } or { ok:false, msg:'...' }.
       var EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      var PHONE_RX = /^[0-9 +()-]{7,20}$/;
       // Empty required = silent red border (Noa: "it's obvious"). The label + the
       // red * already tell the LP this is required; a text error would be noise.
       // Format / length / dup errors KEEP their message so the LP knows the fix.
@@ -904,11 +894,6 @@
         var v = val(id);
         if (!v) return { ok: false, silent: true };
         return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה.' };
-      }
-      function vPhone(id) {
-        var v = val(id);
-        if (!v) return { ok: false, silent: true };
-        return PHONE_RX.test(v) ? { ok: true } : { ok: false, msg: 'נא להזין ספרות בלבד.' };
       }
       function vDigits(id, minLen, maxLen) {
         var v = val(id).replace(/[ -]/g, '');
@@ -920,13 +905,11 @@
       }
       function validateField(name) {
         switch (name) {
-          case 'ind-firstName':  return vRequired('ind-firstName');
-          case 'ind-lastName':   return vRequired('ind-lastName');
+          case 'ind-fullName':   return vRequired('ind-fullName');
           case 'ind-idNumber':   return vDigits('ind-idNumber', 9, 9);
           case 'ent-name':       return vRequired('ent-name');
           case 'ent-number':     return vDigits('ent-number', 9, 9);
           case 'lp-email':       return vEmail('lp-email');
-          case 'lp-phone':       return vPhone('lp-phone');
           case 'bank-name':      return vRequired('bank-name');
           case 'bank-branch':    return vDigits('bank-branch', 2, 4);
           case 'bank-account':   return vDigits('bank-account', 4, 15);
@@ -950,8 +933,8 @@
         if (page === 'personal') {
           var f = (applicantType === 'entity')
             ? ['ent-name', 'ent-number']
-            : ['ind-firstName', 'ind-lastName', 'ind-idNumber'];
-          return f.concat(['lp-email', 'lp-phone']);
+            : ['ind-fullName', 'ind-idNumber'];
+          return f.concat(['lp-email']);
         }
         if (page === 'request') {
           var bank = ['bank-name', 'bank-branch', 'bank-account'];
@@ -1203,29 +1186,29 @@
 
       function buildSubmission() {
         var s = { applicantType: applicantType, meta: { language: 'he' } };
+        // Existing-LP identity: one Hebrew full-name field. Split into first/last
+        // for the typed model; the doc + tracker use lp.legalName (the full name).
+        // Phone is no longer collected (an existing LP is reached via Monday).
+        var fullName = val('ind-fullName');
+        var nameParts = fullName.split(/\s+/);
         if (applicantType === 'entity') {
           s.entity = {
             legalName: val('ent-name'),
             registrationNumber: val('ent-number'),
-            email: val('lp-email'),
-            phone: val('lp-phone')
+            email: val('lp-email')
           };
         } else {
           s.individual = {
-            firstName: val('ind-firstName'),
-            lastName: val('ind-lastName'),
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' '),
             idNumber: val('ind-idNumber'),
-            email: val('lp-email'),
-            phone: val('lp-phone')
+            email: val('lp-email')
           };
         }
         s.lp = {
-          legalName: (applicantType === 'entity')
-            ? val('ent-name')
-            : (val('ind-firstName') + ' ' + val('ind-lastName')).trim(),
+          legalName: (applicantType === 'entity') ? val('ent-name') : fullName,
           idNumber: (applicantType === 'entity') ? val('ent-number') : val('ind-idNumber'),
-          email: val('lp-email'),
-          phone: val('lp-phone')
+          email: val('lp-email')
         };
         var isIncrease = isIncreaseFlow();
         if (isIncrease) {
