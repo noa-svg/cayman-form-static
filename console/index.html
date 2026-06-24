@@ -1001,6 +1001,39 @@ nav {
   line-height: var(--leading-normal);
 }
 
+/* Monday LP cascade search (Israel lane) */
+.lp-results {
+  position: relative; margin-top: 6px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-bg-input); overflow: hidden;
+  max-height: 260px; overflow-y: auto;
+}
+.lp-opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: transparent; border: 0; border-bottom: 1px solid var(--color-border);
+  padding: 10px 12px; font-family: inherit; color: var(--color-ink);
+}
+.lp-opt:last-child { border-bottom: 0; }
+.lp-opt:hover, .lp-opt:focus { background: var(--color-bg-hover, rgba(0,0,0,0.06)); outline: none; }
+.lp-opt-nm { display: block; font-size: 14px; font-weight: 600; }
+.lp-opt-sub { display: block; font-size: 12px; color: var(--color-ink-muted); margin-top: 2px; }
+.lp-empty { padding: 12px; font-size: 13px; color: var(--color-ink-muted); }
+.lp-picked {
+  margin-top: 8px; padding: 12px;
+  border: 1px solid var(--color-atrium); border-radius: var(--radius-md);
+  background: var(--color-bg-input);
+}
+.lp-picked-hd { display: flex; align-items: center; gap: 10px; }
+.lp-picked-nm { font-size: 14px; font-weight: 600; color: var(--color-ink); }
+.lp-picked-id { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); }
+.lp-picked-x { margin-left: auto; background: transparent; border: 0; cursor: pointer; font-size: 18px; color: var(--color-ink-muted); line-height: 1; padding: 2px 6px; }
+.lp-picked-x:hover { color: var(--color-danger, #c0392b); }
+.lp-picked-data { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+.lp-picked-data dt { font-size: 11px; color: var(--color-ink-muted); font-variant: small-caps; text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+.lp-picked-data dd { margin: 0; font-size: 13px; color: var(--color-ink); word-break: break-word; }
+.lp-picked-link { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--color-atrium); }
+.lp-picked-pending { margin-top: 8px; font-size: 12px; color: var(--color-ink-muted); }
+
 /* ============================================================
    FORM ELEMENTS
    ============================================================ */
@@ -2116,7 +2149,22 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="seg" id="segLang" style="max-width:240px"><button class="on" data-v="he">Hebrew</button><button data-v="en">English</button></div>
     <div class="hint">Sets the language of every email to this investor.</div>
 
-    <label for="name">Full name <span class="tag">at least one</span></label>
+    <div id="lpSearchRow" style="display:none">
+    <label for="lpSearch">Find LP in Monday <span class="tag">required</span></label>
+    <input id="lpSearch" autocomplete="off" placeholder="Type a name or email&hellip;">
+    <div id="lpSearchResults" class="lp-results" role="listbox" hidden></div>
+    <div id="lpSearchPicked" class="lp-picked" hidden></div>
+    <div class="hint">Searches Monday directly &mdash; pick the LP and we pull their ID, name, email, and details. No Monday login needed.</div>
+    </div>
+
+    <div id="mondayRow" style="display:none">
+    <label for="mondayId">Monday ID <span class="tag">required</span></label>
+    <input id="mondayId" inputmode="numeric" autocomplete="off" placeholder="e.g. 1234567890">
+    <div class="hint">The LP's Monday item ID. Their name, email, and details are pulled from Monday &mdash; no need to re-type them below.</div>
+    </div>
+
+    <div id="identityBlock">
+    <label for="name">Full name <span class="tag" id="nameReqTag">at least one</span></label>
     <div class="g2">
       <div><input id="name" placeholder="David Cohen  (English)"></div>
       <div><input id="nameHebrew" dir="rtl" aria-label="Full name (Hebrew)" placeholder="&#1491;&#1493;&#1491; &#1499;&#1492;&#1503;  (&#1506;&#1489;&#1512;&#1497;&#1514;)"></div>
@@ -2128,8 +2176,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="hint">First name or nickname for email greetings. Not the full legal name.</div>
     </div>
 
-    <label for="email">Investor email <span class="tag">required</span></label>
+    <label for="email">Investor email <span class="tag" id="emailReqTag">required</span></label>
     <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="investor@example.com">
+    </div>
 
     <div id="foRow">
     <label for="foEmail">FO email <span class="opt">optional</span></label>
@@ -2365,19 +2414,35 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     el=document.getElementById("typeKindRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
+    // Existing-LP processes (increase/withdrawal) are keyed by Monday ID; the
+    // gateway resolves the LP's name + email from the Monday item, so those
+    // become optional here. Subscriptions still require them.
+    //   - Subscription      : identity fields, no Monday.
+    //   - Existing, Cayman   : manual Monday ID field + optional identity fields.
+    //   - Existing, Israel   : Monday LP search; identity fields hidden entirely.
+    var existing=!isSub;
+    var israelSearch=existing&&(state.lane==="israel");
+    el=document.getElementById("lpSearchRow");if(el)el.style.display=israelSearch?"":"none";
+    el=document.getElementById("mondayRow");if(el)el.style.display=(existing&&!israelSearch)?"":"none";
+    el=document.getElementById("identityBlock");if(el)el.style.display=israelSearch?"none":"";
+    var nt=document.getElementById("nameReqTag");
+    if(nt){nt.textContent=isSub?"at least one":"optional";nt.className=isSub?"tag":"opt";}
+    var et=document.getElementById("emailReqTag");
+    if(et){et.textContent=isSub?"required":"optional";et.className=isSub?"tag":"opt";}
+    if(typeof window.__lpResetSearch==="function")window.__lpResetSearch();
   }
   var panelOpener=null;
   function open(){
     panelOpener=document.activeElement;
     // F5: the panel always opens clean. Stale fields from the last invite are a
     // duplicate / misattributed-invite hazard.
-    ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
+    ['name','nameHebrew','nickname','email','foEmail','mondayId'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
     var rs=document.getElementById('revShareSel');if(rs)rs.value='';
     var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
     var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
     var res=document.getElementById('res');if(res)res.classList.remove('on');
     showMsg('',false);
-    syncPanelFields();scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
+    syncPanelFields();scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=(state.process!=="subscription")?document.getElementById("mondayId"):document.getElementById("name");if(f)f.focus();},150);
   }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
   document.getElementById("newBtn").onclick=open;
@@ -2398,7 +2463,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       if(sec)sec.style.display=(state.process==="subscription")?"":"none";
       newDd.classList.remove("on");newArr.classList.remove("open");
       open();
-      setTimeout(function(){var f=document.getElementById("email");if(f)f.focus();},160);
+      setTimeout(function(){var f=(state.process!=="subscription")?document.getElementById("mondayId"):document.getElementById("email");if(f)f.focus();},160);
     };
   });
 
@@ -2571,6 +2636,90 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   })();
   function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
+
+  // ---- Monday LP cascade search (Israel lane, existing-LP processes) ----------
+  // Type-ahead over the Monday board so the operator can grab an existing LP
+  // without opening Monday. Calls the gateway searchLp endpoint; on pick we
+  // stash the Monday id (+ name/email) into the hidden carrier inputs the mint
+  // call already reads, and show the item's data so the operator can confirm
+  // it's the right person. Gated to the Israel lane in syncPanelFields().
+  (function(){
+    var box=document.getElementById('lpSearch');
+    var results=document.getElementById('lpSearchResults');
+    var picked=document.getElementById('lpSearchPicked');
+    if(!box||!results||!picked)return;
+    var debounce=null, seq=0, ROWS=[];
+    function setCarrier(id,nm,em,nh,nick){
+      var f;
+      f=document.getElementById('mondayId');if(f)f.value=id||'';
+      f=document.getElementById('name');if(f)f.value=nm||'';
+      f=document.getElementById('email');if(f)f.value=em||'';
+      f=document.getElementById('nameHebrew');if(f)f.value=nh||'';
+      f=document.getElementById('nickname');if(f)f.value=nick||'';
+    }
+    function clearPick(){setCarrier('','','','','');picked.hidden=true;picked.innerHTML='';}
+    window.__lpResetSearch=function(){if(debounce)clearTimeout(debounce);box.value='';results.hidden=true;results.innerHTML='';ROWS=[];clearPick();};
+    function rowLabel(r){return r.name||r.nameHebrew||('Monday '+(r.id||''));}
+    function renderResults(rows){
+      ROWS=rows;
+      if(!rows.length){results.innerHTML='<div class="lp-empty">No matching LP in Monday.</div>';results.hidden=false;return;}
+      results.innerHTML=rows.map(function(r,i){
+        var sub=esc2(r.email||r.nameHebrew||'');
+        return '<button type="button" class="lp-opt" data-i="'+i+'" role="option">'
+          +'<span class="lp-opt-nm">'+esc2(rowLabel(r))+'</span>'
+          +(sub?'<span class="lp-opt-sub">'+sub+'</span>':'')+'</button>';
+      }).join('');
+      results.hidden=false;
+    }
+    // Build the confirmation data card so the operator can eyeball the right LP
+    // before sending. Just the fields we have: name, email, nickname (Hebrew).
+    function renderPicked(r){
+      var rows=[];
+      function add(label,val){if(val)rows.push('<dt>'+esc2(label)+'</dt><dd>'+esc2(val)+'</dd>');}
+      add('Name', r.name||r.nameHebrew);
+      add('Email', r.email);
+      add('Nickname', r.nickname);
+      var hasData=rows.length>0;
+      var note=hasData?'':'<div class="lp-picked-pending">Selected by ID. Details load server-side on send.</div>';
+      picked.innerHTML='<div class="lp-picked-hd">'
+        +'<span class="lp-picked-nm">'+esc2(rowLabel(r))+'</span>'
+        +'<span class="lp-picked-id">ID '+esc2(String(r.id||''))+'</span>'
+        +'<button type="button" class="lp-picked-x" aria-label="Clear selection">&times;</button></div>'
+        +(rows.length?'<dl class="lp-picked-data">'+rows.join('')+'</dl>':'')
+        +note;
+      picked.hidden=false;
+    }
+    function doSearch(q){
+      var my=++seq;
+      apiFetch('?api=searchLp&lane='+encodeURIComponent(state.lane)+'&q='+encodeURIComponent(q)).then(function(d){
+        if(my!==seq)return; // a newer keystroke superseded this response
+        var rows=(d&&d.results)||(Array.isArray(d)?d:[]);
+        renderResults(rows);
+      }).catch(function(){
+        if(my!==seq)return;
+        results.innerHTML='<div class="lp-empty">Search unavailable right now. Switch to Cayman to enter a Monday ID manually, or try again.</div>';
+        results.hidden=false;
+      });
+    }
+    box.addEventListener('input',function(){
+      clearPick();
+      var q=box.value.trim();
+      if(debounce)clearTimeout(debounce);
+      if(q.length<2){results.hidden=true;results.innerHTML='';return;}
+      debounce=setTimeout(function(){doSearch(q);},250);
+    });
+    results.addEventListener('click',function(e){
+      var b=e.target.closest('.lp-opt');if(!b)return;
+      var r=ROWS[+b.getAttribute('data-i')];if(!r)return;
+      setCarrier(r.id,r.name,r.email,r.nameHebrew,r.nickname);
+      results.hidden=true;results.innerHTML='';
+      box.value=rowLabel(r);
+      renderPicked(r);
+    });
+    picked.addEventListener('click',function(e){
+      if(e.target.closest('.lp-picked-x'))window.__lpResetSearch();
+    });
+  })();
   // show rev share only for subscription
   (function(){
     var sec=document.getElementById('revShareSection');
@@ -2584,15 +2733,27 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var btn=this;
     var msg=document.getElementById("msg");
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
-    if(!name&&!nameHebrew){showMsg("Enter at least one name, English or Hebrew.",true);return}
-    if(!/\S+@\S+\.\S+/.test(email)){showMsg("Enter a valid investor email.",true);return}
-    if(!confirm('Send the invite to '+email+'?'))return;
+    var mondayId=(document.getElementById("mondayId")||{}).value;mondayId=mondayId?mondayId.trim():"";
+    var isExisting=(state.process!=="subscription");
+    var israelSearch=isExisting&&(state.lane==="israel");
+    if(isExisting){
+      // Existing-LP processes are keyed by Monday ID; name + email are optional
+      // (resolved server-side from the Monday item). Still validate email format
+      // if the operator chose to override it.
+      if(!mondayId){showMsg(israelSearch?"Search and select the LP first.":"Enter the LP's Monday ID.",true);return}
+      if(email&&!/\S+@\S+\.\S+/.test(email)){showMsg("That email looks invalid. Leave it blank to use the LP's Monday email.",true);return}
+    }else{
+      if(!name&&!nameHebrew){showMsg("Enter at least one name, English or Hebrew.",true);return}
+      if(!/\S+@\S+\.\S+/.test(email)){showMsg("Enter a valid investor email.",true);return}
+    }
+    var who=email||(mondayId?("Monday ID "+mondayId):"this investor");
+    if(!confirm('Send the invite to '+who+'?'))return;
     btn.disabled=true;btn.textContent="Sending...";
     document.getElementById("res").classList.remove("on");
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
     var _rsel=document.getElementById('revShareSel');var revShare=_rsel&&_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):(_rsel?_rsel.value:'');
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')).then(function(res){
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')+(mondayId?'&mondayId='+encodeURIComponent(mondayId):'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
       showMsg("",false);
