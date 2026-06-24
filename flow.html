@@ -385,6 +385,13 @@
       ];
       var PAGE_ORDER = ['start', 'personal', 'request', 'uploads'];
 
+      // Flow-type predicates. The IL lane gateway may report a flow under either
+      // its cayman_* identifier or the israeli_* one (see console FLOW_LABEL map).
+      // Both name the same form, so branch on these helpers rather than a single
+      // literal — the raw flowType is still echoed back to the gateway verbatim.
+      function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
+      function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
+
       var $loading = document.getElementById('lvp-loading');
       var $form = document.getElementById('lvp-form');
 
@@ -540,8 +547,8 @@
       }
 
       function bootstrapForm() {
-        var isIncrease = (flowType === 'cayman_increase');
-        var isRedemption = (flowType === 'cayman_withdrawal');
+        var isIncrease = isIncreaseFlow();
+        var isRedemption = isRedemptionFlow();
 
         // Welcome title verbatim from EasySend per flow.
         document.getElementById('welcome-title').textContent = isIncrease
@@ -899,7 +906,7 @@
         }
         if (page === 'request') {
           var bank = ['bank-name', 'bank-branch', 'bank-account'];
-          if (flowType === 'cayman_withdrawal') {
+          if (isRedemptionFlow()) {
             var fs = ['wd-mode', 'wd-timing'];
             var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value;
             var timing = (document.querySelector('input[name="wd-timing"]:checked') || {}).value;
@@ -1135,7 +1142,7 @@
           email: val('lp-email'),
           phone: val('lp-phone')
         };
-        var isIncrease = (flowType === 'cayman_increase');
+        var isIncrease = isIncreaseFlow();
         if (isIncrease) {
           s.investment = { amounts: collectAmounts('amount-rows-increase') };
         } else {
