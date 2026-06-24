@@ -465,7 +465,7 @@
         if (lc.countryOfIncorporation) lockedHtml += '<dt>' + esc(tHe('Country')) + '</dt><dd>' + esc(lc.countryOfIncorporation) + '</dd>';
         if (lc.primarySignatory) lockedHtml += '<dt>' + esc(tHe('Primary signatory')) + '</dt><dd>' + esc(lc.primarySignatory.name) + '</dd>';
       }
-      if (lc.primaryInvestor) {
+      if (lc.primaryInvestor && lc.primaryInvestor.name) {
         lockedHtml += '<dt>' + esc(tHe('Primary investor')) + '</dt><dd>' + esc(lc.primaryInvestor.name) + '</dd>';
       }
       if (lc.investmentAmount) {
