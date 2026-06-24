@@ -177,7 +177,6 @@
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
           <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
-          <p class="lvp-prose">לתשומת ליבך, בסיום התהליך תישלח אליך הודעת דואר אלקטרוני המאשרת כי הטפסים בטיפול.</p>
           <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
           <div class="lvp-nav">
             <span></span>
@@ -550,9 +549,9 @@
         var isIncrease = isIncreaseFlow();
         var isRedemption = isRedemptionFlow();
 
-        // Welcome title verbatim from EasySend per flow.
+        // Page-1 title. Increase title per Noa; redemption keeps its welcome line.
         document.getElementById('welcome-title').textContent = isIncrease
-          ? 'ברוכים הבאים לבקשה להגדלת השקעה.'
+          ? 'טופס הגדלת השקעה'
           : 'ברוכים הבאים לתהליך בקשת פדיון.';
 
         // Request-page title.
@@ -710,6 +709,32 @@
         if (add) addAmountRow(add.getAttribute('data-add-currency'));
       });
 
+      // ---- amount thousands-separators --------------------------------------
+      // Format with commas on blur, strip them on focus so digit entry never
+      // fights the cursor. collectAmounts() already strips commas+spaces on
+      // read, so the payload stays numeric. Delegated so it covers rows added
+      // after load. The field is inputmode="decimal" (numeric keypad on mobile).
+      function formatAmountField(el) {
+        var raw = String(el.value || '').replace(/[, ]/g, '');
+        if (!raw) return;
+        var cleaned = raw.replace(/[^\d.]/g, '');
+        if (!cleaned || cleaned === '.') { el.value = ''; return; }
+        var parts = cleaned.split('.');
+        var intPart = parts[0].replace(/^0+(?=\d)/, '') || '0';
+        var intFmt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        el.value = (parts.length > 1)
+          ? (intFmt + '.' + parts.slice(1).join('').slice(0, 2))
+          : intFmt;
+      }
+      document.addEventListener('focusout', function (e) {
+        var el = e.target.closest('input[data-amount]');
+        if (el) formatAmountField(el);
+      });
+      document.addEventListener('focusin', function (e) {
+        var el = e.target.closest('input[data-amount]');
+        if (el) el.value = String(el.value || '').replace(/,/g, '');
+      });
+
       // ---- redemption month picker ------------------------------------------
       // Friedman: only valid options are shown. Each option is the 1st of a
       // calendar month, and the earliest visible month is the first whose 1st
@@ -779,15 +804,39 @@
           markFieldErr(slot, 'נא להעלות קובץ עד 10MB.');
           return;
         }
+        // Reserve the slot the moment a file is chosen, flagged reading:true, so
+        // the field validates as filled WHILE the multi-second phone-photo
+        // base64 read runs. The submit handler waits for reading=false (and
+        // scrubs any slot that never produced bytes) before posting, so an LP
+        // who taps finish mid-read no longer hits a false "missing file" error,
+        // and an empty/failed read never posts a blank upload. The base64 lands
+        // on onload. This is the "photo errored for no reason" fix.
+        clearFieldErr(slot);
+        renderFileName(inp, f.name);
+        pendingUploads[slot] = {
+          slot: slot, fileName: f.name, mimeType: f.type,
+          fileSizeBytes: f.size, base64: '', reading: true
+        };
         var reader = new FileReader();
         reader.onload = function () {
-          var b64 = String(reader.result).split(',')[1] || '';
-          pendingUploads[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
-          renderFileName(inp, f.name);
-          clearFieldErr(slot);
+          var b64 = String(reader.result || '').split(',')[1] || '';
+          if (!b64) { uploadReadFailed(inp, slot); return; }
+          var u = pendingUploads[slot];
+          if (!u) return;                 // slot cleared (LP removed the file)
+          u.base64 = b64; u.reading = false;
         };
-        reader.readAsDataURL(f);
+        reader.onerror = function () { uploadReadFailed(inp, slot); };
+        try { reader.readAsDataURL(f); }
+        catch (err) { uploadReadFailed(inp, slot); }
       });
+      // A failed or empty read clears the slot and the filename so the field
+      // reads as not-attached; the existing required-upload check then catches
+      // it on submit (silent red, house style). A clearer "couldn't read, try
+      // again" message is pending Noa's copy approval (decisions log A3).
+      function uploadReadFailed(inp, slot) {
+        if (pendingUploads[slot]) delete pendingUploads[slot];
+        if (inp) { inp.value = ''; renderFileName(inp, ''); }
+      }
       function renderFileName(inp, name) {
         var wrap = inp.closest('.lvp-upload');
         if (!wrap) return;
@@ -1065,6 +1114,22 @@
         var s = document.getElementById('lvp-submit-status');
         if (s) s.textContent = msg;
       }
+      // True while any chosen upload is still being read to base64.
+      function uploadsReading() {
+        for (var k in pendingUploads) {
+          if (pendingUploads[k] && pendingUploads[k].reading) return true;
+        }
+        return false;
+      }
+      // Run cb once no upload read is in flight, or after a hard ceiling (a read
+      // that never finishes is treated as failed and scrubbed at submit time).
+      function whenUploadsReady(cb) {
+        var waited = 0, step = 120, ceil = 12000;
+        (function tick() {
+          if (!uploadsReading() || waited >= ceil) { cb(); return; }
+          waited += step; setTimeout(tick, step);
+        })();
+      }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
         if (!validateCurrentPage()) return;
         // Cancel any in-flight save_page debounce. Without this, the timer that
@@ -1073,47 +1138,57 @@
         // submittedAt set. Server-side caymanHandleSavePage_ also rejects this
         // case (defence in depth) but the client cancel is the cheaper guard.
         if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-        var submission = buildSubmission();
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
         document.getElementById('lvp-busy').classList.add('is-active');
         submitStatus('שולחים את הטופס, נא לא לסגור את החלון.');
-
-        var body = {
-          action: 'submit',
-          token: token,
-          lane: 'israeli',
-          payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
-        };
-        var p = new XMLHttpRequest();
-        p.open('POST', GW + '?source=lp', true);
-        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-        // 30s hard ceiling. Without this, a slow/dead /exec leaves the LP on
-        // the spinner forever (Noa CTO finding 1). Gateway dedupes submit on
-        // a per-process key (PERF fix 3) so a retry of the same payload is a
-        // no-op if the first one actually landed.
-        p.timeout = 30000;
         function restoreSubmitBtn() {
           btn.disabled = false; btn.textContent = 'סיום ושליחה';
           document.getElementById('lvp-busy').classList.remove('is-active');
         }
-        function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || BROKEN_LINK_MSG); }
-        p.ontimeout = function () { fail(BROKEN_LINK_MSG); };
-        p.onerror   = function () { fail(BROKEN_LINK_MSG); };
-        p.onreadystatechange = function () {
-          if (p.readyState !== 4) return;
-          if (p.status !== 200) return fail(BROKEN_LINK_MSG);
-          var res;
-          try { res = JSON.parse(p.responseText); }
-          catch (e) { return fail(BROKEN_LINK_MSG); }
-          if (!res.ok) {
-            var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || BROKEN_LINK_MSG;
-            return fail(msg);
+        // Wait out any in-flight photo/PDF read, then drop any upload that never
+        // produced bytes, then re-validate so a failed read is flagged here and
+        // never posted blank. Only after that do we build the payload + POST.
+        whenUploadsReady(function () {
+          for (var k in pendingUploads) {
+            if (pendingUploads[k] && (pendingUploads[k].reading || !pendingUploads[k].base64)) {
+              uploadReadFailed(document.querySelector('input[type="file"][data-upload="' + k + '"]'), k);
+            }
           }
-          if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
-          fail(BROKEN_LINK_MSG);
-        };
-        p.send(JSON.stringify(body));
+          if (!validateCurrentPage()) { restoreSubmitBtn(); submitStatus(''); return; }
+          var submission = buildSubmission();
+          var body = {
+            action: 'submit',
+            token: token,
+            lane: 'israeli',
+            payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
+          };
+          var p = new XMLHttpRequest();
+          p.open('POST', GW + '?source=lp', true);
+          p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+          // 30s hard ceiling. Without this, a slow/dead /exec leaves the LP on
+          // the spinner forever (Noa CTO finding 1). Gateway dedupes submit on
+          // a per-process key (PERF fix 3) so a retry of the same payload is a
+          // no-op if the first one actually landed.
+          p.timeout = 30000;
+          function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || BROKEN_LINK_MSG); }
+          p.ontimeout = function () { fail(BROKEN_LINK_MSG); };
+          p.onerror   = function () { fail(BROKEN_LINK_MSG); };
+          p.onreadystatechange = function () {
+            if (p.readyState !== 4) return;
+            if (p.status !== 200) return fail(BROKEN_LINK_MSG);
+            var res;
+            try { res = JSON.parse(p.responseText); }
+            catch (e) { return fail(BROKEN_LINK_MSG); }
+            if (!res.ok) {
+              var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || BROKEN_LINK_MSG;
+              return fail(msg);
+            }
+            if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
+            fail(BROKEN_LINK_MSG);
+          };
+          p.send(JSON.stringify(body));
+        });
       });
 
       function buildSubmission() {
