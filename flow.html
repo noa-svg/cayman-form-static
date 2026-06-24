@@ -1028,8 +1028,7 @@
         return res;
       }
 
-      function validateCurrentPage() {
-        var page = getCurrentPage();
+      function validatePage(page) {
         var summary = document.getElementById('lvp-' + page + '-summary');
         if (summary) { summary.hidden = true; summary.innerHTML = ''; }
         var fields = fieldsForPage(page);
@@ -1072,6 +1071,17 @@
         var firstInp = firstWrap ? (firstWrap.tagName ? (firstWrap.querySelector ? firstWrap.querySelector('input,select') : firstWrap) : null) : null;
         if (firstInp && firstInp.focus) { setTimeout(function () { firstInp.focus({ preventScroll: false }); if (firstInp.scrollIntoView) firstInp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 0); }
         return false;
+      }
+      function validateCurrentPage() { return validatePage(getCurrentPage()); }
+      // Submit-time guard: a resumed session can land on the last page with an
+      // earlier page never validated. Walk every page so a missing amount, bank
+      // detail, or upload is caught and the LP is taken to the first page that
+      // needs a fix, instead of posting an incomplete money request.
+      function validateAllDataPages() {
+        for (var i = 0; i < PAGE_ORDER.length; i++) {
+          if (!validatePage(PAGE_ORDER[i])) { try { goToPage(PAGE_ORDER[i]); } catch (e) {} return false; }
+        }
+        return true;
       }
 
       // Blur validation: validate the field as the user leaves it. Re-clear on
@@ -1131,7 +1141,7 @@
         })();
       }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
-        if (!validateCurrentPage()) return;
+        if (!validateAllDataPages()) return;
         // Cancel any in-flight save_page debounce. Without this, the timer that
         // was queued by the LP's last keystroke fires AFTER the submit lands,
         // and the server processes a save_page on a session that just got
@@ -1155,7 +1165,7 @@
               uploadReadFailed(document.querySelector('input[type="file"][data-upload="' + k + '"]'), k);
             }
           }
-          if (!validateCurrentPage()) { restoreSubmitBtn(); submitStatus(''); return; }
+          if (!validateAllDataPages()) { restoreSubmitBtn(); submitStatus(''); return; }
           var submission = buildSubmission();
           var body = {
             action: 'submit',
