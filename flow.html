@@ -88,7 +88,12 @@
       outline: none; border-color: var(--lvp-input-line-active);
       box-shadow: 0 0 0 3px rgba(13,63,106,0.10);
     }
-    .lvp-input[readonly] { background: #F7F8FA; color: var(--lvp-text-muted); }
+    .lvp-input[readonly] {
+      background: #EDF0F4; color: var(--lvp-text-muted); cursor: default; border-color: #DCE1E8;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: left 13px center; background-size: 15px; padding-left: 40px;
+    }
+    .lvp-input[readonly]:focus { box-shadow: none; border-color: #DCE1E8; }
     .lvp-input--ltr { direction: ltr; text-align: left; }
     .lvp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .lvp-amount-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: end; margin: 0 0 8px; }
