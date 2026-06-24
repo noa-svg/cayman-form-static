@@ -2128,7 +2128,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div id="lpPickerWrap">
       <label>Existing LP <span class="tag">required</span></label>
       <div class="lp-search">
-        <input id="lpSearch" type="search" autocomplete="off" placeholder="Search by name &mdash; Hebrew or English">
+        <input id="lpSearch" type="search" autocomplete="off" placeholder="Search by name (Hebrew or English)">
         <div id="lpResults" class="lp-results" hidden></div>
       </div>
       <div id="lpPicked" class="lp-picked" hidden></div>
@@ -2186,12 +2186,14 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <button class="cta" id="createBtn">Send invite</button>
     <div id="msg" role="status" aria-live="polite" style="margin-top:14px;padding:12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
     <div class="res" id="res">
-      <div style="font-weight:600;font-size:14px;color:var(--color-atrium);margin-bottom:6px">Invite sent.</div>
-      <div style="font-size:12px;color:var(--color-ink-muted);margin-bottom:6px">Copy the link to share manually.</div>
+      <div id="resTitle" style="font-weight:600;font-size:14px;color:var(--color-atrium);margin-bottom:6px">Invite sent.</div>
+      <div id="resSub" style="font-size:12px;color:var(--color-ink-muted);margin-bottom:6px">Copy the link to share manually.</div>
       <div style="display:flex;gap:8px;align-items:center">
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size:12px;padding:6px 14px;white-space:nowrap">Copy link</button>
       </div>
+      <button id="sendLpBtn" class="cta" style="margin-top:12px;display:none">Send to LP</button>
+      <div id="sendLpStatus" role="status" aria-live="polite" style="margin-top:8px;font-size:12px;display:none"></div>
     </div>
   </div>
 
@@ -2679,6 +2681,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
         showMsg('',false);
         document.getElementById('res').classList.add('on');
         document.getElementById('lk').textContent=res.signerLink||res.url||'';
+        // Israeli is create-link-only: surface the Send-to-LP step (no auto-send).
+        document.getElementById('resTitle').textContent='Link ready. Test it, then send.';
+        document.getElementById('resSub').textContent='Open the link to test. When ready, send it to the LP. Omri is cc\'d.';
+        var _slb=document.getElementById('sendLpBtn');
+        _slb.style.display=''; _slb.disabled=false; _slb.textContent='Send to LP';
+        _slb.setAttribute('data-process', res.processId||'');
+        var _sls=document.getElementById('sendLpStatus'); _sls.style.display='none'; _sls.textContent='';
         load();
       }).catch(function(e){btn.disabled=false;btn.textContent='Create link';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
       return;
@@ -2698,6 +2707,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       showMsg("",false);
       document.getElementById("res").classList.add("on");
       document.getElementById("lk").textContent=res.url||"";
+      document.getElementById('resTitle').textContent='Invite sent.';
+      document.getElementById('resSub').textContent='Copy the link to share manually.';
+      var _slb2=document.getElementById('sendLpBtn'); if(_slb2)_slb2.style.display='none';
       load();
     }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
   };
@@ -2705,6 +2717,20 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var lk=document.getElementById("lk").textContent;
     if(!lk)return;
     navigator.clipboard.writeText(lk).then(function(){var b=document.getElementById("copyLinkBtn");b.textContent="Copied";setTimeout(function(){b.textContent="Copy link";},2000);}).catch(function(){});
+  };
+  // Send-to-LP: deliver the already-minted increase invite (from ir@, cc Omri + FO).
+  // This is the operator send step after Noa has tested the link.
+  document.getElementById("sendLpBtn").onclick=function(){
+    var b=this, pid=b.getAttribute("data-process");
+    if(!pid)return;
+    if(!confirm("Send the increase invite to the LP now? Omri will be cc'd."))return;
+    b.disabled=true;b.textContent="Sending...";
+    var st=document.getElementById("sendLpStatus");
+    apiFetch("?admin=sendIsraeliInvite&process="+encodeURIComponent(pid)).then(function(res){
+      st.style.display="";
+      if(res&&res.ok){ b.textContent="Sent"; st.style.color="var(--color-atrium)"; st.textContent="Sent to "+(res.sentTo||"the LP")+". Omri cc'd."; }
+      else { b.disabled=false;b.textContent="Send to LP"; st.style.color="#F87171"; st.textContent=(res&&res.error)||"Send failed."; }
+    }).catch(function(e){ b.disabled=false;b.textContent="Send to LP"; st.style.display="";st.style.color="#F87171"; st.textContent="Server error: "+((e&&e.message)||"unknown"); });
   };
 
   // view switching
