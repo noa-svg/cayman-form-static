@@ -514,7 +514,8 @@
         if (snap.fields) {
           Object.keys(snap.fields).forEach(function (id) {
             var el = document.getElementById(id);
-            if (el && (el.type === 'text' || el.type === 'email' || el.type === 'tel' || el.type === 'date' || el.tagName === 'SELECT')) {
+            // Never let a saved snapshot overwrite a locked (Monday-sourced) field.
+            if (el && !el.readOnly && (el.type === 'text' || el.type === 'email' || el.type === 'tel' || el.type === 'date' || el.tagName === 'SELECT')) {
               el.value = snap.fields[id];
             }
           });
@@ -573,21 +574,38 @@
         // Entity stamp upload only for entity.
         document.getElementById('upload-stamp-wrap').hidden = (applicantType !== 'entity');
 
-        // Prefill from the session snapshot (read-only when known; LP confirms / edits).
+        // Prefill from the session snapshot. For an existing LP these identity
+        // values come from Monday, so we lock them read-only: the LP confirms
+        // who they are but cannot edit it. Only the request fields (amount /
+        // currency / redemption date) stay editable. A value we DON'T have is
+        // left open so the LP can still supply it.
         var pre = (CFG.prefill && CFG.prefill.lp) || {};
+        function lockField(id, v) {
+          var el = document.getElementById(id);
+          if (!el || !v) return;            // no value -> leave editable
+          el.value = v;
+          el.readOnly = true;
+          el.setAttribute('aria-readonly', 'true');
+          el.removeAttribute('required');   // a locked, pre-filled field isn't a thing the LP must fill
+          el.tabIndex = -1;                 // skip locked fields in the tab order
+          var wrap = el.closest('.lvp-field');
+          if (wrap) {
+            wrap.setAttribute('data-locked', 'true');
+            var star = wrap.querySelector('.lvp-req');   // drop the now-meaningless red asterisk
+            if (star) star.hidden = true;
+          }
+        }
         if (applicantType === 'entity') {
-          var nm = pre.legalName || '';
-          var num = pre.idNumber || '';
-          if (nm) document.getElementById('ent-name').value = nm;
-          if (num) document.getElementById('ent-number').value = num;
+          lockField('ent-name', pre.legalName || '');
+          lockField('ent-number', pre.idNumber || '');
         } else {
           var parts = String(pre.legalName || '').trim().split(/\s+/);
-          if (parts[0]) document.getElementById('ind-firstName').value = parts[0];
-          if (parts.length > 1) document.getElementById('ind-lastName').value = parts.slice(1).join(' ');
-          if (pre.idNumber) document.getElementById('ind-idNumber').value = pre.idNumber;
+          lockField('ind-firstName', parts[0] || '');
+          if (parts.length > 1) lockField('ind-lastName', parts.slice(1).join(' '));
+          lockField('ind-idNumber', pre.idNumber || '');
         }
-        if (pre.email) document.getElementById('lp-email').value = pre.email;
-        if (pre.phone) document.getElementById('lp-phone').value = pre.phone;
+        lockField('lp-email', pre.email || '');
+        lockField('lp-phone', pre.phone || '');
 
         // Seed one amount row per flow.
         addAmountRow(isIncrease ? 'increase' : 'redemption');
