@@ -586,9 +586,14 @@
           el.value = v;
           el.readOnly = true;
           el.setAttribute('aria-readonly', 'true');
+          el.removeAttribute('required');   // a locked, pre-filled field isn't a thing the LP must fill
           el.tabIndex = -1;                 // skip locked fields in the tab order
           var wrap = el.closest('.lvp-field');
-          if (wrap) wrap.setAttribute('data-locked', 'true');
+          if (wrap) {
+            wrap.setAttribute('data-locked', 'true');
+            var star = wrap.querySelector('.lvp-req');   // drop the now-meaningless red asterisk
+            if (star) star.hidden = true;
+          }
         }
         if (applicantType === 'entity') {
           lockField('ent-name', pre.legalName || '');
