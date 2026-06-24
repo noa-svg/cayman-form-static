@@ -2122,7 +2122,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   <div class="panel" id="panel">
     <button class="x" id="closeBtn" aria-label="Close">&times;</button>
     <h2 id="panelTitle">New process</h2>
-    <div class="lead">Creates the Monday item, emails the investor, and notifies the team.</div>
+    <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
     <label>Process</label>
     <div class="seg" id="segProc"><button class="on" data-v="subscription">Subscription</button><button data-v="increase">Increase</button><button data-v="withdrawal">Withdrawal</button></div>
     <div id="lpPickerWrap">
@@ -2138,9 +2138,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       <div><label>Subscriber</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
       <div id="kindCell"><label>Investor</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
     </div>
+    <div id="langRow">
     <label>Email language <span class="tag">required</span></label>
     <div class="seg" id="segLang" style="max-width:240px"><button class="on" data-v="he">Hebrew</button><button data-v="en">English</button></div>
     <div class="hint">Sets the language of every email to this investor.</div>
+    </div>
 
     <div id="manualLpFields">
     <label for="name">Full name <span class="tag">at least one</span></label>
@@ -2398,6 +2400,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     el=document.getElementById("manualLpFields");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isSub?"none":"block";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
+    // Israeli increase/withdrawal is Hebrew-only: hide the language toggle and force he,
+    // so the operator never sees an English option that does nothing (Noa 2026-06-24).
+    el=document.getElementById("langRow");if(el)el.style.display=isSub?"":"none";
+    if(!isSub){state.language="he";var ls=document.getElementById("segLang");if(ls)Array.prototype.forEach.call(ls.children,function(b){b.classList.toggle("on",b.getAttribute("data-v")==="he");});}
+    el=document.getElementById("panelLead");if(el)el.textContent=isSub?"Creates the Monday item, emails the investor, and notifies the team.":"For an existing LP. Creates the request on their Monday record and sends the Hebrew form.";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
   }
   var panelOpener=null;
