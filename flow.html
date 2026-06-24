@@ -549,10 +549,10 @@
         var isIncrease = isIncreaseFlow();
         var isRedemption = isRedemptionFlow();
 
-        // Page-1 title. Increase title per Noa; redemption keeps its welcome line.
+        // Page-1 title per Noa: plain "form" titles for both flows.
         document.getElementById('welcome-title').textContent = isIncrease
           ? 'טופס הגדלת השקעה'
-          : 'ברוכים הבאים לתהליך בקשת פדיון.';
+          : 'טופס בקשת פדיון';
 
         // Request-page title.
         document.getElementById('request-title').textContent = isIncrease
