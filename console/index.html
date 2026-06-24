@@ -1981,6 +1981,23 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   .cursor { animation: none; }
   .new-dd { animation: none; }
 }
+/* ---- LP name-search picker (Israeli increase/withdrawal) ---- */
+#lpPickerWrap{display:none}
+.lp-search{position:relative}
+#lpSearch{width:100%;padding:11px 12px;font-size:14px;background:var(--color-bg-input);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-ink);font-family:inherit;box-sizing:border-box}
+#lpSearch:focus{outline:none;border-color:var(--color-border-focus)}
+.lp-results{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;background:var(--color-bg-card);border:1px solid var(--color-border-strong);border-radius:var(--radius-md);box-shadow:0 14px 36px rgba(0,0,0,.6);max-height:300px;overflow-y:auto}
+.lp-row{display:flex;align-items:center;gap:10px;padding:9px 11px;cursor:pointer;border-bottom:1px solid var(--color-border-subtle)}
+.lp-row:last-child{border-bottom:none}
+.lp-row:hover,.lp-row.active{background:var(--color-bg-hover)}
+.lp-av{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:.5px;background:var(--color-atrium-tint-md);color:var(--color-gold)}
+.lp-meta{min-width:0;flex:1}
+.lp-nm{font-size:13px;color:var(--color-ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lp-sub{font-size:11.5px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.lp-empty{padding:13px 12px;font-size:12.5px;color:var(--color-ink-muted)}
+.lp-picked{display:flex;align-items:center;gap:10px;padding:10px 11px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
+.lp-picked .lp-x{margin-left:auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding:0 4px}
+.lp-picked .lp-x:hover{color:var(--color-coral)}
 </style></head>
 <body>
   <aside class="side">
@@ -2108,6 +2125,15 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="lead">Creates the Monday item, emails the investor, and notifies the team.</div>
     <label>Process</label>
     <div class="seg" id="segProc"><button class="on" data-v="subscription">Subscription</button><button data-v="increase">Increase</button><button data-v="withdrawal">Withdrawal</button></div>
+    <div id="lpPickerWrap">
+      <label>Existing LP <span class="tag">required</span></label>
+      <div class="lp-search">
+        <input id="lpSearch" type="search" autocomplete="off" placeholder="Search by name &mdash; Hebrew or English">
+        <div id="lpResults" class="lp-results" hidden></div>
+      </div>
+      <div id="lpPicked" class="lp-picked" hidden></div>
+      <div class="hint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
+    </div>
     <div class="g2" id="typeKindRow">
       <div><label>Subscriber</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
       <div id="kindCell"><label>Investor</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
@@ -2116,6 +2142,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     <div class="seg" id="segLang" style="max-width:240px"><button class="on" data-v="he">Hebrew</button><button data-v="en">English</button></div>
     <div class="hint">Sets the language of every email to this investor.</div>
 
+    <div id="manualLpFields">
     <label for="name">Full name <span class="tag">at least one</span></label>
     <div class="g2">
       <div><input id="name" placeholder="David Cohen  (English)"></div>
@@ -2130,6 +2157,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
 
     <label for="email">Investor email <span class="tag">required</span></label>
     <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="investor@example.com">
+    </div><!-- /manualLpFields -->
 
     <div id="foRow">
     <label for="foEmail">FO email <span class="opt">optional</span></label>
@@ -2362,7 +2390,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   function syncPanelFields(){
     var isSub=(state.process==="subscription");
     var el;
-    el=document.getElementById("typeKindRow");if(el)el.style.display=isSub?"":"none";
+    // increase/withdrawal: keep the Subscriber type seg, hide the Investor-kind cell
+    // (always an existing LP), swap the manual name/email entry for the LP name-picker,
+    // and hide FO. (revShare is hidden separately, subscription-only.)
+    el=document.getElementById("typeKindRow");if(el)el.style.display="";
+    el=document.getElementById("kindCell");if(el)el.style.display=isSub?"":"none";
+    el=document.getElementById("manualLpFields");if(el)el.style.display=isSub?"":"none";
+    el=document.getElementById("lpPickerWrap");if(el)el.style.display=isSub?"none":"block";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
   }
@@ -2372,6 +2406,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     // F5: the panel always opens clean. Stale fields from the last invite are a
     // duplicate / misattributed-invite hazard.
     ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
+    if(window.__lpClearPick)window.__lpClearPick();
     var rs=document.getElementById('revShareSel');if(rs)rs.value='';
     var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
     var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
@@ -2578,11 +2613,68 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     document.getElementById('segProc').addEventListener('click',function(){setTimeout(function(){syncRevShare();syncPanelFields();},0);});
     syncRevShare();
   })();
+  // ---- LP name-search picker (Israeli increase/withdrawal) ----
+  (function(){
+    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
+    if(!inp||!box||!picked)return;
+    var T=null,rows=[],active=-1;
+    function initials(m){var s=(m.nameEn||m.nameHe||'').trim().replace(/["'“”]/g,'');var p=s.split(/\s+/);return((((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase())||'?';}
+    function subline(m){return [(m.nameHe&&m.nameEn)?m.nameEn:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
+    function clearPick(){state.selectedMondayId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
+    window.__lpClearPick=clearPick;
+    function setPick(m){
+      state.selectedMondayId=m.itemId;state.selectedLp=m;
+      picked.innerHTML='<div class="lp-av">'+esc2(initials(m))+'</div><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
+      picked.hidden=false;box.hidden=true;inp.style.display='none';
+      var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
+    }
+    function render(){
+      if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
+      box.innerHTML=rows.map(function(m,i){return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-av">'+esc2(initials(m))+'</div><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';}).join('');
+      box.hidden=false;
+      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){r.onclick=function(){setPick(rows[+r.getAttribute('data-i')]);};});
+    }
+    inp.addEventListener('input',function(){
+      var q=inp.value.trim();active=-1;
+      if(q.length<2){box.hidden=true;rows=[];return;}
+      if(T)clearTimeout(T);
+      T=setTimeout(function(){
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
+      },220);
+    });
+    inp.addEventListener('keydown',function(e){
+      if(box.hidden||!rows.length)return;
+      if(e.key==='ArrowDown'){active=Math.min(active+1,rows.length-1);render();e.preventDefault();}
+      else if(e.key==='ArrowUp'){active=Math.max(active-1,0);render();e.preventDefault();}
+      else if(e.key==='Enter'){if(active>=0){setPick(rows[active]);e.preventDefault();}}
+      else if(e.key==='Escape'){box.hidden=true;}
+    });
+    document.addEventListener('click',function(e){var w=document.getElementById('lpPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
+  })();
   // create
   function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"#2A0808":"#071B22";m.style.color=isErr?"#F87171":"#22D3EE";m.style.border=isErr?"1px solid #3D0F0F":"1px solid #0C2A35";m.setAttribute('role',isErr?'alert':'status');m.setAttribute('aria-live',isErr?'assertive':'polite');}
   document.getElementById("createBtn").onclick=function(){
     var btn=this;
     var msg=document.getElementById("msg");
+    if(state.process!=='subscription'){
+      // Israeli increase/withdrawal: existing LP picked BY NAME -> mint by Monday id
+      // (lane=israel + process routes to the Hebrew flow; no manual name/email here).
+      if(!state.selectedMondayId){showMsg('Pick the LP from the search above.',true);return;}
+      var lpName=(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn))||'this LP';
+      if(!confirm('Create the '+(PROC_LABEL[state.process]||state.process)+' request for '+lpName+'?'))return;
+      btn.disabled=true;btn.textContent='Sending...';
+      document.getElementById('res').classList.remove('on');
+      showMsg('Creating '+(PROC_LABEL[state.process]||'')+' request...',false);
+      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane=israel&mondayId='+encodeURIComponent(state.selectedMondayId)+'&type='+encodeURIComponent(state.type)).then(function(res){
+        btn.disabled=false;btn.textContent='Send invite';
+        if(!res||!res.ok){showMsg((res&&res.error)||'Could not create. Check GAS logs.',true);return;}
+        showMsg('',false);
+        document.getElementById('res').classList.add('on');
+        document.getElementById('lk').textContent=res.signerLink||res.url||'';
+        load();
+      }).catch(function(e){btn.disabled=false;btn.textContent='Send invite';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
+      return;
+    }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
     if(!name&&!nameHebrew){showMsg("Enter at least one name, English or Hebrew.",true);return}
     if(!/\S+@\S+\.\S+/.test(email)){showMsg("Enter a valid investor email.",true);return}
