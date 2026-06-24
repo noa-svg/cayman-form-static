@@ -2404,8 +2404,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     // so the operator never sees an English option that does nothing (Noa 2026-06-24).
     el=document.getElementById("langRow");if(el)el.style.display=isSub?"":"none";
     if(!isSub){state.language="he";var ls=document.getElementById("segLang");if(ls)Array.prototype.forEach.call(ls.children,function(b){b.classList.toggle("on",b.getAttribute("data-v")==="he");});}
-    el=document.getElementById("panelLead");if(el)el.textContent=isSub?"Creates the Monday item, emails the investor, and notifies the team.":"For an existing LP. Creates the request on their Monday record and sends the Hebrew form.";
+    el=document.getElementById("panelLead");if(el)el.textContent=isSub?"Creates the Monday item, emails the investor, and notifies the team.":"For an existing LP. Mints the link for you to test and send yourself. Nothing is emailed automatically.";
     el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
+    el=document.getElementById("createBtn");if(el)el.textContent=isSub?"Send invite":"Create link";
   }
   var panelOpener=null;
   function open(){
@@ -2669,17 +2670,17 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       if(!state.selectedMondayId){showMsg('Pick the LP from the search above.',true);return;}
       var lpName=(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn))||'this LP';
       if(!confirm('Create the '+(PROC_LABEL[state.process]||state.process)+' request for '+lpName+'?'))return;
-      btn.disabled=true;btn.textContent='Sending...';
+      btn.disabled=true;btn.textContent='Creating...';
       document.getElementById('res').classList.remove('on');
       showMsg('Creating '+(PROC_LABEL[state.process]||'')+' request...',false);
       apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane=israel&mondayId='+encodeURIComponent(state.selectedMondayId)+'&type='+encodeURIComponent(state.type)).then(function(res){
-        btn.disabled=false;btn.textContent='Send invite';
+        btn.disabled=false;btn.textContent='Create link';
         if(!res||!res.ok){showMsg((res&&res.error)||'Could not create. Check GAS logs.',true);return;}
         showMsg('',false);
         document.getElementById('res').classList.add('on');
         document.getElementById('lk').textContent=res.signerLink||res.url||'';
         load();
-      }).catch(function(e){btn.disabled=false;btn.textContent='Send invite';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
+      }).catch(function(e){btn.disabled=false;btn.textContent='Create link';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
