@@ -176,25 +176,16 @@
     <div class="lvp-card" id="lvp-card">
       <div class="lvp-loading" id="lvp-loading">טוען...</div>
       <div id="lvp-form" hidden>
-        <div class="lvp-progress" aria-label="התקדמות" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" id="lvp-progress-meta">
-          <div class="lvp-progress__bar"><span id="lvp-progress-bar" style="width: 25%"></span></div>
+        <div class="lvp-progress" aria-label="התקדמות" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" id="lvp-progress-meta">
+          <div class="lvp-progress__bar"><span id="lvp-progress-bar" style="width: 33%"></span></div>
         </div>
 
-        <!-- PAGE 1: התחלה -->
+        <!-- PAGE 1: התחלה + פרטים אישיים (merged) -->
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
           <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
           <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
-          <div class="lvp-nav">
-            <span></span>
-            <button type="button" class="lvp-btn lvp-btn--primary" data-go="personal">הבא</button>
-          </div>
-        </section>
-
-        <!-- PAGE 2: פרטים אישיים -->
-        <section class="lvp-page" data-page="personal">
-          <h1 class="lvp-page__title">פרטים אישיים</h1>
-          <div id="lvp-personal-summary" class="lvp-error-summary" hidden role="alert"></div>
+          <div id="lvp-start-summary" class="lvp-error-summary" hidden role="alert"></div>
 
           <div id="personal-individual">
             <label class="lvp-field" data-field="ind-fullName">
@@ -232,12 +223,12 @@
           </label>
 
           <div class="lvp-nav">
-            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="start">הקודם</button>
+            <span></span>
             <button type="button" class="lvp-btn lvp-btn--primary" data-go="request">הבא</button>
           </div>
         </section>
 
-        <!-- PAGE 3: פרטי הבקשה (increase: פרטי בקשת ההגדלה / redemption: פרטי הפדיון) -->
+        <!-- PAGE 2: פרטי הבקשה (increase: פרטי בקשת ההגדלה / redemption: פרטי הפדיון) -->
         <section class="lvp-page" data-page="request">
           <h1 class="lvp-page__title" id="request-title"></h1>
           <div id="lvp-request-summary" class="lvp-error-summary" hidden role="alert"></div>
@@ -317,7 +308,7 @@
           </div>
 
           <div class="lvp-nav">
-            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="personal">הקודם</button>
+            <button type="button" class="lvp-btn lvp-btn--ghost" data-go="start">הקודם</button>
             <button type="button" class="lvp-btn lvp-btn--primary" data-go="uploads">הבא</button>
           </div>
         </section>
@@ -379,7 +370,7 @@
         { code: 'דולר', symbol: '$' },
         { code: 'יורו', symbol: '€' }
       ];
-      var PAGE_ORDER = ['start', 'personal', 'request', 'uploads'];
+      var PAGE_ORDER = ['start', 'request', 'uploads'];
 
       // Flow-type predicates. The IL lane gateway may report a flow under either
       // its cayman_* identifier or the israeli_* one (see console FLOW_LABEL map).
@@ -615,7 +606,7 @@
           el.classList.toggle('is-active', el.getAttribute('data-page') === key);
         });
         document.getElementById('lvp-progress-meta').setAttribute('aria-valuenow', String(idx + 1));
-        document.getElementById('lvp-progress-bar').style.width = ((idx + 1) * 25) + '%';
+        document.getElementById('lvp-progress-bar').style.width = (((idx + 1) / PAGE_ORDER.length) * 100) + '%';
         window.scrollTo({ top: 0, behavior: 'smooth' });
         // A11y: move focus to the new page's title so a screen reader announces
         // the heading instead of leaving the user on the previous Continue
@@ -941,7 +932,7 @@
         return { ok: true };
       }
       function fieldsForPage(page) {
-        if (page === 'personal') {
+        if (page === 'start') {
           var f = (applicantType === 'entity')
             ? ['ent-name', 'ent-number']
             : ['ind-fullName', 'ind-idNumber'];
