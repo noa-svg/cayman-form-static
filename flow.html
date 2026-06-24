@@ -577,7 +577,9 @@
           prefillRO('ind-fullName', pre.legalName || '');
           prefillRO('ind-idNumber', pre.idNumber || '');
         }
-        if (pre.email) document.getElementById('lp-email').value = pre.email;
+        // Email is authoritative from Monday too: lock it (Noa 2026-06-24, "we
+        // have that, lock that field"). Editable only if the board cell is blank.
+        prefillRO('lp-email', pre.email || '');
 
         // Seed one amount row per flow.
         addAmountRow(isIncrease ? 'increase' : 'redemption');
