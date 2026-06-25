@@ -732,10 +732,28 @@
       nav.hidden = false;
     }
 
+    // Single-signer flows (increase / withdrawal) give this signer nothing to
+    // fill: the LP is the sole party and their details are already on file. In
+    // that case strip the multi-party chrome (the "complete your section"
+    // instruction, the locked primary-investor + amount summary, the empty "Your
+    // details" section, and the document-section header) down to just: review the
+    // document and sign. Hiding only, no copy rewritten. Triggered by an empty
+    // editable-field set, which is exactly the case that otherwise shows an empty
+    // "Your details" block under a redundant locked summary.
+    function applyLeanReview_(ctx) {
+      var hasFields = (((ctx.editableFields || {}).fields) || []).length > 0;
+      if (hasFields) return;
+      ['form-hint', 'locked-context', 'fields-title', 'signer-form'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.hidden = true;
+      });
+      var docHead = document.querySelector('.doc-preview h2');
+      if (docHead) docHead.hidden = true;
+    }
     function renderSignerForm(ctx) {
       CTX = ctx;
       applyLang('he');
       renderDynamic(ctx, true);
+      applyLeanReview_(ctx);
       prefillSavedData(ctx.savedData);
       show('form');
       initPad(ctx);
