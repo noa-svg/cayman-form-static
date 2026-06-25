@@ -95,6 +95,25 @@
     }
     .lvp-input[readonly]:focus { box-shadow: none; border-color: #DCE1E8; }
     .lvp-input--ltr { direction: ltr; text-align: left; }
+    /* Type-to-search combobox (bank + branch). The text input is unchanged; the
+       suggestion list floats under it and matches the field tokens. */
+    .lvp-combo { position: relative; }
+    .lvp-combo__list {
+      position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 4px);
+      margin: 0; padding: 4px; list-style: none; max-height: 248px; overflow-y: auto;
+      background: #fff; border: 1px solid var(--lvp-input-line); border-radius: 10px;
+      box-shadow: 0 10px 28px rgba(13,63,106,0.14);
+    }
+    .lvp-combo__list[hidden] { display: none; }
+    .lvp-combo__opt {
+      display: flex; gap: 8px; align-items: baseline;
+      padding: 9px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--lvp-text);
+    }
+    .lvp-combo__opt:hover, .lvp-combo__opt.is-active { background: #EEF3F8; }
+    .lvp-combo__opt-code { direction: ltr; font-size: 13px; color: var(--lvp-text-muted); min-width: 40px; }
+    .lvp-combo__opt-city { margin-inline-start: auto; font-size: 13px; color: var(--lvp-text-muted); }
+    .lvp-combo__empty { padding: 9px 12px; font-size: 14px; color: var(--lvp-text-muted); }
+    .lvp-branch-confirm { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--lvp-navy); }
     .lvp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .lvp-amount-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: end; margin: 0 0 8px; }
     .lvp-amount-row .lvp-field { margin: 0; }
@@ -291,13 +310,24 @@
           <p class="lvp-prose" id="bank-prose-redemption" hidden>ידוע לי כי סכום הפדיון יועבר בהתאם לתנאי הסכם השותפות, במטבע בו בוצעה ההשקעה בחשבון השותפות, ועלויות המרה למטבע אחר, אם יחולו, יחולו על חשבוני וכי הודעת פדיון זו לא תהיה ניתנת לביטול אלא אם הסכים השותף הכללי מראש ובכתב לביטולה.</p>
           <label class="lvp-field" data-field="bank-name">
             <span class="lvp-field__label">בנק<span class="lvp-req" aria-hidden="true">*</span></span>
-            <input class="lvp-input" type="text" id="bank-name" autocomplete="off" required aria-describedby="err-bank-name">
+            <div class="lvp-combo">
+              <input class="lvp-input" type="text" id="bank-name" autocomplete="off" required
+                     role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-name-list"
+                     placeholder="הקלדת שם הבנק" aria-describedby="err-bank-name">
+              <ul class="lvp-combo__list" id="bank-name-list" role="listbox" hidden></ul>
+            </div>
             <span class="lvp-field__error" id="err-bank-name"></span>
           </label>
           <div class="lvp-row">
             <label class="lvp-field" data-field="bank-branch">
               <span class="lvp-field__label">מספר סניף<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric" autocomplete="off" required pattern="[0-9]{2,4}" maxlength="4" aria-describedby="err-bank-branch">
+              <div class="lvp-combo">
+                <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric" autocomplete="off" required maxlength="4"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-branch-list"
+                       placeholder="מספר או שם סניף" aria-describedby="bank-branch-confirm err-bank-branch">
+                <ul class="lvp-combo__list" id="bank-branch-list" role="listbox" hidden></ul>
+              </div>
+              <span class="lvp-branch-confirm" id="bank-branch-confirm" aria-live="polite"></span>
               <span class="lvp-field__error" id="err-bank-branch"></span>
             </label>
             <label class="lvp-field" data-field="bank-account">
@@ -588,6 +618,9 @@
         // uploadsMeta) if the LP had partially filled before. Identity prefill is
         // already applied above; this layer carries everything else.
         try { applyResumeSnapshot(CFG.prefill || {}); } catch (e) {}
+        // Preload the bank registry so a resumed bank name re-resolves (sets the
+        // bank code + branch confirmation) without waiting for a focus.
+        try { loadBankRegistry(); } catch (e) {}
 
         // Resume page: jump straight to where the LP left off, if not page 1.
         if (CFG.resumePage && CFG.resumePage !== 'start') {
@@ -767,6 +800,138 @@
         if (el) formatAmountField(el);
       });
 
+      // ---- bank + branch type-to-search (B1) --------------------------------
+      // Catches the silent wrong-branch typo: the LP searches a real bank, types
+      // the branch, and the branch name+city confirm it. Data is the Bank of Israel
+      // registry (bank-registry.json: deposit banks + active branches). The bank and
+      // branch stay plain text inputs, so save/resume/submit are unchanged; this only
+      // layers a filtered suggestion list + existence validation on top.
+      var BANK_REG = null, BANK_BY_CODE = {};
+      function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+      // Normalize a Hebrew bank/branch string for matching: drop בע"מ, gershayim and
+      // quotes, collapse whitespace. Keeps the match forgiving of how the LP types it.
+      function normHe(s){ return String(s || '').replace(/בע"?מ/g, '').replace(/[״׳"'`]/g, '').replace(/\s+/g, ' ').trim(); }
+      function loadBankRegistry(){
+        if (BANK_REG) return;
+        BANK_REG = [];  // guard against a double fetch while the first is in flight
+        var x = new XMLHttpRequest();
+        x.open('GET', 'bank-registry.json', true);
+        x.onreadystatechange = function(){
+          if (x.readyState !== 4) return;
+          try {
+            var d = JSON.parse(x.responseText);
+            BANK_REG = (d && d.banks) || [];
+            BANK_BY_CODE = {};
+            BANK_REG.forEach(function(b){ BANK_BY_CODE[b.c] = b; });
+          } catch(e){ BANK_REG = []; }
+          refreshBankFromInputs();
+        };
+        try { x.send(); } catch(e){ BANK_REG = []; }
+      }
+      function bankByCode(c){ return BANK_BY_CODE[c] || null; }
+      function bankByName(name){
+        var q = normHe(name); if (!q || !BANK_REG) return null;
+        for (var i = 0; i < BANK_REG.length; i++){ if (normHe(BANK_REG[i].n) === q) return BANK_REG[i]; }
+        return null;
+      }
+      function selectedBank(){
+        var inp = document.getElementById('bank-name'); if (!inp) return null;
+        var code = inp.getAttribute('data-bank-code');
+        if (code && bankByCode(+code)) return bankByCode(+code);
+        return bankByName(inp.value);
+      }
+      function branchByCode(bank, code){
+        if (!bank) return null;
+        for (var i = 0; i < bank.br.length; i++){ if (bank.br[i][0] === code) return bank.br[i]; }
+        return null;
+      }
+      function comboClose(listEl, inputEl){ if (!listEl) return; listEl.hidden = true; listEl.innerHTML = ''; if (inputEl) inputEl.setAttribute('aria-expanded', 'false'); }
+      function comboRender(listEl, inputEl, items, render, onPick){
+        if (!items.length){ comboClose(listEl, inputEl); return; }
+        listEl.innerHTML = '';
+        items.slice(0, 40).forEach(function(it){
+          var li = document.createElement('li');
+          li.className = 'lvp-combo__opt'; li.setAttribute('role', 'option');
+          li.innerHTML = render(it);
+          // mousedown (not click) so it fires before the input blur closes the list.
+          li.addEventListener('mousedown', function(ev){ ev.preventDefault(); onPick(it); });
+          listEl.appendChild(li);
+        });
+        listEl.hidden = false; inputEl.setAttribute('aria-expanded', 'true');
+      }
+      function setBranchConfirm(bank){
+        var inp = document.getElementById('bank-branch');
+        var conf = document.getElementById('bank-branch-confirm');
+        if (!inp || !conf) return;
+        var v = String(inp.value || '').replace(/\D/g, '');
+        if (!bank || !v){ conf.textContent = ''; return; }
+        var br = branchByCode(bank, +v);
+        conf.textContent = br ? (br[1] + (br[2] ? (' · ' + br[2]) : '')) : '';
+      }
+      function refreshBankFromInputs(){
+        // Re-resolve after a resume or registry load: restore the bank code data attr
+        // from the restored bank name + re-show the branch confirmation.
+        var binp = document.getElementById('bank-name');
+        if (!binp || !BANK_REG) return;
+        var b = bankByName(binp.value);
+        if (b) binp.setAttribute('data-bank-code', b.c);
+        setBranchConfirm(b);
+      }
+      (function initBankCombo(){
+        var bankInput = document.getElementById('bank-name');
+        var bankList = document.getElementById('bank-name-list');
+        var brInput = document.getElementById('bank-branch');
+        var brList = document.getElementById('bank-branch-list');
+        if (!bankInput || !brInput) return;
+        function brShow(bank, query){
+          var q = String(query || '').trim();
+          var qn = q.replace(/\D/g, ''), qt = normHe(q);
+          var items = bank.br.filter(function(br){
+            if (!q) return true;
+            if (qn && String(br[0]).indexOf(qn) === 0) return true;
+            if (qt && normHe(br[1]).indexOf(qt) !== -1) return true;
+            if (qt && br[2] && normHe(br[2]).indexOf(qt) !== -1) return true;
+            return false;
+          });
+          comboRender(brList, brInput, items, function(br){
+            return '<span class="lvp-combo__opt-code">' + br[0] + '</span><span>' + escHtml(br[1]) +
+                   '</span><span class="lvp-combo__opt-city">' + escHtml(br[2] || '') + '</span>';
+          }, function(br){
+            brInput.value = br[0]; comboClose(brList, brInput);
+            setBranchConfirm(bank); clearFieldErr('bank-branch');
+            var acct = document.getElementById('bank-account'); if (acct) acct.focus();
+          });
+        }
+        bankInput.addEventListener('focus', loadBankRegistry);
+        bankInput.addEventListener('input', function(){
+          // Typing a new bank invalidates the prior pick + any branch chosen under it.
+          bankInput.removeAttribute('data-bank-code');
+          brInput.value = ''; setBranchConfirm(null);
+          var q = normHe(bankInput.value);
+          var items = (BANK_REG || []).filter(function(b){ return !q || normHe(b.n).indexOf(q) !== -1; });
+          comboRender(bankList, bankInput, items, function(b){
+            return '<span>' + escHtml(b.n) + '</span>';
+          }, function(b){
+            bankInput.value = b.n; bankInput.setAttribute('data-bank-code', b.c);
+            comboClose(bankList, bankInput); clearFieldErr('bank-name');
+            brInput.focus();
+          });
+        });
+        brInput.addEventListener('focus', function(){
+          loadBankRegistry();
+          var bank = selectedBank(); if (bank) brShow(bank, brInput.value);
+        });
+        brInput.addEventListener('input', function(){
+          var bank = selectedBank();
+          setBranchConfirm(bank);
+          if (bank) brShow(bank, brInput.value);
+        });
+        document.addEventListener('click', function(e){
+          if (!e.target.closest('#bank-name, #bank-name-list')) comboClose(bankList, bankInput);
+          if (!e.target.closest('#bank-branch, #bank-branch-list')) comboClose(brList, brInput);
+        });
+      })();
+
       // ---- redemption month picker ------------------------------------------
       // Friedman: only valid options are shown. Each option is the 1st of a
       // calendar month, and the earliest visible month is the first whose 1st
@@ -944,6 +1109,26 @@
         if (v.length < minLen || v.length > maxLen) return { ok: false, msg: 'נא להזין ' + ranged + '.' };
         return { ok: true };
       }
+      // Bank must resolve to a real bank in the registry (catches a typed-but-unpicked
+      // name); branch must be a real branch code OF that bank (catches the silent
+      // wrong-branch typo). If the registry has not loaded yet, fall back to a plain
+      // required/format check so a load hiccup never blocks the LP.
+      function vBank() {
+        var inp = document.getElementById('bank-name');
+        if (!inp || !inp.value.trim()) return { ok: false, silent: true };
+        if (!BANK_REG || !BANK_REG.length) return { ok: true };
+        return selectedBank() ? { ok: true } : { ok: false, msg: 'נא לבחור בנק מהרשימה.' };
+      }
+      function vBranch() {
+        var inp = document.getElementById('bank-branch');
+        var v = String((inp && inp.value) || '').replace(/\D/g, '');
+        if (!v) return { ok: false, silent: true };
+        if (!BANK_REG || !BANK_REG.length) return vDigits('bank-branch', 2, 4);
+        var bank = selectedBank();
+        if (!bank) return { ok: false, msg: 'נא לבחור בנק תחילה.' };
+        return branchByCode(bank, +v) ? { ok: true }
+          : { ok: false, msg: 'מספר הסניף לא נמצא בבנק שנבחר. יש לבדוק מול אישור ניהול החשבון.' };
+      }
       function validateField(name) {
         switch (name) {
           case 'ind-fullName':   return vRequired('ind-fullName');
@@ -951,8 +1136,8 @@
           case 'ent-name':       return vRequired('ent-name');
           case 'ent-number':     return vDigits('ent-number', 9, 9);
           case 'lp-email':       return vEmail('lp-email');
-          case 'bank-name':      return vRequired('bank-name');
-          case 'bank-branch':    return vDigits('bank-branch', 2, 4);
+          case 'bank-name':      return vBank();
+          case 'bank-branch':    return vBranch();
           case 'bank-account':   return vDigits('bank-account', 4, 15);
           case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, silent: true };
@@ -1264,8 +1449,10 @@
             amounts: (mode === 'partial') ? collectAmounts('amount-rows-redemption') : []
           };
         }
+        var bankEl = document.getElementById('bank-name');
         s.lpBank = {
           bankName: val('bank-name'),
+          bankCode: (bankEl && bankEl.getAttribute('data-bank-code')) || '',
           branch: val('bank-branch'),
           accountNumber: val('bank-account')
         };
