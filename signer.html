@@ -256,13 +256,16 @@
 
         <!-- Signature -->
         <div class="sig-section">
-          <h2>Your signature</h2>
-          <div class="pad-shell">
-            <canvas id="pad"></canvas>
-          </div>
+          <h2 id="sig-title">Your signature</h2>
+          <!-- Draw/Type toggle ABOVE the pad so the LP (and any keyboard/AT signer) sees
+               the Type option before engaging the canvas; Type mode is fully keyboard-
+               operable, Draw is not. -->
           <div class="sig-mode" role="group" aria-label="Signature method">
             <button type="button" class="sig-mode__opt is-active" data-sig-mode="draw" aria-pressed="true">Draw</button>
             <button type="button" class="sig-mode__opt" data-sig-mode="type" aria-pressed="false">Type</button>
+          </div>
+          <div class="pad-shell">
+            <canvas id="pad" role="img" aria-labelledby="sig-title"></canvas>
           </div>
           <div class="sig-typed" id="sig-typed" hidden>
             <label class="sig-typed__label" for="sig-typed-input">Type your full name to sign</label>
