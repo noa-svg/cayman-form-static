@@ -869,14 +869,37 @@
       // to the old orientation and strokes landed off the fingertip. Re-fit only
       // when the display WIDTH actually changes, so the on-screen keyboard opening
       // (height-only change) never wipes a half-drawn signature. Assigning
-      // canvas.width clears it, so a rotate does reset the stroke, which is the
-      // right call over a smeared remap.
+      // canvas.width clears the bitmap, so we SNAPSHOT the pad first and redraw it
+      // into the new size: losing an entered signature on rotate is the highest-
+      // severity failure (Friedman), so a slight remap-stretch beats a blank pad.
+      // Typed mode re-stamps the name; drawn mode replays the captured PNG.
       var _sigW = canvas.getBoundingClientRect().width, _sigT = null;
       function refitSig() {
         var w = canvas.getBoundingClientRect().width;
         if (Math.abs(w - _sigW) < 2) return;
-        _sigW = w; size(); dirty = false; points = 0;
-        if (sigMode === 'type') renderTypedName();   // resize clears the canvas; re-stamp the typed name
+        var prevPng = null;
+        if (sigMode === 'draw' && dirty) {
+          try { prevPng = canvas.toDataURL('image/png'); } catch (e) { prevPng = null; }
+        }
+        var prevPoints = points;
+        _sigW = w; size();
+        if (sigMode === 'type') {
+          dirty = false; points = 0;
+          renderTypedName();   // resize clears the canvas; re-stamp the typed name
+        } else if (prevPng) {
+          // Replay the pre-resize drawing, scaled to the new CSS dimensions. size()
+          // left the ctx scaled by devicePixelRatio, so draw in CSS px. Keep the
+          // signature counted as present so the submit gate still passes.
+          var img = new Image();
+          img.onload = function () {
+            var r = canvas.getBoundingClientRect();
+            ctx2.drawImage(img, 0, 0, r.width, r.height);
+          };
+          img.src = prevPng;
+          dirty = true; points = prevPoints;
+        } else {
+          dirty = false; points = 0;
+        }
         updateBtn();
       }
       window.addEventListener('orientationchange', function () { clearTimeout(_sigT); _sigT = setTimeout(refitSig, 200); });
