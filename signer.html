@@ -70,7 +70,8 @@
       background:#fff; border-bottom:1px solid #dce3eb; scrollbar-width:thin; }
     .doc-jumpnav__chip { flex:0 0 auto; cursor:pointer; white-space:nowrap; font-size:12px;
       line-height:1; font-weight:600; color:var(--navy); background:#eef3fb;
-      border:1px solid #d4e0f0; border-radius:999px; padding:7px 12px; font-family:inherit; direction:ltr; }
+      border:1px solid #d4e0f0; border-radius:999px; padding:7px 12px; font-family:inherit;
+      /* Inherit the page direction so Hebrew chip text reads RTL on a Hebrew page. */ }
     .doc-jumpnav__chip:hover { background:#e0eaf8; }
     .doc-jumpnav__chip:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
     .doc-jumpnav__chip--sign { background:var(--navy); color:#fff; border-color:var(--navy); }
@@ -404,6 +405,13 @@
     }
 
     if (!TOKEN) { applyLang('he'); show('invalid'); return; }
+
+    // Translate every static state to Hebrew BEFORE the API fetch. Without this, the
+    // loading state shows "Loading your form..." in English/LTR for ~20s of GAS cold
+    // start on an otherwise Hebrew/RTL page. The signer page serves Israeli flows
+    // today; Cayman onboarding is not live. The EN/HE toggle (hidden by CSS) and the
+    // success/error handlers also call applyLang, so a toggle still works cleanly.
+    applyLang('he');
 
     // Fetch signer form context (with 20s timeout for GAS cold starts)
     function loadSignerForm() {
