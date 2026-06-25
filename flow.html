@@ -330,7 +330,7 @@
             </label>
             <label class="lvp-field" data-field="bank-account">
               <span class="lvp-field__label">מספר חשבון<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,15}" maxlength="15" aria-describedby="err-bank-account">
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,13}" maxlength="13" enterkeyhint="next" aria-describedby="err-bank-account">
               <span class="lvp-field__error" id="err-bank-account"></span>
             </label>
           </div>
@@ -1115,7 +1115,11 @@
         return (bank && v && branchByCode(bank, +v)) ? { ok: true } : { ok: false, msg: 'נא לבחור סניף' };
       }
       function vAccount() {
-        return val('bank-account').replace(/\D/g, '') ? { ok: true } : { ok: false, msg: 'נא להזין מספר חשבון' };
+        // Empty gets Noa's required message; otherwise the standard digit/range check.
+        // Israeli IBAN account slot is 13 digits (ISO 13616: IL + 2 check + 3 bank + 3
+        // branch + 13 account), zero-left-padded, so 4-13 is the real range.
+        if (!val('bank-account').replace(/\D/g, '')) return { ok: false, msg: 'נא להזין מספר חשבון' };
+        return vDigits('bank-account', 4, 13);
       }
       function validateField(name) {
         switch (name) {
@@ -1373,11 +1377,13 @@
           var p = new XMLHttpRequest();
           p.open('POST', GW + '?source=lp', true);
           p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-          // 30s hard ceiling. Without this, a slow/dead /exec leaves the LP on
-          // the spinner forever (Noa CTO finding 1). Gateway dedupes submit on
-          // a per-process key (PERF fix 3) so a retry of the same payload is a
-          // no-op if the first one actually landed.
-          p.timeout = 30000;
+          // 60s hard ceiling. submit runs a SYNCHRONOUS Drive render (makeCopy +
+          // replaceText of the increase template) that on a cold Drive can take
+          // 10-25s; 30s was clipping that and showing a false broken-link, so the
+          // ceiling is raised so a normal cold render never times out. A dead /exec
+          // still fails after 60s rather than hanging the spinner forever. Gateway
+          // dedupes submit per-process so a retry of the same payload is a no-op.
+          p.timeout = 60000;
           function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || BROKEN_LINK_MSG); }
           p.ontimeout = function () { fail(BROKEN_LINK_MSG); };
           p.onerror   = function () { fail(BROKEN_LINK_MSG); };
