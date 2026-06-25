@@ -323,7 +323,7 @@
               <div class="lvp-combo">
                 <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric" autocomplete="off" required maxlength="4"
                        role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-branch-list"
-                       aria-describedby="err-bank-branch">
+                       enterkeyhint="next" aria-describedby="err-bank-branch">
                 <ul class="lvp-combo__list" id="bank-branch-list" role="listbox" hidden></ul>
               </div>
               <span class="lvp-field__error" id="err-bank-branch"></span>
@@ -847,15 +847,38 @@
       function comboRender(listEl, inputEl, items, render, onPick){
         if (!items.length){ comboClose(listEl, inputEl); return; }
         listEl.innerHTML = '';
-        items.slice(0, 40).forEach(function(it){
+        var capped = items.slice(0, 40);
+        var baseId = (listEl.id || 'combo') + '-opt-';
+        capped.forEach(function(it, i){
           var li = document.createElement('li');
-          li.className = 'lvp-combo__opt'; li.setAttribute('role', 'option');
+          li.className = 'lvp-combo__opt'; li.setAttribute('role', 'option'); li.id = baseId + i;
           li.innerHTML = render(it);
-          // mousedown (not click) so it fires before the input blur closes the list.
-          li.addEventListener('mousedown', function(ev){ ev.preventDefault(); onPick(it); });
+          // pointerdown covers mouse + touch + pen and fires before the input blur
+          // closes the list, so a tap or a click commits the option.
+          li.addEventListener('pointerdown', function(ev){ ev.preventDefault(); onPick(it); });
           listEl.appendChild(li);
         });
         listEl.hidden = false; inputEl.setAttribute('aria-expanded', 'true');
+        // Keyboard-nav state read by comboKeydown.
+        listEl._items = capped; listEl._onPick = onPick; listEl._active = -1;
+        inputEl.removeAttribute('aria-activedescendant');
+      }
+      // Arrow/Enter/Escape so a keyboard or screen-reader LP can commit a bank/branch
+      // they typed (the list was mouse-only). Highlights via .is-active +
+      // aria-activedescendant; Enter picks the highlighted option; Escape closes.
+      function comboKeydown(e, listEl, inputEl){
+        if (!listEl || listEl.hidden) return;
+        var opts = listEl.querySelectorAll('.lvp-combo__opt');
+        if (!opts.length) return;
+        var act = (listEl._active == null) ? -1 : listEl._active;
+        if (e.key === 'ArrowDown'){ e.preventDefault(); act = Math.min(opts.length - 1, act + 1); }
+        else if (e.key === 'ArrowUp'){ e.preventDefault(); act = Math.max(0, act - 1); }
+        else if (e.key === 'Enter'){ if (act >= 0 && listEl._onPick){ e.preventDefault(); listEl._onPick(listEl._items[act]); } return; }
+        else if (e.key === 'Escape'){ comboClose(listEl, inputEl); return; }
+        else return;
+        for (var i = 0; i < opts.length; i++){ opts[i].classList.toggle('is-active', i === act); opts[i].setAttribute('aria-selected', i === act ? 'true' : 'false'); }
+        listEl._active = act;
+        if (opts[act]){ opts[act].scrollIntoView({ block: 'nearest' }); inputEl.setAttribute('aria-activedescendant', opts[act].id); }
       }
       function refreshBankFromInputs(){
         // Re-resolve after a resume or registry load: restore the bank code data attr
@@ -912,6 +935,30 @@
         brInput.addEventListener('input', function(){
           var bank = selectedBank();
           if (bank) brShow(bank, brInput.value);
+        });
+        bankInput.addEventListener('keydown', function(e){ comboKeydown(e, bankList, bankInput); });
+        brInput.addEventListener('keydown', function(e){ comboKeydown(e, brList, brInput); });
+        // Exact / single-match resolution on blur: a keyboard or tab-away LP who typed a
+        // bank or branch that uniquely identifies one entry gets it auto-committed, so a
+        // correct typed value is not rejected just because they never tapped the list.
+        bankInput.addEventListener('blur', function(){
+          if (bankInput.getAttribute('data-bank-code') || !BANK_REG) return;
+          var q = normHe(bankInput.value); if (!q) return;
+          var exact = bankByName(bankInput.value);
+          var matches = BANK_REG.filter(function(b){ return normHe(b.n).indexOf(q) !== -1; });
+          var pick = exact || (matches.length === 1 ? matches[0] : null);
+          if (pick){ bankInput.value = pick.n; bankInput.setAttribute('data-bank-code', pick.c); clearFieldErr('bank-name'); }
+        });
+        brInput.addEventListener('blur', function(){
+          var bank = selectedBank(); if (!bank) return;
+          var v = String(brInput.value || ''), vn = v.replace(/\D/g, ''), qt = normHe(v);
+          if (vn && branchByCode(bank, +vn)) return;  // already a valid code
+          var matches = bank.br.filter(function(br){
+            if (vn && String(br[0]).indexOf(vn) === 0) return true;
+            if (qt && normHe(br[1]).indexOf(qt) !== -1) return true;
+            return false;
+          });
+          if (matches.length === 1){ brInput.value = matches[0][0]; clearFieldErr('bank-branch'); }
         });
         document.addEventListener('click', function(e){
           if (!e.target.closest('#bank-name, #bank-name-list')) comboClose(bankList, bankInput);
