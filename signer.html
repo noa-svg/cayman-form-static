@@ -31,11 +31,19 @@
     .header img { max-width:140px; height:auto; width:auto; display:block; }
     .card { background:var(--card-bg); width:100%; max-width:700px; border-radius:12px;
       box-shadow:0 6px 24px rgba(13,63,106,0.12); padding:32px 32px 28px; }
-    .pill { display:inline-block; padding:4px 12px; background:var(--navy); color:#fff; border-radius:999px; font-size:12px; font-weight:700; letter-spacing:0.03em; margin-bottom:14px; }
-    h1 { color:var(--navy); font-size:24px; font-weight:700; margin:0 0 14px; }
-    h1::after { content:""; display:block; height:4px; width:90px; margin-top:8px; background:linear-gradient(to right, var(--gold) 0 45px, var(--navy) 45px 90px); }
-    h2 { color:var(--navy); font-size:18px; font-weight:700; margin:24px 0 12px; }
-    .hint { color:var(--muted); font-size:15px; margin:0 0 20px; line-height:1.6; }
+    /* Soft tint pill instead of a heavy solid-navy block: the legal name reads as a
+       quiet kicker, not a second headline. */
+    .pill { display:inline-block; padding:5px 13px; background:#eef3fb; color:var(--navy); border-radius:999px; font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; margin-bottom:16px; }
+    h1 { color:var(--navy); font-size:23px; font-weight:700; margin:0 0 12px; letter-spacing:-0.01em; text-align:center; }
+    /* One calm gold accent, centered under the title (was a heavy two-tone gold+navy bar). */
+    h1::after { content:""; display:block; height:3px; width:44px; margin:10px auto 0; border-radius:2px; background:var(--gold); }
+    /* Section heads are quiet slate labels, not navy headlines: less navy, clear hierarchy. */
+    h2 { color:#3a4f63; font-size:15px; font-weight:700; margin:26px 0 12px; }
+    .hint { color:var(--muted); font-size:15px; margin:0 0 22px; line-height:1.6; }
+    /* Centered masthead: the pill + title + accent + hint read as the document header;
+       the body sections below keep their natural RTL/LTR reading flow. */
+    [data-state="form"] > .pill { display:block; width:max-content; max-width:100%; margin-inline:auto; }
+    #form-hint { text-align:center; max-width:46ch; margin-inline:auto; }
 
     /* Locked/greyed context block */
     .locked { background:#f4f7fb; border:1px solid #dce3eb; border-radius:8px; padding:16px; margin:0 0 20px; }
@@ -45,7 +53,7 @@
 
     /* Editable form fields */
     .field { margin-bottom:16px; }
-    .field label { display:block; font-size:13px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+    .field label { display:block; font-size:13px; font-weight:700; color:#3a4f63; margin-bottom:4px; }
     .field label .req { color:var(--error); }
     .field input, .field select { font:inherit; font-size:15px; width:100%; padding:10px 12px;
       border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--text); }
