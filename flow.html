@@ -703,14 +703,53 @@
       });
 
       // ---- amount thousands-separators --------------------------------------
-      // Format with commas on blur, strip them on focus so digit entry never
-      // fights the cursor. collectAmounts() already strips commas+spaces on
-      // read, so the payload stays numeric. Delegated so it covers rows added
+      // Commas are grouped LIVE as the LP types, caret preserved, so the value
+      // never flickers. The old approach stripped commas on focus and reformatted
+      // on blur, which made the number visibly jump every time the field was
+      // entered or left. Now: format on input (caret-safe), and normalize once on
+      // blur (leading zeros, decimal clamp). collectAmounts() strips commas+spaces
+      // on read so the payload stays numeric. Delegated so it covers rows added
       // after load. The field is inputmode="decimal" (numeric keypad on mobile).
+
+      // Group the integer part with commas, keeping at most one dot + two decimals,
+      // and put the caret back after the same count of value characters it was
+      // before, so inserting a comma never shoves the cursor.
+      function formatAmountLive(el) {
+        var oldValue = String(el.value || '');
+        var caret = (el.selectionStart == null) ? oldValue.length : el.selectionStart;
+        // How many digit/dot chars sit to the LEFT of the caret right now.
+        var charsBefore = (oldValue.slice(0, caret).match(/[\d.]/g) || []).length;
+        var cleaned = oldValue.replace(/[^\d.]/g, '');
+        var dot = cleaned.indexOf('.');
+        var intRaw, decRaw, hasDot;
+        if (dot === -1) { intRaw = cleaned; decRaw = ''; hasDot = false; }
+        else {
+          intRaw = cleaned.slice(0, dot);
+          decRaw = cleaned.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+          hasDot = true;
+        }
+        var intFmt = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        var newValue = hasDot ? (intFmt + '.' + decRaw) : intFmt;
+        if (newValue === oldValue) return;
+        el.value = newValue;
+        // Walk the new value to the position just past the same number of
+        // digit/dot chars, so the caret lands where the LP expects.
+        var seen = 0, newCaret = newValue.length;
+        if (charsBefore === 0) { newCaret = 0; }
+        else {
+          for (var i = 0; i < newValue.length; i++) {
+            if (/[\d.]/.test(newValue.charAt(i))) {
+              seen++;
+              if (seen >= charsBefore) { newCaret = i + 1; break; }
+            }
+          }
+        }
+        try { el.setSelectionRange(newCaret, newCaret); } catch (e) {}
+      }
+
+      // Final normalize on blur: strip leading zeros + an empty/dot-only value.
       function formatAmountField(el) {
-        var raw = String(el.value || '').replace(/[, ]/g, '');
-        if (!raw) return;
-        var cleaned = raw.replace(/[^\d.]/g, '');
+        var cleaned = String(el.value || '').replace(/[^\d.]/g, '');
         if (!cleaned || cleaned === '.') { el.value = ''; return; }
         var parts = cleaned.split('.');
         var intPart = parts[0].replace(/^0+(?=\d)/, '') || '0';
@@ -719,13 +758,13 @@
           ? (intFmt + '.' + parts.slice(1).join('').slice(0, 2))
           : intFmt;
       }
+      document.addEventListener('input', function (e) {
+        var el = e.target.closest('input[data-amount]');
+        if (el) formatAmountLive(el);
+      });
       document.addEventListener('focusout', function (e) {
         var el = e.target.closest('input[data-amount]');
         if (el) formatAmountField(el);
-      });
-      document.addEventListener('focusin', function (e) {
-        var el = e.target.closest('input[data-amount]');
-        if (el) el.value = String(el.value || '').replace(/,/g, '');
       });
 
       // ---- redemption month picker ------------------------------------------
