@@ -629,6 +629,30 @@
       // print-width text. Strip the seal anchors, the letterhead + footer chrome,
       // and the print geometry for DISPLAY only. The sealed PDF is built server-
       // side from the untouched template, so this never changes what is signed.
+      // scopeGoogleDocStyles_: Google Docs HTML export puts almost ALL the doc
+      // styling (fonts, weights, sizes, indents, headings) in a <style> block as
+      // class rules (.c0, .c1, .lst-kix_*, etc) that the inline <p>/<span> reference
+      // by class. Stripping the <style> block leaves the body unstyled and reads as
+      // plain text. Instead, scope every selector under .doc__body so the rules can
+      // only style the inline doc preview (never the surrounding chrome), and drop
+      // page-geometry rules on the body wrapper that would blow out our card.
+      function scopeGoogleDocStyles_(cssText) {
+        return String(cssText || '').replace(/([^{}]+)\{([^}]*)\}/g, function (_, sel, body) {
+          sel = String(sel).trim();
+          body = String(body).trim();
+          if (/^body\b/i.test(sel)) {
+            // drop page geometry on the body wrapper so the doc fits the card
+            body = body.replace(/(^|;)\s*(width|min-width|max-width|height|min-height|max-height|padding(-(top|bottom|left|right))?|margin(-(top|bottom|left|right))?)\s*:[^;]*/gi, '');
+          }
+          var scoped = sel.split(',').map(function (s) {
+            s = s.trim();
+            if (!s) return s;
+            if (/^body\b/i.test(s)) return s.replace(/^body\b/i, '.doc__body');
+            return '.doc__body ' + s;
+          }).join(', ');
+          return scoped + '{' + body + '}';
+        });
+      }
       function buildDocBody_(rawHtml) {
         rawHtml = String(rawHtml || '')
           .replace(/Sign here(\s*\([^)<]{1,40}\))?:?/g, '')
@@ -636,8 +660,15 @@
         var body = document.createElement('div');
         body.className = 'doc__body';
         body.innerHTML = rawHtml;
-        var chrome = body.querySelectorAll('style, meta, link, title, base');
-        for (var i = 0; i < chrome.length; i++) chrome[i].parentNode.removeChild(chrome[i]);
+        // Drop only the chrome we cannot scope (meta/link/title/base/script). KEEP
+        // <style> but scope its selectors under .doc__body so the doc's fonts +
+        // headings + indents survive without leaking to the surrounding chrome.
+        var dropChrome = body.querySelectorAll('meta, link, title, base, script');
+        for (var i = 0; i < dropChrome.length; i++) dropChrome[i].parentNode.removeChild(dropChrome[i]);
+        var styleEls = body.querySelectorAll('style');
+        for (var si = 0; si < styleEls.length; si++) {
+          styleEls[si].textContent = scopeGoogleDocStyles_(styleEls[si].textContent || '');
+        }
         var geom = /(^|;)\s*(width|min-width|max-width|height|min-height|max-height|margin|margin-left|margin-right|margin-top|margin-bottom|padding-left|padding-right|position|top|left|right|bottom|float)\s*:[^;]*/gi;
         var styled = body.querySelectorAll('[style]');
         for (var j = 0; j < styled.length; j++) {
@@ -654,8 +685,20 @@
           var txt = (el.textContent || '').replace(/\s+/g, '');
           return !!hasImg && txt.length === 0;
         }
-        while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
-          body.removeChild(body.firstElementChild);
+        function firstRenderableChild_(parent) {
+          // Skip <style>/<script>/comments when scanning for the first VISIBLE element,
+          // so the chrome-band strip can still catch a leading img-only letterhead even
+          // though we now keep the GoogleDoc <style> block alive for font/weight rules.
+          var e = parent.firstElementChild;
+          while (e && (e.tagName === 'STYLE' || e.tagName === 'SCRIPT')) e = e.nextElementSibling;
+          return e;
+        }
+        var firstVisible = firstRenderableChild_(body);
+        while (firstVisible && isChromeBand_(firstVisible)) {
+          var next = firstVisible.nextElementSibling;
+          firstVisible.parentNode.removeChild(firstVisible);
+          while (next && (next.tagName === 'STYLE' || next.tagName === 'SCRIPT')) next = next.nextElementSibling;
+          firstVisible = next;
         }
         var FOOT_RE = /legacyvpartners\.com|info@legacy|\+972[\s-]*505[\s-]*880013/i;
         [].slice.call(body.querySelectorAll('p, div, td')).forEach(function (el) {
@@ -665,8 +708,12 @@
             el.parentNode.removeChild(el);
           }
         });
-        while (body.firstElementChild && isChromeBand_(body.firstElementChild)) {
-          body.removeChild(body.firstElementChild);
+        var firstVisible2 = firstRenderableChild_(body);
+        while (firstVisible2 && isChromeBand_(firstVisible2)) {
+          var next2 = firstVisible2.nextElementSibling;
+          firstVisible2.parentNode.removeChild(firstVisible2);
+          while (next2 && (next2.tagName === 'STYLE' || next2.tagName === 'SCRIPT')) next2 = next2.nextElementSibling;
+          firstVisible2 = next2;
         }
         return body;
       }
