@@ -85,9 +85,20 @@
       transform:rotate(45deg); transition:transform 200ms ease; flex-shrink:0; margin-left:12px; }
     .doc.collapsed .doc__title::after { transform:rotate(-45deg); }
     .doc__body { max-height:400px; overflow-y:auto; padding:16px; font-size:13px; line-height:1.6; background:#fff;
-      direction:ltr; text-align:left; unicode-bidi:isolate; overflow-wrap:break-word; }
+      overflow-wrap:break-word; }
+    /* Force RTL on the doc body for Hebrew signers. Google Doc HTML export ships
+       with text-align:left + dir:ltr on every paragraph. The descendant override
+       below wins regardless. Bilingual atoms (IBAN, account numbers, ISO dates,
+       email) stay LTR via dir="auto" on their inline wrappers. The doc body text
+       is overwhelmingly Hebrew on the Israeli lane. */
+    :root[dir="rtl"] .doc__body, :root[dir="rtl"] .doc__body * {
+      direction:rtl !important; text-align:right !important;
+      unicode-bidi:isolate; }
+    :root[dir="rtl"] .doc__body p, :root[dir="rtl"] .doc__body div, :root[dir="rtl"] .doc__body li, :root[dir="rtl"] .doc__body td {
+      text-align:right !important; }
+    :root[dir="ltr"] .doc__body, :root[dir="ltr"] .doc__body * {
+      direction:ltr; text-align:left; unicode-bidi:isolate; max-width:100%; }
     .doc.collapsed .doc__body { max-height:0; padding:0 16px; overflow:hidden; }
-    .doc__body * { direction:ltr; max-width:100%; }
     .doc__body img { max-width:100%; height:auto; }
     .doc__body table { width:100%; max-width:100%; table-layout:auto; border-collapse:collapse; }
     .doc__note { padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
