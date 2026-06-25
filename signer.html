@@ -240,10 +240,6 @@
         <!-- Signature -->
         <div class="sig-section">
           <h2>Your signature</h2>
-          <label class="consent-check">
-            <input type="checkbox" id="consent">
-            <span>I have reviewed the documents above and confirm my agreement to the terms set out in the Subscription Agreement.</span>
-          </label>
           <div class="pad-shell">
             <canvas id="pad"></canvas>
           </div>
@@ -748,6 +744,14 @@
       });
       var docHead = document.querySelector('.doc-preview h2');
       if (docHead) docHead.hidden = true;
+      // Single-doc lean mode: the per-doc collapsible title bar is empty (no English
+      // label on a Hebrew page), so it reads as an empty collapsed box. Drop the empty
+      // bar and keep the document expanded so the doc shows directly, never hidden.
+      document.querySelectorAll('#doc-list .doc').forEach(function (d) {
+        d.classList.remove('collapsed');
+        var t = d.querySelector('.doc__title');
+        if (t && !t.textContent.trim()) t.style.display = 'none';
+      });
     }
     function renderSignerForm(ctx) {
       CTX = ctx;
@@ -780,7 +784,6 @@
       var canvas = document.getElementById('pad');
       var doneBtn = document.getElementById('done');
       var clearBtn = document.getElementById('clear');
-      var consentBox = document.getElementById('consent');
       var errEl = document.getElementById('err');
       var ctx2 = canvas.getContext('2d');
       function size() {
@@ -842,10 +845,6 @@
       // required field) and refuses to submit until all are satisfied. updateBtn
       // is kept as a no-op hook so the draw/consent listeners need no rewiring.
       function updateBtn() { /* button intentionally always enabled */ }
-      consentBox.addEventListener('change', function () {
-        // Clearing the consent error mark as soon as the box is checked (reward early).
-        if (consentBox.checked) errEl.textContent = '';
-      });
 
       clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
@@ -1049,13 +1048,7 @@
           return;
         }
 
-        // Consent + signature are required to submit; guide to whichever is missing.
-        if (!consentBox.checked) {
-          errEl.textContent = tHe('Please confirm that you have reviewed the documents.');
-          consentBox.focus();
-          if (consentBox.scrollIntoView) consentBox.scrollIntoView({ block: 'center' });
-          return;
-        }
+        // The signature itself is the agreement; no separate consent checkbox.
         if (!dirty || points < MIN_POINTS) {
           errEl.textContent = tHe('Please add your signature before submitting.');
           if (canvas.scrollIntoView) canvas.scrollIntoView({ block: 'center' });
