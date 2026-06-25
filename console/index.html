@@ -2337,16 +2337,19 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
     });
   }
+  // One haystack per row: every field the row shows or carries, so search matches
+  // name, Hebrew name, stage (raw + spaced so "in progress" hits "in_progress"),
+  // type (word + raw), lane, age, and the next-action phrase.
+  function rowHay(r){
+    return [r.name,r.he,r.stage,(r.stage||"").replace(/_/g," "),
+            r.typeLabel,r.type,r.lane,r.age,r.wait,r.pid]
+      .filter(Boolean).join(" ").toLowerCase();
+  }
   function applySearch(){
     var q=(document.getElementById("boardSearch").value||"").trim().toLowerCase();
     var base=stageFilter?allRows.filter(function(r){return r.stage===stageFilter;}):allRows;
     if(!q){renderRows(base);return;}
-    var filtered=base.filter(function(r){
-      return (r.name||"").toLowerCase().indexOf(q)>=0
-          ||(r.he||"").toLowerCase().indexOf(q)>=0
-          ||(r.stage||"").toLowerCase().indexOf(q)>=0
-          ||(r.pid||"").toLowerCase().indexOf(q)>=0;
-    });
+    var filtered=base.filter(function(r){return rowHay(r).indexOf(q)>=0;});
     renderRows(filtered);
   }
   function render(rows){
@@ -2383,7 +2386,8 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       if(rid!==LOAD_SEQ)return;
       var src=(d&&d.processes)||(d&&d.items)||[];
-      var rows=src.map(function(it){return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||''};});
+      var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_onboarding:'onboarding',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
+      var rows=src.map(function(it){var ft=it.flowType||'';return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||'',type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
     }).catch(function(){if(rid!==LOAD_SEQ)return;document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
