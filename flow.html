@@ -113,7 +113,6 @@
     .lvp-combo__opt-code { direction: ltr; font-size: 13px; color: var(--lvp-text-muted); min-width: 40px; }
     .lvp-combo__opt-city { margin-inline-start: auto; font-size: 13px; color: var(--lvp-text-muted); }
     .lvp-combo__empty { padding: 9px 12px; font-size: 14px; color: var(--lvp-text-muted); }
-    .lvp-branch-confirm { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--lvp-navy); }
     .lvp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .lvp-amount-row { display: grid; grid-template-columns: 1fr 160px auto; gap: 8px; align-items: end; margin: 0 0 8px; }
     .lvp-amount-row .lvp-field { margin: 0; }
@@ -313,21 +312,20 @@
             <div class="lvp-combo">
               <input class="lvp-input" type="text" id="bank-name" autocomplete="off" required
                      role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-name-list"
-                     placeholder="הקלדת שם הבנק" aria-describedby="err-bank-name">
+                     aria-describedby="err-bank-name">
               <ul class="lvp-combo__list" id="bank-name-list" role="listbox" hidden></ul>
             </div>
             <span class="lvp-field__error" id="err-bank-name"></span>
           </label>
           <div class="lvp-row">
             <label class="lvp-field" data-field="bank-branch">
-              <span class="lvp-field__label">מספר סניף<span class="lvp-req" aria-hidden="true">*</span></span>
+              <span class="lvp-field__label">סניף<span class="lvp-req" aria-hidden="true">*</span></span>
               <div class="lvp-combo">
                 <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" inputmode="numeric" autocomplete="off" required maxlength="4"
                        role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-branch-list"
-                       placeholder="מספר או שם סניף" aria-describedby="bank-branch-confirm err-bank-branch">
+                       aria-describedby="err-bank-branch">
                 <ul class="lvp-combo__list" id="bank-branch-list" role="listbox" hidden></ul>
               </div>
-              <span class="lvp-branch-confirm" id="bank-branch-confirm" aria-live="polite"></span>
               <span class="lvp-field__error" id="err-bank-branch"></span>
             </label>
             <label class="lvp-field" data-field="bank-account">
@@ -859,23 +857,13 @@
         });
         listEl.hidden = false; inputEl.setAttribute('aria-expanded', 'true');
       }
-      function setBranchConfirm(bank){
-        var inp = document.getElementById('bank-branch');
-        var conf = document.getElementById('bank-branch-confirm');
-        if (!inp || !conf) return;
-        var v = String(inp.value || '').replace(/\D/g, '');
-        if (!bank || !v){ conf.textContent = ''; return; }
-        var br = branchByCode(bank, +v);
-        conf.textContent = br ? (br[1] + (br[2] ? (' · ' + br[2]) : '')) : '';
-      }
       function refreshBankFromInputs(){
         // Re-resolve after a resume or registry load: restore the bank code data attr
-        // from the restored bank name + re-show the branch confirmation.
+        // from the restored bank name.
         var binp = document.getElementById('bank-name');
         if (!binp || !BANK_REG) return;
         var b = bankByName(binp.value);
         if (b) binp.setAttribute('data-bank-code', b.c);
-        setBranchConfirm(b);
       }
       (function initBankCombo(){
         var bankInput = document.getElementById('bank-name');
@@ -898,7 +886,7 @@
                    '</span><span class="lvp-combo__opt-city">' + escHtml(br[2] || '') + '</span>';
           }, function(br){
             brInput.value = br[0]; comboClose(brList, brInput);
-            setBranchConfirm(bank); clearFieldErr('bank-branch');
+            clearFieldErr('bank-branch');
             var acct = document.getElementById('bank-account'); if (acct) acct.focus();
           });
         }
@@ -906,7 +894,7 @@
         bankInput.addEventListener('input', function(){
           // Typing a new bank invalidates the prior pick + any branch chosen under it.
           bankInput.removeAttribute('data-bank-code');
-          brInput.value = ''; setBranchConfirm(null);
+          brInput.value = '';
           var q = normHe(bankInput.value);
           var items = (BANK_REG || []).filter(function(b){ return !q || normHe(b.n).indexOf(q) !== -1; });
           comboRender(bankList, bankInput, items, function(b){
@@ -923,7 +911,6 @@
         });
         brInput.addEventListener('input', function(){
           var bank = selectedBank();
-          setBranchConfirm(bank);
           if (bank) brShow(bank, brInput.value);
         });
         document.addEventListener('click', function(e){
@@ -1109,25 +1096,26 @@
         if (v.length < minLen || v.length > maxLen) return { ok: false, msg: 'נא להזין ' + ranged + '.' };
         return { ok: true };
       }
-      // Bank must resolve to a real bank in the registry (catches a typed-but-unpicked
-      // name); branch must be a real branch code OF that bank (catches the silent
-      // wrong-branch typo). If the registry has not loaded yet, fall back to a plain
-      // required/format check so a load hiccup never blocks the LP.
+      // Bank + branch are pick-from-list: the value must resolve to a real entry the LP
+      // chose, so a typed-but-unmatched value reads as "not selected". No confirmation
+      // line and no existence error; the message just asks them to pick (Noa-approved,
+      // 2026-06-25). A registry load hiccup falls back to a plain non-empty check so it
+      // never blocks. Account is a plain number field, required.
       function vBank() {
         var inp = document.getElementById('bank-name');
-        if (!inp || !inp.value.trim()) return { ok: false, silent: true };
-        if (!BANK_REG || !BANK_REG.length) return { ok: true };
-        return selectedBank() ? { ok: true } : { ok: false, msg: 'נא לבחור בנק מהרשימה.' };
+        var has = inp && inp.value.trim();
+        if (!BANK_REG || !BANK_REG.length) return has ? { ok: true } : { ok: false, msg: 'נא לבחור בנק' };
+        return selectedBank() ? { ok: true } : { ok: false, msg: 'נא לבחור בנק' };
       }
       function vBranch() {
         var inp = document.getElementById('bank-branch');
         var v = String((inp && inp.value) || '').replace(/\D/g, '');
-        if (!v) return { ok: false, silent: true };
-        if (!BANK_REG || !BANK_REG.length) return vDigits('bank-branch', 2, 4);
+        if (!BANK_REG || !BANK_REG.length) return v ? { ok: true } : { ok: false, msg: 'נא לבחור סניף' };
         var bank = selectedBank();
-        if (!bank) return { ok: false, msg: 'נא לבחור בנק תחילה.' };
-        return branchByCode(bank, +v) ? { ok: true }
-          : { ok: false, msg: 'מספר הסניף לא נמצא בבנק שנבחר. יש לבדוק מול אישור ניהול החשבון.' };
+        return (bank && v && branchByCode(bank, +v)) ? { ok: true } : { ok: false, msg: 'נא לבחור סניף' };
+      }
+      function vAccount() {
+        return val('bank-account').replace(/\D/g, '') ? { ok: true } : { ok: false, msg: 'נא להזין מספר חשבון' };
       }
       function validateField(name) {
         switch (name) {
@@ -1138,7 +1126,7 @@
           case 'lp-email':       return vEmail('lp-email');
           case 'bank-name':      return vBank();
           case 'bank-branch':    return vBranch();
-          case 'bank-account':   return vDigits('bank-account', 4, 15);
+          case 'bank-account':   return vAccount();
           case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-requestedDate':
