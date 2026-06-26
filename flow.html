@@ -31,12 +31,12 @@
     .lvp-brand img { max-width: 140px; height: auto; }
     .lvp-card {
       background: var(--lvp-card-bg); width: 100%;
-      border: 1px solid #ECECEC; border-radius: 12px;
+      border-radius: 12px;
       padding: 28px 28px 32px;
-      box-shadow: 0 1px 0 rgba(13,63,106,0.04);
+      box-shadow: 0 1px 2px rgba(13,63,106,0.06), 0 8px 24px rgba(13,63,106,0.06);
     }
     @media (max-width: 540px) { .lvp-card { padding: 20px 16px 24px; } }
-    .lvp-req { color: var(--lvp-error); margin-inline-start: 4px; }
+    .lvp-req { display: none; }
     .lvp-field__error {
       display: none;
       color: var(--lvp-error); font-size: 13px;
@@ -67,11 +67,12 @@
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
     .lvp-progress__count { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; }
     .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 6px; }
-    .lvp-page__title::after { content: ""; display: block; width: 90px; height: 4px; border-radius: 2px; margin-top: 8px;
-      background: linear-gradient(to left, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    .lvp-page__title::after { content: ""; display: block; width: 48px; height: 3px; border-radius: 2px; margin-top: 8px;
+      background: var(--lvp-navy); }
     .lvp-page__hint { color: var(--lvp-text-muted); font-size: 15px; margin: 0 0 22px; }
     .lvp-section { margin: 18px 0 8px; }
     .lvp-section__title { color: var(--lvp-navy); font-size: 18px; font-weight: 700; margin: 0 0 6px; }
+    .lvp-section__title--sub { font-size: 16px; }
     .lvp-prose { color: var(--lvp-text-muted); font-size: 14px; line-height: 1.6; margin: 0 0 12px; }
     .lvp-field { display: block; margin: 0 0 14px; }
     fieldset.lvp-field { border: 0; padding: 0; margin: 0 0 14px; }
@@ -278,7 +279,7 @@
             </fieldset>
 
             <div id="redemption-partial-block" hidden>
-              <div class="lvp-section"><h3 class="lvp-section__title" style="font-size:16px;">סכום הפדיון (ברוטו)</h3></div>
+              <div class="lvp-section"><h3 class="lvp-section__title lvp-section__title--sub">סכום הפדיון (ברוטו)</h3></div>
               <div id="amount-rows-redemption"></div>
               <button type="button" class="lvp-amount-add" data-add-currency="redemption">+ הוספת מטבע</button>
             </div>
