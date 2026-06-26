@@ -66,6 +66,7 @@
     .lvp-progress__bar { flex: 1; height: 6px; background: #EFEFEF; border-radius: 3px; overflow: hidden; }
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-navy); transition: width 200ms ease; }
     .lvp-progress__count { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; }
+    .lvp-required-note { color: var(--lvp-text-muted); font-size: 12px; margin: 0 0 16px; }
     .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 6px; }
     .lvp-page__title::after { content: ""; display: block; width: 48px; height: 3px; border-radius: 2px; margin-top: 8px;
       background: var(--lvp-navy); }
@@ -198,11 +199,12 @@
         <div class="lvp-progress" aria-label="התקדמות" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" id="lvp-progress-meta">
           <div class="lvp-progress__bar"><span id="lvp-progress-bar" style="width: 33%"></span></div>
         </div>
+        <p class="lvp-required-note">כל השדות הינם חובה</p>
 
         <!-- PAGE 1: התחלה + פרטים אישיים (merged) -->
         <section class="lvp-page is-active" data-page="start">
           <h1 class="lvp-page__title" id="welcome-title"></h1>
-          <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה ישירות מהמחשב או מהנייד.</p>
+          <p class="lvp-prose">בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה.</p>
           <p class="lvp-prose">לאחר השלמת התהליך יתקבל עותק חתום.</p>
           <div id="lvp-start-summary" class="lvp-error-summary" hidden role="alert"></div>
 
