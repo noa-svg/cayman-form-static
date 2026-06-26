@@ -112,6 +112,10 @@
     .doc.collapsed .doc__body { max-height:0; padding:0 16px; overflow:hidden; }
     .doc__body img { max-width:100%; height:auto; }
     .doc__body table { width:100%; max-width:100%; table-layout:auto; border-collapse:collapse; }
+    /* Bound values: GAS wraps each filled token in span.lvp-filled. Match the LP
+       review (index.html) + the sealed PDF (setBold) so filled values render
+       bold navy on all three surfaces, not inert plain text. */
+    .doc__body .lvp-filled { font-weight:700; color:#0D406B; }
     .doc__note { padding:14px 16px; color:var(--muted); font-size:13px; font-style:italic; }
 
     /* Signature */
@@ -331,7 +335,7 @@
       "Recording...": "מתעד....",
       "Thank you": "תודה",
       "Your signature has been recorded.": "החתימה שלך תועדה.",
-      "All signatures are in. We will assemble the documents and email a confirmation.": "כל החתימות התקבלו. נרכיב את המסמכים ונשלח אישור למייל.",
+      "All signatures are in. We will assemble the documents and email a confirmation.": "המסמכים החתומים יישלחו במייל.",
       "Your signature has been recorded. We will notify the next signer.": "החתימה שלך תועדה. נודיע לחותם/ת הבא/ה.",
       "We could not record your signature. Please try again.": "לא ניתן לתעד את החתימה. נא לנסות שוב.",
       "Please draw your signature before submitting.": "יש לשרטט חתימה לפני השליחה.",
