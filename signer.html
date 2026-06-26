@@ -443,20 +443,23 @@
         if (!ctx.ok) {
           if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
           if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
-          // Map known invalid reasons to specific copy; keep the generic
-          // fallback for unknown/unset reasons. F47. We set both the visible
+          // Map known TERMINAL reasons to specific copy. F47. We set both the visible
           // text and data-en so applyLang('he') translates it via HE_MAP.
           var reasonMsg = {
             expired: 'This signing link has expired. Please contact Legacy Value Partners for a new link.',
             voided:  'This subscription has been cancelled. Please contact Legacy Value Partners.',
             revoked: 'This signing link has been revoked. Please contact Legacy Value Partners.'
           };
-          var msgEl = document.getElementById('invalid-msg');
-          if (msgEl && reasonMsg[ctx.reason]) {
-            msgEl.dataset.en = reasonMsg[ctx.reason];
-            msgEl.textContent = reasonMsg[ctx.reason];
+          if (reasonMsg[ctx.reason]) {
+            var msgEl = document.getElementById('invalid-msg');
+            if (msgEl) { msgEl.dataset.en = reasonMsg[ctx.reason]; msgEl.textContent = reasonMsg[ctx.reason]; }
+            applyLang('he'); show('invalid'); return;
           }
-          applyLang('he'); show('invalid'); return;
+          // F-L4.4 (2026-06-26): an UNKNOWN / unset reason means the server threw on the
+          // pane export (a transient caymanExportPackForSigner_ Drive failure) or the
+          // response did not parse, NOT a terminal-dead link. Route to the RETRY state, not
+          // the "contact us" broken-link dead-end, so a transient failure recovers with one tap.
+          applyLang('he'); show('timeout'); return;
         }
         renderSignerForm(ctx);
       };
