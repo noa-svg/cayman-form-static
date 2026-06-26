@@ -78,7 +78,8 @@
       background:#fff; border-bottom:1px solid #dce3eb; scrollbar-width:thin; }
     .doc-jumpnav__chip { flex:0 0 auto; cursor:pointer; white-space:nowrap; font-size:12px;
       line-height:1; font-weight:600; color:var(--navy); background:#eef3fb;
-      border:1px solid #d4e0f0; border-radius:999px; padding:7px 12px; font-family:inherit;
+      border:1px solid #d4e0f0; border-radius:999px; padding:7px 14px; font-family:inherit;
+      min-height:44px; box-sizing:border-box; display:inline-flex; align-items:center;
       /* Inherit the page direction so Hebrew chip text reads RTL on a Hebrew page. */ }
     .doc-jumpnav__chip:hover { background:#e0eaf8; }
     .doc-jumpnav__chip:focus-visible { outline:3px solid var(--navy); outline-offset:2px; }
@@ -87,12 +88,14 @@
     .doc { margin-top:16px; border:1px solid #dce3eb; border-radius:8px; overflow:hidden; }
     .doc__title { background:#f4f7fb; padding:10px 16px; font-weight:700; font-size:14px;
       color:var(--navy); border-bottom:1px solid #dce3eb; cursor:pointer; user-select:none;
+      min-height:44px; box-sizing:border-box;
       display:flex; align-items:center; justify-content:space-between; }
+    .doc__title:focus-visible { outline:3px solid var(--navy); outline-offset:-3px; }
     .doc__title::after { content:""; display:inline-block; width:8px; height:8px;
       border-right:2px solid var(--navy); border-bottom:2px solid var(--navy);
       transform:rotate(45deg); transition:transform 200ms ease; flex-shrink:0; margin-left:12px; }
     .doc.collapsed .doc__title::after { transform:rotate(-45deg); }
-    .doc__body { max-height:400px; overflow-y:auto; padding:16px; font-size:13px; line-height:1.6; background:#fff;
+    .doc__body { max-height:60vh; overflow-y:auto; padding:16px; font-size:15px; line-height:1.6; background:#fff;
       overflow-wrap:break-word; }
     /* Force RTL on the doc body for Hebrew signers. Google Doc HTML export ships
        with text-align:left + dir:ltr on every paragraph. The descendant override
@@ -117,7 +120,7 @@
     canvas { width:100%; height:200px; border:1px dashed #b9c2cb; border-radius:8px; touch-action:none; background:#fff; display:block; }
     /* Signature method: two quiet equal options. */
     .sig-mode { display:inline-flex; gap:4px; background:#F0F3F8; border-radius:8px; padding:4px; margin:12px 0 0; }
-    .sig-mode__opt { border:none; background:transparent; font:inherit; font-size:14px; color:var(--muted); padding:8px 20px; border-radius:6px; cursor:pointer; min-height:40px; }
+    .sig-mode__opt { border:none; background:transparent; font:inherit; font-size:14px; color:var(--muted); padding:8px 20px; border-radius:6px; cursor:pointer; min-height:44px; }
     .sig-mode__opt:focus-visible { outline:2px solid var(--navy); outline-offset:2px; }
     .sig-mode__opt.is-active { background:#fff; color:var(--navy); font-weight:600; box-shadow:0 1px 3px rgba(13,64,107,.12); }
     .sig-typed { margin:14px 0 0; }
@@ -418,7 +421,22 @@
 
     function show(name) {
       var els = document.querySelectorAll('[data-state]');
-      for (var i = 0; i < els.length; i++) els[i].hidden = (els[i].getAttribute('data-state') !== name);
+      var shown = null;
+      for (var i = 0; i < els.length; i++) {
+        var on = (els[i].getAttribute('data-state') === name);
+        els[i].hidden = !on;
+        if (on) shown = els[i];
+      }
+      // L5 (a11y): move focus to the new state's heading so a screen-reader / keyboard
+      // signer is told the view changed, instead of focus being orphaned on a now-hidden
+      // node after the ~20s cold-start load, a "Try again" retry, or submit. The 68-year-old
+      // on TalkBack otherwise gets silence and cannot tell the page advanced. Best-effort.
+      if (shown) {
+        try {
+          var h = shown.querySelector('h1, h2');
+          if (h) { h.setAttribute('tabindex', '-1'); h.focus(); }
+        } catch (e) {}
+      }
     }
 
     if (!TOKEN) { applyLang('he'); show('invalid'); return; }
@@ -559,15 +577,18 @@
           var opts = '<option value=""></option>' + (def.options || []).map(function (o) {
             return '<option value="' + esc(o) + '">' + esc(tHe(o)) + '</option>';
           }).join('');
-          return '<select name="' + nm + '"' + reqAttr + descAttr + '>' + opts + '</select><span class="signer-note" id="' + msgId + '" hidden></span>';
+          return '<select id="f-' + nm + '" name="' + nm + '"' + reqAttr + descAttr + '>' + opts + '</select><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
         if (def.type === 'textarea') {
-          return '<textarea name="' + nm + '" rows="2"' + reqAttr + descAttr + '></textarea><span class="signer-note" id="' + msgId + '" hidden></span>';
+          return '<textarea id="f-' + nm + '" name="' + nm + '" rows="2"' + reqAttr + descAttr + '></textarea><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
         if (def.type === 'checkbox') {
-          return '<label class="signer-check"><input type="checkbox" name="' + nm + '"' + reqAttr + descAttr + '> ' + esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReq ? ' <span class="req">*</span>' : '') + '</label><span class="signer-note" id="' + msgId + '" hidden></span>';
+          return '<label class="signer-check"><input type="checkbox" id="f-' + nm + '" name="' + nm + '"' + reqAttr + descAttr + '> ' + esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReq ? ' <span class="req">*</span>' : '') + '</label><span class="signer-note" id="' + msgId + '" hidden></span>';
         }
-        return '<input type="' + esc(def.type) + '" name="' + nm + '"' + acAttr + imAttr + reqAttr + descAttr + '><span class="signer-note" id="' + msgId + '" hidden></span>';
+        // L5 (a11y): a date field (e.g. date of birth) caps at today so the native
+        // picker cannot offer a future birth date and opens nearer a plausible year.
+        var maxAttr = (def.type === 'date') ? ' max="' + new Date().toISOString().slice(0, 10) + '"' : '';
+        return '<input type="' + esc(def.type) + '" id="f-' + nm + '" name="' + nm + '"' + acAttr + imAttr + maxAttr + reqAttr + descAttr + '><span class="signer-note" id="' + msgId + '" hidden></span>';
       }
       // Build the label markup for a field. Required-ness is derived from the
       // '*' in the English def label; the asterisk is rendered separately so the
@@ -596,7 +617,7 @@
           if (def.type === 'checkbox') {
             fieldsHtml += '<div class="field" data-field="' + esc(f) + '">' + controlMarkup(f, def) + '</div>';
           } else {
-            fieldsHtml += '<div class="field" data-field="' + esc(f) + '"><label>' + labelMarkup(def) + '</label>' +
+            fieldsHtml += '<div class="field" data-field="' + esc(f) + '"><label for="f-' + esc(f) + '">' + labelMarkup(def) + '</label>' +
               controlMarkup(f, def) + '</div>';
           }
         });
@@ -740,7 +761,7 @@
       // preview" to the LP. Guard at render time so a language re-toggle can never
       // re-show it.
       function titleHtml(t) {
-        var s = tHe(t); return s ? '<div class="doc__title">' + esc(s) + '</div>' : '';
+        var s = tHe(t); return s ? '<div class="doc__title" role="button" tabindex="0" aria-expanded="true">' + esc(s) + '</div>' : '';
       }
       var docList = document.getElementById('doc-list');
       if (isInitial) {
@@ -759,7 +780,19 @@
               '<div class="doc__note">' + esc(tHe(doc.error || 'Document preview not available.')) + '</div>';
           }
           var titleEl = el.querySelector('.doc__title');
-          if (titleEl) titleEl.addEventListener('click', function () { el.classList.toggle('collapsed'); });
+          if (titleEl) {
+            // L5 (a11y): the doc title bar is a real toggle button. Click + Enter/Space,
+            // aria-expanded reflects state, so a keyboard / screen-reader signer can
+            // collapse/expand the document preview, not only a mouse user.
+            var toggleDoc = function () {
+              var collapsed = el.classList.toggle('collapsed');
+              titleEl.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            };
+            titleEl.addEventListener('click', toggleDoc);
+            titleEl.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); toggleDoc(); }
+            });
+          }
           docList.appendChild(el);
         });
         buildSignerJumpNav_(ctx);

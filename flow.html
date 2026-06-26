@@ -144,7 +144,7 @@
       min-height: 44px;
     }
     .lvp-amount-add { min-height: 44px; }
-    .lvp-radio { min-height: 32px; padding: 4px 0; }
+    .lvp-radio { min-height: 44px; padding: 8px 0; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
@@ -235,7 +235,7 @@
 
           <label class="lvp-field" data-field="lp-email">
             <span class="lvp-field__label">כתובת דוא"ל<span class="lvp-req" aria-hidden="true">*</span></span>
-            <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" autocomplete="email" required aria-describedby="err-lp-email hint-lp-email">
+            <input class="lvp-input lvp-input--ltr" type="email" id="lp-email" inputmode="email" autocomplete="email" required aria-describedby="err-lp-email hint-lp-email">
             <span class="lvp-field__hint" id="hint-lp-email">כתובת זו תשמש אותנו לתקשורת</span>
             <span class="lvp-field__error" id="err-lp-email"></span>
           </label>
@@ -330,7 +330,7 @@
             </label>
             <label class="lvp-field" data-field="bank-account">
               <span class="lvp-field__label">מספר חשבון<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,13}" maxlength="13" enterkeyhint="next" aria-describedby="err-bank-account">
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,13}" maxlength="13" enterkeyhint="done" aria-describedby="err-bank-account">
               <span class="lvp-field__error" id="err-bank-account"></span>
             </label>
           </div>
