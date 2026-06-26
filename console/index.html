@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    LEGACY VALUE PARTNERS — OPERATOR CONSOLE
@@ -61,8 +61,8 @@
   --color-info-bg:        #1A1508;
   --color-neutral:        #504840;
   --color-neutral-bg:     #1C1A16;
-  --font-display:         'JetBrains Mono', 'Courier New', monospace;
-  --font-body:            'JetBrains Mono', 'Courier New', monospace;
+  --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
+  --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
   --text-2xs:   9px;  --text-xs:    11px; --text-sm:    12px;
   --text-base:  13px; --text-md:    15px; --text-lg:    18px;
@@ -253,7 +253,7 @@ nav {
   font-weight: var(--weight-medium);
   text-shadow: 0 0 8px rgba(34,211,238,0.3);
 }
-.nav.on::before { content: "> "; color: var(--color-atrium); font-weight: 700; }
+.nav.on::before { content: ""; }
 
 .nav.on:hover {
   background: var(--color-atrium-tint-md);
@@ -356,55 +356,56 @@ nav {
    ============================================================ */
 
 :root[data-theme="light"] {
-  --color-bg-page:        #F5F0E8;
-  --color-bg-sidebar:     #EDE8DF;
-  --color-bg-card:        #FFFEF8;
-  --color-bg-panel:       #FFFEF8;
-  --color-bg-input:       #FFFEF8;
-  --color-bg-hover:       #EAE4D8;
-  --color-bg-strip:       #EDE8DF;
-  --color-bg-drawer:      #FFFEF8;
-  --color-bg-overlay:     rgba(20,19,15,0.55);
-  --color-atrium:         #B87020;
-  --color-atrium-deep:    #9A5C16;
-  --color-atrium-tint:    #F5EDD8;
-  --color-atrium-tint-md: #EDE0C0;
-  --color-atrium-muted:   rgba(184,112,32,0.12);
-  --color-ink:            #1A1410;
-  --color-ink-sub:        #4A4038;
-  --color-ink-muted:      #6E6456;
-  --color-ink-disabled:   #C0B8A8;
-  --color-ink-inverse:    #F5F0E8;
-  --color-border:         #D8D0C0;
-  --color-border-subtle:  #E8E0D0;
-  --color-border-strong:  #A89880;
-  --color-border-focus:   #B87020;
-  --color-gold:           #B87020;
-  --color-gold-tint:      #F5EDD8;
-  --color-coral:          #A03020;
-  --color-coral-tint:     #FDE8E4;
-  --color-green:          #1A7A30;
-  --color-green-tint:     #E8F5EC;
-  --color-amber:          #B87020;
-  --color-amber-tint:     #F5EDD8;
-  --color-red:            #A03020;
-  --color-red-tint:       #FDE8E4;
-  --color-dim:            #8A8070;
-  --color-success:        #1A7A30;
-  --color-success-bg:     #E8F5EC;
-  --color-warning:        #B87020;
-  --color-warning-bg:     #F5EDD8;
-  --color-danger:         #A03020;
-  --color-danger-bg:      #FDE8E4;
-  --color-info:           #B87020;
-  --color-info-bg:        #F5EDD8;
-  --color-neutral:        #7A7060;
-  --color-neutral-bg:     #EDE8DF;
-  --shadow-card:          0 1px 3px rgba(20,19,15,0.08);
-  --shadow-hover:         0 2px 8px rgba(20,19,15,0.10), 0 0 0 1px #D8D0C0;
-  --shadow-panel:         0 4px 24px rgba(20,19,15,0.14);
-  --shadow-drawer:        -2px 0 24px rgba(20,19,15,0.12);
-  --shadow-modal:         0 8px 40px rgba(20,19,15,0.18);
+  /* LEGACY QUIET - warm white ground, navy ink, gold accent */
+  --color-bg-page:        #FAF8F4;
+  --color-bg-sidebar:     #F2EEE6;
+  --color-bg-card:        #FFFFFF;
+  --color-bg-panel:       #FFFFFF;
+  --color-bg-input:       #FFFFFF;
+  --color-bg-hover:       #F1EDE4;
+  --color-bg-strip:       #F4F0E8;
+  --color-bg-drawer:      #FFFFFF;
+  --color-bg-overlay:     rgba(26,44,105,0.40);
+  --color-atrium:         #B8902E;
+  --color-atrium-deep:    #9A7724;
+  --color-atrium-tint:    #FBF4E2;
+  --color-atrium-tint-md: #F2E6C6;
+  --color-atrium-muted:   rgba(184,144,46,0.14);
+  --color-ink:            #15203F;
+  --color-ink-sub:        #41506E;
+  --color-ink-muted:      #6B7488;
+  --color-ink-disabled:   #BFC4CF;
+  --color-ink-inverse:    #FFFFFF;
+  --color-border:         #E6E2D8;
+  --color-border-subtle:  #F0ECE3;
+  --color-border-strong:  #CBC5B8;
+  --color-border-focus:   #1a2c69;
+  --color-gold:           #B8902E;
+  --color-gold-tint:      #FBF4E2;
+  --color-coral:          #B23A26;
+  --color-coral-tint:     #FBEAE6;
+  --color-green:          #1F7A3D;
+  --color-green-tint:     #E8F4EC;
+  --color-amber:          #B8902E;
+  --color-amber-tint:     #FBF4E2;
+  --color-red:            #B23A26;
+  --color-red-tint:       #FBEAE6;
+  --color-dim:            #8A92A2;
+  --color-success:        #1F7A3D;
+  --color-success-bg:     #E8F4EC;
+  --color-warning:        #B8902E;
+  --color-warning-bg:     #FBF4E2;
+  --color-danger:         #B23A26;
+  --color-danger-bg:      #FBEAE6;
+  --color-info:           #1a2c69;
+  --color-info-bg:        #ECEFF6;
+  --color-neutral:        #6B7488;
+  --color-neutral-bg:     #F1EDE4;
+  --shadow-card:          0 1px 3px rgba(21,32,63,0.07);
+  --shadow-hover:         0 2px 10px rgba(21,32,63,0.10), 0 0 0 1px #E6E2D8;
+  --shadow-panel:         0 6px 28px rgba(21,32,63,0.14);
+  --shadow-drawer:        -2px 0 26px rgba(21,32,63,0.12);
+  --shadow-modal:         0 10px 44px rgba(21,32,63,0.18);
 }
 /* Theme toggle in light mode */
 :root[data-theme="light"] #theme-toggle {
@@ -1125,9 +1126,9 @@ input:focus {
   font-family: var(--font-body);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
-  background: var(--color-atrium);
-  color: var(--color-ink-inverse);
-  border: 1px solid var(--color-atrium);
+  background: var(--color-info);
+  color: #fff;
+  border: 1px solid var(--color-info);
   border-radius: var(--radius-lg);
   padding: var(--space-3) 0;
   cursor: pointer;
@@ -1137,7 +1138,7 @@ input:focus {
 }
 
 .cta:hover {
-  background: var(--color-atrium-deep);
+  background: var(--color-ink);
 }
 
 .cta:active {
@@ -1986,7 +1987,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
 .lp-search{position:relative}
 #lpSearch{width:100%;padding:11px 12px;font-size:14px;background:var(--color-bg-input);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-ink);font-family:inherit;box-sizing:border-box}
 #lpSearch:focus{outline:none;border-color:var(--color-border-focus)}
-.lp-results{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;background:var(--color-bg-card);border:1px solid var(--color-border-strong);border-radius:var(--radius-md);box-shadow:0 14px 36px rgba(0,0,0,.6);max-height:300px;overflow-y:auto}
+.lp-results{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;background:var(--color-bg-card);border:1px solid var(--color-border-strong);border-radius:var(--radius-md);box-shadow:var(--shadow-panel);max-height:300px;overflow-y:auto}
 .lp-row{display:flex;align-items:center;gap:10px;padding:9px 11px;cursor:pointer;border-bottom:1px solid var(--color-border-subtle)}
 .lp-row:last-child{border-bottom:none}
 .lp-row:hover,.lp-row.active{background:var(--color-bg-hover)}
@@ -2002,8 +2003,8 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
 <body>
   <aside class="side">
     <div class="brand">
-      <div class="mark">OPERATOR_</div>
-      <div class="sub">Legacy Value Partners</div>
+      <img src="brand-logo.png" alt="Legacy Value Partners" style="height:30px;width:auto;display:block;margin:0 0 4px">
+      <div class="sub">Operator console</div>
       <div class="fundsw" id="fundsw"><button class="on" data-v="cayman">&#127464;&#127486; Cayman</button><button data-v="israel">&#127470;&#127473; Israel</button></div>
       <button id="side-collapse">&#171; collapse</button>
     </div>
@@ -2016,7 +2017,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     </nav>
     <div class="side-foot">
       <div class="ver" id="ver-side">GAS prod</div>
-      <button id="theme-toggle" onclick="toggleTheme()">[ LIGHT ]</button>
+      <button id="theme-toggle" onclick="toggleTheme()">Dark</button>
       <div class="auth-email" id="auth-status">not signed in</div>
       <button class="signout-link" id="sign-out-btn" style="display:none" onclick="clearAuth()">Sign out</button>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top:4px">Atrium</a>
@@ -2027,11 +2028,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       <div class="top">
         <button id="mob-menu" aria-label="Menu">&#9776;</button>
         <div id="mob-fund"><button class="mob-fb on" data-v="cayman">CY</button><button class="mob-fb" data-v="israel">IL</button></div>
-        <div class="prompt"><span class="prompt-host">operator@legacy</span><span class="prompt-path" id="prompt-path">:~/cayman$</span><span class="cursor"></span></div>
+        <div style="font-size:18px;font-weight:500;color:var(--color-ink)">Board</div><span id="prompt-path" hidden></span>
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
             <div class="cmd-split">
-              <button class="cmd-btn cmd-btn-main" id="newBtn">&gt; new</button><button class="cmd-btn cmd-btn-arr" id="newArr" title="Quick create">&#9660;</button>
+              <button class="cmd-btn cmd-btn-main" id="newBtn">New</button><button class="cmd-btn cmd-btn-arr" id="newArr" title="Quick create">&#9660;</button>
             </div>
             <div class="new-dd" id="newDd">
               <div class="new-dd-hdr">onboarding</div>
@@ -2050,7 +2051,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       </div>
       <div class="content">
         <div class="stages" id="stages"></div>
-        <div class="listhead"><h2 id="listLabel">in flight</h2><input class="board-search" id="boardSearch" type="search" placeholder="/ search" autocomplete="off"></div>
+        <div class="listhead"><h2 id="listLabel">In flight</h2><input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off"></div>
         <div class="tbl-head"><span class="th-sg">-</span><span class="th-nm">name</span><span class="th-st">stage</span><span class="th-age">time</span></div>
         <div id="list"></div>
         <div class="statusbar" id="statusbar">
@@ -2200,7 +2201,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
 <script>
   // ---- THEME ----
   (function(){
-    var t=localStorage.getItem('lvp_theme')||'dark';
+    var t=localStorage.getItem('lvp_theme')||'light';
     document.documentElement.setAttribute('data-theme',t);
     // update button label after DOM ready
     document.addEventListener('DOMContentLoaded',function(){updateThemeBtn(t);});
@@ -2208,7 +2209,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   function updateThemeBtn(t){
     var b=document.getElementById('theme-toggle');
     if(!b)return;
-    b.textContent=t==='light'?'[ DARK ]':'[ LIGHT ]';
+    b.textContent=t==='light'?'Dark':'Light';
   }
   function toggleTheme(){
     var cur=document.documentElement.getAttribute('data-theme')||'dark';
@@ -2326,7 +2327,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       var he=(r.he&&r.name)?r.he:'';
       return '<div class="row" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
         +'<span class="sg '+sg.c+'">'+sg.g+'</span>'
-        +'<span class="rn">'+esc2(nm)+(he?' <span class="rhe">'+esc2(he)+'</span>':'')+'</span>'
+        +'<span class="rn">'+esc2(nm)+(he?' <span class="rhe">'+esc2(he)+'</span>':'')+(r.wait?'<span class="rwait" style="display:block;font-size:11px;color:#6b7785;margin-top:2px;font-weight:400;">'+esc2(r.wait)+'</span>':'')+'</span>'
         +'<span class="rst">'+esc2(r.stage.toUpperCase())+'</span>'
         +'<span class="rage">'+(r.age||'')+'</span>'
         +'</div>';
@@ -2379,10 +2380,10 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
-  var LOAD_SEQ=0;
-  function load(){
+  var LOAD_SEQ=0, _autoRefreshArmed=false;
+  function load(silent){
     var rid=++LOAD_SEQ;
-    document.getElementById("list").innerHTML='<div class="empty">Loading...</div>';
+    if(!silent) document.getElementById("list").innerHTML='<div class="empty">Loading...</div>';
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       if(rid!==LOAD_SEQ)return;
       var src=(d&&d.processes)||(d&&d.items)||[];
@@ -2390,7 +2391,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
       var rows=src.map(function(it){var ft=it.flowType||'';return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||'',type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
-    }).catch(function(){if(rid!==LOAD_SEQ)return;document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
+    }).catch(function(){if(rid!==LOAD_SEQ)return;if(!silent)document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
+    // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
+    // the operator must reload to see truth. Silent (no Loading flash, keeps the current
+    // rows on a transient failure). LOAD_SEQ already guards against stale paints.
+    if(!_autoRefreshArmed){_autoRefreshArmed=true;setInterval(function(){if(document.visibilityState==='visible')load(true);},45000);}
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
@@ -2687,10 +2692,18 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
         document.getElementById('lk').textContent=res.signerLink||res.url||'';
         // Israeli is create-link-only: surface the Send-to-LP step (no auto-send).
         document.getElementById('resTitle').textContent='Link ready. Test it, then send.';
-        document.getElementById('resSub').textContent='Open the link to test. When ready, send it to the LP. Omri is cc\'d.';
         var _slb=document.getElementById('sendLpBtn');
-        _slb.style.display=''; _slb.disabled=false; _slb.textContent='Send to LP';
-        _slb.setAttribute('data-process', res.processId||'');
+        if(state.process==='withdrawal'){
+          // L6: withdrawal has no auto-send (the redemption invite email copy is not
+          // approved), so the backend refuses sendIsraeliInvite for it. Hide the Send-to-LP
+          // button and tell the operator to send manually, instead of a refusal dead-end.
+          document.getElementById('resSub').textContent='Withdrawal links are sent manually. Test the link, then copy it and email it to the LP yourself.';
+          _slb.style.display='none';
+        } else {
+          document.getElementById('resSub').textContent='Open the link to test. When ready, send it to the LP. Omri is cc\'d.';
+          _slb.style.display=''; _slb.disabled=false; _slb.textContent='Send to LP';
+          _slb.setAttribute('data-process', res.processId||'');
+        }
         var _sls=document.getElementById('sendLpStatus'); _sls.style.display='none'; _sls.textContent='';
         load();
       }).catch(function(e){btn.disabled=false;btn.textContent='Create link';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
@@ -2732,8 +2745,8 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 9px; }
     var st=document.getElementById("sendLpStatus");
     apiFetch("?admin=sendIsraeliInvite&process="+encodeURIComponent(pid)).then(function(res){
       st.style.display="";
-      if(res&&res.ok){ b.textContent="Sent"; st.style.color="var(--color-atrium)"; st.textContent="Sent to "+(res.sentTo||"the LP")+". Omri cc'd."; }
-      else { b.disabled=false;b.textContent="Send to LP"; st.style.color="#F87171"; st.textContent=(res&&res.error)||"Send failed."; }
+      if(res&&res.ok){ b.textContent="Sent"; st.style.color="var(--color-atrium)"; st.textContent="Sent to "+(res.sentTo||"the LP")+(res.cc?". Cc: "+res.cc:"")+"."; }
+      else { b.disabled=false;b.textContent="Send to LP"; st.style.color="#F87171"; st.textContent=((res&&res.error)||"Send failed.")+((res&&res.detail)?" ("+res.detail+")":""); }
     }).catch(function(e){ b.disabled=false;b.textContent="Send to LP"; st.style.display="";st.style.color="#F87171"; st.textContent="Server error: "+((e&&e.message)||"unknown"); });
   };
 
