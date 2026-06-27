@@ -979,10 +979,10 @@
         var host = document.getElementById('wd-date-radios');
         if (!host) return;
         var prev = (host.querySelector('input[name="wd-date"]:checked') || {}).value || '';
-        var earliest = new Date(); earliest.setDate(earliest.getDate() + 14);
-        earliest.setHours(0, 0, 0, 0);
-        var cursor = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
-        if (cursor < earliest) cursor.setMonth(cursor.getMonth() + 1);
+        // The soonest 1st-of-month not in the past. NO 14-day buffer (Noa 2026-06-27).
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        var cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+        if (cursor < today) cursor.setMonth(cursor.getMonth() + 1);
         var html = '';
         for (var i = 0; i < REDEMPTION_MONTHS_AHEAD; i++) {
           var y = cursor.getFullYear();
