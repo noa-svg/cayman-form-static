@@ -1695,6 +1695,13 @@
         if (typeof dobInitAll === 'function') dobInitAll();
         if (typeof applyConditionals === 'function') applyConditionals();
       }
+      // Cold start: the sync boot ran before config resolved, so it could not jump
+      // to the saved page and the LP is sitting on the welcome page with data
+      // present but invisible. Now that config (incl. resumePage) has arrived,
+      // re-apply the resume jump. Guarded by didResumeJump so we never override a
+      // jump the sync path already made or fire twice.
+      var rp = newCfg.resumePage || CFG.resumePage;
+      if (rp) { CFG.resumePage = rp; applyResumeJump_(rp); }
     };
 
     function applicant() { return state.applicantType || ''; } // always preset from CFG; the LP never self-classifies
@@ -2678,6 +2685,29 @@
       setStatus('');
       window.scrollTo(0, 0);
     }
+    // Map a saved resumePage data-page id to its index in the CURRENT visible-page
+    // sequence (the sequence depends on applicant type + conditionals, so resolve it
+    // live). Returns -1 when the id is unknown (e.g. a page now filtered out).
+    var didResumeJump = false;
+    function resolveResumePageIndex_(resumePage) {
+      if (!resumePage) return -1;
+      var pages = visiblePages();
+      for (var i = 0; i < pages.length; i++) {
+        if (pages[i].getAttribute('data-page') === resumePage) return i;
+      }
+      return -1;
+    }
+    // Apply the resume jump once. Guarded so the sync boot path and the async
+    // CFG-arrival path (cold start: config resolves AFTER init) cannot double-jump
+    // or fight each other. Whichever fires first with a resolvable page wins; the
+    // other becomes a no-op.
+    function applyResumeJump_(resumePage) {
+      if (didResumeJump) return;
+      var target = resolveResumePageIndex_(resumePage);
+      if (target < 0) return;
+      didResumeJump = true;
+      showPage(target);
+    }
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
@@ -3284,9 +3314,11 @@
     function savePage() {
       // partial save-and-resume: send the snapshot WITHOUT file base64 (upload
       // metadata only); server merges. Base64 rides only on the final submit.
-      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) })
-        .then(function (res) { return res; })
-        .catch(function (err) { return null; }); // best-effort save; entries persist in-session, no alarming message to the LP
+      // A real failure REJECTS so the Next handler's catch can surface the
+      // "Could not auto-save" warning (otherwise that fallback is dead code and a
+      // dropped save is completely silent). Callers that don't care can still
+      // .catch and ignore; the page has already advanced when this runs.
+      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) });
     }
     // P0 upload-on-selection: store one KYC file to the token-gated KYC folder the
     // moment it is selected, so a reload/resume restores it. On success swap the
@@ -3788,10 +3820,13 @@
         a.value = n ? Number(n).toLocaleString('en-US') : '';
       });
     })();
-    // resume to the last saved page if the server supplied one
+    // resume to the last saved page if the server supplied one (sync boot path).
+    // On a GAS cold start CFG.resumePage is not known yet here; the async
+    // __caymanOnCfgUpdate path re-applies the jump once config arrives (guarded
+    // by didResumeJump so the two paths never double-jump).
     if (CFG.resumePage) {
-      var pages = visiblePages();
-      for (var i = 0; i < pages.length; i++) { if (pages[i].getAttribute('data-page') === CFG.resumePage) { idx = i; break; } }
+      var resumeTarget = resolveResumePageIndex_(CFG.resumePage);
+      if (resumeTarget >= 0) { idx = resumeTarget; didResumeJump = true; }
     }
     // Render data-help hints into the DOM before the first language pass so they
     // are cached + translated alongside every other .lvp-hint-small.

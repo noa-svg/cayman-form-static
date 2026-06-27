@@ -483,11 +483,22 @@
             if (msgEl) { msgEl.dataset.en = reasonMsg[ctx.reason]; msgEl.textContent = reasonMsg[ctx.reason]; }
             applyLang('he'); show('invalid'); return;
           }
-          // F-L4.4 (2026-06-26): an UNKNOWN / unset reason means the server threw on the
-          // pane export (a transient caymanExportPackForSigner_ Drive failure) or the
-          // response did not parse, NOT a terminal-dead link. Route to the RETRY state, not
-          // the "contact us" broken-link dead-end, so a transient failure recovers with one tap.
-          applyLang('he'); show('timeout'); return;
+          // P2 (2026-06-28): default-to-retry is WRONG. The signature engine's failure
+          // vocabulary (verifySignerLink_ / caymanVerifySignToken_) is broader than the
+          // three messages above: malformed | invalid_sig | unknown_request |
+          // unknown_signer | engine_not_linked are all PERMANENT (bad/forged token, a
+          // process or signer that does not exist, an unlinked engine). A dead link
+          // whose reason landed in this set used to fall through to the retry state and
+          // loop "Try again" forever. Treat ONLY a genuinely transient signal as
+          // retryable: an empty/unset reason (the doGet catch returns
+          // { ok:false, error:'internal error' } with NO reason on a thrown pane export
+          // or a non-parsing body) or an explicit 'export_failed' marker. Every other
+          // KNOWN reason is terminal -> the existing dead-end "Link unavailable" copy.
+          var transientReason = (!ctx.reason || ctx.reason === 'export_failed' || ctx.reason === 'busy, please retry');
+          if (transientReason) { applyLang('he'); show('timeout'); return; }
+          // Known terminal reason without a specific message: show the generic
+          // dead-end (invalid-msg default copy), never the retry loop.
+          applyLang('he'); show('invalid'); return;
         }
         renderSignerForm(ctx);
       };
