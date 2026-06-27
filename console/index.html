@@ -146,6 +146,19 @@ body {
   border-bottom: 1px solid var(--color-sidebar-line);
 }
 
+/* White chip so the navy+gold LVP mark reads cleanly on the blue sidebar
+   (mirrors the login card's white ground). No recolor/redraw of the asset. */
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  background: #FFFFFF;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
 .brand .mark {
   font-family: var(--font-display);
   font-style: normal;
@@ -566,7 +579,10 @@ nav {
   background: var(--color-atrium-deep);
 }
 /* ---- quick-create split button + dropdown ---- */
-.new-wrap { position: relative; display: inline-flex; align-items: stretch; }
+/* On desktop the 3 launch tiles are always visible, so the top-right New
+   split-button is redundant; hidden here and re-shown on mobile (where the
+   tiles scroll out of view) via the max-width:600px query. */
+.new-wrap { position: relative; display: none; align-items: stretch; }
 .cmd-split { display: flex; }
 .cmd-btn-main { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: 1px solid rgba(232,163,61,0.2); }
 .cmd-btn-arr  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 4px 8px; font-size: 11px; line-height: 1; }
@@ -1837,6 +1853,8 @@ body.side-coll .side { width: var(--sidebar-w-coll); }
 body.side-coll .brand .sub,
 body.side-coll .fundsw { display: none; }
 body.side-coll .brand .mark { font-size: 11px; letter-spacing: 0.06em; }
+body.side-coll .brand-chip { padding: 5px 6px; }
+body.side-coll .brand-chip img { height: 18px; }
 body.side-coll #side-collapse { padding: 4px 0; text-align: center; font-size: 13px; letter-spacing: 0; }
 body.side-coll .nav { padding: var(--space-2) 0; justify-content: center; font-size: 0; gap: 0; }
 body.side-coll .nav::before { display: none !important; }
@@ -1946,6 +1964,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
   .top { padding: 12px var(--grid-gutter); gap: 8px; }
   .prompt-path { display: none; }
 
+  /* Persistent create affordance on mobile (tiles scroll out of view here) */
+  .new-wrap { display: inline-flex; }
+
   /* Mobile fund switcher in topbar */
   #mob-fund {
     display: flex;
@@ -2054,7 +2075,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
 <body>
   <aside class="side">
     <div class="brand">
-      <img src="brand-logo.png" alt="Legacy Value Partners" style="height:30px;width:auto;display:block;margin: 0 0 4px">
+      <span class="brand-chip"><img src="brand-logo.png" alt="Legacy Value Partners" style="height:26px;width:auto;display:block"></span>
       <div class="sub">Operator console</div>
       <div class="fundsw" id="fundsw"><button class="on" data-v="cayman">&#127464;&#127486; Cayman</button><button data-v="israel">&#127470;&#127473; Israel</button></div>
       <button id="side-collapse">&#171; collapse</button>
@@ -2506,11 +2527,11 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
   }
   function render(rows){
     allRows=rows;
-    // Bucket counts drive the filter row + the "In flight {N}" heading.
+    // Bucket counts drive the filter row (the single source of truth for counts).
+    // The heading stays a plain "In flight" with no number, so it never fights the
+    // filter totals or implies a Complete row belongs under it.
     var counts={needs:0,waiting:0,complete:0};
     rows.forEach(function(r){counts[bucketOf(r.stage)]++;});
-    var inFlight=counts.needs+counts.waiting;
-    var ll=document.getElementById('listLabel');if(ll)ll.textContent='In flight '+inFlight;
     var FILTERS=[['','All',rows.length],['needs','Needs you',counts.needs],['waiting','Waiting',counts.waiting],['complete','Complete',counts.complete]];
     document.getElementById("stages").innerHTML=FILTERS.map(function(f){
       var sel=(stageFilter||'')===f[0];
