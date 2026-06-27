@@ -934,28 +934,16 @@
       function refitSig() {
         var w = canvas.getBoundingClientRect().width;
         if (Math.abs(w - _sigW) < 2) return;
-        var prevPng = null;
-        if (sigMode === 'draw' && dirty) {
-          try { prevPng = canvas.toDataURL('image/png'); } catch (e) { prevPng = null; }
-        }
-        var prevPoints = points;
-        _sigW = w; size();
+        _sigW = w; size();   // size() clears the canvas and re-scales the ctx by dpr
+        // P1 (2026-06-27): redraw the signature SYNCHRONOUSLY from the recorded vector
+        // strokes (draw mode) or the typed name. The old path snapshotted the canvas to a
+        // PNG and redrew it via img.onload (ASYNC), so for a brief window after a rotate the
+        // canvas was blank; a submit firing in that window captured a blank signature. The
+        // strokes are the source of truth, so replaying them leaves no async gap.
         if (sigMode === 'type') {
-          dirty = false; points = 0;
-          renderTypedName();   // resize clears the canvas; re-stamp the typed name
-        } else if (prevPng) {
-          // Replay the pre-resize drawing, scaled to the new CSS dimensions. size()
-          // left the ctx scaled by devicePixelRatio, so draw in CSS px. Keep the
-          // signature counted as present so the submit gate still passes.
-          var img = new Image();
-          img.onload = function () {
-            var r = canvas.getBoundingClientRect();
-            ctx2.drawImage(img, 0, 0, r.width, r.height);
-          };
-          img.src = prevPng;
-          dirty = true; points = prevPoints;
-        } else {
-          dirty = false; points = 0;
+          renderTypedName();   // synchronous re-stamp (sets dirty/points if a name exists)
+        } else if (dirty && strokes.length) {
+          drawStrokesLive();   // synchronous vector replay; dirty/points unchanged
         }
         updateBtn();
       }
@@ -969,15 +957,59 @@
       var typedWrap = document.getElementById('sig-typed');
       var typedInput = document.getElementById('sig-typed-input');
       var modeBtns = document.querySelectorAll('[data-sig-mode]');
+      // P1 (2026-06-27): recorded vector strokes are the SOURCE OF TRUTH for the drawn
+      // signature, in normalized 0..1 coords (so they survive a pad resize/rotate). The
+      // captured PNG is rebuilt from these, never read from a canvas that might be blank
+      // mid-redraw. strokes = [[{x,y},...], ...].
+      var strokes = [];
+      var curStroke = null;
       function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x: t.clientX - r.left, y: t.clientY - r.top }; }
-      function start(e) { if (sigMode !== 'draw') return; drawing = true; last = pos(e); e.preventDefault(); }
+      function start(e) {
+        if (sigMode !== 'draw') return;
+        drawing = true;
+        var r = canvas.getBoundingClientRect();
+        last = pos(e);
+        curStroke = [ { x: last.x / (r.width || 1), y: last.y / (r.height || 1) } ];
+        strokes.push(curStroke);
+        e.preventDefault();
+      }
       function move(e) {
         if (sigMode !== 'draw' || !drawing) return;
+        var r = canvas.getBoundingClientRect();
         var p = pos(e);
         ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
         last = p; dirty = true; points++;
+        if (curStroke) curStroke.push({ x: p.x / (r.width || 1), y: p.y / (r.height || 1) });
         updateBtn();
         e.preventDefault();
+      }
+      // Replay the recorded vector strokes onto the live canvas, in CSS px (ctx is already
+      // dpr-scaled by size()). SYNCHRONOUS: safe to call right before toDataURL so the
+      // captured image always reflects the real strokes regardless of redraw timing.
+      function drawStrokesLive() {
+        var r = canvas.getBoundingClientRect();
+        var W = r.width, H = r.height;
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
+        strokes.forEach(function (s) {
+          if (!s || !s.length) return;
+          ctx2.beginPath();
+          ctx2.moveTo(s[0].x * W, s[0].y * H);
+          for (var i = 1; i < s.length; i++) ctx2.lineTo(s[i].x * W, s[i].y * H);
+          if (s.length === 1) ctx2.lineTo(s[0].x * W + 0.5, s[0].y * H + 0.5); // single tap = a dot
+          ctx2.stroke();
+        });
+      }
+      // Hard ink check: does the canvas actually carry signature pixels? Backstop so a
+      // blank signature can never be sealed. Same-origin canvas never taints, so a throw
+      // here is not expected; fail open to the dirty/points gate if it ever does.
+      function canvasHasInk(c) {
+        try {
+          var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+          var n = 0;
+          for (var i = 3; i < d.length; i += 4) { if (d[i] > 0) { n++; if (n > 40) return true; } }
+          return false;
+        } catch (e) { return true; }
       }
       function endDraw() { drawing = false; }
       canvas.addEventListener('mousedown', start);
@@ -995,7 +1027,7 @@
 
       clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
-        dirty = false; points = 0; errEl.textContent = '';
+        dirty = false; points = 0; strokes = []; curStroke = null; errEl.textContent = '';
         if (sigMode === 'type' && typedInput) { typedInput.value = ''; typedInput.focus(); }
         updateBtn();
       });
@@ -1028,7 +1060,7 @@
         });
         if (typedWrap) typedWrap.hidden = (sigMode !== 'type');
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
-        dirty = false; points = 0; errEl.textContent = '';
+        dirty = false; points = 0; strokes = []; curStroke = null; errEl.textContent = '';
         if (sigMode === 'type') {
           renderTypedName();
           if (typedInput) setTimeout(function () { typedInput.focus(); }, 0);
@@ -1217,7 +1249,21 @@
         if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
         doneBtn.disabled = true; clearBtn.disabled = true; errEl.textContent = '';
         doneBtn.textContent = tHe('Recording...');
+        // P1 (2026-06-27): rebuild the signature image SYNCHRONOUSLY from the source of
+        // truth (recorded strokes for draw, the typed name for type) right before reading
+        // it, so a rotate-induced mid-redraw blank canvas can never be what we capture.
+        if (sigMode === 'type') renderTypedName(); else drawStrokesLive();
         var png = canvas.toDataURL('image/png');
+        // Hard gate: a blank signature must be impossible to seal. If the canvas carries no
+        // ink, block the submit and ask the LP to re-sign (never POST a blank signature).
+        if (!canvasHasInk(canvas)) {
+          errEl.textContent = tHe('Please add your signature before submitting.');
+          doneBtn.textContent = tHe('Sign and submit');
+          doneBtn.disabled = false; clearBtn.disabled = false;
+          submitting = false;
+          if (canvas.scrollIntoView) canvas.scrollIntoView({ block: 'center' });
+          return;
+        }
 
         // Collect editable field values (inputs, selects, textareas, checkboxes)
         var formData = {};
