@@ -140,6 +140,9 @@
     .lvp-upload__btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: #fff; color: var(--lvp-navy); border: 1.5px solid var(--lvp-navy); font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 18px; border-radius: 8px; transition: background .15s, color .15s; }
     .lvp-upload__btn:hover, .lvp-upload__input:focus + .lvp-upload__btn { background: var(--lvp-navy); color: #fff; }
     .lvp-upload__name { display: block; color: var(--lvp-navy); font-size: 13px; font-weight: 600; margin: 8px 0 0; }
+    /* Collapse the filename line when empty so the upload box fits its content
+       instead of reserving a hollow blank row (Ive pass 2026-06-27). */
+    .lvp-upload__name:empty { display: none; }
     .lvp-nav { display: flex; gap: 10px; margin: 22px 0 0; justify-content: space-between; }
     .lvp-btn {
       font-family: inherit; font-size: 15px; font-weight: 700; padding: 11px 22px;
