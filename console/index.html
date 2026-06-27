@@ -1906,16 +1906,16 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     color: var(--color-ink-muted);
     cursor: pointer;
     padding: 8px 4px;
-    font-family: var(--font-mono);
+    font-family: var(--font-body);
     min-height: 44px;
     position: relative;
     -webkit-tap-highlight-color: transparent;
-    transition: color var(--dur-fast) var(--ease-out);
+    transition: color var(--dur-base) var(--ease-out);
   }
   .tab:active { opacity: 0.65; }
-  .tab.on { color: var(--color-atrium); }
+  .tab.on { color: var(--color-gold); }
   .tab-icon { font-size: 15px; line-height: 1; display: block; }
-  .tab-lbl { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; display: block; }
+  .tab-lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; text-transform: none; line-height: 1; display: block; }
   .tab-badge {
     position: absolute;
     top: 4px;
@@ -1957,22 +1957,22 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     flex-shrink: 0;
   }
   .mob-fb {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
     color: var(--color-ink-sub);
     background: transparent;
     border: none;
     border-radius: var(--radius-pill);
-    padding: 4px 8px;
+    padding: 4px 14px;
     cursor: pointer;
     min-height: 28px;
     -webkit-tap-highlight-color: transparent;
-    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
   }
-  .mob-fb.on { background: var(--color-atrium); color: var(--color-ink-inverse); }
+  .mob-fb.on { background: var(--color-gold); color: #2B2410; }
 
   /* Touch targets */
   .row { min-height: 44px; align-items: center; }
@@ -1994,12 +1994,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
 
   /* Hide stage + age columns in board table */
   .th-st, .rst, .th-age, .rage { display: none; }
-  /* Board rows: keep the material status tag visible, drop the age column */
+  /* Board rows: keep the material status tag fully visible, drop the age column */
   .row { gap: var(--space-3); }
-  .r-tag { min-width: 0; padding: 4px 10px; }
-  .launch-row { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; }
-  .launch-row .tile { scroll-snap-align: start; }
-  .launch-row::-webkit-scrollbar { display: none; }
+  .rn { min-width: 0; }
+  .r-tag { min-width: 0; padding: 4px 10px; flex-shrink: 0; }
+  /* Launch tiles stack 1-up so no primary action hides behind a swipe */
+  .launch-row { grid-template-columns: 1fr; }
+  .tile { padding: var(--space-4); }
 
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
