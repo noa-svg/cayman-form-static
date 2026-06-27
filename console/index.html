@@ -2603,6 +2603,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     var rs=document.getElementById('revShareSel');if(rs)rs.value='';
     var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
     var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
+    // A completed submit drops the persisted draft for this lane+process so the next
+    // create starts clean. Draft survives click-out/reopen/reload; only submit clears it.
+    if(window.__clearCreateDraft)window.__clearCreateDraft();
   }
   function open(){
     panelOpener=document.activeElement;
@@ -2610,7 +2613,10 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     // card + status message reset on open; the form fields are wiped on submit only.
     var res=document.getElementById('res');if(res)res.classList.remove('on');
     showMsg('',false);
-    syncPanelFields();scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
+    syncPanelFields();
+    // Rehydrate any persisted draft for this lane+process (survives reload/crash).
+    if(window.__restoreCreateDraft)window.__restoreCreateDraft();
+    scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
   }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
   document.getElementById("newBtn").onclick=open;
@@ -2823,14 +2829,17 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     if(!inp||!box||!picked)return;
     var T=null,rows=[],active=-1;
     function subline(m){return [(m.nameHe&&m.nameEn)?m.nameEn:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearPick(){state.selectedMondayId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
+    function clearPick(){state.selectedMondayId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;if(window.__saveCreateDraft)window.__saveCreateDraft();}
     window.__lpClearPick=clearPick;
     function setPick(m){
       state.selectedMondayId=m.itemId;state.selectedLp=m;
       picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
       picked.hidden=false;box.hidden=true;inp.style.display='none';
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
+      if(window.__saveCreateDraft)window.__saveCreateDraft();
     }
+    // Restore a persisted LP pick (increase/withdrawal) without re-hitting search.
+    window.__lpRestorePick=function(m){if(m&&m.itemId)setPick(m);};
     function render(){
       if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
       box.innerHTML=rows.map(function(m,i){return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';}).join('');
@@ -2853,6 +2862,60 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
       else if(e.key==='Escape'){box.hidden=true;}
     });
     document.addEventListener('click',function(e){var w=document.getElementById('lpPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
+  })();
+  // ---- in-progress create-draft persistence (localStorage, keyed by lane+process) ----
+  // Operator state must never be lost. The draft survives click-out, navigating to another
+  // view, a full page reload, or a crash. It is cleared ONLY by caymanClearCreateForm,
+  // which runs only on a successful submit. Keyed by lane+process so a Cayman subscription
+  // draft and an Israeli increase draft do not collide; switching lane keeps each lane's draft.
+  (function(){
+    function draftKey(){return 'lvp_console_create_draft__'+(state.lane||'')+'__'+(state.process||'');}
+    function collect(){
+      var g=function(id){var f=document.getElementById(id);return f?f.value:'';};
+      return {
+        v:1,
+        name:g('name'),nameHebrew:g('nameHebrew'),nickname:g('nickname'),
+        email:g('email'),foEmail:g('foEmail'),
+        revShareSel:g('revShareSel'),revShareCustom:g('revShareCustom'),
+        // increase/withdrawal LP picker selection
+        selectedMondayId:state.selectedMondayId||'',
+        selectedLp:state.selectedLp||null
+      };
+    }
+    function isEmpty(d){
+      return !d.name&&!d.nameHebrew&&!d.nickname&&!d.email&&!d.foEmail&&
+             !d.revShareSel&&!d.revShareCustom&&!d.selectedMondayId;
+    }
+    function save(){
+      try{
+        var d=collect();var k=draftKey();
+        if(isEmpty(d)){localStorage.removeItem(k);return;}
+        localStorage.setItem(k,JSON.stringify(d));
+      }catch(e){}
+    }
+    function clear(){try{localStorage.removeItem(draftKey());}catch(e){}}
+    function restore(){
+      var d;try{d=JSON.parse(localStorage.getItem(draftKey())||'null');}catch(e){d=null;}
+      if(!d)return;
+      var s=function(id,val){var f=document.getElementById(id);if(f&&val!=null)f.value=val;};
+      s('name',d.name);s('nameHebrew',d.nameHebrew);s('nickname',d.nickname);
+      s('email',d.email);s('foEmail',d.foEmail);
+      var rs=document.getElementById('revShareSel');
+      if(rs&&d.revShareSel!=null){rs.value=d.revShareSel;
+        var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display=(d.revShareSel==='custom')?'block':'none';
+      }
+      s('revShareCustom',d.revShareCustom);
+      // Rehydrate the LP picker selection (increase/withdrawal) from the stored object.
+      if(d.selectedMondayId&&d.selectedLp&&window.__lpRestorePick){window.__lpRestorePick(d.selectedLp);}
+    }
+    window.__saveCreateDraft=save;
+    window.__clearCreateDraft=clear;
+    window.__restoreCreateDraft=restore;
+    // Persist on every keystroke/change across all create fields.
+    ['name','nameHebrew','nickname','email','foEmail','revShareCustom'].forEach(function(id){
+      var f=document.getElementById(id);if(f)f.addEventListener('input',save);
+    });
+    var rsel=document.getElementById('revShareSel');if(rsel)rsel.addEventListener('change',save);
   })();
   // create
   function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"#2A0808":"#071B22";m.style.color=isErr?"#F87171":"#22D3EE";m.style.border=isErr?"1px solid #3D0F0F":"1px solid #0C2A35";m.setAttribute('role',isErr?'alert':'status');m.setAttribute('aria-live',isErr?'assertive':'polite');}
