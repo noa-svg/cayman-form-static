@@ -8,6 +8,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <!-- Assistant webfont, all four design weights (was 400;700 via @import, so the
+       500/600 the design uses rendered synthetic). Matches flow.html (Ive pass). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!--
     Per-signer form + inline doc review + signature page. Each secondary signer
     (subscriber2, cp1..4, lawyer) lands here via a tokenized URL. They see:
@@ -20,7 +25,6 @@
     No em-dashes in LP-visible copy.
   -->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
     :root { --navy:#0D3F6A; --navy-700:#0a3257; --gold:#FFB42C; --text:#1d1d1d; --muted:#545454; --line:#C2C2C2; --error:#c0392b; --card-bg:#fff; }
     * { box-sizing: border-box; }
     html, body { margin:0; padding:0; min-height:100%; }

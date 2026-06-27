@@ -7,6 +7,14 @@
   <title>Legacy Value Partners</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="alternate icon" href="favicon.ico">
+  <!-- Load the Assistant webfont (Ive pass 2026-06-27). The form used to ship NO
+       font link, so a real LP's device that lacks Assistant rendered the whole form
+       in a fallback (system-ui/Arial), not the designed typeface. All four weights
+       the design uses (400/500/600/700) are loaded so 500/600 are TRUE weights, not
+       synthetic. display=swap shows text immediately and swaps in Assistant. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* lvp- design system, lifted from index.html so this page is self-contained.
        The Israeli increase/redemption flow is its own static page (flow.html),
