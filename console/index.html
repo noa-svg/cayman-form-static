@@ -2243,7 +2243,44 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     }
   })();
 
+  // LOCAL-ONLY design/dev render mode. Gated to non-prod origins exactly like the
+  // ?op= fallback (DEMO is false on the prod host). ?demo=1 short-circuits apiFetch
+  // with representative stub data so every authenticated view renders without Google
+  // auth or any gateway call. Never active on sign.legacyvpartners.com. Pure render
+  // fixtures (generic names, round amounts), never real LP data.
+  var DEMO = !IS_PROD_HOST && ((new URLSearchParams(location.search)).get('demo')==='1');
+  function demoResolve_(qs){
+    function P(processId,displayName,nameHebrew,currentStage,ageDays,nextActionPhrase,flowType,lane){
+      return {processId:processId,displayName:displayName,nameHebrew:nameHebrew,currentStage:currentStage,ageDays:ageDays,nextActionPhrase:nextActionPhrase,flowType:flowType,lane:lane};
+    }
+    var cayman=[
+      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Waiting on controlling person 2 of 3','cayman_subscription','cayman'),
+      P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Review the submission and assemble the pack','cayman_subscription','cayman'),
+      P('p3','Tomer Shapira','תומר שפירא','complete',9,'','cayman_increase','cayman'),
+      P('p4','Helena Brandt','הלנה ברנדט','needs_attention',4,'W-8 classification needs a counsel flag','cayman_subscription','cayman'),
+      P('p5','Yael Adler','יעל אדלר','link_sent',0,'Invite sent. Waiting for the investor to open it','cayman_subscription','cayman')
+    ];
+    var israel=[
+      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Waiting on the investor signature','israeli_increase','israel'),
+      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israel'),
+      P('i3','David Cohen','דוד כהן','link_sent',0,'Link minted. Test it, then send to the LP','israeli_increase','israel')
+    ];
+    var L=state.lane;
+    if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-27T23:30',version:434};
+    if(qs.indexOf('?api=activity')===0){
+      var rows=(L==='israel'?israel:cayman).map(function(p,i){return {processId:p.processId,displayName:p.displayName,flowType:p.flowType,currentStage:p.currentStage,lane:p.lane,createdAt:'2026-06-2'+(7-(i%2))+'T'+(9+i)+':1'+i+':00'};});
+      return {rows:rows};
+    }
+    if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:1},due:[
+      {name:'Helena Brandt',variant:'W-8BEN-E',status:'expiring',expiry:'2026-08-15'},
+      {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'}
+    ]};
+    if(qs.indexOf('?admin=getConsoleSettings')===0) return {ok:true,allowedEmails:['noa@legacyvpartners.com','omri@legacyvpartners.com']};
+    if(qs.indexOf('?api=messages')===0) return {messages:[]};
+    return {ok:true};
+  }
   function apiFetch(qs){
+    if(DEMO){return new Promise(function(res){setTimeout(function(){res(demoResolve_(qs));},60);});}
     // F20: POST so the id_token + params ride in the body, not the URL. The
     // server (?source=op) rebuilds the param map and delegates to the same router.
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
@@ -2294,6 +2331,13 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
   }
   function initAuth(){
+    if(DEMO){
+      var as=document.getElementById('auth-status');if(as)as.textContent='🔓 demo (local render)';
+      var so=document.getElementById('sign-out-btn');if(so)so.style.display='inline';
+      document.getElementById('login-screen').classList.add('off');
+      load();
+      return;
+    }
     if(ID_TOKEN){
       try{
         var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
