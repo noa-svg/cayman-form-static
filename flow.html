@@ -268,9 +268,6 @@
             <div class="lvp-section">
               <h2 class="lvp-section__title">סכום הפדיון</h2>
             </div>
-            <p class="lvp-prose">סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים.</p>
-            <p class="lvp-prose">ידוע לנו כי אם יתרת חשבון ההון שלנו, לאחר הפדיון, נמוכה מחמישים אלף (50,000) שקלים חדשים, השותף הכללי רשאי, אך לא חייב, לקבוע כי סכום הפדיון יעמוד על מלוא היתרה בחשבון ההון שלנו. כמו כן ידוע לנו כי עם פדיון כל היתרה בחשבון ההון שלנו, נחדל, ביום הפדיון המבוקש, להיות שותף בשותפות ולא תהיה לנו כל זכות שהיא בשותפות ו/או בנכסיה, ואולם נמשיך לחוב בחובת הסודיות על פי הסכם השותפות, ובקשר עם התקופה בה היינו שותף מוגבל בכל התחייבויותינו לפי הסכם השותפות.</p>
-
             <fieldset class="lvp-field" data-field="wd-mode">
               <legend class="lvp-field__label">סכום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
               <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-mode">
@@ -289,20 +286,11 @@
             <div class="lvp-section">
               <h2 class="lvp-section__title">יום הפדיון</h2>
             </div>
-            <p class="lvp-prose">יש לנקוב ביום שהינו היום הראשון בכל חודש קלנדרי ובלבד שהיום האמור לא יחול פחות מ-14 ימים לפני מסירת הודעה זו לשותף הכללי; יש לנקוב בחשבון זהה לחשבון ממנו הועברה קרן ההשקעה לשותפות; הכל בכפוף לתקופת ההתניה הקבועה בהסכם השותפות;</p>
-            <fieldset class="lvp-field" data-field="wd-timing">
+            <fieldset class="lvp-field" data-field="wd-date">
               <legend class="lvp-field__label">יום הפדיון המבוקש<span class="lvp-req" aria-hidden="true">*</span></legend>
-              <div class="lvp-radios" role="radiogroup" aria-describedby="err-wd-timing">
-                <label class="lvp-radio"><input type="radio" name="wd-timing" value="immediate" required><span>פדיון מיידי. הכסף יועבר עד ה-15 לחודש הקרוב (לפחות 14 ימים מהבקשה).</span></label>
-                <label class="lvp-radio"><input type="radio" name="wd-timing" value="future"><span>ברצוני לבחור תאריך פדיון עתידי</span></label>
-              </div>
-              <span class="lvp-field__error" id="err-wd-timing"></span>
+              <div class="lvp-radios" role="radiogroup" id="wd-date-radios" aria-describedby="err-wd-date"></div>
+              <span class="lvp-field__error" id="err-wd-date"></span>
             </fieldset>
-            <label class="lvp-field" id="wd-future-date-field" data-field="wd-requestedDate" hidden>
-              <span class="lvp-field__label">תאריך הפדיון<span class="lvp-req" aria-hidden="true">*</span></span>
-              <select class="lvp-select" id="wd-requestedDate" required aria-required="true" aria-describedby="err-wd-requestedDate"></select>
-              <span class="lvp-field__error" id="err-wd-requestedDate"></span>
-            </label>
           </div>
 
           <!-- BANK (both) -->
@@ -480,7 +468,7 @@
           if (el.type === 'radio' || el.type === 'file') return;
           if (el.value) snap.fields[el.id] = el.value;
         });
-        ['wd-mode', 'wd-timing'].forEach(function (n) {
+        ['wd-mode', 'wd-date'].forEach(function (n) {
           var r = document.querySelector('input[name="' + n + '"]:checked');
           if (r) snap.radios[n] = r.value;
         });
@@ -584,6 +572,10 @@
         // Page 3 block.
         document.getElementById('block-increase').hidden = !isIncrease;
         document.getElementById('block-redemption').hidden = !isRedemption;
+
+        // Build the redemption day radios up front (every option is a valid
+        // 1st-of-month, computed relative to today). No "future" toggle now.
+        if (isRedemption) populateRedemptionMonths();
 
         // Bank prose only on redemption.
         document.getElementById('bank-prose-redemption').hidden = !isRedemption;
@@ -976,27 +968,30 @@
       var REDEMPTION_MONTHS_AHEAD = 2;
       var REDEMPTION_MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
         'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+      // The redemption day is ALWAYS the 1st of a calendar month (Noa 2026-06-27).
+      // The control is exactly REDEMPTION_MONTHS_AHEAD radio options, each a valid
+      // 1st-of-month >= today + 14 days. There is no "immediate" path: every choice
+      // is structurally a 1st-of-month, so the sealed notice can never carry today's
+      // date or a mid-month date.
       function populateRedemptionMonths() {
-        var sel = document.getElementById('wd-requestedDate');
-        if (!sel) return;
-        var prev = sel.value;
-        // Earliest valid 1st-of-month: walk month-by-month from this month's
-        // 1st forward until that 1st is >= today + 14 days.
+        var host = document.getElementById('wd-date-radios');
+        if (!host) return;
+        var prev = (host.querySelector('input[name="wd-date"]:checked') || {}).value || '';
         var earliest = new Date(); earliest.setDate(earliest.getDate() + 14);
         earliest.setHours(0, 0, 0, 0);
         var cursor = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
         if (cursor < earliest) cursor.setMonth(cursor.getMonth() + 1);
-        var opts = ['<option value=""></option>'];
+        var html = '';
         for (var i = 0; i < REDEMPTION_MONTHS_AHEAD; i++) {
           var y = cursor.getFullYear();
           var m = cursor.getMonth();
           var iso = y + '-' + String(m + 1).padStart(2, '0') + '-01';
           var label = '1 ב' + REDEMPTION_MONTHS_HE[m] + ' ' + y;
-          opts.push('<option value="' + iso + '">' + label + '</option>');
+          var checked = (iso === prev) ? ' checked' : '';
+          html += '<label class="lvp-radio"><input type="radio" name="wd-date" value="' + iso + '"' + checked + ' required><span>' + label + '</span></label>';
           cursor.setMonth(m + 1);
         }
-        sel.innerHTML = opts.join('');
-        if (prev) sel.value = prev;
+        host.innerHTML = html;
       }
 
       // ---- redemption conditionals ------------------------------------------
@@ -1005,16 +1000,8 @@
           document.getElementById('redemption-partial-block').hidden = (e.target.value !== 'partial');
           clearFieldErr('wd-mode');
         }
-        if (e.target.name === 'wd-timing') {
-          document.getElementById('wd-future-date-field').hidden = (e.target.value !== 'future');
-          clearFieldErr('wd-timing');
-          // Friedman: make the wrong choice impossible at the control. The
-          // server rule is "1st of a calendar month, at least 14 days from
-          // today". A month dropdown structurally cannot violate either:
-          // every option IS a valid 1st-of-month with the 14-day buffer
-          // already applied. Show 2 months (Noa). Refresh on each switch
-          // so the available months stay current relative to today.
-          if (e.target.value === 'future') populateRedemptionMonths();
+        if (e.target.name === 'wd-date') {
+          clearFieldErr('wd-date');
         }
       });
 
@@ -1182,14 +1169,10 @@
           case 'bank-branch':    return vBranch();
           case 'bank-account':   return vAccount();
           case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
-          case 'wd-timing':      return document.querySelector('input[name="wd-timing"]:checked') ? { ok: true } : { ok: false, silent: true };
-          case 'wd-requestedDate':
-            // The control is a server-validated month dropdown: every option
-            // is a 1st-of-month >= today + 14 days. Only failure mode is
-            // empty (LP did not pick one), which is silent-red per house
-            // style for required fields.
-            if (!val('wd-requestedDate')) return { ok: false, silent: true };
-            return { ok: true };
+          case 'wd-date':
+            // Every radio is a server-valid 1st-of-month >= today + 14 days, so
+            // the only failure mode is "none picked" (silent-red per house style).
+            return document.querySelector('input[name="wd-date"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'accountManagementApproval':
             return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
           case 'companyStamp':
@@ -1207,11 +1190,9 @@
         if (page === 'request') {
           var bank = ['bank-name', 'bank-branch', 'bank-account'];
           if (isRedemptionFlow()) {
-            var fs = ['wd-mode', 'wd-timing'];
+            var fs = ['wd-mode', 'wd-date'];
             var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value;
-            var timing = (document.querySelector('input[name="wd-timing"]:checked') || {}).value;
             if (mode === 'partial') fs.push('__rows-redemption');
-            if (timing === 'future') fs.push('wd-requestedDate');
             return fs.concat(bank);
           }
           return ['__rows-increase'].concat(bank);
@@ -1485,11 +1466,13 @@
           s.investment = { amounts: collectAmounts('amount-rows-increase') };
         } else {
           var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value || '';
-          var timing = (document.querySelector('input[name="wd-timing"]:checked') || {}).value || '';
+          var wdDate = (document.querySelector('input[name="wd-date"]:checked') || {}).value || '';
+          // The redemption day is always an LP-chosen 1st-of-month (no immediate path),
+          // so timing is always 'future' and requestedDate carries the 1st-of-month ISO.
           s.withdrawal = {
             mode: mode,
-            timing: timing,
-            requestedDate: val('wd-requestedDate'),
+            timing: 'future',
+            requestedDate: wdDate,
             amounts: (mode === 'partial') ? collectAmounts('amount-rows-redemption') : []
           };
         }
