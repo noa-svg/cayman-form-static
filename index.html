@@ -2087,6 +2087,15 @@
         reader.onload = function () {
           var b64 = String(reader.result).split(',')[1];
           pendingUploads[key] = { slot: key, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+          // P0 save-and-resume: store the file to the token-gated KYC folder NOW
+          // (on selection), so a reload/resume finds it already on file instead of
+          // an empty slot. On success we keep the driveId and DROP the base64 from
+          // pendingUploads, so the snapshot persisted by savePage carries the
+          // driveId and restoreFormData can rehydrate the slot. The base64 stays as
+          // a fallback until the upload confirms, so a failed upload still rides on
+          // final submit (caymanRouteUploads_ stores it then). Best-effort: an
+          // upload failure never blocks the LP or shows an alarming message.
+          uploadFileNow(key, pendingUploads[key]);
           // The ID uploads ARE the scan: uploading the passport / ת"ז fills the form (no
           // separate scan step). Autofill from the first image only, when a key is set.
           if (i === 0 && (slot === 'passportPrimary' || slot === 'nationalId' || slot === 'nationalIdFront') && CFG.kycScanEnabled) autofillFromIdDoc(slot, b64, f.type || 'image/jpeg');
@@ -3260,7 +3269,12 @@
       var meta = {};
       Object.keys(data.__uploads).forEach(function (slot) {
         var u = data.__uploads[slot] || {};
+        // Persist driveId when the file is already on Drive (uploaded on selection
+        // via upload_file). That lets restoreFormData rehydrate the slot on resume
+        // and lets the final submit skip re-storing. base64 is still stripped (the
+        // 8KB session cap cannot hold a file); the driveId is a short string.
         meta[slot] = { slot: u.slot || slot, fileName: u.fileName, mimeType: u.mimeType, fileSizeBytes: u.fileSizeBytes };
+        if (u.driveId) meta[slot].driveId = u.driveId;
       });
       // shallow clone so we never mutate the live pendingUploads-backed object
       var copy = {}; Object.keys(data).forEach(function (k) { copy[k] = data[k]; });
@@ -3273,6 +3287,30 @@
       return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) })
         .then(function (res) { return res; })
         .catch(function (err) { return null; }); // best-effort save; entries persist in-session, no alarming message to the LP
+    }
+    // P0 upload-on-selection: store one KYC file to the token-gated KYC folder the
+    // moment it is selected, so a reload/resume restores it. On success swap the
+    // in-memory entry from base64 -> driveId and persist the snapshot so the driveId
+    // is durable. Best-effort: a failure leaves the base64 in place (it rides on the
+    // final submit) and never shows the LP an error. Requires a resume token (the
+    // gateway rejects a tokenless upload_file); a tokenless anonymous session cannot
+    // resume anyway, so its files correctly ride only on submit.
+    function uploadFileNow(key, entry) {
+      if (!entry || !entry.base64) return;
+      var liveCfg = window.CAYMAN_CFG || CFG;
+      if (!(liveCfg.token || CFG.token)) return; // no resume token -> no on-selection store; base64 rides on submit
+      gateway('upload_file', { slot: key, file: { fileName: entry.fileName, mimeType: entry.mimeType, fileSizeBytes: entry.fileSizeBytes, base64: entry.base64 } })
+        .then(function (res) {
+          var up = res && res.detail && res.detail.upload;
+          if (!up || !up.driveId) return;
+          // The user may have removed/replaced the file while the upload was in
+          // flight; only commit if this slot still holds the same pending entry.
+          var cur = pendingUploads[key];
+          if (!cur || cur !== entry) return;
+          pendingUploads[key] = { slot: key, fileName: entry.fileName, mimeType: entry.mimeType, fileSizeBytes: entry.fileSizeBytes, driveId: up.driveId };
+          savePage(); // persist the driveId into the durable snapshot
+        })
+        .catch(function () { /* best-effort: base64 stays, rides on final submit */ });
     }
     var submitting = false;
     function doSubmit() {
@@ -3665,6 +3703,33 @@
         inp.value = strVal;
       });
       applyConditionals();
+      // P0 resume-restores-uploads: rehydrate every KYC slot the LP already uploaded
+      // (stored on selection via upload_file, persisted as { driveId, fileName, ... }
+      // in the snapshot's __uploads). Without this, a resumed LP saw empty slots and
+      // was re-blocked at the required-upload gate even though their passport / proof
+      // of address was already on file. We re-seat each entry into pendingUploads
+      // (driveId, no base64) so the gate (which reads pendingUploads[slot]) passes,
+      // and mark the slot's UI with a neutral "on file" state.
+      // NOTE (Noa): the on-file LABEL is a placeholder pending your approval. See report.
+      if (prefill.__uploads && typeof prefill.__uploads === 'object') {
+        Object.keys(prefill.__uploads).forEach(function (key) {
+          var m = prefill.__uploads[key];
+          if (!m || !m.driveId) return; // only restore files already on Drive
+          pendingUploads[key] = { slot: key, fileName: m.fileName, mimeType: m.mimeType, fileSizeBytes: m.fileSizeBytes, driveId: m.driveId };
+          // Multi-file slots key as slot_2 / slot_3; the DOM marker targets the base
+          // slot only (the first file). Extras still restore into pendingUploads so
+          // they ride the final submit; the base slot drives the visible state + gate.
+          var baseSlot = key.replace(/_\d+$/, '');
+          form.querySelectorAll('input[data-upload="' + baseSlot + '"]').forEach(function (inp) {
+            var wrap = inp.closest('.lvp-upload');
+            if (!wrap) return;
+            var nm = wrap.querySelector('[data-upload-name]');
+            // LP-FACING COPY PENDING NOA APPROVAL: neutral "on file" label.
+            if (nm) { nm.textContent = (m.fileName || (curLang === 'he' ? 'קובץ שמור' : 'On file')); nm.setAttribute('data-has-file', '1'); }
+            wrap.classList.add('has-file');
+          });
+        });
+      }
       // Stub uploads for test links. prefill.__testUploads is an array of slot names;
       // each gets a placeholder entry in pendingUploads and a green "has-file" UI state
       // so all upload validation passes without the LP needing to select real files.
