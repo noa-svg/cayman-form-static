@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Legacy Value Partners CI - signature</title>
+  <title>Legacy Value Partners - signature</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -344,7 +344,7 @@
         var who = ctx.signerName ? (signingAs + ' ' + esc2(ctx.signerName) + (roleLabel ? ' (' + roleLabel + ')' : '')) : '';
         document.getElementById('signbox').innerHTML =
           '<div class="signbox__t">' + esc2(tHe(ctx.docTitle || 'Subscription Agreement')) + '</div>' +
-          '<div class="signbox__f">' + esc2(ctx.fundLegalName || 'Legacy Value Partners CI, LP') + '</div>' +
+          '<div class="signbox__f">' + esc2(ctx.fundLegalName || 'Legacy Value Partners') + '</div>' +
           amt + (who ? '<div class="signbox__s">' + who + '</div>' : '');
       };
       window.__renderSignbox();
