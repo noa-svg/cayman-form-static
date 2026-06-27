@@ -2593,15 +2593,21 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
     el=document.getElementById("createBtn");if(el)el.textContent=isSub?"Send invite":"Create link";
   }
   var panelOpener=null;
-  function open(){
-    panelOpener=document.activeElement;
-    // F5: the panel always opens clean. Stale fields from the last invite are a
-    // duplicate / misattributed-invite hazard.
+  // Wipe the create form. Called AFTER a successful submit, NOT on open, so an
+  // accidental click-out + reopen preserves what the operator typed (Noa 2026-06-28:
+  // mid-entry click-out must not lose the data). Clearing on submit still satisfies the
+  // old F5 intent: a COMPLETED invite never carries its name/email into the next one.
+  function caymanClearCreateForm(){
     ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
     if(window.__lpClearPick)window.__lpClearPick();
     var rs=document.getElementById('revShareSel');if(rs)rs.value='';
     var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
     var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
+  }
+  function open(){
+    panelOpener=document.activeElement;
+    // Preserve in-progress entries across an accidental close/reopen. Only the result
+    // card + status message reset on open; the form fields are wiped on submit only.
     var res=document.getElementById('res');if(res)res.classList.remove('on');
     showMsg('',false);
     syncPanelFields();scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
@@ -2883,6 +2889,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
           _slb.setAttribute('data-process', res.processId||'');
         }
         var _sls=document.getElementById('sendLpStatus'); _sls.style.display='none'; _sls.textContent='';
+        caymanClearCreateForm();
         load();
       }).catch(function(e){btn.disabled=false;btn.textContent='Create link';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
       return;
@@ -2905,6 +2912,7 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
       document.getElementById('resTitle').textContent='Invite sent.';
       document.getElementById('resSub').textContent='Copy the link to share manually.';
       var _slb2=document.getElementById('sendLpBtn'); if(_slb2)_slb2.style.display='none';
+      caymanClearCreateForm();
       load();
     }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
   };
