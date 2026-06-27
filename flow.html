@@ -420,6 +420,10 @@
       // button re-enables for a retry); the old code mislabeled it. House pattern,
       // mirrors signer.html's "לא ניתן לתעד את החתימה. נא לנסות שוב." (Noa 2026-06-27).
       var SUBMIT_FAIL_MSG = 'לא ניתן לשלוח את הבקשה. נא לנסות שוב.';
+      // Shown only after the config-load retries exhaust on a transient failure
+      // (network outage / timeout / 5xx). The link is fine, the connection is not,
+      // so this is distinct from BROKEN_LINK_MSG (a genuinely dead/expired link).
+      var NETWORK_FAIL_MSG = 'לא ניתן לטעון את הטופס כעת. נא לבדוק את החיבור ולנסות שוב.';
       if (!token && !qs.get('mock')) {
         $loading.textContent = BROKEN_LINK_MSG;
         return;
@@ -458,19 +462,39 @@
         applicantType = CFG.applicantType;
         bootstrapForm();
       } else {
-        var x = new XMLHttpRequest();
-        x.open('GET', GW + '?api=config&t=' + encodeURIComponent(token), true);
-        x.onreadystatechange = function () {
-          if (x.readyState !== 4) return;
-          if (x.status !== 200) { $loading.textContent = BROKEN_LINK_MSG; return; }
-          try { CFG = JSON.parse(x.responseText); }
-          catch (e) { $loading.textContent = BROKEN_LINK_MSG; return; }
-          if (!CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
-          flowType = CFG.flowType;
-          applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
-          bootstrapForm();
-        };
-        x.send();
+        // Config load is idempotent (a read), so a transient failure (stalled
+        // connection, timeout, network drop, or a 5xx) is safe to retry and is
+        // NOT a broken link. The old code had no timeout/onerror at all, so a
+        // stalled connection hung on the loading screen forever, and any blip
+        // showed the permanent broken-link message. Distinguish transient
+        // (retry, then fall back) from terminal (4xx / bad token / no flowType).
+        var cfgAttempts = 0;
+        var CFG_MAX_ATTEMPTS = 3;
+        function loadConfig() {
+          cfgAttempts++;
+          var x = new XMLHttpRequest();
+          x.open('GET', GW + '?api=config&t=' + encodeURIComponent(token), true);
+          x.timeout = 20000;
+          function transientFail() {
+            if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
+            $loading.textContent = NETWORK_FAIL_MSG;
+          }
+          x.ontimeout = transientFail;
+          x.onerror = transientFail;
+          x.onreadystatechange = function () {
+            if (x.readyState !== 4) return;
+            if (x.status === 0 || x.status >= 500) { transientFail(); return; }
+            if (x.status !== 200) { $loading.textContent = BROKEN_LINK_MSG; return; }
+            try { CFG = JSON.parse(x.responseText); }
+            catch (e) { $loading.textContent = BROKEN_LINK_MSG; return; }
+            if (!CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
+            flowType = CFG.flowType;
+            applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
+            bootstrapForm();
+          };
+          x.send();
+        }
+        loadConfig();
       }
 
       // ---- save & resume ---------------------------------------------------

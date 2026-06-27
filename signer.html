@@ -1287,7 +1287,7 @@
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-        p.timeout = 40000; // 40s -- signature PNG upload on cold GAS can be slow
+        p.timeout = 70000; // 70s. A cold GAS start plus the signature PNG upload and seal can exceed 40s; a too-short timeout surfaced an in-progress submit as a false "could not record" failure. Retry stays safe (the gateway dedupes by processId).
         function onPostFail() {
           errEl.textContent = tHe('We could not record your signature. Please try again.');
           doneBtn.textContent = tHe('Sign and submit');
