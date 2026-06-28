@@ -883,7 +883,7 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.primary.firstName" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.primary.lastName" autocomplete="off"></label>
           </div>
-          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber" inputmode="numeric" autocomplete="off"></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber" inputmode="text" autocomplete="off"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.primary.email" inputmode="email" autocomplete="off"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.primary.title" autocomplete="off" placeholder="Director, Managing Member, CEO"></label>
           <fieldset class="lvp-fieldset" data-required>
@@ -903,7 +903,7 @@
               <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.secondary.firstName" autocomplete="off"></label>
               <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.secondary.lastName" autocomplete="off"></label>
             </div>
-            <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber" inputmode="numeric" autocomplete="off"></label>
+            <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber" inputmode="text" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.secondary.email" inputmode="email" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.secondary.title" autocomplete="off" placeholder="Director, Managing Member, CEO"></label>
             <fieldset class="lvp-fieldset" data-required>
@@ -968,7 +968,7 @@
                 <label class="lvp-field" data-required><span class="lvp-field__label">Last name in Hebrew</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastNameHebrew" dir="rtl" autocomplete="off"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber" inputmode="numeric" autocomplete="off"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber" inputmode="text" autocomplete="off"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="additionalInvestors[${i}].email" inputmode="email" autocomplete="off"></label>
               </div>
               <div class="lvp-grid-2">
@@ -2619,7 +2619,7 @@
       // Error summary: list every invalid field at the top of the page when there
       // is more than one (a single error is already obvious + scrolled-to). Cleared
       // when the page validates.
-      renderErrorSummary(pageEl, errors.length > 1 ? errors : []);
+      renderErrorSummary(pageEl, errors.length >= 1 ? errors : []);
       // Scroll the first errored field into view (long pages can show red above the
       // fold with the status message far below; auto-scroll removes the hunt).
       if (firstError) {
@@ -2684,6 +2684,14 @@
       if (page.getAttribute('data-page') === 'review') { loadDocPreview(); }
       setStatus('');
       window.scrollTo(0, 0);
+      // Move focus to the new page's heading so screen-reader and keyboard users
+      // are announced into the page they just advanced to, instead of being left
+      // on the now-hidden previous Continue button (mirrors signer.html show()).
+      var pageHeading = page.querySelector('.lvp-page__title');
+      if (pageHeading) {
+        pageHeading.setAttribute('tabindex', '-1');
+        try { pageHeading.focus({ preventScroll: true }); } catch (e) { pageHeading.focus(); }
+      }
     }
     // Map a saved resumePage data-page id to its index in the CURRENT visible-page
     // sequence (the sequence depends on applicant type + conditionals, so resolve it
@@ -3344,6 +3352,22 @@
         })
         .catch(function () { /* best-effort: base64 stays, rides on final submit */ });
     }
+    // Stable client idempotency key, minted once per form session and kept in
+    // sessionStorage. The server (CaymanSubmitIdempotency) prefers an explicit
+    // client key and otherwise derives one from a canonical field hash, so a retry
+    // AFTER the LP edits a field would hash differently and mint a SECOND pack.
+    // A stable key collapses every retry of this session onto one pack regardless
+    // of edits. Cleared with the tab; a fresh link starts a fresh session.
+    function caymanSubmitIdemKey_() {
+      try {
+        var k = sessionStorage.getItem('lvp_submit_idem');
+        if (!k) {
+          k = 'idem-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+          sessionStorage.setItem('lvp_submit_idem', k);
+        }
+        return k;
+      } catch (e) { return ''; }
+    }
     var submitting = false;
     function doSubmit() {
       if (submitting) return;          // synchronous guard: no duplicate pack on a double-tap
@@ -3358,7 +3382,7 @@
         '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
         '<h2>' + esc(displayFor('Submitting your subscription', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('Recording your signature and finalizing your documents. Please keep this window open.', curLang)) + '</p>');
-      gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '' }).then(function (res) {
+      gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '', idempotencyKey: caymanSubmitIdemKey_() }).then(function (res) {
         // Single-signer (individual, no lawyer): all done.
         if (res.stage === 'all_signed') { showSubmittedCard(); return; }
         // Multi-signer: the primary signed inline, next signers get their own links.
