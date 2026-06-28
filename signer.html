@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -397,11 +397,12 @@
       "Go to signature": "מעבר לחתימה"
     };
 
-    var curLang = 'he';
+    var curLang = 'en';
     function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; }); }
 
     function applyLang(lang) {
+      lang = 'en'; // English-only to start (Noa 2026-06-28); HE_MAP retained for re-enable
       curLang = lang;
       document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
