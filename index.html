@@ -539,6 +539,14 @@
     .lvp-gate__recover--en { direction: ltr; margin: 4px auto 0; color: #9CA3AF; letter-spacing: .04em; max-width: 320px; overflow-wrap: break-word; }
     .lvp-gate__recover a { color: #0D3F6A; text-decoration: none; }
     .lvp-gate__recover a:hover { text-decoration: underline; }
+    /* Completed-link terminal screen (English only, per Noa 2026-06-28). cfg.completed
+       flips .lvp-done-mode when a finished link is reopened, replacing the form. */
+    #lvp-done { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; position: fixed; inset: 0; background: linear-gradient(-45deg,#FBF7EC,#EEF3FF,#FFF5F0,#F0F7F4); background-size: 400% 400%; animation: gateShift 12s ease infinite; }
+    .lvp-done-mode #lvp-done { display: flex; }
+    .lvp-done-mode .lvp-lang, .lvp-done-mode .lvp-app, .lvp-done-mode #lvp-gate { display: none; }
+    .lvp-done__icon { margin-bottom: 20px; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both; }
+    .lvp-done__msg { font-size: 19px; font-weight: 700; color: #1A2330; margin: 0 0 10px; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .45s both; }
+    .lvp-done__sub { font-size: 14px; color: #6B7280; margin: 0; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .6s both; }
     @keyframes gateUp { from{opacity:0;transform:translateY(13px)} to{opacity:1;transform:translateY(0)} }
 
     /* Error summary block at the top of a page with multiple errors. Accessible
@@ -564,8 +572,8 @@
         transition-duration: 0.001ms !important;
         scroll-behavior: auto !important;
       }
-      #lvp-gate { animation: none !important; background-position: 0% 50% !important; }
-      .lvp-gate__logo, .lvp-gate__icon, .lvp-gate__msg, .lvp-gate__en, .lvp-gate__recover { animation: none !important; opacity: 1 !important; transform: none !important; }
+      #lvp-gate, #lvp-done { animation: none !important; background-position: 0% 50% !important; }
+      .lvp-gate__logo, .lvp-gate__icon, .lvp-gate__msg, .lvp-gate__en, .lvp-gate__recover, .lvp-done__icon, .lvp-done__msg, .lvp-done__sub { animation: none !important; opacity: 1 !important; transform: none !important; }
     }
   </style>
   <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin')&&!p.get('fixture'))document.documentElement.classList.add('lvp-gate-mode');})();</script>
@@ -578,6 +586,12 @@
     <p class="lvp-gate__en">Please use the link that was sent to you.</p>
     <p class="lvp-gate__recover">אם איבדת את הקישור שנשלח אלייך ניתן לכתוב לנו: <a href="mailto:noa@legacyvpartners.com">noa@legacyvpartners.com</a></p>
     <p class="lvp-gate__recover lvp-gate__recover--en">Lost your link? Email us: <a href="mailto:noa@legacyvpartners.com">noa@legacyvpartners.com</a></p>
+  </div>
+  <div id="lvp-done">
+    <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
+    <span class="lvp-done__icon" aria-hidden="true"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2E9E5B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></span>
+    <p class="lvp-done__msg">Your request is complete.</p>
+    <p class="lvp-done__sub">A signed copy has been emailed to you.</p>
   </div>
   <div class="lvp-lang" role="group" aria-label="Language">
     <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
@@ -883,7 +897,7 @@
             <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.primary.firstName" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.primary.lastName" autocomplete="off"></label>
           </div>
-          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber" inputmode="numeric" autocomplete="off"></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.primary.idNumber" inputmode="text" autocomplete="off"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.primary.email" inputmode="email" autocomplete="off"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.primary.title" autocomplete="off" placeholder="Director, Managing Member, CEO"></label>
           <fieldset class="lvp-fieldset" data-required>
@@ -903,7 +917,7 @@
               <label class="lvp-field" data-required><span class="lvp-field__label">First name</span><input class="lvp-input" type="text" name="signatories.secondary.firstName" autocomplete="off"></label>
               <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="signatories.secondary.lastName" autocomplete="off"></label>
             </div>
-            <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber" inputmode="numeric" autocomplete="off"></label>
+            <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="signatories.secondary.idNumber" inputmode="text" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="signatories.secondary.email" inputmode="email" autocomplete="off"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">Title or position</span><input class="lvp-input" type="text" name="signatories.secondary.title" autocomplete="off" placeholder="Director, Managing Member, CEO"></label>
             <fieldset class="lvp-fieldset" data-required>
@@ -968,7 +982,7 @@
                 <label class="lvp-field" data-required><span class="lvp-field__label">Last name in Hebrew</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].lastNameHebrew" dir="rtl" autocomplete="off"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber" inputmode="numeric" autocomplete="off"></label>
+                <label class="lvp-field" data-required><span class="lvp-field__label">ID or passport number</span><input class="lvp-input" type="text" name="additionalInvestors[${i}].idNumber" inputmode="text" autocomplete="off"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Email</span><input class="lvp-input" type="email" name="additionalInvestors[${i}].email" inputmode="email" autocomplete="off"></label>
               </div>
               <div class="lvp-grid-2">
@@ -1407,10 +1421,18 @@
         }
       }
 
+      // Completed-link terminal screen: a reopened finished link (cfg.completed
+      // from the gateway, set once submittedAt is recorded) shows the static
+      // "already complete" screen instead of rehydrating the form (2026-06-28).
+      function markDoneIfCompleted(cfg) {
+        if (cfg && cfg.completed) document.documentElement.classList.add('lvp-done-mode');
+      }
+      window.__lvpMarkDone = markDoneIfCompleted;
+
       // Serve cached CFG immediately (repeat visits are instant)
       try {
         var raw = sessionStorage.getItem(cacheKey);
-        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); }
+        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); markDoneIfCompleted(window.CAYMAN_CFG); }
       } catch(e) {}
 
       // Always fetch fresh in background; update cache + apply language if needed
@@ -1436,6 +1458,7 @@
           .then(function(cfg) {
             window.CAYMAN_CFG = cfg;
             applyCfgVisuals(cfg);
+            markDoneIfCompleted(cfg);
             if (cfg.language === 'en' || cfg.language === 'he') {
               var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
               if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
@@ -1453,6 +1476,8 @@
   (function () {
     'use strict';
     var CFG = window.CAYMAN_CFG || {};
+    // Reopened finished link: show the completed terminal screen, never the form.
+    if (CFG && CFG.completed) document.documentElement.classList.add('lvp-done-mode');
     if (!CFG.placesApiKey) CFG.placesApiKey = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw';
     var form = document.getElementById('lvp-form');
     var statusEl = form.querySelector('[data-status]');
@@ -1663,6 +1688,8 @@
     // flow, and gateway() always has a real URL + token.
     window.__caymanOnCfgUpdate = function (newCfg) {
       if (!newCfg) return;
+      // Fresh config can flip a session to completed after a stale-cached boot.
+      if (newCfg.completed && typeof window.__lvpMarkDone === 'function') window.__lvpMarkDone(newCfg);
       CFG.gatewayUrl = newCfg.gatewayUrl || CFG.gatewayUrl;
       CFG.token = newCfg.token || CFG.token;
       if (newCfg.applicantType && newCfg.applicantType !== CFG.applicantType) {
@@ -1695,6 +1722,13 @@
         if (typeof dobInitAll === 'function') dobInitAll();
         if (typeof applyConditionals === 'function') applyConditionals();
       }
+      // Cold start: the sync boot ran before config resolved, so it could not jump
+      // to the saved page and the LP is sitting on the welcome page with data
+      // present but invisible. Now that config (incl. resumePage) has arrived,
+      // re-apply the resume jump. Guarded by didResumeJump so we never override a
+      // jump the sync path already made or fire twice.
+      var rp = newCfg.resumePage || CFG.resumePage;
+      if (rp) { CFG.resumePage = rp; applyResumeJump_(rp); }
     };
 
     function applicant() { return state.applicantType || ''; } // always preset from CFG; the LP never self-classifies
@@ -2087,6 +2121,15 @@
         reader.onload = function () {
           var b64 = String(reader.result).split(',')[1];
           pendingUploads[key] = { slot: key, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+          // P0 save-and-resume: store the file to the token-gated KYC folder NOW
+          // (on selection), so a reload/resume finds it already on file instead of
+          // an empty slot. On success we keep the driveId and DROP the base64 from
+          // pendingUploads, so the snapshot persisted by savePage carries the
+          // driveId and restoreFormData can rehydrate the slot. The base64 stays as
+          // a fallback until the upload confirms, so a failed upload still rides on
+          // final submit (caymanRouteUploads_ stores it then). Best-effort: an
+          // upload failure never blocks the LP or shows an alarming message.
+          uploadFileNow(key, pendingUploads[key]);
           // The ID uploads ARE the scan: uploading the passport / ת"ז fills the form (no
           // separate scan step). Autofill from the first image only, when a key is set.
           if (i === 0 && (slot === 'passportPrimary' || slot === 'nationalId' || slot === 'nationalIdFront') && CFG.kycScanEnabled) autofillFromIdDoc(slot, b64, f.type || 'image/jpeg');
@@ -2603,7 +2646,7 @@
       // Error summary: list every invalid field at the top of the page when there
       // is more than one (a single error is already obvious + scrolled-to). Cleared
       // when the page validates.
-      renderErrorSummary(pageEl, errors.length > 1 ? errors : []);
+      renderErrorSummary(pageEl, errors.length >= 1 ? errors : []);
       // Scroll the first errored field into view (long pages can show red above the
       // fold with the status message far below; auto-scroll removes the hunt).
       if (firstError) {
@@ -2668,6 +2711,37 @@
       if (page.getAttribute('data-page') === 'review') { loadDocPreview(); }
       setStatus('');
       window.scrollTo(0, 0);
+      // Move focus to the new page's heading so screen-reader and keyboard users
+      // are announced into the page they just advanced to, instead of being left
+      // on the now-hidden previous Continue button (mirrors signer.html show()).
+      var pageHeading = page.querySelector('.lvp-page__title');
+      if (pageHeading) {
+        pageHeading.setAttribute('tabindex', '-1');
+        try { pageHeading.focus({ preventScroll: true }); } catch (e) { pageHeading.focus(); }
+      }
+    }
+    // Map a saved resumePage data-page id to its index in the CURRENT visible-page
+    // sequence (the sequence depends on applicant type + conditionals, so resolve it
+    // live). Returns -1 when the id is unknown (e.g. a page now filtered out).
+    var didResumeJump = false;
+    function resolveResumePageIndex_(resumePage) {
+      if (!resumePage) return -1;
+      var pages = visiblePages();
+      for (var i = 0; i < pages.length; i++) {
+        if (pages[i].getAttribute('data-page') === resumePage) return i;
+      }
+      return -1;
+    }
+    // Apply the resume jump once. Guarded so the sync boot path and the async
+    // CFG-arrival path (cold start: config resolves AFTER init) cannot double-jump
+    // or fight each other. Whichever fires first with a resolvable page wins; the
+    // other becomes a no-op.
+    function applyResumeJump_(resumePage) {
+      if (didResumeJump) return;
+      var target = resolveResumePageIndex_(resumePage);
+      if (target < 0) return;
+      didResumeJump = true;
+      showPage(target);
     }
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
     nextBtn.addEventListener('click', function () {
@@ -3260,7 +3334,12 @@
       var meta = {};
       Object.keys(data.__uploads).forEach(function (slot) {
         var u = data.__uploads[slot] || {};
+        // Persist driveId when the file is already on Drive (uploaded on selection
+        // via upload_file). That lets restoreFormData rehydrate the slot on resume
+        // and lets the final submit skip re-storing. base64 is still stripped (the
+        // 8KB session cap cannot hold a file); the driveId is a short string.
         meta[slot] = { slot: u.slot || slot, fileName: u.fileName, mimeType: u.mimeType, fileSizeBytes: u.fileSizeBytes };
+        if (u.driveId) meta[slot].driveId = u.driveId;
       });
       // shallow clone so we never mutate the live pendingUploads-backed object
       var copy = {}; Object.keys(data).forEach(function (k) { copy[k] = data[k]; });
@@ -3270,9 +3349,51 @@
     function savePage() {
       // partial save-and-resume: send the snapshot WITHOUT file base64 (upload
       // metadata only); server merges. Base64 rides only on the final submit.
-      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) })
-        .then(function (res) { return res; })
-        .catch(function (err) { return null; }); // best-effort save; entries persist in-session, no alarming message to the LP
+      // A real failure REJECTS so the Next handler's catch can surface the
+      // "Could not auto-save" warning (otherwise that fallback is dead code and a
+      // dropped save is completely silent). Callers that don't care can still
+      // .catch and ignore; the page has already advanced when this runs.
+      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), snapshot: snapshotWithoutFileBytes(collectAll()) });
+    }
+    // P0 upload-on-selection: store one KYC file to the token-gated KYC folder the
+    // moment it is selected, so a reload/resume restores it. On success swap the
+    // in-memory entry from base64 -> driveId and persist the snapshot so the driveId
+    // is durable. Best-effort: a failure leaves the base64 in place (it rides on the
+    // final submit) and never shows the LP an error. Requires a resume token (the
+    // gateway rejects a tokenless upload_file); a tokenless anonymous session cannot
+    // resume anyway, so its files correctly ride only on submit.
+    function uploadFileNow(key, entry) {
+      if (!entry || !entry.base64) return;
+      var liveCfg = window.CAYMAN_CFG || CFG;
+      if (!(liveCfg.token || CFG.token)) return; // no resume token -> no on-selection store; base64 rides on submit
+      gateway('upload_file', { slot: key, file: { fileName: entry.fileName, mimeType: entry.mimeType, fileSizeBytes: entry.fileSizeBytes, base64: entry.base64 } })
+        .then(function (res) {
+          var up = res && res.detail && res.detail.upload;
+          if (!up || !up.driveId) return;
+          // The user may have removed/replaced the file while the upload was in
+          // flight; only commit if this slot still holds the same pending entry.
+          var cur = pendingUploads[key];
+          if (!cur || cur !== entry) return;
+          pendingUploads[key] = { slot: key, fileName: entry.fileName, mimeType: entry.mimeType, fileSizeBytes: entry.fileSizeBytes, driveId: up.driveId };
+          savePage(); // persist the driveId into the durable snapshot
+        })
+        .catch(function () { /* best-effort: base64 stays, rides on final submit */ });
+    }
+    // Stable client idempotency key, minted once per form session and kept in
+    // sessionStorage. The server (CaymanSubmitIdempotency) prefers an explicit
+    // client key and otherwise derives one from a canonical field hash, so a retry
+    // AFTER the LP edits a field would hash differently and mint a SECOND pack.
+    // A stable key collapses every retry of this session onto one pack regardless
+    // of edits. Cleared with the tab; a fresh link starts a fresh session.
+    function caymanSubmitIdemKey_() {
+      try {
+        var k = sessionStorage.getItem('lvp_submit_idem');
+        if (!k) {
+          k = 'idem-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+          sessionStorage.setItem('lvp_submit_idem', k);
+        }
+        return k;
+      } catch (e) { return ''; }
     }
     var submitting = false;
     function doSubmit() {
@@ -3288,7 +3409,7 @@
         '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
         '<h2>' + esc(displayFor('Submitting your subscription', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('Recording your signature and finalizing your documents. Please keep this window open.', curLang)) + '</p>');
-      gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '' }).then(function (res) {
+      gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '', idempotencyKey: caymanSubmitIdemKey_() }).then(function (res) {
         // Single-signer (individual, no lawyer): all done.
         if (res.stage === 'all_signed') { showSubmittedCard(); return; }
         // Multi-signer: the primary signed inline, next signers get their own links.
@@ -3665,6 +3786,33 @@
         inp.value = strVal;
       });
       applyConditionals();
+      // P0 resume-restores-uploads: rehydrate every KYC slot the LP already uploaded
+      // (stored on selection via upload_file, persisted as { driveId, fileName, ... }
+      // in the snapshot's __uploads). Without this, a resumed LP saw empty slots and
+      // was re-blocked at the required-upload gate even though their passport / proof
+      // of address was already on file. We re-seat each entry into pendingUploads
+      // (driveId, no base64) so the gate (which reads pendingUploads[slot]) passes,
+      // and mark the slot's UI with a neutral "on file" state.
+      // NOTE (Noa): the on-file LABEL is a placeholder pending your approval. See report.
+      if (prefill.__uploads && typeof prefill.__uploads === 'object') {
+        Object.keys(prefill.__uploads).forEach(function (key) {
+          var m = prefill.__uploads[key];
+          if (!m || !m.driveId) return; // only restore files already on Drive
+          pendingUploads[key] = { slot: key, fileName: m.fileName, mimeType: m.mimeType, fileSizeBytes: m.fileSizeBytes, driveId: m.driveId };
+          // Multi-file slots key as slot_2 / slot_3; the DOM marker targets the base
+          // slot only (the first file). Extras still restore into pendingUploads so
+          // they ride the final submit; the base slot drives the visible state + gate.
+          var baseSlot = key.replace(/_\d+$/, '');
+          form.querySelectorAll('input[data-upload="' + baseSlot + '"]').forEach(function (inp) {
+            var wrap = inp.closest('.lvp-upload');
+            if (!wrap) return;
+            var nm = wrap.querySelector('[data-upload-name]');
+            // LP-FACING COPY PENDING NOA APPROVAL: neutral "on file" label.
+            if (nm) { nm.textContent = (m.fileName || (curLang === 'he' ? 'קובץ שמור' : 'On file')); nm.setAttribute('data-has-file', '1'); }
+            wrap.classList.add('has-file');
+          });
+        });
+      }
       // Stub uploads for test links. prefill.__testUploads is an array of slot names;
       // each gets a placeholder entry in pendingUploads and a green "has-file" UI state
       // so all upload validation passes without the LP needing to select real files.
@@ -3723,10 +3871,13 @@
         a.value = n ? Number(n).toLocaleString('en-US') : '';
       });
     })();
-    // resume to the last saved page if the server supplied one
+    // resume to the last saved page if the server supplied one (sync boot path).
+    // On a GAS cold start CFG.resumePage is not known yet here; the async
+    // __caymanOnCfgUpdate path re-applies the jump once config arrives (guarded
+    // by didResumeJump so the two paths never double-jump).
     if (CFG.resumePage) {
-      var pages = visiblePages();
-      for (var i = 0; i < pages.length; i++) { if (pages[i].getAttribute('data-page') === CFG.resumePage) { idx = i; break; } }
+      var resumeTarget = resolveResumePageIndex_(CFG.resumePage);
+      if (resumeTarget >= 0) { idx = resumeTarget; didResumeJump = true; }
     }
     // Render data-help hints into the DOM before the first language pass so they
     // are cached + translated alongside every other .lvp-hint-small.
