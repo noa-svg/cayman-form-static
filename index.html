@@ -539,6 +539,14 @@
     .lvp-gate__recover--en { direction: ltr; margin: 4px auto 0; color: #9CA3AF; letter-spacing: .04em; max-width: 320px; overflow-wrap: break-word; }
     .lvp-gate__recover a { color: #0D3F6A; text-decoration: none; }
     .lvp-gate__recover a:hover { text-decoration: underline; }
+    /* Completed-link terminal screen (English only, per Noa 2026-06-28). cfg.completed
+       flips .lvp-done-mode when a finished link is reopened, replacing the form. */
+    #lvp-done { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; position: fixed; inset: 0; background: linear-gradient(-45deg,#FBF7EC,#EEF3FF,#FFF5F0,#F0F7F4); background-size: 400% 400%; animation: gateShift 12s ease infinite; }
+    .lvp-done-mode #lvp-done { display: flex; }
+    .lvp-done-mode .lvp-lang, .lvp-done-mode .lvp-app, .lvp-done-mode #lvp-gate { display: none; }
+    .lvp-done__icon { margin-bottom: 20px; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both; }
+    .lvp-done__msg { font-size: 19px; font-weight: 700; color: #1A2330; margin: 0 0 10px; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .45s both; }
+    .lvp-done__sub { font-size: 14px; color: #6B7280; margin: 0; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .6s both; }
     @keyframes gateUp { from{opacity:0;transform:translateY(13px)} to{opacity:1;transform:translateY(0)} }
 
     /* Error summary block at the top of a page with multiple errors. Accessible
@@ -564,8 +572,8 @@
         transition-duration: 0.001ms !important;
         scroll-behavior: auto !important;
       }
-      #lvp-gate { animation: none !important; background-position: 0% 50% !important; }
-      .lvp-gate__logo, .lvp-gate__icon, .lvp-gate__msg, .lvp-gate__en, .lvp-gate__recover { animation: none !important; opacity: 1 !important; transform: none !important; }
+      #lvp-gate, #lvp-done { animation: none !important; background-position: 0% 50% !important; }
+      .lvp-gate__logo, .lvp-gate__icon, .lvp-gate__msg, .lvp-gate__en, .lvp-gate__recover, .lvp-done__icon, .lvp-done__msg, .lvp-done__sub { animation: none !important; opacity: 1 !important; transform: none !important; }
     }
   </style>
   <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin')&&!p.get('fixture'))document.documentElement.classList.add('lvp-gate-mode');})();</script>
@@ -578,6 +586,12 @@
     <p class="lvp-gate__en">Please use the link that was sent to you.</p>
     <p class="lvp-gate__recover">אם איבדת את הקישור שנשלח אלייך ניתן לכתוב לנו: <a href="mailto:noa@legacyvpartners.com">noa@legacyvpartners.com</a></p>
     <p class="lvp-gate__recover lvp-gate__recover--en">Lost your link? Email us: <a href="mailto:noa@legacyvpartners.com">noa@legacyvpartners.com</a></p>
+  </div>
+  <div id="lvp-done">
+    <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
+    <span class="lvp-done__icon" aria-hidden="true"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2E9E5B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></span>
+    <p class="lvp-done__msg">Your request is complete.</p>
+    <p class="lvp-done__sub">A signed copy has been emailed to you.</p>
   </div>
   <div class="lvp-lang" role="group" aria-label="Language">
     <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
@@ -1407,10 +1421,18 @@
         }
       }
 
+      // Completed-link terminal screen: a reopened finished link (cfg.completed
+      // from the gateway, set once submittedAt is recorded) shows the static
+      // "already complete" screen instead of rehydrating the form (2026-06-28).
+      function markDoneIfCompleted(cfg) {
+        if (cfg && cfg.completed) document.documentElement.classList.add('lvp-done-mode');
+      }
+      window.__lvpMarkDone = markDoneIfCompleted;
+
       // Serve cached CFG immediately (repeat visits are instant)
       try {
         var raw = sessionStorage.getItem(cacheKey);
-        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); }
+        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); markDoneIfCompleted(window.CAYMAN_CFG); }
       } catch(e) {}
 
       // Always fetch fresh in background; update cache + apply language if needed
@@ -1436,6 +1458,7 @@
           .then(function(cfg) {
             window.CAYMAN_CFG = cfg;
             applyCfgVisuals(cfg);
+            markDoneIfCompleted(cfg);
             if (cfg.language === 'en' || cfg.language === 'he') {
               var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
               if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
@@ -1453,6 +1476,8 @@
   (function () {
     'use strict';
     var CFG = window.CAYMAN_CFG || {};
+    // Reopened finished link: show the completed terminal screen, never the form.
+    if (CFG && CFG.completed) document.documentElement.classList.add('lvp-done-mode');
     if (!CFG.placesApiKey) CFG.placesApiKey = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw';
     var form = document.getElementById('lvp-form');
     var statusEl = form.querySelector('[data-status]');
@@ -1663,6 +1688,8 @@
     // flow, and gateway() always has a real URL + token.
     window.__caymanOnCfgUpdate = function (newCfg) {
       if (!newCfg) return;
+      // Fresh config can flip a session to completed after a stale-cached boot.
+      if (newCfg.completed && typeof window.__lvpMarkDone === 'function') window.__lvpMarkDone(newCfg);
       CFG.gatewayUrl = newCfg.gatewayUrl || CFG.gatewayUrl;
       CFG.token = newCfg.token || CFG.token;
       if (newCfg.applicantType && newCfg.applicantType !== CFG.applicantType) {
