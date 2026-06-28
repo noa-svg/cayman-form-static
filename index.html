@@ -226,6 +226,17 @@
     .lvp-card[dir="rtl"] .lvp-field--error .lvp-field__label::after, .lvp-card[dir="rtl"] .lvp-fieldset--error .lvp-fieldset__legend::after { content: " שדה חובה"; }
     .lvp-field--value-error .lvp-input, .lvp-field--value-error .lvp-input--select { border-bottom-color: var(--lvp-error); border-bottom-width: 2px; padding-bottom: 7px; }
     .lvp-field--value-error .lvp-field__label { color: var(--lvp-error); }
+    /* A format/value error must show its REASON in words, not just a red field. The
+       message is written into an lvp-sr-only span (screen-reader only), so a sighted LP
+       saw red with no explanation. Un-clip it for value errors ONLY (a required-empty
+       field already shows " required" on its label, so leave those SR-only to avoid
+       doubling). Reverses every lvp-sr-only clip property. */
+    .lvp-field--value-error [data-err-msg] {
+      position: static; width: 100%; height: auto; padding: 0; margin: 6px 0 0;
+      overflow: visible; clip: auto; white-space: normal; border: 0; box-sizing: border-box;
+      display: block; color: var(--lvp-error); font-size: 12px; line-height: 1.4;
+    }
+    .lvp-card[dir="rtl"] .lvp-field--value-error [data-err-msg] { text-align: right; }
 
     /* Submit: full-card loading + branded confirmation states (fix 5/UX). */
     .lvp-result { text-align: center; padding: 24px 8px 12px; }
@@ -823,7 +834,7 @@
           <label class="lvp-field" data-required><span class="lvp-field__label">Legal entity name</span><input class="lvp-input" type="text" name="entity.legalName" autocomplete="organization" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Entity name in Hebrew</span><input class="lvp-input" type="text" name="entity.fullNameHebrew" dir="rtl" autocomplete="off" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
           <label class="lvp-field" data-required data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify)</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
-          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber" inputmode="numeric"></label>
+          <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber" inputmode="text"></label>
           <h3 class="lvp-subhead">Contact</h3>
           <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Primary entity email</span><input class="lvp-input" type="email" name="entity.email" inputmode="email" autocomplete="email"></label>
@@ -946,7 +957,7 @@
           <label class="lvp-field" data-required><span class="lvp-field__label">Name and address of your bank</span><input class="lvp-input" type="text" name="investment.lpBank.nameAndAddress" data-help="Full legal name of bank plus full branch address including city and country"></label>
           <div class="lvp-grid-2">
             <label class="lvp-field" data-required><span class="lvp-field__label">SWIFT code</span><input class="lvp-input" type="text" name="investment.lpBank.swift" autocomplete="off" data-help="Your bank's SWIFT code for international transfers (8 or 11 letters/digits). A 9-digit U.S. ABA routing number is also accepted."></label>
-            <label class="lvp-field" data-required><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber" inputmode="numeric" autocomplete="off"></label>
+            <label class="lvp-field" data-required><span class="lvp-field__label">Bank account number</span><input class="lvp-input" type="text" name="investment.lpBank.accountNumber" inputmode="text" autocomplete="off"></label>
           </div>
           <label class="lvp-field" data-required><span class="lvp-field__label">Account holder name</span><input class="lvp-input" type="text" name="investment.lpBank.accountHolderName" data-autofill-holder></label>
           <p class="lvp-hint-small" data-applicant="individual">Must match the individual LP's name exactly.</p>
@@ -2618,6 +2629,23 @@
           ok = false; holder.classList.add('lvp-field--value-error');
           flag(holder, false, 'Please enter a valid email address.');
         }
+      });
+      // Re-run the FORMAT validators at submit, not just on focusout. A pasted or
+      // autofilled bad IBAN / Israeli ID / SWIFT / amount that never received a blur
+      // otherwise passed the client gate and only the server sanitizer caught it.
+      // Mirror the focusout path (validateSingleField): for each filled, named, visible
+      // control, run lvpValidateFormat_ and flag a non-empty result as a value-error.
+      // Reuses the existing validator table + messages (no new copy). Emails are handled
+      // above; files, radios, checkboxes, and DOB segments are skipped.
+      pageEl.querySelectorAll('input, select, textarea').forEach(function (ctrl) {
+        if (ctrl.type === 'radio' || ctrl.type === 'checkbox' || ctrl.type === 'file' || ctrl.type === 'email') return;
+        if (ctrl.closest('.lvp-dob')) return;
+        var holder = ctrl.closest('.lvp-field');
+        if (!holder || isHidden(holder)) return;
+        var fv = (ctrl.value || '').trim();
+        if (!fv || !ctrl.name) return;
+        var fmtErr = lvpValidateFormat_(ctrl.name, fv);
+        if (fmtErr) { ok = false; holder.classList.add('lvp-field--value-error'); flag(holder, false, fmtErr); }
       });
       // Date validation: proof-of-address date must be within the last 3 months and not in the future.
       pageEl.querySelectorAll('input[type="date"]').forEach(function (inp) {
