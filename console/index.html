@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8">
+<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Operator - Legacy Value Partners</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -345,26 +345,6 @@ nav {
    THEME TOGGLE
    ============================================================ */
 
-#theme-toggle {
-  font-family: var(--font-body);
-  font-size: var(--text-2xs);
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-sidebar-ink-sub);
-  background: transparent;
-  border: 1px solid var(--color-sidebar-line);
-  border-radius: var(--radius-pill);
-  padding: 4px 12px;
-  cursor: pointer;
-  align-self: flex-start;
-  margin-top: 0;
-  transition: color var(--dur-base), border-color var(--dur-base), background var(--dur-base);
-}
-#theme-toggle:hover {
-  color: var(--color-sidebar-ink);
-  border-color: var(--color-sidebar-ink-sub);
-  background: var(--color-sidebar-hover);
-}
 
 /* ============================================================
    LIGHT THEME OVERRIDES
@@ -475,7 +455,6 @@ nav {
   letter-spacing: 0.10em;
   text-transform: uppercase;
   line-height: var(--leading-tight);
-  text-shadow: 0 0 12px rgba(34,211,238,0.5);
   margin-bottom: var(--space-1);
 }
 
@@ -1864,8 +1843,6 @@ body.side-coll .side-foot .ver,
 body.side-coll .side-foot .auth-email,
 body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
-body.side-coll #theme-toggle { font-size: 0; padding: 4px 0; width: 100%; }
-body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
 
 #side-scrim {
   display: none;
@@ -2088,7 +2065,6 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
       <button class="nav" data-view="settings" data-icon="S">Settings</button>
     </nav>
     <div class="side-foot">
-      <button id="theme-toggle" onclick="toggleTheme()">Dark</button>
       <div class="ver" id="ver-side">Synced</div>
       <div class="auth-email" id="auth-status">not signed in</div>
       <button class="signout-link" id="sign-out-btn" style="display:none" onclick="clearAuth()">Sign out</button>
@@ -2282,26 +2258,9 @@ body.side-coll #theme-toggle::after { content: "T"; font-size: 11px; }
   </div>
 
 <script>
-  // ---- THEME ----
-  (function(){
-    var t=localStorage.getItem('lvp_theme')||'light';
-    document.documentElement.setAttribute('data-theme',t);
-    // update button label after DOM ready
-    document.addEventListener('DOMContentLoaded',function(){updateThemeBtn(t);});
-  })();
-  function updateThemeBtn(t){
-    var b=document.getElementById('theme-toggle');
-    if(!b)return;
-    b.textContent=t==='light'?'Dark':'Light';
-  }
-  function toggleTheme(){
-    var cur=document.documentElement.getAttribute('data-theme')||'dark';
-    var next=cur==='dark'?'light':'dark';
-    document.documentElement.setAttribute('data-theme',next);
-    localStorage.setItem('lvp_theme',next);
-    updateThemeBtn(next);
-  }
-  // ---- END THEME ----
+  // Theme: single light editorial identity. The dark CRT theme was removed
+  // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
+  // palette is the only one. No toggle, no localStorage theme state.
 
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
