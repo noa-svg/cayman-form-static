@@ -2205,6 +2205,18 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </div>
 
     <div id="manualLpFields">
+    <div id="onbPickerWrap" style="margin-bottom: 16px">
+      <label>Pending onboarding submission <span class="opt">optional</span></label>
+      <div style="display:flex;align-items:center;gap: 12px;flex-wrap:wrap">
+        <button type="button" id="onbLoadBtn" class="btn" style="font-size: 13px;padding: 8px 16px;white-space:nowrap">Load pending submissions</button>
+        <span id="onbStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--color-ink-muted);font-family:var(--font-body)"></span>
+      </div>
+      <div class="lp-search" style="margin-top: 8px">
+        <div id="onbResults" class="lp-results" hidden></div>
+      </div>
+      <div id="onbPicked" class="lp-picked" hidden style="margin-top: 8px"></div>
+      <div class="hint">Pulls submissions from the onboarding board so you do not retype the name and email. The fields below stay editable.</div>
+    </div>
     <label for="name">Full name <span class="tag">at least one</span></label>
     <div class="g2">
       <div><input id="name" placeholder="David Cohen  (English)"></div>
@@ -2330,6 +2342,14 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       {key:'reminder',label:'Invite reminder',to:'Investor',placeholders:['name','link'],
         he:{subject:'תזכורת - {{name}}',body:'שלום {{name}},\nתזכורת להשלמת ההצטרפות:\n{{link}}',overridden:true},
         en:{subject:'Reminder - {{name}}',body:'Hello {{name}},\nA reminder to complete onboarding:\n{{link}}',overridden:true}}
+    ]};
+    if(qs.indexOf('?admin=listOnboardingSubmissions')===0) return {ok:true,submissions:[
+      {itemId:'d-onb-1',nameEn:'Ilan Yeshua',nameHe:'אילן ישועה',email:'ilan@example.com',nickname:''},
+      {itemId:'d-onb-2',nameEn:'Almog Hazon',nameHe:'אלמוג חזון',email:'almog@example.com',nickname:'מוגי'}
+    ]};
+    if(qs.indexOf('?admin=searchInvestments')===0) return {ok:true,matches:[
+      {investmentsItemId:'d-inv-1',name:'עידו חגאי',email:'idoh@example.com',linkedPeopleItemId:'d-ppl-1'},
+      {investmentsItemId:'d-inv-2',name:'מ ארקין בעמ',email:'',linkedPeopleItemId:''}
     ]};
     return {ok:true};
   }
@@ -2559,6 +2579,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function caymanClearCreateForm(){
     ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
     if(window.__lpClearPick)window.__lpClearPick();
+    var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
+    var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
+    var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
     var rs=document.getElementById('revShareSel');if(rs)rs.value='';
     var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
     var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
@@ -2788,39 +2811,107 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(!inp||!box||!picked)return;
     var T=null,rows=[],active=-1;
     function subline(m){return [(m.nameHe&&m.nameEn)?m.nameEn:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearPick(){state.selectedMondayId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;if(window.__saveCreateDraft)window.__saveCreateDraft();}
+    function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;if(window.__saveCreateDraft)window.__saveCreateDraft();}
     window.__lpClearPick=clearPick;
     function setPick(m){
-      state.selectedMondayId=m.itemId;state.selectedLp=m;
-      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
+      // Read both ids off the match object m (NOT off state) so restore via
+      // __lpRestorePick(d.selectedLp) rehydrates without a re-search. The Investments
+      // row carries the deal contract; the linked People item carries the LP identity
+      // (Israeli ID is read People-side). selectedMondayId is the legacy field and now
+      // holds the People identity id for backward-compat with the mint guard.
+      state.selectedInvestmentsId=m.investmentsItemId||'';
+      state.selectedPeopleId=m.linkedPeopleItemId||'';
+      state.selectedMondayId=m.linkedPeopleItemId||'';
+      state.selectedLp=m;
+      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
       picked.hidden=false;box.hidden=true;inp.style.display='none';
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
       if(window.__saveCreateDraft)window.__saveCreateDraft();
     }
     // Restore a persisted LP pick (increase/withdrawal) without re-hitting search.
-    window.__lpRestorePick=function(m){if(m&&m.itemId)setPick(m);};
+    // A persisted Investments match is keyed by investmentsItemId; older drafts may
+    // carry only itemId. Accept either so a reload rehydrates the pick.
+    window.__lpRestorePick=function(m){if(m&&(m.investmentsItemId||m.itemId))setPick(m);};
     function render(){
       if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
-      box.innerHTML=rows.map(function(m,i){return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';}).join('');
+      // A match with no linked People item has no LP identity record (no Israeli ID),
+      // so it can never mint. Render it disabled with a short note so the operator
+      // cannot pick it.
+      box.innerHTML=rows.map(function(m,i){
+        var mintable=!!m.linkedPeopleItemId;
+        if(!mintable){
+          return '<div class="lp-row" data-i="'+i+'" aria-disabled="true" style="cursor:not-allowed;opacity:.55"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div><div class="lp-sub" style="color:var(--color-coral)">no linked LP record</div></div></div>';
+        }
+        return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';
+      }).join('');
       box.hidden=false;
-      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){r.onclick=function(){setPick(rows[+r.getAttribute('data-i')]);};});
+      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){
+        if(r.getAttribute('aria-disabled')==='true')return;
+        r.onclick=function(){setPick(rows[+r.getAttribute('data-i')]);};
+      });
     }
     inp.addEventListener('input',function(){
       var q=inp.value.trim();active=-1;
       if(q.length<2){box.hidden=true;rows=[];return;}
       if(T)clearTimeout(T);
       T=setTimeout(function(){
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
+        apiFetch('?admin=searchInvestments&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
       },220);
     });
     inp.addEventListener('keydown',function(e){
       if(box.hidden||!rows.length)return;
       if(e.key==='ArrowDown'){active=Math.min(active+1,rows.length-1);render();e.preventDefault();}
       else if(e.key==='ArrowUp'){active=Math.max(active-1,0);render();e.preventDefault();}
-      else if(e.key==='Enter'){if(active>=0){setPick(rows[active]);e.preventDefault();}}
+      else if(e.key==='Enter'){if(active>=0&&rows[active]&&rows[active].linkedPeopleItemId){setPick(rows[active]);e.preventDefault();}}
       else if(e.key==='Escape'){box.hidden=true;}
     });
     document.addEventListener('click',function(e){var w=document.getElementById('lpPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
+  })();
+  // ---- Onboarding-submission picker (subscription only) ----
+  // Pulls pending submissions from the onboarding board so the operator does not retype
+  // the name and email. Picking one fills the existing console inputs and fires an 'input'
+  // event on each, so the draft-save listener + validation run exactly as if typed by hand.
+  // The manual fields stay editable; this is autofill, not a lock. No new draft fields are
+  // needed because the autofilled inputs are already persisted by the draft IIFE.
+  (function(){
+    var loadBtn=document.getElementById('onbLoadBtn'),box=document.getElementById('onbResults'),
+        picked=document.getElementById('onbPicked'),status=document.getElementById('onbStatus');
+    if(!loadBtn||!box||!picked)return;
+    var subs=[];
+    function setVal(id,val){
+      var f=document.getElementById(id);if(!f)return;
+      f.value=(val==null)?'':val;
+      // Fire 'input' so draft-save + any validation listeners react like a real keystroke.
+      try{f.dispatchEvent(new Event('input',{bubbles:true}));}
+      catch(e){var ev=document.createEvent('HTMLEvents');ev.initEvent('input',true,false);f.dispatchEvent(ev);}
+    }
+    function subline(s){return [s.email,s.nickname?('“'+s.nickname+'”'):''].filter(Boolean).join('  ·  ');}
+    function clearPick(){picked.hidden=true;picked.innerHTML='';}
+    function pick(s){
+      setVal('name',s.nameEn);
+      setVal('nameHebrew',s.nameHe);
+      setVal('nickname',s.nickname);
+      setVal('email',s.email);
+      box.hidden=true;
+      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(s.nameHe||s.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(s))+'</div></div><div class="lp-x" id="onbClear" title="Clear">&times;</div>';
+      picked.hidden=false;
+      var x=document.getElementById('onbClear');if(x)x.onclick=clearPick;
+    }
+    function render(){
+      if(!subs.length){box.innerHTML='<div class="lp-empty">No pending submissions.</div>';box.hidden=false;return;}
+      box.innerHTML=subs.map(function(s,i){return '<div class="lp-row" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(s.nameHe||s.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(s))+'</div></div></div>';}).join('');
+      box.hidden=false;
+      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){r.onclick=function(){pick(subs[+r.getAttribute('data-i')]);};});
+    }
+    loadBtn.onclick=function(){
+      status.textContent='Loading...';box.hidden=true;
+      apiFetch('?admin=listOnboardingSubmissions').then(function(d){
+        subs=(d&&d.submissions)||[];
+        status.textContent=subs.length?(subs.length+' pending'):'None pending';
+        render();
+      }).catch(function(){status.textContent='Load failed.';subs=[];});
+    };
+    document.addEventListener('click',function(e){var w=document.getElementById('onbPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
   })();
   // ---- in-progress create-draft persistence (localStorage, keyed by lane+process) ----
   // Operator state must never be lost. The draft survives click-out, navigating to another
@@ -2836,8 +2927,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         name:g('name'),nameHebrew:g('nameHebrew'),nickname:g('nickname'),
         email:g('email'),foEmail:g('foEmail'),
         revShareSel:g('revShareSel'),revShareCustom:g('revShareCustom'),
-        // increase/withdrawal LP picker selection
+        // increase/withdrawal LP picker selection. selectedLp is the full match
+        // object; on restore __lpRestorePick reads both ids back off it, so the two
+        // id fields below are belt-and-suspenders for older/partial drafts.
         selectedMondayId:state.selectedMondayId||'',
+        selectedInvestmentsId:state.selectedInvestmentsId||'',
+        selectedPeopleId:state.selectedPeopleId||'',
         selectedLp:state.selectedLp||null
       };
     }
@@ -2890,7 +2985,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       btn.disabled=true;btn.textContent='Creating...';
       document.getElementById('res').classList.remove('on');
       showMsg('Creating '+(PROC_LABEL[state.process]||'')+' request...',false);
-      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane=israel&mondayId='+encodeURIComponent(state.selectedMondayId)+'&type='+encodeURIComponent(state.type)).then(function(res){
+      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane=israel&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId)+'&type='+encodeURIComponent(state.type)).then(function(res){
         btn.disabled=false;btn.textContent='Create link';
         if(!res||!res.ok){showMsg((res&&res.error)||'Could not create. Check GAS logs.',true);return;}
         showMsg('',false);
