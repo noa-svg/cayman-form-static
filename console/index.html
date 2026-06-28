@@ -2369,7 +2369,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // F13: on prod, keep failure reasons generic so a probe cannot confirm
     // valid operator emails. Detailed reasons only on non-prod hosts.
     var statusEl=document.getElementById('auth-status');
-    if(statusEl)statusEl.textContent='🔒 '+(reason?(IS_PROD_HOST?'not authorized':'auth failed: '+reason):'not signed in');
+    if(statusEl)statusEl.textContent=(reason?(IS_PROD_HOST?'not authorized':'auth failed: '+reason):'not signed in');
     document.getElementById('sign-out-btn').style.display='none';
     document.getElementById('login-screen').classList.remove('off');
     var dbg=document.getElementById('login-debug');
@@ -2406,7 +2406,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
   function initAuth(){
     if(DEMO){
-      var as=document.getElementById('auth-status');if(as)as.textContent='🔓 demo (local render)';
+      var as=document.getElementById('auth-status');if(as)as.textContent='demo (local render)';
       var so=document.getElementById('sign-out-btn');if(so)so.style.display='inline';
       document.getElementById('login-screen').classList.add('off');
       load();
@@ -2426,7 +2426,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         var pl=JSON.parse(atob(ID_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
         var exp=Number(pl.exp||0);
         if(exp&&exp*1000<Date.now()){localStorage.removeItem(TOKEN_KEY);ID_TOKEN='';document.getElementById('login-screen').classList.remove('off');return;}
-        document.getElementById('auth-status').textContent='🔓 '+(pl.email||'');
+        document.getElementById('auth-status').textContent=(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
         document.getElementById('login-screen').classList.add('off');
         load();
