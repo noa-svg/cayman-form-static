@@ -209,6 +209,9 @@
     .lvp-wire dd { color: var(--lvp-text); font-size: 15px; margin: 0; font-weight: 600; word-break: break-word; }
 
     [data-show-when][hidden] { display: none !important; }
+    /* Off-ju lock: pre-vetted fields shown set + disabled, value still readable (no faded text). */
+    .lvp-locked select, .lvp-locked input { background: #EEF1F5; color: #1F2937; -webkit-text-fill-color: #1F2937; opacity: 1; cursor: default; }
+    .lvp-radio-lock--off { opacity: 0.45; }
     .lvp-page[hidden] { display: none !important; }
 
     /* Required marker on text/select fields and fieldset legends. Slot-style
@@ -1746,6 +1749,7 @@
       // jump the sync path already made or fire twice.
       var rp = newCfg.resumePage || CFG.resumePage;
       if (rp) { CFG.resumePage = rp; applyResumeJump_(rp); }
+      applyOffJuLock(); // re-apply after the authoritative applicantType + any rebuild
     };
 
     function applicant() { return state.applicantType || ''; } // always preset from CFG; the LP never self-classifies
@@ -3885,6 +3889,44 @@
       }
     }
 
+    // Off-ju lock (2026-06-29). The LP is pre-vetted (Israeli individual or Israeli
+    // regarded corporation) BEFORE the link is minted, so the off-ju-determining
+    // fields are not the LP's to choose. Prefill them to the only in-scope values and
+    // disable them, so a normal LP can never reach the server off-ju gate (Trust /
+    // LLC / Partnership / Other / non-Israel / US entity). collectAll reads disabled
+    // inputs, so the locked values still submit. The server scope gate stays as the
+    // tamper backstop. Runs after every rebuild (init + applicantType change).
+    function applyOffJuLock() {
+      function lockField(name, value) {
+        // Match any control by name: entity.type stays a <select>, but the country
+        // field is swapped to a typeable <input list> combobox by populateCountries.
+        var el = form.querySelector('[name="' + name + '"]');
+        if (!el || el.disabled) return;
+        el.value = value;
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+        el.disabled = true; el.setAttribute('aria-disabled', 'true');
+        var fld = el.closest('.lvp-field'); if (fld) fld.classList.add('lvp-locked');
+      }
+      function lockRadio(name, value) {
+        var radios = form.querySelectorAll('input[name="' + name + '"]');
+        if (!radios.length || radios[0].disabled) return;
+        Array.prototype.forEach.call(radios, function (r) {
+          r.checked = (r.value === value);
+          var lbl = r.closest('label'); if (lbl) lbl.classList.toggle('lvp-radio-lock--off', !r.checked);
+        });
+        try { radios[0].dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+        Array.prototype.forEach.call(radios, function (r) { r.disabled = true; r.setAttribute('aria-disabled', 'true'); });
+      }
+      // US-person locked Not-US for every minted LP (pre-vetted non-US Israeli).
+      lockRadio('fatcaCrs.usPersonStatus', 'notUs');
+      // The only in-scope entity is an Israeli regarded Corporation.
+      if (applicant() === 'entity') {
+        lockField('entity.type', 'Corporation');
+        lockField('entity.formationCountry', 'Israel');
+      }
+      if (typeof applyConditionals === 'function') applyConditionals();
+    }
+
     // ---- init ----
     populateCountries();
     ensureMinRows();
@@ -3896,6 +3938,7 @@
     // Restore prefill data into form fields (resume or test link).
     if (CFG.prefill && Object.keys(CFG.prefill).length > 1) { restoreFormData(CFG.prefill); syncUsCitizenshipToFatca(); }
     dobInitAll(); // split any restored ISO birthDate into the DD/MM/YYYY segments
+    applyOffJuLock(); // pre-vetted off-ju fields: set to in-scope values + disable
     // Amount: whole-number, grouped with thousands separators on blur, so the LP
     // sees exactly what is submitted and no decimal/locale ambiguity reaches the doc.
     (function () {
