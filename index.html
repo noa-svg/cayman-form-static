@@ -209,9 +209,6 @@
     .lvp-wire dd { color: var(--lvp-text); font-size: 15px; margin: 0; font-weight: 600; word-break: break-word; }
 
     [data-show-when][hidden] { display: none !important; }
-    /* Off-ju lock: pre-vetted fields shown set + disabled, value still readable (no faded text). */
-    .lvp-locked select, .lvp-locked input { background: #EEF1F5; color: #1F2937; -webkit-text-fill-color: #1F2937; opacity: 1; cursor: default; }
-    .lvp-radio-lock--off { opacity: 0.45; }
     .lvp-page[hidden] { display: none !important; }
 
     /* Required marker on text/select fields and fieldset legends. Slot-style
@@ -3887,38 +3884,37 @@
 
     // Off-ju lock (2026-06-29). The LP is pre-vetted (Israeli individual or Israeli
     // regarded corporation) BEFORE the link is minted, so the off-ju-determining
-    // fields are not the LP's to choose. Prefill them to the only in-scope values and
-    // disable them, so a normal LP can never reach the server off-ju gate (Trust /
-    // LLC / Partnership / Other / non-Israel / US entity). collectAll reads disabled
-    // inputs, so the locked values still submit. The server scope gate stays as the
-    // tamper backstop. Runs after every rebuild (init + applicantType change).
+    // fields are not the LP's to choose. Preset them to the only in-scope values and
+    // hide them, so a normal LP never sees or reaches the server off-ju gate (Trust /
+    // LLC / Partnership / Other / non-Israel / US entity). collectAll reads hidden
+    // inputs by name, so the preset values still submit. The server scope gate stays as
+    // the tamper backstop. Runs after every rebuild (init + applicantType change).
     function applyOffJuLock() {
-      function lockField(name, value) {
-        // Match any control by name: entity.type stays a <select>, but the country
-        // field is swapped to a typeable <input list> combobox by populateCountries.
+      // Preset the value, fire change so dependent conditionals settle (Corporation
+      // reveals the Articles upload; notUs hides the CLN/exemption), then HIDE the
+      // field (Noa 2026-06-29: do not show a greyed locked control, just preselect).
+      // collectAll reads hidden inputs by name, so the preset value still submits.
+      // The country field is a swapped-in <input list> (populateCountries); matched by name.
+      function preset(name, value, container) {
         var el = form.querySelector('[name="' + name + '"]');
-        if (!el || el.disabled) return;
+        if (!el) return;
         el.value = value;
         try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
-        el.disabled = true; el.setAttribute('aria-disabled', 'true');
-        var fld = el.closest('.lvp-field'); if (fld) fld.classList.add('lvp-locked');
+        var box = el.closest(container); if (box) box.style.display = 'none';
       }
-      function lockRadio(name, value) {
+      function presetRadio(name, value, container) {
         var radios = form.querySelectorAll('input[name="' + name + '"]');
-        if (!radios.length || radios[0].disabled) return;
-        Array.prototype.forEach.call(radios, function (r) {
-          r.checked = (r.value === value);
-          var lbl = r.closest('label'); if (lbl) lbl.classList.toggle('lvp-radio-lock--off', !r.checked);
-        });
+        if (!radios.length) return;
+        Array.prototype.forEach.call(radios, function (r) { r.checked = (r.value === value); });
         try { radios[0].dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
-        Array.prototype.forEach.call(radios, function (r) { r.disabled = true; r.setAttribute('aria-disabled', 'true'); });
+        var box = radios[0].closest(container); if (box) box.style.display = 'none';
       }
-      // US-person locked Not-US for every minted LP (pre-vetted non-US Israeli).
-      lockRadio('fatcaCrs.usPersonStatus', 'notUs');
+      // US-person preset Not-US + hidden for every minted LP (pre-vetted non-US Israeli).
+      presetRadio('fatcaCrs.usPersonStatus', 'notUs', 'fieldset');
       // The only in-scope entity is an Israeli regarded Corporation.
       if (applicant() === 'entity') {
-        lockField('entity.type', 'Corporation');
-        lockField('entity.formationCountry', 'Israel');
+        preset('entity.type', 'Corporation', '.lvp-field');
+        preset('entity.formationCountry', 'Israel', '.lvp-field');
       }
       if (typeof applyConditionals === 'function') applyConditionals();
     }
