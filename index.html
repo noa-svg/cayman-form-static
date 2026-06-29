@@ -1471,6 +1471,14 @@
             window.CAYMAN_CFG = cfg;
             applyCfgVisuals(cfg);
             markDoneIfCompleted(cfg);
+            // Bad / expired / revoked token: the gateway returns a config with no usable
+            // flow (flowType '') exactly as caymanFormConfig_ documents. Route it to the
+            // broken-link gate instead of leaving the LP on a blank form that only fails at
+            // submit. Skip fixture/screenshot renders and already-completed links.
+            var tokenish = p.get('t') || p.get('token') || p.get('item') || p.get('sign');
+            if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
+              document.documentElement.classList.add('lvp-gate-mode');
+            }
             if (cfg.language === 'en' || cfg.language === 'he') {
               var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
               if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
@@ -2112,6 +2120,19 @@
       if (!inp.hasAttribute('data-upload')) return;
       var slot = inp.getAttribute('data-upload');
       var files = inp.files;
+      // Reject the whole selection up front if ANY file exceeds 10 MB, BEFORE marking
+      // the slot filled or starting any reader. A file input cannot drop one file
+      // selectively, so it is all-or-nothing; this avoids a half-filled multi-file slot
+      // and the async residue where an early file's reader lands after a later file is
+      // rejected (slot looked empty but still submitted the early file).
+      if (files && files.length && Array.prototype.some.call(files, function (bf) { return bf.size > 10 * 1024 * 1024; })) {
+        setStatus(curLang === 'he' ? 'קובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.' : 'A file is larger than 10 MB. Please upload smaller files.', true);
+        inp.value = '';
+        var wB = inp.closest('.lvp-upload');
+        if (wB) { wB.classList.remove('has-file'); var nB = wB.querySelector('[data-upload-name]'); if (nB) { nB.textContent = ''; nB.removeAttribute('data-has-file'); } var hB = wB.closest('.lvp-field') || wB; if (hB) hB.classList.add('lvp-field--error'); }
+        Object.keys(pendingUploads).forEach(function (k) { if (k === slot || k.indexOf(slot + '_') === 0) delete pendingUploads[k]; });
+        return;
+      }
       // Update the styled upload block's filename display immediately (synchronous).
       (function () {
         var wrap = inp.parentElement && inp.parentElement.classList.contains('lvp-upload') ? inp.parentElement : null;
@@ -2164,6 +2185,12 @@
           // The ID uploads ARE the scan: uploading the passport / ת"ז fills the form (no
           // separate scan step). Autofill from the first image only, when a key is set.
           if (i === 0 && (slot === 'passportPrimary' || slot === 'nationalId' || slot === 'nationalIdFront') && CFG.kycScanEnabled) autofillFromIdDoc(slot, b64, f.type || 'image/jpeg');
+        };
+        // A read failure must not leave the slot looking filled with nothing stored
+        // (it would pass the has-file UI but fail the required gate with no visible reason).
+        reader.onerror = function () {
+          delete pendingUploads[key];
+          if (i === 0) { var wE = inp.closest('.lvp-upload'); if (wE) { wE.classList.remove('has-file'); var nE = wE.querySelector('[data-upload-name]'); if (nE) { nE.textContent = ''; nE.removeAttribute('data-has-file'); } } }
         };
         reader.readAsDataURL(f);
       });
