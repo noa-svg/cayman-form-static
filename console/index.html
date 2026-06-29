@@ -2549,6 +2549,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     el=document.getElementById("manualLpFields");if(el)el.style.display=isSub?"":"none";
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isSub?"none":"block";
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
+    // Rev share is a NEW-subscription field (the FO/family revenue split is set at onboarding,
+    // never for an existing LP). Gate it on lpKind so toggling Investor New/Existing updates it live.
+    el=document.getElementById("revShareSection");if(el)el.style.display=(isSub&&state.lpKind==="new")?"":"none";
     // Israeli increase/withdrawal is Hebrew-only: hide the language toggle and force he,
     // so the operator never sees an English option that does nothing (Noa 2026-06-24).
     el=document.getElementById("langRow");if(el)el.style.display=isSub?"":"none";
@@ -2600,8 +2603,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     setToggleSilent("segType","type",btn.getAttribute("data-type"));
     setToggleSilent("segKind","lpKind",btn.getAttribute("data-kind"));
     setToggleSilent("segLang","language",btn.getAttribute("data-lang"));
-    var sec=document.getElementById("revShareSection");
-    if(sec)sec.style.display=(state.process==="subscription")?"":"none";
     newDd.classList.remove("on");newArr.classList.remove("open");
     open();
     setTimeout(function(){var f=document.getElementById("email");if(f)f.focus();},160);
@@ -2782,15 +2783,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
     if(mf)mf.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
   })();
-  function wire(id,key){var s=document.getElementById(id);s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v")}}
+  // Every seg click sets its state key AND re-syncs the panel, so dependent fields
+  // (rev-share on Investor New/Existing, etc.) update live and consistently. Previously
+  // only segProc had a re-sync listener, so toggling Investor did nothing.
+  function wire(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v");syncPanelFields();};}
   wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
-  // show rev share only for subscription
-  (function(){
-    var sec=document.getElementById('revShareSection');
-    function syncRevShare(){if(sec)sec.style.display=(state.process==='subscription')?'':'none';}
-    document.getElementById('segProc').addEventListener('click',function(){setTimeout(function(){syncRevShare();syncPanelFields();},0);});
-    syncRevShare();
-  })();
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   (function(){
     var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
@@ -3005,7 +3002,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     document.getElementById("res").classList.remove("on");
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
-    var _rsel=document.getElementById('revShareSel');var revShare=_rsel&&_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):(_rsel?_rsel.value:'');
+    // Rev share is new-subscription-only; never carry a value an existing-LP submit hid.
+    var _rsel=document.getElementById('revShareSel');var revShare=(state.lpKind==='new'&&_rsel)?(_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):_rsel.value):'';
     apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
