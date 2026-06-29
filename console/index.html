@@ -2169,15 +2169,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <button class="x" id="closeBtn" aria-label="Close">&times;</button>
     <h2 id="panelTitle">New process</h2>
     <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
-    <div id="lpPickerWrap">
-      <label>Existing LP <span class="tag">required</span></label>
-      <div class="lp-search">
-        <input id="lpSearch" type="search" autocomplete="off" placeholder="Search by name (Hebrew or English)">
-        <div id="lpResults" class="lp-results" hidden></div>
-      </div>
-      <div id="lpPicked" class="lp-picked" hidden></div>
-      <div class="hint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
-    </div>
     <div class="g2" id="typeKindRow">
       <div><label>Subscriber</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
       <div id="kindCell"><label>Investor</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
@@ -2248,8 +2239,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size: 13px;padding: 8px 16px;white-space:nowrap">Copy link</button>
       </div>
-      <button id="sendLpBtn" class="cta" style="margin-top: 12px;display:none">Send to LP</button>
-      <div id="sendLpStatus" role="status" aria-live="polite" style="margin-top: 8px;font-size: 13px;display:none"></div>
+      <!-- (Send-to-LP button removed with the Israeli mint path.) -->
     </div>
   </div>
 
@@ -2535,32 +2525,24 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
-  var PROC_LABEL={subscription:"Subscription",increase:"Increase",withdrawal:"Withdrawal"};
+  // This console mints subscriptions only, so the create fields are always shown; the one
+  // conditional left is rev-share (new-subscription only).
   function syncPanelFields(){
-    var isSub=(state.process==="subscription");
     var el;
-    // increase/withdrawal: keep the Subscriber type seg, hide the Investor-kind cell
-    // (always an existing LP), swap the manual name/email entry for the LP name-picker,
-    // and hide FO. (revShare is hidden separately, subscription-only.)
     el=document.getElementById("typeKindRow");if(el)el.style.display="";
-    el=document.getElementById("kindCell");if(el)el.style.display=isSub?"":"none";
-    el=document.getElementById("manualLpFields");if(el)el.style.display=isSub?"":"none";
-    el=document.getElementById("lpPickerWrap");if(el)el.style.display=isSub?"none":"block";
-    el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
+    el=document.getElementById("kindCell");if(el)el.style.display="";
+    el=document.getElementById("manualLpFields");if(el)el.style.display="";
+    el=document.getElementById("foRow");if(el)el.style.display="";
+    el=document.getElementById("langRow");if(el)el.style.display="";
     // Rev share is a NEW-subscription field (the FO/family revenue split is set at onboarding,
-    // never for an existing LP). Gate it on lpKind so toggling Investor New/Existing updates it live.
-    var rsOn=(isSub&&state.lpKind==="new");
+    // never for an existing LP). Gate on lpKind so the Investor New/Existing toggle updates it
+    // live, and reset it when hidden so no stale value lingers in the draft (submit also re-gates).
+    var rsOn=(state.lpKind==="new");
     el=document.getElementById("revShareSection");if(el)el.style.display=rsOn?"":"none";
-    // When rev-share is not applicable (existing LP), reset it so no stale value lingers in the
-    // draft or rehydrates on restore (the submit already re-gates, this keeps the data clean too).
     if(!rsOn){var _rs=document.getElementById("revShareSel");if(_rs)_rs.value="";var _rw=document.getElementById("revShareCustomWrap");if(_rw)_rw.style.display="none";}
-    // Israeli increase/withdrawal is Hebrew-only: hide the language toggle and force he,
-    // so the operator never sees an English option that does nothing (Noa 2026-06-24).
-    el=document.getElementById("langRow");if(el)el.style.display=isSub?"":"none";
-    if(!isSub){state.language="he";var ls=document.getElementById("segLang");if(ls)Array.prototype.forEach.call(ls.children,function(b){b.classList.toggle("on",b.getAttribute("data-v")==="he");});}
-    el=document.getElementById("panelLead");if(el)el.textContent=isSub?"Creates the Monday item, emails the investor, and notifies the team.":"For an existing LP. Mints the link for you to test and send yourself. Nothing is emailed automatically.";
-    el=document.getElementById("panelTitle");if(el)el.textContent=PROC_LABEL[state.process]||"New process";
-    el=document.getElementById("createBtn");if(el)el.textContent=isSub?"Send invite":"Create link";
+    el=document.getElementById("panelLead");if(el)el.textContent="Creates the Monday item, emails the investor, and notifies the team.";
+    el=document.getElementById("panelTitle");if(el)el.textContent="Subscription";
+    el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
   }
   var panelOpener=null;
   // Wipe the create form. Called AFTER a successful submit, NOT on open, so an
@@ -2569,7 +2551,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   // old F5 intent: a COMPLETED invite never carries its name/email into the next one.
   function caymanClearCreateForm(){
     ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
-    if(window.__lpClearPick)window.__lpClearPick();
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
@@ -2790,68 +2771,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function wire(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v");syncPanelFields();};}
   // Process is fixed to subscription (the only flow this console mints); no segProc to wire.
   wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
-  // ---- LP name-search picker (Israeli increase/withdrawal) ----
-  (function(){
-    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
-    if(!inp||!box||!picked)return;
-    var T=null,rows=[],active=-1;
-    function subline(m){return [(m.nameHe&&m.nameEn)?m.nameEn:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;if(window.__saveCreateDraft)window.__saveCreateDraft();}
-    window.__lpClearPick=clearPick;
-    function setPick(m){
-      // Read both ids off the match object m (NOT off state) so restore via
-      // __lpRestorePick(d.selectedLp) rehydrates without a re-search. The Investments
-      // row carries the deal contract; the linked People item carries the LP identity
-      // (Israeli ID is read People-side). selectedMondayId is the legacy field and now
-      // holds the People identity id for backward-compat with the mint guard.
-      state.selectedInvestmentsId=m.investmentsItemId||'';
-      state.selectedPeopleId=m.linkedPeopleItemId||'';
-      state.selectedMondayId=m.linkedPeopleItemId||'';
-      state.selectedLp=m;
-      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
-      picked.hidden=false;box.hidden=true;inp.style.display='none';
-      var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
-      if(window.__saveCreateDraft)window.__saveCreateDraft();
-    }
-    // Restore a persisted LP pick (increase/withdrawal) without re-hitting search.
-    // A persisted Investments match is keyed by investmentsItemId; older drafts may
-    // carry only itemId. Accept either so a reload rehydrates the pick.
-    window.__lpRestorePick=function(m){if(m&&(m.investmentsItemId||m.itemId))setPick(m);};
-    function render(){
-      if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
-      // A match with no linked People item has no LP identity record (no Israeli ID),
-      // so it can never mint. Render it disabled with a short note so the operator
-      // cannot pick it.
-      box.innerHTML=rows.map(function(m,i){
-        var mintable=!!m.linkedPeopleItemId;
-        if(!mintable){
-          return '<div class="lp-row" data-i="'+i+'" aria-disabled="true" style="cursor:not-allowed;opacity:.55"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div><div class="lp-sub" style="color:var(--color-coral)">no linked LP record</div></div></div>';
-        }
-        return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';
-      }).join('');
-      box.hidden=false;
-      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){
-        if(r.getAttribute('aria-disabled')==='true')return;
-        r.onclick=function(){setPick(rows[+r.getAttribute('data-i')]);};
-      });
-    }
-    inp.addEventListener('input',function(){
-      var q=inp.value.trim();active=-1;
-      if(q.length<2){box.hidden=true;rows=[];return;}
-      if(T)clearTimeout(T);
-      T=setTimeout(function(){
-        apiFetch('?admin=searchInvestments&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
-      },220);
-    });
-    inp.addEventListener('keydown',function(e){
-      if(box.hidden||!rows.length)return;
-      if(e.key==='ArrowDown'){active=Math.min(active+1,rows.length-1);render();e.preventDefault();}
-      else if(e.key==='ArrowUp'){active=Math.max(active-1,0);render();e.preventDefault();}
-      else if(e.key==='Enter'){if(active>=0&&rows[active]&&rows[active].linkedPeopleItemId){setPick(rows[active]);e.preventDefault();}}
-      else if(e.key==='Escape'){box.hidden=true;}
-    });
-    document.addEventListener('click',function(e){var w=document.getElementById('lpPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
-  })();
+  // (LP name-search picker removed 2026-06-29 with the Israeli increase/withdrawal mint path.)
   // ---- Onboarding-submission picker (subscription only) ----
   // Pulls pending submissions from the onboarding board so the operator does not retype
   // the name and email. Picking one fills the existing console inputs and fires an 'input'
@@ -2911,19 +2831,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         v:1,
         name:g('name'),nameHebrew:g('nameHebrew'),nickname:g('nickname'),
         email:g('email'),foEmail:g('foEmail'),
-        revShareSel:g('revShareSel'),revShareCustom:g('revShareCustom'),
-        // increase/withdrawal LP picker selection. selectedLp is the full match
-        // object; on restore __lpRestorePick reads both ids back off it, so the two
-        // id fields below are belt-and-suspenders for older/partial drafts.
-        selectedMondayId:state.selectedMondayId||'',
-        selectedInvestmentsId:state.selectedInvestmentsId||'',
-        selectedPeopleId:state.selectedPeopleId||'',
-        selectedLp:state.selectedLp||null
+        revShareSel:g('revShareSel'),revShareCustom:g('revShareCustom')
       };
     }
     function isEmpty(d){
       return !d.name&&!d.nameHebrew&&!d.nickname&&!d.email&&!d.foEmail&&
-             !d.revShareSel&&!d.revShareCustom&&!d.selectedMondayId;
+             !d.revShareSel&&!d.revShareCustom;
     }
     function save(){
       try{
@@ -2944,8 +2857,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display=(d.revShareSel==='custom')?'block':'none';
       }
       s('revShareCustom',d.revShareCustom);
-      // Rehydrate the LP picker selection (increase/withdrawal) from the stored object.
-      if(d.selectedMondayId&&d.selectedLp&&window.__lpRestorePick){window.__lpRestorePick(d.selectedLp);}
     }
     window.__saveCreateDraft=save;
     window.__clearCreateDraft=clear;
@@ -2961,41 +2872,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   document.getElementById("createBtn").onclick=function(){
     var btn=this;
     var msg=document.getElementById("msg");
-    if(state.process!=='subscription'){
-      // Israeli increase/withdrawal: existing LP picked BY NAME -> mint by Monday id
-      // (lane=israel + process routes to the Hebrew flow; no manual name/email here).
-      if(!state.selectedMondayId){showMsg('Pick the LP from the search above.',true);return;}
-      var lpName=(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn))||'this LP';
-      if(!confirm('Create the '+(PROC_LABEL[state.process]||state.process)+' request for '+lpName+'?'))return;
-      btn.disabled=true;btn.textContent='Creating...';
-      document.getElementById('res').classList.remove('on');
-      showMsg('Creating '+(PROC_LABEL[state.process]||'')+' request...',false);
-      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane=israel&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId)+'&type='+encodeURIComponent(state.type)).then(function(res){
-        btn.disabled=false;btn.textContent='Create link';
-        if(!res||!res.ok){showMsg((res&&res.error)||'Could not create. Check GAS logs.',true);return;}
-        showMsg('',false);
-        document.getElementById('res').classList.add('on');
-        document.getElementById('lk').textContent=res.signerLink||res.url||'';
-        // Israeli is create-link-only: surface the Send-to-LP step (no auto-send).
-        document.getElementById('resTitle').textContent='Link ready. Test it, then send.';
-        var _slb=document.getElementById('sendLpBtn');
-        if(state.process==='withdrawal'){
-          // L6: withdrawal has no auto-send (the redemption invite email copy is not
-          // approved), so the backend refuses sendIsraeliInvite for it. Hide the Send-to-LP
-          // button and tell the operator to send manually, instead of a refusal dead-end.
-          document.getElementById('resSub').textContent='Withdrawal links are sent manually. Test the link, then copy it and email it to the LP yourself.';
-          _slb.style.display='none';
-        } else {
-          document.getElementById('resSub').textContent='Open the link to test. When ready, send it to the LP. Omri is cc\'d.';
-          _slb.style.display=''; _slb.disabled=false; _slb.textContent='Send to LP';
-          _slb.setAttribute('data-process', res.processId||'');
-        }
-        var _sls=document.getElementById('sendLpStatus'); _sls.style.display='none'; _sls.textContent='';
-        caymanClearCreateForm();
-        load();
-      }).catch(function(e){btn.disabled=false;btn.textContent='Create link';showMsg('Server error: '+((e&&e.message)||'unknown'),true);});
-      return;
-    }
+    // (Israeli increase/withdrawal mint path removed 2026-06-29. This console mints subscriptions only.)
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
     if(!name&&!nameHebrew){showMsg("Enter at least one name, English or Hebrew.",true);return}
     if(!/\S+@\S+\.\S+/.test(email)){showMsg("Enter a valid investor email.",true);return}
@@ -3014,7 +2891,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       document.getElementById("lk").textContent=res.url||"";
       document.getElementById('resTitle').textContent='Invite sent.';
       document.getElementById('resSub').textContent='Copy the link to share manually.';
-      var _slb2=document.getElementById('sendLpBtn'); if(_slb2)_slb2.style.display='none';
       caymanClearCreateForm();
       load();
     }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
@@ -3024,20 +2900,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(!lk)return;
     navigator.clipboard.writeText(lk).then(function(){var b=document.getElementById("copyLinkBtn");b.textContent="Copied";setTimeout(function(){b.textContent="Copy link";},2000);}).catch(function(){});
   };
-  // Send-to-LP: deliver the already-minted increase invite (from ir@, cc Omri + FO).
-  // This is the operator send step after Noa has tested the link.
-  document.getElementById("sendLpBtn").onclick=function(){
-    var b=this, pid=b.getAttribute("data-process");
-    if(!pid)return;
-    if(!confirm("Send the increase invite to the LP now? Omri will be cc'd."))return;
-    b.disabled=true;b.textContent="Sending...";
-    var st=document.getElementById("sendLpStatus");
-    apiFetch("?admin=sendIsraeliInvite&process="+encodeURIComponent(pid)).then(function(res){
-      st.style.display="";
-      if(res&&res.ok){ b.textContent="Sent"; st.style.color="var(--color-atrium)"; st.textContent="Sent to "+(res.sentTo||"the LP")+(res.cc?". Cc: "+res.cc:"")+"."; }
-      else { b.disabled=false;b.textContent="Send to LP"; st.style.color="#F87171"; st.textContent=((res&&res.error)||"Send failed.")+((res&&res.detail)?" ("+res.detail+")":""); }
-    }).catch(function(e){ b.disabled=false;b.textContent="Send to LP"; st.style.display="";st.style.color="#F87171"; st.textContent="Server error: "+((e&&e.message)||"unknown"); });
-  };
+  // (Send-to-LP step removed with the Israeli mint path; subscriptions auto-send the invite.)
 
   // view switching
   function switchView(v){
