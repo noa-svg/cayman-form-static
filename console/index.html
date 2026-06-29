@@ -2169,8 +2169,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <button class="x" id="closeBtn" aria-label="Close">&times;</button>
     <h2 id="panelTitle">New process</h2>
     <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
-    <label>Process</label>
-    <div class="seg" id="segProc"><button class="on" data-v="subscription">Subscription</button></div>
     <div id="lpPickerWrap">
       <label>Existing LP <span class="tag">required</span></label>
       <div class="lp-search">
@@ -2551,7 +2549,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     el=document.getElementById("foRow");if(el)el.style.display=isSub?"":"none";
     // Rev share is a NEW-subscription field (the FO/family revenue split is set at onboarding,
     // never for an existing LP). Gate it on lpKind so toggling Investor New/Existing updates it live.
-    el=document.getElementById("revShareSection");if(el)el.style.display=(isSub&&state.lpKind==="new")?"":"none";
+    var rsOn=(isSub&&state.lpKind==="new");
+    el=document.getElementById("revShareSection");if(el)el.style.display=rsOn?"":"none";
+    // When rev-share is not applicable (existing LP), reset it so no stale value lingers in the
+    // draft or rehydrates on restore (the submit already re-gates, this keeps the data clean too).
+    if(!rsOn){var _rs=document.getElementById("revShareSel");if(_rs)_rs.value="";var _rw=document.getElementById("revShareCustomWrap");if(_rw)_rw.style.display="none";}
     // Israeli increase/withdrawal is Hebrew-only: hide the language toggle and force he,
     // so the operator never sees an English option that does nothing (Noa 2026-06-24).
     el=document.getElementById("langRow");if(el)el.style.display=isSub?"":"none";
@@ -2599,7 +2601,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   document.addEventListener("click",function(e){if(newWrap&&!newWrap.contains(e.target)){newDd.classList.remove("on");newArr.classList.remove("open");}});
   function setToggleSilent(id,key,val){var s=document.getElementById(id);if(!s)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");});var b=s.querySelector('[data-v="'+val+'"]');if(b){b.classList.add("on");state[key]=val;}}
   function quickPick(btn){
-    setToggleSilent("segProc","process",btn.getAttribute("data-proc"));
     setToggleSilent("segType","type",btn.getAttribute("data-type"));
     setToggleSilent("segKind","lpKind",btn.getAttribute("data-kind"));
     setToggleSilent("segLang","language",btn.getAttribute("data-lang"));
@@ -2787,7 +2788,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   // (rev-share on Investor New/Existing, etc.) update live and consistently. Previously
   // only segProc had a re-sync listener, so toggling Investor did nothing.
   function wire(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v");syncPanelFields();};}
-  wire("segProc","process");wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
+  // Process is fixed to subscription (the only flow this console mints); no segProc to wire.
+  wire("segType","type");wire("segKind","lpKind");wire("segLang","language");
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   (function(){
     var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
