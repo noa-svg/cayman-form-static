@@ -1175,8 +1175,7 @@
             <label class="lvp-field" data-required data-applicant="entity"><span class="lvp-field__label">Indicate exemption</span><input class="lvp-input" type="text" name="fatcaCrs.usExemptionCategory"></label>
           </div>
 
-          <!-- Tax residency (always shown) -->
-          <h3 class="lvp-subhead">Tax residency</h3>
+          <!-- Tax residency (always shown). Page title is already "Tax residency", so no subhead. -->
           <p class="lvp-hint-small">Every jurisdiction where you are tax-resident. Up to 3.</p>
           <div data-repeating-typed-path="fatcaCrs.taxResidency" data-repeating-min="1" data-repeating-template="taxres"></div>
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="fatcaCrs.taxResidency">+ Add another jurisdiction</button>
