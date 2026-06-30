@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&family=Caveat:wght@600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 /* ============================================================
@@ -536,18 +536,15 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .google-signin-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .google-signin-btn:active { background: #f1f3f4; }
 
-/* ----- login doodles: loose brush-ink collage around the sign-in card. Drawn with
-   perfect-freehand (variable-width committed strokes). Lives inside #login-screen so
-   it clears (.off) on auth. Decorative + non-interactive. ----- */
-#login-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-#login-glow { display: none; }
+/* ----- login sketchbook: one contained inline-SVG page (liori-style ink), the
+   sign-in card parked on top. Clears (.off) on auth. ----- */
+#login-screen { background: #F5F1E8; }
+#login-ink, #login-top { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#login-ink { z-index: 0; }
+#login-top { z-index: 3; }
 #login-screen .lc { position: relative; z-index: 2; }
-#login-measure { position: absolute; width: 100px; height: 100px; visibility: hidden; left: -9999px; }
-#login-art .d { position: absolute; }
-#login-art .d svg { width: 100%; height: auto; display: block; overflow: visible; }
-#login-art .ltr { position: absolute; font-family: 'Permanent Marker', cursive; color: #141414; line-height: .9; white-space: nowrap; }
-#login-art .ltr span { display: inline-block; }
-@media (max-height: 600px) { #login-art, #login-glow { display: none; } }
+#login-ink text.cap, #login-top text.cap { font-family: 'Permanent Marker', cursive; fill: #1A1A1A; }
+#login-ink text.cur, #login-top text.cur { font-family: 'Caveat', cursive; fill: #1A1A1A; }
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -3761,127 +3758,159 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
-  <div id="login-art" aria-hidden="true"></div>
-  <div id="login-glow" aria-hidden="true"></div>
-  <svg id="login-measure" viewBox="0 0 100 100" aria-hidden="true"></svg>
-  <script>
-  /* Login brush-doodle collage. Drawn with perfect-freehand (variable-width
-     committed strokes). Decorative + non-blocking: if the engine fails to load the
-     login is unaffected (the catch swallows it and #login-art stays empty). */
-  (function(){
-    import('https://esm.sh/perfect-freehand@1.2.0').then(function(mod){
-      var getStroke=mod.getStroke, NS='http://www.w3.org/2000/svg';
-      var measure=document.getElementById('login-measure'), art=document.getElementById('login-art');
-      if(!getStroke||!measure||!art) return;
-      var seed=99; function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
-      function pts(d,phase){var t=document.createElementNS(NS,'path');t.setAttribute('d',d);measure.appendChild(t);var L=t.getTotalLength();var n=Math.max(8,Math.round(L/3.2));var out=[];for(var i=0;i<=n;i++){var p=t.getPointAtLength(L*i/n);out.push([p.x+(rnd()-0.5)*1.9,p.y+(rnd()-0.5)*1.9,Math.max(0.08,Math.min(1,0.3+0.62*(0.5+0.5*Math.sin((i/n)*Math.PI*2.3+phase))+(rnd()-0.5)*0.18))]);}measure.removeChild(t);return out;}
-      function sfs(s){if(!s.length)return'';var d=s.reduce(function(a,p,i,arr){var n=arr[(i+1)%arr.length];a.push(p[0],p[1],(p[0]+n[0])/2,(p[1]+n[1])/2);return a;},['M',s[0][0],s[0][1],'Q']);d.push('Z');return d.join(' ');}
-      function draw(strokes,sz){var s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 100 100');strokes.forEach(function(d,k){var o=getStroke(pts(d,k*1.7+rnd()*3),{size:sz,thinning:0.72,smoothing:0.5,streamline:0.32,simulatePressure:false,start:{taper:6,cap:true},end:{taper:10,cap:true}});var p=document.createElementNS(NS,'path');p.setAttribute('d',sfs(o));p.setAttribute('fill','#141414');s.appendChild(p);});return s;}
-      var PATHS={
-        clap:['M22 44 L78 44 L78 84 L22 84 Z','M22 44 L80 34','M32 60 L66 60'],
-        goog:['M74 38 A28 28 0 1 0 76 62 L52 62'],
-        fb:['M24 18 L76 18 L82 24 L82 76 L76 82 L24 82 L18 76 L18 24 Z','M60 30 Q47 28 47 44 L47 80','M38 48 L60 48'],
-        col:['M30 30 L70 30 L70 36 L30 36 Z','M36 36 L38 76','M50 36 L50 76','M64 36 L62 76','M26 78 L74 78','M22 86 L78 86'],
-        blade:['M46 56 C36 44 40 24 54 16 C62 24 62 44 56 56 Z','M42 56 L60 56 L58 62 L44 62 Z','M46 62 L44 66 L48 68 L45 72 L49 74 L46 78 L51 84 L56 78 L53 74 L57 72 L54 68 L58 66 L56 62'],
-        coupe:['M24 32 L76 32 Q72 50 50 52 Q28 50 24 32 Z','M50 52 L50 80','M36 82 Q50 78 64 82'],
-        wine:['M34 26 Q34 50 50 53 Q66 50 66 26 Q50 22 34 26 Z','M50 53 L50 80','M36 82 Q50 78 64 82'],
-        cork:['M26 26 L74 26','M50 26 L50 58','M44 58 Q56 62 44 68 Q56 72 44 78 Q56 82 50 88'],
-        sushi:['M22 60 Q22 50 50 50 Q78 50 78 60 Q78 70 50 70 Q22 70 22 60 Z','M24 52 Q50 44 76 52 Q76 57 50 57 Q24 57 24 52 Z'],
-        noodle:['M22 56 Q50 80 78 56','M20 54 Q50 62 80 54','M38 54 Q34 38 42 30','M50 54 Q48 36 54 28','M62 54 Q60 38 66 32','M40 26 L70 22'],
-        forkknife:['M36 22 L36 82','M30 22 L30 36','M42 22 L42 36','M30 36 Q36 42 42 36','M62 22 Q70 24 66 46 L62 82'],
-        sake:['M44 22 L56 22 L56 34 Q66 40 66 56 L66 80 Q66 86 58 86 L42 86 Q34 86 34 80 L34 56 Q34 40 44 34 Z','M40 56 L60 56'],
-        fuji:['M12 80 L50 24 L88 80','M37 43 L43 51 L49 41 L55 51 L61 43','M10 82 Q50 78 90 82'],
-        star:['M50 18 Q56 44 82 50 Q56 56 50 82 Q44 56 18 50 Q44 44 50 18 Z'],
-        catglass:['M30 86 Q24 58 40 55 Q40 43 48 47 Q54 43 60 47 Q72 56 64 86','M40 49 L35 38 L47 47','M58 49 L63 38 L51 47','M64 82 Q82 80 76 62','M20 62 L36 66','M20 70 L36 70','M58 60 L55 88 L70 88 L67 60','M55 60 L70 60','M61 50 L61 60'],
-        buckethead:['M34 88 L38 60 Q50 56 62 60 L66 88','M40 64 Q28 70 28 84','M36 40 L64 40 L61 60 L39 60 Z','M34 40 L66 40','M42 88 L42 96','M58 88 L58 96'],
-        fish:['M18 50 Q40 34 66 50 Q40 66 18 50 Z','M66 50 L84 38 L84 62 Z','M32 42 Q37 50 32 58','M28 47 L31 47'],
-        bird:['M22 58 Q40 42 60 48 Q56 36 70 34 Q72 46 64 52 Q86 48 92 64 Q70 70 58 64 L40 78 Q26 72 22 58','M68 42 L72 42'],
-        choop:['M30 20 L48 84','M42 17 L60 82','M33 30 L46 27'],
-        flower:['M50 80 L50 50','M50 50 Q39 38 50 28 Q61 38 50 50','M50 50 Q62 40 72 50 Q62 60 50 50','M50 50 Q60 62 50 72 Q40 62 50 50','M50 50 Q38 60 28 50 Q38 40 50 50'],
-        moon:['M64 22 Q34 30 34 56 Q34 82 64 78 Q44 64 44 50 Q44 36 64 22 Z'],
-        teacup:['M28 50 Q30 74 50 74 Q70 74 72 50 Z','M26 51 L74 51','M72 55 Q87 55 85 66 Q83 73 74 70','M41 44 Q45 38 43 33 M55 44 Q59 38 57 33'],
-        bottle:['M45 18 L54 20 L55 33 Q63 39 61 53 L59 85 Q58 89 50 88 L43 87 Q38 86 39 81 L41 51 Q40 39 45 33 Z','M40 58 L60 60'],
-        diner:['M40 24 Q40 14 50 14 Q60 14 60 24 Q60 32 50 32 Q40 32 40 24','M40 18 Q50 9 61 17','M44 28 Q50 31 56 28','M33 72 L40 40 Q51 36 62 42 L67 72','M40 46 L29 58 L47 59','M62 46 L71 51','M68 49 L72 62 L80 62 L77 49','M20 72 L80 74'],
-        chicken:['M30 60 Q28 44 44 42 Q60 40 64 56 Q64 70 50 70 Q34 72 30 60','M44 42 Q42 30 52 28','M50 28 Q52 22 56 26 Q58 22 61 28','M52 32 L61 34 L52 38','M62 54 Q79 46 81 29','M64 60 Q81 56 85 40','M44 70 L42 82 L35 84','M56 70 L58 82 L65 84'],
-        pour:['M14 28 L34 20 L44 40 L38 58 L18 64 L8 44 Z','M26 24 L33 21','M40 52 Q56 62 70 56 Q86 50 96 64'],
-        cat:['M34 84 Q30 56 50 54 Q70 56 66 84','M40 56 L36 44 L48 52','M60 56 L64 44 L52 52','M66 80 Q80 78 76 64','M30 68 L42 70','M30 74 L42 73','M44 64 L47 64','M53 64 L56 64'],
-        plate:['M12 50 Q12 37 50 37 Q88 37 88 50 Q88 63 50 63 Q12 63 12 50 Z','M24 50 Q24 43 50 43 Q76 43 76 50 Q76 57 50 57 Q24 57 24 50 Z'],
-        jobs:['M37 25 Q37 10 52 10 Q67 10 67 25 Q67 39 52 41 Q37 39 37 25 Z','M40 14 Q46 8 52 11 M65 16 Q62 9 56 11','M39 25 Q39 19 45 19 Q51 19 51 25 Q51 31 45 31 Q39 31 39 25 Z','M54 25 Q54 19 60 19 Q66 19 66 25 Q66 31 60 31 Q54 31 54 25 Z','M51 25 L54 25','M38 25 L33 24 M66 25 L71 24','M45 36 Q52 39 59 36','M40 42 Q52 47 65 42 L67 60 Q67 64 61 64 L44 64 Q38 64 38 60 Z','M43 64 L40 92 M62 64 L65 92','M44 92 L44 100 M61 92 L61 100','M65 47 L82 39 L80 46'],
-        cactus:['M44 92 L44 42 Q44 32 52 32 Q60 32 60 42 L60 92','M44 64 L34 64 Q28 64 28 56 L28 48','M60 56 L70 56 Q76 56 76 48 L76 40','M40 92 L64 92 L62 99 L42 99 Z'],
-        sun:['M34 50 Q34 34 50 34 Q66 34 66 50 Q66 66 50 66 Q34 66 34 50 Z','M50 30 L50 20','M50 70 L50 80','M30 50 L20 50','M70 50 L80 50','M36 36 L30 30','M64 36 L70 30','M36 64 L30 70','M64 64 L70 70'],
-        carrot:['M50 90 L40 50 Q50 45 60 50 Z','M44 50 L40 36','M50 49 L50 32','M56 50 L60 36','M46 62 L52 60','M48 72 L54 70'],
-        tomato:['M30 56 Q30 38 50 38 Q70 38 70 56 Q70 74 50 74 Q30 74 30 56 Z','M50 38 L50 30','M44 36 L38 30','M56 36 L62 30','M48 34 L45 27'],
-        leafy:['M30 80 Q24 50 40 40 Q36 24 50 28 Q49 16 60 26 Q72 22 70 40 Q84 48 74 64 Q78 78 60 78 Q44 86 30 80 Z','M50 72 L50 42','M44 62 L39 48','M58 62 L64 48'],
-        winebottle:['M44 16 L56 16 L56 34 Q62 42 62 56 L62 86 Q62 90 56 90 L44 90 Q38 90 38 86 L38 56 Q38 42 44 34 Z','M40 60 L60 60','M40 74 L60 74','M45 16 L55 16 L55 10 L45 10 Z'],
-        backpack:['M30 40 Q30 24 50 24 Q70 24 70 40 L70 84 Q70 90 62 90 L38 90 Q30 90 30 84 Z','M38 90 Q36 62 47 56 Q55 54 63 58 Q70 72 68 90','M38 42 Q34 30 42 28','M62 42 Q66 30 58 28','M44 66 L56 66'],
-        hat:['M32 52 Q32 30 50 30 Q68 30 68 52','M22 52 Q50 58 78 52 L72 64 Q50 70 28 64 Z','M38 52 L62 52']
-      };
-      function place(name,sz,css){if(!PATHS[name])return;var d=document.createElement('div');d.className='d';d.style.cssText=css;d.appendChild(draw(PATHS[name],sz));art.appendChild(d);}
-      function text(t,css,size){var e=document.createElement('div');e.className='ltr';e.style.cssText=css+';font-size:'+size+'px';t.split('').forEach(function(ch){if(ch==='\n'){e.appendChild(document.createElement('br'));return;}var sp=document.createElement('span');if(ch===' ')sp.innerHTML='&nbsp;';else sp.textContent=ch;sp.style.transform='rotate('+((rnd()-0.5)*16)+'deg) translateY('+((rnd()-0.5)*7)+'px)';sp.style.fontSize=(0.82+rnd()*0.42)+'em';e.appendChild(sp);});art.appendChild(e);}
-      var screen=document.getElementById('login-screen');
-      function placeTop(name,sz,css){if(!PATHS[name])return;var d=document.createElement('div');d.className='d';d.style.cssText='position:absolute;z-index:3;pointer-events:none;'+css;d.appendChild(draw(PATHS[name],sz));screen.appendChild(d);}
-      function quote(css){var e=document.createElement('div');e.className='ltr';e.style.cssText=css;e.innerHTML='<div style="margin-left:0">MAKE</div><div style="margin-left:1.5em">THINGS AS</div><div style="margin-left:0;line-height:1"><span style="font-size:1.8em">SIMPLE</span> AS</div><div style="margin-left:1.3em">POSSIBLE</div><div style="margin-left:0">BUT NOT SIMPLER</div>';art.appendChild(e);}
-      if(window.matchMedia('(max-width:560px)').matches){
-        place('buckethead',6.5,'top:2vh;left:1vw;width:120px;transform:rotate(-3deg)');
-        place('chicken',6,'top:3vh;right:3vw;width:96px;transform:rotate(5deg)');
-        place('sushi',8,'top:13vh;left:6vw;width:64px;transform:rotate(-5deg)');
-        place('coupe',7,'top:13vh;right:8vw;width:56px;transform:rotate(6deg)');
-        placeTop('pour',6,'top:17vh;left:28vw;width:150px;transform:rotate(4deg)');
-        place('cat',6,'bottom:2vh;left:3vw;width:96px;transform:rotate(2deg)');
-        place('fish',6,'bottom:2vh;right:4vw;width:90px;transform:rotate(-5deg)');
-        place('noodle',8,'bottom:12vh;left:8vw;width:78px;transform:rotate(5deg)');
-        place('fb',8,'bottom:12vh;right:8vw;width:56px;transform:rotate(-4deg)');
-      } else {
-        // figures + creatures = the body of the page
-        place('buckethead',7,'top:5vh;left:0vw;width:225px;transform:rotate(-3deg)');
-        place('diner',7,'top:2vh;left:21vw;width:188px;transform:rotate(2deg)');
-        place('catglass',6,'top:33vh;left:0vw;width:150px;transform:rotate(3deg)');
-        place('chicken',6.5,'top:29vh;right:8vw;width:132px;transform:rotate(4deg)');
-        place('cat',6,'bottom:1vh;left:2vw;width:122px;transform:rotate(2deg)');
-        placeTop('pour',7,'top:15vh;left:41vw;width:200px;transform:rotate(5deg)');
-        place('jobs',7,'top:1vh;left:52vw;width:165px;transform:rotate(2deg)');
-        place('sun',7,'top:3vh;right:2vw;width:60px;transform:rotate(0deg)');
-        place('hat',7,'top:33vh;left:13vw;width:80px;transform:rotate(-5deg)');
-        place('backpack',7,'top:42vh;right:11vw;width:96px;transform:rotate(5deg)');
-        place('cactus',7,'top:60vh;left:33vw;width:64px;transform:rotate(-3deg)');
-        place('winebottle',7,'top:58vh;left:14vw;width:58px;transform:rotate(6deg)');
-        place('carrot',7,'bottom:2vh;left:34vw;width:54px;transform:rotate(8deg)');
-        place('tomato',7,'bottom:13vh;right:27vw;width:60px;transform:rotate(-6deg)');
-        place('leafy',7,'bottom:2vh;right:11vw;width:70px;transform:rotate(5deg)');
-        // heavy columns + named objects
-        place('col',12,'top:56vh;left:2vw;width:122px;transform:rotate(-3deg)');
-        place('fish',6,'top:40vh;left:14vw;width:108px;transform:rotate(-7deg)');
-        place('fb',8,'bottom:3vh;right:5vw;width:74px;transform:rotate(-5deg)');
-        place('blade',6,'bottom:12vh;right:15vw;width:70px;transform:rotate(-7deg)');
-        place('plate',8,'bottom:13vh;left:25vw;width:185px;transform:rotate(-2deg)');
-        // food/drink fill - namable, no holes
-        place('coupe',7,'top:6vh;right:31vw;width:80px;transform:rotate(-5deg)');
-        place('sushi',8,'top:3vh;right:19vw;width:94px;transform:rotate(5deg)');
-        place('teacup',7,'top:5vh;right:5vw;width:82px;transform:rotate(-4deg)');
-        place('fuji',7,'top:20vh;left:17vw;width:88px;transform:rotate(3deg)');
-        place('choop',7,'top:18vh;left:29vw;width:56px;transform:rotate(-7deg)');
-        place('sake',7,'top:19vh;right:31vw;width:62px;transform:rotate(-8deg)');
-        place('teacup',7,'top:20vh;right:21vw;width:76px;transform:rotate(5deg)');
-        place('noodle',8,'top:33vh;right:23vw;width:92px;transform:rotate(6deg)');
-        place('wine',8,'top:46vh;left:7vw;width:74px;transform:rotate(6deg)');
-        place('forkknife',7,'top:45vh;right:4vw;width:64px;transform:rotate(7deg)');
-        place('moon',7,'top:58vh;right:7vw;width:64px;transform:rotate(6deg)');
-        place('sushi',7,'top:50vh;right:18vw;width:72px;transform:rotate(-6deg)');
-        place('coupe',7,'top:35vh;left:26vw;width:64px;transform:rotate(-5deg)');
-        place('wine',7,'top:52vh;left:27vw;width:60px;transform:rotate(5deg)');
-        place('sushi',7,'top:36vh;right:27vw;width:64px;transform:rotate(4deg)');
-        place('sake',7,'bottom:2vh;left:14vw;width:60px;transform:rotate(-7deg)');
-        place('noodle',8,'bottom:2vh;left:20vw;width:100px;transform:rotate(5deg)');
-        place('bottle',7,'bottom:2vh;left:45vw;width:62px;transform:rotate(15deg)');
-        place('teacup',7,'bottom:3vh;right:31vw;width:74px;transform:rotate(5deg)');
-        place('sushi',8,'bottom:2vh;right:21vw;width:88px;transform:rotate(-6deg)');
-        place('fuji',7,'bottom:3vh;right:2vw;width:84px;transform:rotate(4deg)');
-        // text floated on the plate, ragged, one big word
-        quote("bottom:14vh;left:27vw;transform:rotate(-3deg)");
-      }
-    }).catch(function(){});
-  })();
-  </script>
+  <svg id="login-ink" aria-hidden="true" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <filter id="lvink-rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.013 0.015" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="lvink-paper"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" result="t"/><feColorMatrix in="t" type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer></filter>
+  </defs>
+
+  <g filter="url(#lvink-rough)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+    <!-- ===== TOP-LEFT: floral vase (hero) + wine bottle (hero) + cherries ===== -->
+    <!-- vase -->
+    <path stroke-width="6" d="M150 256 Q138 366 200 372 Q262 366 250 256 Q224 246 200 246 Q176 246 150 256 Z"/>
+    <path stroke-width="4" d="M152 258 Q200 270 248 258"/>
+    <!-- stems + leaves to the top edge -->
+    <path stroke-width="5" d="M188 248 Q176 150 158 40"/>
+    <path stroke-width="5" d="M200 246 Q204 140 196 30"/>
+    <path stroke-width="5" d="M214 250 Q236 150 262 56"/>
+    <path stroke-width="4" d="M180 170 Q150 158 138 132"/>
+    <path stroke-width="4" d="M210 190 Q244 178 256 150"/>
+    <path stroke-width="4" d="M196 110 Q170 96 162 70"/>
+    <!-- blooms -->
+    <path stroke-width="5" d="M150 44 Q136 26 158 24 Q178 18 182 44 Q172 62 156 56"/>
+    <path stroke-width="5" d="M250 60 Q236 40 258 38 Q280 34 282 60 Q272 78 256 72"/>
+    <path stroke-width="4" d="M150 132 Q132 124 134 108 Q140 94 156 100 Q162 116 150 132"/>
+    <!-- wine bottle (hero) -->
+    <path stroke-width="7" d="M348 372 L348 188 Q348 156 362 134 L362 84 L410 84 L410 134 Q424 156 424 188 L424 372 Q424 386 410 386 L362 386 Q348 386 348 372 Z"/>
+    <path stroke-width="6" d="M362 84 L410 84 L410 62 L362 62 Z"/>
+    <path stroke-width="4" d="M360 314 L412 314"/>
+    <!-- ===== TOP-RIGHT: clapping hands + butterfly (hero, right edge) + heel shoe ===== -->
+    <!-- clapping hands -->
+    <path stroke-width="6" d="M788 200 Q772 150 794 138 L820 196 Z"/>
+    <path stroke-width="6" d="M858 200 Q874 150 852 138 L826 196 Z"/>
+    <path stroke-width="3" d="M778 120 L786 134 M868 120 L860 134 M824 108 L824 124"/>
+    <!-- butterfly (hero) touching right edge -->
+    <path stroke-width="6" d="M1024 168 L1024 320"/>
+    <path stroke-width="6" d="M1022 184 Q930 120 904 196 Q884 268 1020 274 Z"/>
+    <path stroke-width="6" d="M1026 184 Q1130 108 1198 176 Q1224 252 1028 274 Z"/>
+    <path stroke-width="3" d="M1022 168 Q1004 144 996 154 M1026 168 Q1046 144 1054 154"/>
+    <!-- high-heel shoe -->
+    <path stroke-width="5" d="M806 432 Q806 410 838 408 L928 400 Q962 400 956 418 L902 432 L880 472 L864 470 L878 432 Z"/>
+    <path stroke-width="5" d="M864 470 L856 432"/>
+    <!-- ===== MID-LEFT: walking figure (hero, left+bottom edge) + chair + cat ===== -->
+    <!-- head + face -->
+    <path stroke-width="6" d="M118 512 Q118 478 152 478 Q186 478 186 512 Q186 546 152 550 Q118 546 118 512 Z"/>
+    <path stroke-width="5" d="M116 494 Q152 468 188 494"/>
+    <path stroke-width="3" d="M132 510 L142 510 M162 510 L172 510"/>
+    <path stroke-width="3" d="M152 514 L149 526 L158 526"/>
+    <path stroke-width="3" d="M138 532 Q152 540 168 532"/>
+    <!-- jacket (patterned) -->
+    <path stroke-width="7" d="M104 566 L88 730 L150 740 L152 566"/>
+    <path stroke-width="7" d="M198 566 L216 726 L150 740"/>
+    <path stroke-width="4" d="M112 606 L150 600 M110 648 L150 642 M114 690 L150 684"/>
+    <path stroke-width="6" d="M200 588 Q238 628 232 694"/>
+    <!-- legs to bottom edge -->
+    <path stroke-width="7" d="M118 740 L94 920 L74 1110"/>
+    <path stroke-width="7" d="M172 740 L200 920 L222 1110"/>
+    <path stroke-width="4" d="M104 840 L100 844 M96 900 L92 904 M188 840 L192 844 M200 900 L204 904"/>
+    <path stroke-width="6" d="M64 1110 L104 1116 M212 1110 L252 1116"/>
+    <!-- chair -->
+    <path stroke-width="5" d="M300 740 L300 920 M300 760 L388 752 L388 920 M300 836 L388 828"/>
+    <!-- cat -->
+    <path stroke-width="6" d="M318 962 Q312 884 358 880 Q404 884 398 962"/>
+    <path stroke-width="5" d="M346 882 L342 858 L358 874 M370 882 L374 858 L358 874"/>
+    <path stroke-width="5" d="M398 952 Q430 948 424 900"/>
+    <path stroke-width="3" d="M306 916 L330 920 M306 930 L330 928"/>
+    <!-- ===== MID-RIGHT: candle (right edge) + ashtray + wine glass + bird ===== -->
+    <path stroke-width="6" d="M1104 562 L1104 704 L1156 704 L1156 562 Z"/>
+    <path stroke-width="5" d="M1130 562 Q1116 540 1130 506 Q1146 540 1130 562 Z"/>
+    <path stroke-width="4" d="M1104 588 Q1096 612 1104 626"/>
+    <!-- ashtray + cigarette -->
+    <path stroke-width="5" d="M936 794 Q936 822 1000 822 Q1064 822 1064 794 Q1000 782 936 794 Z"/>
+    <path stroke-width="5" d="M1010 800 L1086 770"/>
+    <path stroke-width="3" d="M1066 778 Q1074 760 1066 750 Q1080 760 1074 744"/>
+    <!-- wine glass (standard) -->
+    <path stroke-width="6" d="M812 584 Q812 662 852 672 Q892 662 892 584 Q852 572 812 584 Z"/>
+    <path stroke-width="6" d="M852 672 L852 744"/>
+    <path stroke-width="6" d="M822 748 Q852 740 882 748"/>
+    <path stroke-width="4" d="M820 596 Q852 606 884 596"/>
+    <!-- bird (dove) -->
+    <path stroke-width="6" d="M982 856 Q1024 814 1078 826 Q1070 804 1098 800 Q1108 820 1088 834 Q1132 826 1144 852 Q1110 866 1086 854 L1034 882 Q996 874 982 856 Z"/>
+    <!-- ===== BOTTOM: corkscrew + knife + fish (bottom edge) + moon + lemon ===== -->
+    <path stroke-width="5" d="M602 924 Q602 908 620 908 Q638 908 638 924 Q638 940 620 940 Q602 940 602 924 Z"/>
+    <path stroke-width="6" d="M620 940 L620 992"/>
+    <path stroke-width="5" d="M620 992 Q602 1004 620 1018 Q638 1032 620 1046 Q602 1060 622 1074"/>
+    <path stroke-width="6" d="M842 1044 L936 1030 Q976 1030 970 1048 L854 1060 Z"/>
+    <path stroke-width="6" d="M854 1060 L832 1066 L828 1052 L850 1048"/>
+    <path stroke-width="6" d="M306 1150 Q360 1116 432 1150 Q360 1186 306 1150 Z"/>
+    <path stroke-width="6" d="M432 1150 L470 1130 L470 1172 Z"/>
+    <path stroke-width="4" d="M334 1144 L342 1144"/>
+    <path stroke-width="6" d="M256 988 Q192 998 192 1032 Q192 1066 256 1060 Q214 1044 214 1024 Q214 1004 256 988 Z"/>
+    <path stroke-width="5" d="M508 1132 Q480 1132 480 1158 Q480 1184 512 1182 Q540 1180 538 1156 Q536 1134 508 1132 Z"/>
+    <path stroke-width="4" d="M512 1132 L516 1120"/>
+    <!-- ===== DENSITY FILL (keep the visible band hole-free) ===== -->
+    <!-- espresso cup above card -->
+    <path stroke-width="6" d="M636 286 Q636 320 678 320 Q720 320 720 286 Z"/>
+    <path stroke-width="5" d="M720 294 Q740 294 738 310 Q736 322 722 318"/>
+    <path stroke-width="4" d="M624 326 L730 326"/>
+    <!-- coupe glass -->
+    <path stroke-width="6" d="M516 176 L598 176 Q582 220 558 224 Q534 220 516 176 Z"/>
+    <path stroke-width="6" d="M558 224 L558 268 M540 272 Q558 264 578 272"/>
+    <!-- grapes cluster -->
+    <path stroke-width="4" d="M500 330 Q500 320 510 320 Q520 320 520 330 Q520 340 510 340 Q500 340 500 330 Z"/>
+    <path stroke-width="4" d="M520 346 Q520 336 530 336 Q540 336 540 346 Q540 356 530 356 Q520 356 520 346 Z"/>
+    <path stroke-width="4" d="M482 348 Q482 338 492 338 Q502 338 502 348 Q502 358 492 358 Q482 358 482 348 Z"/>
+    <path stroke-width="4" d="M510 318 Q514 300 528 298"/>
+    <!-- small bottle left of card -->
+    <path stroke-width="6" d="M306 478 L306 404 Q306 388 318 380 L318 362 L348 362 L348 380 Q360 388 360 404 L360 478 Q360 484 352 484 L314 484 Q306 484 306 478 Z"/>
+    <path stroke-width="4" d="M312 440 L354 440"/>
+    <!-- lemon -->
+    <path stroke-width="6" d="M300 604 Q300 566 340 566 Q380 566 380 604 Q380 642 340 642 Q300 642 300 604 Z"/>
+    <path stroke-width="5" d="M376 580 Q396 570 404 578"/>
+    <!-- fork right edge -->
+    <path stroke-width="6" d="M1150 566 L1150 720"/>
+    <path stroke-width="5" d="M1138 566 L1138 596 M1150 566 L1150 590 M1162 566 L1162 596 M1138 596 Q1150 606 1162 596"/>
+    <!-- olive branch -->
+    <path stroke-width="5" d="M960 1006 Q1010 980 1070 992"/>
+    <path stroke-width="5" d="M996 994 Q994 980 1006 978 Q1018 982 1014 996 M1030 998 Q1028 984 1040 982 Q1052 986 1048 1000"/>
+    <!-- dog (loose, like the reference) -->
+    <path stroke-width="6" d="M556 1142 Q574 1092 624 1100 Q636 1080 654 1092 Q650 1108 638 1108 Q700 1106 712 1140 L704 1186 M624 1130 L624 1188 M690 1126 L690 1186"/>
+    <path stroke-width="5" d="M654 1092 Q648 1086 654 1080"/>
+    <!-- plate bottom-center -->
+    <path stroke-width="6" d="M452 1118 Q452 1098 528 1098 Q604 1098 604 1118 Q604 1138 528 1138 Q452 1138 452 1118 Z"/>
+    <path stroke-width="4" d="M474 1118 Q474 1106 528 1106 Q582 1106 582 1118"/>
+    <!-- spoon by ashtray -->
+    <path stroke-width="6" d="M1048 858 L1086 770"/>
+    <path stroke-width="5" d="M1080 760 Q1094 762 1092 776 Q1090 788 1076 786 Q1066 778 1072 766"/>
+    <!-- a second standing bottle right of card -->
+    <path stroke-width="6" d="M928 372 L928 300 Q928 284 940 276 L940 258 L968 258 L968 276 Q980 284 980 300 L980 372 Q980 378 972 378 L936 378 Q928 378 928 372 Z"/>
+    <!-- a moon-glass cluster near figure -->
+    <path stroke-width="6" d="M470 660 L470 740 M452 664 Q470 656 488 664 M452 736 Q470 744 488 736"/>
+  </g>
+
+  <!-- ===== RED ACCENTS (~6 small spots) ===== -->
+  <g filter="url(#lvink-rough)" fill="#C9302C" stroke="#C9302C" stroke-linejoin="round">
+    <rect x="356" y="232" width="60" height="68" rx="2"/>                                <!-- wine label -->
+    <path stroke-width="0" d="M268 408 Q258 398 268 392 Q280 388 282 400 Q282 412 270 414 Q260 412 268 408 Z"/>  <!-- cherry 1 -->
+    <path stroke-width="0" d="M296 416 Q286 406 296 400 Q308 396 310 408 Q310 420 298 422 Q288 420 296 416 Z"/>  <!-- cherry 2 -->
+    <circle cx="950" cy="206" r="9"/><circle cx="1090" cy="206" r="9"/>                  <!-- butterfly wing spots -->
+    <circle cx="86" cy="1120" r="7"/><circle cx="232" cy="1120" r="7"/>                  <!-- figure shoe dots -->
+    <path stroke-width="0" d="M712 1104 Q742 1086 762 1104 Q782 1086 812 1104 Q782 1134 762 1128 Q742 1134 712 1104 Z"/>  <!-- lips -->
+  </g>
+  <g fill="none" stroke="#C9302C" stroke-width="4" stroke-linecap="round" filter="url(#lvink-rough)">
+    <path d="M264 386 Q276 360 296 360 M298 396 Q302 364 296 360"/>                       <!-- cherry stems -->
+    <path d="M640 470 L640 510 M620 490 L660 490 M628 476 L652 504 M652 476 L628 504"/>   <!-- red sparkle -->
+    <path d="M1156 980 L1156 1016 M1138 998 L1174 998 M1146 986 L1166 1010 M1166 986 L1146 1010"/> <!-- red sparkle -->
+  </g>
+
+  <!-- ===== hand-lettered text ===== -->
+  <text class="cap" x="560" y="250" font-size="46" transform="rotate(-3 560 250)">MAKE <tspan font-size="72">IT</tspan> SIMPLE</text>
+
+  <rect width="1200" height="1200" filter="url(#lvink-paper)" style="mix-blend-mode:multiply"/>
+</svg>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
     <div class="lsub">Operator Console</div>
@@ -3896,6 +3925,17 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
+  <svg id="login-top" aria-hidden="true" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid slice">
+  <g filter="url(#lvink-rough)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+    <!-- pour squiggle from the bottle area crossing onto the card -->
+    <path stroke-width="5" d="M418 380 Q470 430 520 440 Q580 452 600 510 Q616 560 560 580"/>
+    <!-- a flower stem from the vase reaching over the card's left edge -->
+    <path stroke-width="5" d="M250 240 Q360 300 430 360 Q470 392 452 430"/>
+    <path stroke-width="5" d="M452 430 Q436 412 448 396 Q466 390 470 410 Q462 430 448 430"/>
+    <!-- cursive text passing under the card bottom edge -->
+    <text class="cur" x="360" y="864" font-size="86" transform="rotate(-4 360 864)">drink slowly</text>
+  </g>
+</svg>
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
