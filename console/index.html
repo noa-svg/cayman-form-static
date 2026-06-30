@@ -542,24 +542,24 @@ body.side-coll .side-foot .foot-gear { display: none; }
    the card always has clear breathing room. Decorative + non-interactive. ----- */
 #login-art { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 #login-screen .lc { position: relative; z-index: 2; }
-.doodle { position: absolute; width: clamp(72px, 15vw, 132px); height: auto; opacity: 0.92; }
+.doodle { position: absolute; width: clamp(78px, 16vw, 138px); height: auto; opacity: 0.9; }
 .doodle svg { width: 100%; height: auto; display: block; }
-.d-ju   { top: 5vh;  left: 6vw; transform: rotate(-2deg); }
-.d-gpu  { top: 6vh;  right: 6vw; transform: rotate(6deg); }
-.d-bag  { bottom: 6vh; left: 7vw; transform: rotate(5deg); }
-.d-tlv  { bottom: 4vh; left: 50%; margin-left: -52px; transform: rotate(-3deg); width: clamp(64px, 13vw, 104px); }
-.d-yog  { bottom: 7vh; right: 7vw; transform: rotate(-6deg); }
-.spark { position: absolute; color: var(--color-atrium, #4a5bd8); opacity: 0.6; }
+.p-lion { top: 6vh;  left: 7vw; transform: rotate(-4deg); }
+.p-ftai { top: 7vh;  right: 6vw; transform: rotate(5deg); }
+.p-apo  { bottom: 7vh; left: 8vw; transform: rotate(-3deg); }
+.p-goog { bottom: 5vh; left: 50%; margin-left: -56px; transform: rotate(4deg); width: clamp(70px, 14vw, 112px); }
+.p-meta { bottom: 8vh; right: 7vw; transform: rotate(-5deg); }
+.spark { position: absolute; color: #1a1a1a; opacity: 0.7; }
 .spark svg { width: 100%; height: auto; display: block; }
-.s1 { top: 20vh; left: 16vw; width: 22px; }
-.s2 { top: 16vh; right: 20vw; width: 28px; }
-.s3 { bottom: 22vh; left: 22vw; width: 26px; }
-.s4 { bottom: 18vh; right: 18vw; width: 20px; }
+.s1 { top: 22vh; left: 17vw; width: 20px; transform: rotate(8deg); }
+.s2 { top: 17vh; right: 21vw; width: 26px; transform: rotate(-10deg); }
+.s3 { bottom: 23vh; left: 23vw; width: 22px; transform: rotate(6deg); }
+.s4 { bottom: 19vh; right: 19vw; width: 18px; transform: rotate(-6deg); }
 @media (max-width: 560px) {
-  .d-tlv { display: none; }
-  .d-ju, .d-gpu { top: 3vh; }
-  .d-bag, .d-yog { bottom: 3vh; }
-  .doodle { width: clamp(60px, 22vw, 100px); }
+  .p-goog { display: none; }
+  .p-lion, .p-ftai { top: 3vh; }
+  .p-apo, .p-meta { bottom: 3vh; }
+  .doodle { width: clamp(64px, 23vw, 104px); }
   .s1, .s2, .s3, .s4 { display: none; }
 }
 @media (max-height: 620px) { #login-art { display: none; } }
@@ -2840,7 +2840,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function load(silent){
     var rid=++LOAD_SEQ;
     if(!silent) document.getElementById("list").innerHTML=boardSkeleton();
-    apiFetch('?api=list&lane='+state.lane).then(function(d){
+    apiFetch('?api=list&lane='+state.lane+'&includeDone=1').then(function(d){
       if(rid!==LOAD_SEQ)return;
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
@@ -3777,53 +3777,45 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 </script>
 <div id="login-screen">
   <div id="login-art" aria-hidden="true">
-    <!-- 十 (Ju) + rising-sun: the project's namesake, Japanese ten -->
-    <div class="doodle d-ju"><svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="72" cy="30" r="18" fill="#e23b2e" stroke="#2f3142" stroke-width="2.5"/>
-      <path d="M37 22 L36 84" stroke="#2f3142" stroke-width="7"/>
-      <path d="M12 54 L62 53" stroke="#2f3142" stroke-width="7"/>
+    <!-- doodles = the fund's current top-5 positions, loose-ink. Refreshed by routine.
+         LION clapperboard / FTAI jet / APO column / GOOG magnifier / META loop. -->
+    <!-- LIONSGATE STUDIOS - film clapperboard -->
+    <div class="doodle p-lion"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 45 Q18 44 20 44 L80 47 Q83 47 82 50 L79 84 Q78 87 74 87 L25 85 Q21 85 21 81 Z"/>
+      <path d="M17 32 Q16 30 19 30 L83 22 Q86 22 86 25 L88 38 Q88 41 85 41 L21 49 Q18 49 18 46 Z"/>
+      <path d="M30 30 L36 48 M45 28 L51 46 M60 26 L66 44 M75 24 L81 42" stroke-width="5.4"/>
+      <path d="M31 60 Q50 58 69 60 M31 71 Q46 70 61 71" stroke-width="2.3"/>
     </svg></div>
-    <!-- GPU: a little graphics card -->
-    <div class="doodle d-gpu"><svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="14" y="24" width="72" height="46" rx="7" fill="#6d76ff" stroke="#2f3142" stroke-width="2.5"/>
-      <circle cx="38" cy="47" r="13" fill="#eef0ff" stroke="#2f3142" stroke-width="2.2"/>
-      <path d="M38 40 L38 54 M31 47 L45 47 M33 42 L43 52 M43 42 L33 52" stroke="#2f3142" stroke-width="1.8"/>
-      <rect x="62" y="38" width="16" height="18" rx="3" fill="#f6b53c" stroke="#2f3142" stroke-width="2"/>
-      <path d="M24 70 L24 80 M40 70 L40 80 M56 70 L56 80 M72 70 L72 80" stroke="#2f3142" stroke-width="3"/>
+    <!-- FTAI AVIATION - jetliner -->
+    <div class="doodle p-ftai"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 58 Q15 51 24 51 L70 53 Q86 54 90 59 Q86 64 70 64 L24 65 Q15 65 14 58 Z"/>
+      <path d="M40 62 L50 76 L60 76 L56 61"/>
+      <path d="M22 57 L13 42 L23 45 L29 55"/>
+      <path d="M78 56 Q82 56 84 58 M70 56 Q74 56 76 57.5" stroke-width="2.6"/>
+      <path d="M34 59 L37 59 M44 59.4 L47 59.4 M54 60 L57 60" stroke-width="2.4"/>
     </svg></div>
-    <!-- merch backpack -->
-    <div class="doodle d-bag"><svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M26 38 Q26 20 50 20 Q74 20 74 38" stroke="#2f3142" stroke-width="2.5"/>
-      <rect x="20" y="36" width="60" height="52" rx="16" fill="#19b3a6" stroke="#2f3142" stroke-width="2.5"/>
-      <path d="M36 88 Q34 60 44 52 Q56 49 66 56 Q72 70 70 88" fill="#13988d" stroke="#2f3142" stroke-width="2"/>
-      <rect x="42" y="60" width="16" height="14" rx="3" fill="#eafaf8" stroke="#2f3142" stroke-width="2"/>
-      <path d="M50 60 L50 74" stroke="#2f3142" stroke-width="1.8"/>
-      <path d="M34 40 Q31 33 38 31 M66 40 Q69 33 62 31" stroke="#2f3142" stroke-width="2.5"/>
+    <!-- APOLLO GLOBAL - classical column -->
+    <div class="doodle p-apo"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M28 26 Q50 23 72 26 M26 33 Q50 30 74 33"/>
+      <path d="M35 26 Q29 18 37 18 M65 26 Q71 18 63 18"/>
+      <path d="M37 34 L39 78 M50 33 L50 78 M63 34 L61 78"/>
+      <path d="M44 34 L45 78 M57 34 L56 78" stroke-width="2"/>
+      <path d="M28 79 Q50 76 72 79 M22 87 Q50 84 78 87"/>
     </svg></div>
-    <!-- a Tel Avivian: shades + iced coffee -->
-    <div class="doodle d-tlv"><svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="46" cy="28" r="15" fill="#ffd9b3" stroke="#2f3142" stroke-width="2.4"/>
-      <path d="M33 24 Q31 14 46 13 Q61 14 59 24" fill="#2f3142"/>
-      <rect x="35" y="25" width="10" height="7" rx="2.5" fill="#2f3142"/>
-      <rect x="48" y="25" width="10" height="7" rx="2.5" fill="#2f3142"/>
-      <path d="M38 50 Q46 45 56 50 L60 84 L36 84 Z" fill="#ff6f61" stroke="#2f3142" stroke-width="2.4"/>
-      <path d="M60 56 Q72 58 74 74" stroke="#2f3142" stroke-width="2.4"/>
-      <rect x="68" y="70" width="13" height="16" rx="2" fill="#cdeee9" stroke="#2f3142" stroke-width="2"/>
-      <path d="M70 76 L79 76 M74 66 L74 70" stroke="#2f3142" stroke-width="1.8"/>
+    <!-- ALPHABET / GOOGLE - magnifying glass -->
+    <div class="doodle p-goog"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M62 40 A24 24 0 1 1 61.5 39 Z"/>
+      <path d="M60 62 L84 86" stroke-width="6.4"/>
+      <path d="M30 38 Q40 28 52 36" stroke-width="2.6"/>
     </svg></div>
-    <!-- Kri Kri yogurt cup -->
-    <div class="doodle d-yog"><svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M28 40 L72 40 L66 86 Q50 90 34 86 Z" fill="#fbfbf6" stroke="#2f3142" stroke-width="2.5"/>
-      <path d="M24 40 Q50 32 76 40 L76 34 Q50 26 24 34 Z" fill="#f6b53c" stroke="#2f3142" stroke-width="2.2"/>
-      <path d="M76 37 Q92 22 86 16" stroke="#2f3142" stroke-width="2.2"/>
-      <path d="M40 54 q6 -7 11 0 q5 7 11 0" fill="#ff6f61" stroke="#2f3142" stroke-width="2"/>
-      <circle cx="46" cy="66" r="2.4" fill="#e23b2e"/>
-      <circle cx="56" cy="72" r="2.4" fill="#e23b2e"/>
+    <!-- META - infinity loop -->
+    <div class="doodle p-meta"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 50 C41 28 16 28 16 50 C16 72 41 72 50 50 C59 28 84 28 84 50 C84 72 59 72 50 50 Z"/>
     </svg></div>
-    <span class="spark s1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></span>
-    <span class="spark s2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></span>
-    <span class="spark s3"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></span>
-    <span class="spark s4"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1 L14 10 L23 12 L14 14 L12 23 L10 14 L1 12 L10 10 Z"/></svg></span>
+    <span class="spark s1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3 L12 21 M3 12 L21 12"/></svg></span>
+    <span class="spark s2"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
+    <span class="spark s3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4 L20 20 M20 4 L4 20"/></svg></span>
+    <span class="spark s4"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
   </div>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
