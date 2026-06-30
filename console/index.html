@@ -581,7 +581,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 /* On desktop the 3 launch tiles are always visible, so the top-right New
    split-button is redundant; hidden here and re-shown on mobile (where the
    tiles scroll out of view) via the max-width:600px query. */
-.new-wrap { position: relative; display: none; align-items: stretch; }
+.new-wrap { position: relative; display: inline-flex; align-items: stretch; }
 .cmd-split { display: flex; }
 .cmd-btn-main { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: 1px solid rgba(232,163,61,0.2); }
 .cmd-btn-arr  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 4px 8px; font-size: 11px; line-height: 1; }
@@ -2177,6 +2177,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
 .lp-picked{display:flex;align-items:center;gap: 12px;padding: 12px 12px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
+.lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
 .lp-picked .lp-x:hover{color:var(--color-coral)}
 </style></head>
@@ -2185,7 +2186,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <div class="brand">
       <span class="brand-chip"><img src="/brand-logo.png" alt="Legacy Value Partners" style="height:26px;width:auto;display:block"></span>
       <div class="sub">Operator console</div>
-      <div class="fundsw" id="fundsw"><button class="on" data-v="cayman">&#127464;&#127486; Cayman</button><button data-v="israel">&#127470;&#127473; Israel</button></div>
+      <div class="fundsw" id="fundsw"><button data-v="cayman">&#127464;&#127486; Cayman</button><button class="on" data-v="israel">&#127470;&#127473; Israel</button></div>
       <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
@@ -2200,15 +2201,14 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <button class="foot-gear" id="foot-gear" title="Settings" aria-label="Settings"><i class="ti ti-settings"></i></button>
       </div>
       <button class="signout-link" id="sign-out-btn" style="display:none" onclick="clearAuth()">Sign out</button>
-      <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top: 2px">Open Atrium</a>
     </div>
   </aside>
   <div class="main">
     <div class="view" id="v-board">
       <div class="top">
         <button id="mob-menu" aria-label="Menu">&#9776;</button>
-        <div id="mob-fund"><button class="mob-fb on" data-v="cayman">CY</button><button class="mob-fb" data-v="israel">IL</button></div>
-        <div><h1>Board</h1><div class="sub">Where every in-flight process stands.</div></div><span id="prompt-path" hidden></span>
+        <div id="mob-fund"><button class="mob-fb" data-v="cayman">CY</button><button class="mob-fb on" data-v="israel">IL</button></div>
+        <div><h1>Board</h1></div><span id="prompt-path" hidden></span>
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
             <div class="cmd-split">
@@ -2233,9 +2233,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <div class="content">
         <div class="listhead">
           <input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off">
-          <div class="lh-right">
-            <button class="board-new" id="boardNewBtn" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">+ New onboarding</button>
-          </div>
         </div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
@@ -2637,7 +2634,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     }
   }
 
-  var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
+  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",language:"he",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
   // ============================================================
   // MESSAGES - static metadata for the real email set. Renders without server
   // changes; the live ?api=messages payload only supplies subject/body/overridden.
@@ -2891,7 +2888,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
   }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
-  document.getElementById("newBtn").onclick=open;
+  // "New" opens the lane-aware menu (Israel: Increase/Withdrawal; Cayman: + Onboarding),
+  // never a fixed subscription panel - so the Israel operator always picks a valid flow.
+  document.getElementById("newBtn").onclick=function(e){e.stopPropagation();var on=newDd.classList.toggle("on");newArr.classList.toggle("open",on);};
   document.getElementById("closeBtn").onclick=close;
   scrim.onclick=close;
   // quick-pick dropdown
@@ -2914,7 +2913,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   });
   // Inline primary "+ New onboarding" button on the Board list header. Carries the
   // same data-proc/type/kind/lang the old hero tile had; reuses the quick-pick path.
-  (function(){var b=document.getElementById("boardNewBtn");if(b)b.onclick=function(){quickPick(b);};})();
 
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
@@ -3066,6 +3064,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var mf=document.getElementById("mob-fund");
     function syncFund(v){
       state.lane=v;
+      try{localStorage.setItem('lvp_console_lane',v);}catch(e){}
       document.body.setAttribute("data-lane",v);
       Array.prototype.forEach.call(fs.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
       if(mf)Array.prototype.forEach.call(mf.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
@@ -3089,6 +3088,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     }
     fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
     if(mf)mf.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
+    // Open on the operator's last fund, defaulting to Israel (Omri's lane). This sets
+    // data-lane + the active pills and triggers the first board load.
+    var savedLane=''; try{savedLane=localStorage.getItem('lvp_console_lane')||'';}catch(e){}
+    syncFund(savedLane==='cayman'||savedLane==='israel'?savedLane:state.lane);
   })();
   // Every seg click sets its state key AND re-syncs the panel, so dependent fields
   // (rev-share on Investor New/Existing, etc.) update live and consistently. Previously
