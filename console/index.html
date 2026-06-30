@@ -65,8 +65,8 @@
   --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
-  --text-2xs:   9px;  --text-xs:    11px; --text-sm:    12px;
-  --text-base:  13px; --text-md:    15px; --text-lg:    18px;
+  --text-2xs:   10px;  --text-xs:    12px; --text-sm:    13px;
+  --text-base:  14px; --text-md:    16px; --text-lg:    20px;
   --text-xl:    22px; --text-2xl:   28px; --text-3xl:   36px;
   --leading-tight:   1.2;  --leading-normal:  1.5; --leading-loose:   1.75;
   --tracking-tight:  -0.01em; --tracking-normal: 0;
@@ -740,6 +740,10 @@ body.side-coll .side-foot .foot-gear { display: none; }
   transition: background var(--dur-base) var(--ease-out);
 }
 .board-new:hover { background: var(--color-atrium-deep); }
+/* Israel lane mints nothing from this console (increase/withdrawal start elsewhere;
+   onboarding is Cayman-only), so hide every create affordance when Israel is active. */
+body[data-lane="israel"] .new-wrap,
+body[data-lane="israel"] .board-new { display: none; }
 
 /* Quiet demoted "Show completed" toggle (no box) */
 .show-done {
@@ -790,7 +794,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
   gap: 1px;
 }
 .rn-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: var(--weight-semi);
   color: var(--color-ink);
   line-height: 1.25;
@@ -2794,7 +2798,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       if(rid!==LOAD_SEQ)return;
       var src=(d&&d.processes)||(d&&d.items)||[];
-      var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_onboarding:'onboarding',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
+      var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
       var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
@@ -2977,7 +2981,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         if(!hr||!hr.ok||!hr.processes||!hr.processes.length){el.remove();return;}
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
         if(!others.length){el.remove();return;}
-        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_onboarding:'Sub',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
+        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
         var STAGE_DOT={complete:'#16A34A',sealed:'#16A34A',voided:'#9CA3AF',void:'#9CA3AF',needs_attention:'#DC2626'};
         var rows='';
         others.forEach(function(p){
@@ -3226,7 +3230,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     return '<span class="act-chip '+cls+'">'+esc2(stage)+'</span>';
   }
   function actFlowLabel(f){
-    var M={cayman_subscription:'sub',cayman_increase:'increase',cayman_withdrawal:'withdrawal',israeli_onboarding:'sub',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
+    var M={cayman_subscription:'sub',cayman_increase:'increase',cayman_withdrawal:'withdrawal',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
     return M[f]||f||'';
   }
   function renderActivity(rows){
