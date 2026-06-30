@@ -2545,9 +2545,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       {itemId:'d-onb-1',nameEn:'Ilan Yeshua',nameHe:'אילן ישועה',email:'ilan@example.com',nickname:''},
       {itemId:'d-onb-2',nameEn:'Almog Hazon',nameHe:'אלמוג חזון',email:'almog@example.com',nickname:'מוגי'}
     ]};
-    if(qs.indexOf('?admin=searchInvestments')===0) return {ok:true,matches:[
-      {investmentsItemId:'d-inv-1',name:'עידו חגאי',email:'idoh@example.com',linkedPeopleItemId:'d-ppl-1'},
-      {investmentsItemId:'d-inv-2',name:'מ ארקין בעמ',email:'',linkedPeopleItemId:''}
+    if(qs.indexOf('?admin=searchLps')===0) return {ok:true,matches:[
+      {itemId:'d-ppl-1',nameHe:'עידו חגאי',nameEn:'Ido Hagai',email:'ido@example.com',nickname:'עידו'},
+      {itemId:'d-ppl-2',nameHe:'דליה כהן',nameEn:'Dalya Cohen',email:'dalya@example.com',nickname:'דלי'}
     ]};
     return {ok:true};
   }
@@ -3110,22 +3110,22 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
     window.__lpClearPick=clearPick;
     function setPick(m){
-      state.selectedInvestmentsId=m.investmentsItemId||'';
-      state.selectedPeopleId=m.linkedPeopleItemId||'';
-      state.selectedMondayId=m.linkedPeopleItemId||'';
+      state.selectedInvestmentsId='';
+      state.selectedPeopleId=m.itemId||'';
+      state.selectedMondayId=m.itemId||'';
       state.selectedLp=m;
-      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
+      picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
       picked.hidden=false;box.hidden=true;inp.style.display='none';
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
     }
     function render(){
       if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
       box.innerHTML=rows.map(function(m,i){
-        var mintable=!!m.linkedPeopleItemId;
+        var mintable=!!m.itemId;
         if(!mintable){
-          return '<div class="lp-row" data-i="'+i+'" aria-disabled="true" style="cursor:not-allowed;opacity:.55"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div><div class="lp-sub" style="color:var(--color-coral)">no linked LP record</div></div></div>';
+          return '<div class="lp-row" data-i="'+i+'" aria-disabled="true" style="cursor:not-allowed;opacity:.55"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div><div class="lp-sub" style="color:var(--color-coral)">no linked LP record</div></div></div>';
         }
-        return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.name||m.nameHe||m.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';
+        return '<div class="lp-row'+(i===active?' active':'')+'" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';
       }).join('');
       box.hidden=false;
       Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){
@@ -3138,14 +3138,14 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       if(q.length<2){box.hidden=true;rows=[];return;}
       if(T)clearTimeout(T);
       T=setTimeout(function(){
-        apiFetch('?admin=searchInvestments&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
       },220);
     });
     inp.addEventListener('keydown',function(e){
       if(box.hidden||!rows.length)return;
       if(e.key==='ArrowDown'){active=Math.min(active+1,rows.length-1);render();e.preventDefault();}
       else if(e.key==='ArrowUp'){active=Math.max(active-1,0);render();e.preventDefault();}
-      else if(e.key==='Enter'){if(active>=0&&rows[active]&&rows[active].linkedPeopleItemId){setPick(rows[active]);e.preventDefault();}}
+      else if(e.key==='Enter'){if(active>=0&&rows[active]&&rows[active].itemId){setPick(rows[active]);e.preventDefault();}}
       else if(e.key==='Escape'){box.hidden=true;}
     });
     document.addEventListener('click',function(e){var w=document.getElementById('lpPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
