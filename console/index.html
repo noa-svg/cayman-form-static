@@ -544,11 +544,11 @@ body.side-coll .side-foot .foot-gear { display: none; }
 #login-screen .lc { position: relative; z-index: 2; }
 .doodle { position: absolute; width: clamp(78px, 16vw, 138px); height: auto; opacity: 0.9; }
 .doodle svg { width: 100%; height: auto; display: block; }
-.p-lion { top: 6vh;  left: 7vw; transform: rotate(-4deg); }
-.p-ftai { top: 7vh;  right: 6vw; transform: rotate(5deg); }
-.p-apo  { bottom: 7vh; left: 8vw; transform: rotate(-3deg); }
-.p-goog { bottom: 5vh; left: 50%; margin-left: -56px; transform: rotate(4deg); width: clamp(70px, 14vw, 112px); }
-.p-meta { bottom: 8vh; right: 7vw; transform: rotate(-5deg); }
+.dslot1 { top: 6vh;  left: 7vw; transform: rotate(-4deg); }
+.dslot2 { top: 7vh;  right: 6vw; transform: rotate(5deg); }
+.dslot3 { bottom: 7vh; left: 8vw; transform: rotate(-3deg); }
+.dslot4 { bottom: 5vh; left: 50%; margin-left: -56px; transform: rotate(4deg); width: clamp(70px, 14vw, 112px); }
+.dslot5 { bottom: 8vh; right: 7vw; transform: rotate(-5deg); }
 .spark { position: absolute; color: #1a1a1a; opacity: 0.7; }
 .spark svg { width: 100%; height: auto; display: block; }
 .s1 { top: 22vh; left: 17vw; width: 20px; transform: rotate(8deg); }
@@ -556,9 +556,9 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .s3 { bottom: 23vh; left: 23vw; width: 22px; transform: rotate(6deg); }
 .s4 { bottom: 19vh; right: 19vw; width: 18px; transform: rotate(-6deg); }
 @media (max-width: 560px) {
-  .p-goog { display: none; }
-  .p-lion, .p-ftai { top: 3vh; }
-  .p-apo, .p-meta { bottom: 3vh; }
+  .dslot4 { display: none; }
+  .dslot1, .dslot2 { top: 3vh; }
+  .dslot3, .dslot5 { bottom: 3vh; }
   .doodle { width: clamp(64px, 23vw, 104px); }
   .s1, .s2, .s3, .s4 { display: none; }
 }
@@ -3777,46 +3777,55 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 </script>
 <div id="login-screen">
   <div id="login-art" aria-hidden="true">
-    <!-- doodles = the fund's current top-5 positions, loose-ink. Refreshed by routine.
-         LION clapperboard / FTAI jet / APO column / GOOG magnifier / META loop. -->
-    <!-- LIONSGATE STUDIOS - film clapperboard -->
-    <div class="doodle p-lion"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M19 45 Q18 44 20 44 L80 47 Q83 47 82 50 L79 84 Q78 87 74 87 L25 85 Q21 85 21 81 Z"/>
-      <path d="M17 32 Q16 30 19 30 L83 22 Q86 22 86 25 L88 38 Q88 41 85 41 L21 49 Q18 49 18 46 Z"/>
-      <path d="M30 30 L36 48 M45 28 L51 46 M60 26 L66 44 M75 24 L81 42" stroke-width="5.4"/>
-      <path d="M31 60 Q50 58 69 60 M31 71 Q46 70 61 71" stroke-width="2.3"/>
-    </svg></div>
-    <!-- FTAI AVIATION - jetliner -->
-    <div class="doodle p-ftai"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 58 Q15 51 24 51 L70 53 Q86 54 90 59 Q86 64 70 64 L24 65 Q15 65 14 58 Z"/>
-      <path d="M40 62 L50 76 L60 76 L56 61"/>
-      <path d="M22 57 L13 42 L23 45 L29 55"/>
-      <path d="M78 56 Q82 56 84 58 M70 56 Q74 56 76 57.5" stroke-width="2.6"/>
-      <path d="M34 59 L37 59 M44 59.4 L47 59.4 M54 60 L57 60" stroke-width="2.4"/>
-    </svg></div>
-    <!-- APOLLO GLOBAL - classical column -->
-    <div class="doodle p-apo"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M28 26 Q50 23 72 26 M26 33 Q50 30 74 33"/>
-      <path d="M35 26 Q29 18 37 18 M65 26 Q71 18 63 18"/>
-      <path d="M37 34 L39 78 M50 33 L50 78 M63 34 L61 78"/>
-      <path d="M44 34 L45 78 M57 34 L56 78" stroke-width="2"/>
-      <path d="M28 79 Q50 76 72 79 M22 87 Q50 84 78 87"/>
-    </svg></div>
-    <!-- ALPHABET / GOOGLE - magnifying glass -->
-    <div class="doodle p-goog"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M62 40 A24 24 0 1 1 61.5 39 Z"/>
-      <path d="M60 62 L84 86" stroke-width="6.4"/>
-      <path d="M30 38 Q40 28 52 36" stroke-width="2.6"/>
-    </svg></div>
-    <!-- META - infinity loop -->
-    <div class="doodle p-meta"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M50 50 C41 28 16 28 16 50 C16 72 41 72 50 50 C59 28 84 28 84 50 C84 72 59 72 50 50 Z"/>
-    </svg></div>
+    <!-- Slots filled by renderLoginDoodles() from DOODLE_LIB, keyed to the fund's
+         current top-5 positions (served by the gateway ?api=topPositions, refreshed
+         weekly by the routine). Default keys render instantly so it is never blank. -->
+    <div class="doodle dslot1" data-slot="1"></div>
+    <div class="doodle dslot2" data-slot="2"></div>
+    <div class="doodle dslot3" data-slot="3"></div>
+    <div class="doodle dslot4" data-slot="4"></div>
+    <div class="doodle dslot5" data-slot="5"></div>
     <span class="spark s1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3 L12 21 M3 12 L21 12"/></svg></span>
     <span class="spark s2"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
     <span class="spark s3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4 L20 20 M20 4 L4 20"/></svg></span>
     <span class="spark s4"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
   </div>
+  <script>
+  /* Loose-ink doodle library, keyed by position. Add a key here when the routine
+     emails that a new top-5 holding has no doodle. Unknown keys fall back to a
+     neutral ink mark (no ticker text) so the public page never leaks a name. */
+  var DOODLE_LIB = {
+    lion: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 45 Q18 44 20 44 L80 47 Q83 47 82 50 L79 84 Q78 87 74 87 L25 85 Q21 85 21 81 Z"/><path d="M17 32 Q16 30 19 30 L83 22 Q86 22 86 25 L88 38 Q88 41 85 41 L21 49 Q18 49 18 46 Z"/><path d="M30 30 L36 48 M45 28 L51 46 M60 26 L66 44 M75 24 L81 42" stroke-width="5.4"/><path d="M31 60 Q50 58 69 60 M31 71 Q46 70 61 71" stroke-width="2.3"/></svg>',
+    ftai: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 58 Q15 51 24 51 L70 53 Q86 54 90 59 Q86 64 70 64 L24 65 Q15 65 14 58 Z"/><path d="M40 62 L50 76 L60 76 L56 61"/><path d="M22 57 L13 42 L23 45 L29 55"/><path d="M78 56 Q82 56 84 58 M70 56 Q74 56 76 57.5" stroke-width="2.6"/><path d="M34 59 L37 59 M44 59.4 L47 59.4 M54 60 L57 60" stroke-width="2.4"/></svg>',
+    apo:  '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M28 26 Q50 23 72 26 M26 33 Q50 30 74 33"/><path d="M35 26 Q29 18 37 18 M65 26 Q71 18 63 18"/><path d="M37 34 L39 78 M50 33 L50 78 M63 34 L61 78"/><path d="M44 34 L45 78 M57 34 L56 78" stroke-width="2"/><path d="M28 79 Q50 76 72 79 M22 87 Q50 84 78 87"/></svg>',
+    goog: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M62 40 A24 24 0 1 1 61.5 39 Z"/><path d="M60 62 L84 86" stroke-width="6.4"/><path d="M30 38 Q40 28 52 36" stroke-width="2.6"/></svg>',
+    meta: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 50 C41 28 16 28 16 50 C16 72 41 72 50 50 C59 28 84 28 84 50 C84 72 59 72 50 50 Z"/></svg>',
+    avio: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 12 Q64 30 64 56 L60 74 L40 74 L36 56 Q36 30 50 12 Z"/><path d="M40 60 L28 72 L30 80 L40 72 M60 60 L72 72 L70 80 L60 72"/><path d="M44 80 Q50 90 56 80"/><circle cx="50" cy="38" r="6"/></svg>',
+    rocket: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 12 Q64 30 64 56 L60 74 L40 74 L36 56 Q36 30 50 12 Z"/><path d="M40 60 L28 72 L30 80 L40 72 M60 60 L72 72 L70 80 L60 72"/><path d="M44 80 Q50 90 56 80"/><circle cx="50" cy="38" r="6"/></svg>',
+    chip: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M30 30 L70 30 L70 70 L30 70 Z"/><path d="M44 44 L56 44 L56 56 L44 56 Z"/><path d="M38 30 L38 18 M50 30 L50 18 M62 30 L62 18 M38 70 L38 82 M50 70 L50 82 M62 70 L62 82 M30 38 L18 38 M30 50 L18 50 M30 62 L18 62 M70 38 L82 38 M70 50 L82 50 M70 62 L82 62" stroke-width="2.8"/></svg>',
+    generic: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="50" r="30"/><path d="M50 34 L50 58 M50 66 L50 67" stroke-width="4"/></svg>'
+  };
+  var DOODLE_DEFAULT_KEYS = ['lion','ftai','apo','goog','meta'];
+  function renderLoginDoodles(keys){
+    if(!keys||!keys.length) keys = DOODLE_DEFAULT_KEYS;
+    for(var i=0;i<5;i++){
+      var slot=document.querySelector('.dslot'+(i+1));
+      if(!slot) continue;
+      var key=keys[i]||DOODLE_DEFAULT_KEYS[i];
+      slot.innerHTML = DOODLE_LIB[key] || DOODLE_LIB.generic;
+    }
+  }
+  renderLoginDoodles(DOODLE_DEFAULT_KEYS);
+  (function(){
+    try{
+      // Pre-auth: hit the OPEN GET route (no token). Simple GET = no CORS preflight.
+      var GW_TOP='https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      fetch(GW_TOP+'?api=topPositions').then(function(r){return r.json();}).then(function(d){
+        if(d&&d.ok&&d.keys&&d.keys.length) renderLoginDoodles(d.keys);
+      }).catch(function(){});
+    }catch(e){}
+  })();
+  </script>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
     <div class="lsub">Operator Console</div>
