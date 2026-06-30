@@ -1238,12 +1238,13 @@
                     <option value="(e)">(e) Passive NFFE</option>
                   </select>
                 </label>
-                <fieldset class="lvp-fieldset" data-required data-show-when="fatcaCrs.fatca.subType=(e)">
-                  <legend class="lvp-fieldset__legend">Passive NFFE controlling-persons reporting method</legend>
-                  <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="substantialUsOwners"> Using the "Substantial U.S. Owner" definition</label>
-                  <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.passive.method" value="controllingPersons"> Using the "Controlling Person" definition per CRS</label>
-                </fieldset>
-                <div data-show-when="fatcaCrs.fatca.passive.method=substantialUsOwners">
+                <!-- Passive NFFE: the W-8BEN-E 40b-vs-40c choice is a single deterministic
+                     boolean. Checked = the entity has substantial U.S. owners (40c, list them
+                     below); unchecked = none (40b, the common Israeli holding corp). Replaces the
+                     old reporting-method radio; the CRS controlling-persons capture is a separate
+                     page driven by the CRS branch. -->
+                <label class="lvp-checkbox" data-show-when="fatcaCrs.fatca.subType=(e)"><input type="checkbox" name="fatcaCrs.fatca.passive.hasSubstantialUsOwners" value="true" data-show-when-trigger="fatcaCrs.fatca.passive.hasSubstantialUsOwners"> The entity has substantial U.S. owners</label>
+                <div data-show-when="fatcaCrs.fatca.passive.hasSubstantialUsOwners=true">
                   <p class="lvp-hint-small">List each substantial U.S. owner.</p>
                   <div data-repeating-typed-path="fatcaCrs.fatca.passive.substantialUsOwners" data-repeating-min="1" data-repeating-template="susown"></div>
                   <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="fatcaCrs.fatca.passive.substantialUsOwners">+ Add a substantial U.S. owner</button>
