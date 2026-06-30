@@ -696,23 +696,10 @@
 
           <!-- ENTITY documents -->
           <div data-applicant="entity">
-            <!-- Entity type asked here so doc conditionals fire immediately -->
-            <label class="lvp-field" data-required><span class="lvp-field__label">Entity type</span>
-              <select class="lvp-input--select" name="entity.type" data-show-when-trigger="entity.type">
-                <option value="">Select</option>
-                <option value="Corporation">Corporation</option>
-                <option value="LLC">Limited Liability Company</option>
-                <option value="Partnership">Limited Partnership</option>
-                <option value="Trust">Trust</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-
-            <div class="lvp-field" data-required data-show-when="entity.type=Trust"><span class="lvp-field__label">Trust type</span>
-              <label class="lvp-radio"><input type="radio" name="entity.trustType" value="Simple trust"> Simple trust</label>
-              <label class="lvp-radio"><input type="radio" name="entity.trustType" value="Complex trust"> Complex trust</label>
-              <label class="lvp-radio"><input type="radio" name="entity.trustType" value="Grantor trust"> Grantor trust</label>
-            </div>
+            <!-- Entity type is Corporation only (the fund accepts Israeli corporations). Hardcoded
+                 so the W-8BEN-E Chapter-3 + the doc conditionals resolve deterministically; trusts,
+                 partnerships, LLCs and "other" are off-scope and not offered. -->
+            <input type="hidden" name="entity.type" value="Corporation">
 
             <label class="lvp-field" data-required><span class="lvp-field__label">Certificate of Incorporation / government registration</span><input class="lvp-input" type="file" data-upload="certificateOfIncorporation" accept="application/pdf,image/*"></label>
             <label class="lvp-field" data-required><span class="lvp-field__label">List of authorized signatories</span><input class="lvp-input" type="file" data-upload="listOfAuthorizedSignatories" accept="application/pdf,image/*"></label>
@@ -721,8 +708,6 @@
               <label class="lvp-field" data-required><span class="lvp-field__label">Articles of Incorporation</span><input class="lvp-input" type="file" data-upload="articlesOfIncorporation" accept="application/pdf,image/*"></label>
               <label class="lvp-field" data-required><span class="lvp-field__label">Corporate resolution / authorization</span><input class="lvp-input" type="file" data-upload="corporateResolution" accept="application/pdf,image/*"></label>
             </div>
-            <label class="lvp-field" data-required data-show-when="entity.type=Partnership"><span class="lvp-field__label">Partnership agreement</span><input class="lvp-input" type="file" data-upload="partnershipAgreement" accept="application/pdf,image/*"></label>
-            <label class="lvp-field" data-required data-show-when="entity.type=Trust"><span class="lvp-field__label">Trust agreement (relevant pages)</span><input class="lvp-input" type="file" data-upload="trustAgreement" accept="application/pdf,image/*"></label>
 
             <label class="lvp-field"><span class="lvp-field__label">Corporate seal or stamp</span><input class="lvp-input" type="file" data-upload="corporateSeal" accept="application/pdf,image/*"><p class="lvp-hint-small">Upload an image of the seal at original size, without a background, so it prints clearly on the documents.</p></label>
 
@@ -820,7 +805,6 @@
           <p class="lvp-page__hint">Tell us about the entity making this subscription.</p>
           <label class="lvp-field" data-required><span class="lvp-field__label">Legal entity name</span><input class="lvp-input" type="text" name="entity.legalName" autocomplete="organization" data-help="Full registered name as it appears in the Certificate of Incorporation"></label>
           <label class="lvp-field" data-required><span class="lvp-field__label">Entity name in Hebrew</span><input class="lvp-input" type="text" name="entity.fullNameHebrew" dir="rtl" autocomplete="off" data-help="We keep the entity's name in both English and Hebrew for our records and Israeli bank reporting. This is the one field where you write in Hebrew."></label>
-          <label class="lvp-field" data-required data-show-when="entity.type=Other"><span class="lvp-field__label">Entity type (please specify)</span><input class="lvp-input" type="text" name="entity.typeOther"></label>
           <label class="lvp-field lvp-field--short" data-required><span class="lvp-field__label">Registration number</span><input class="lvp-input" type="text" name="entity.registrationNumber" inputmode="text"></label>
           <h3 class="lvp-subhead">Contact</h3>
           <label class="lvp-field" data-required><span class="lvp-field__label">Phone number</span><input class="lvp-input" type="tel" name="entity.phone" inputmode="tel" autocomplete="tel" placeholder="+972 50 123 4567"></label>
