@@ -1238,25 +1238,6 @@
                     <option value="(e)">(e) Passive NFFE</option>
                   </select>
                 </label>
-                <!-- Passive NFFE: the W-8BEN-E 40b-vs-40c choice is a single deterministic
-                     boolean. Checked = the entity has substantial U.S. owners (40c, list them
-                     below); unchecked = none (40b, the common Israeli holding corp). Replaces the
-                     old reporting-method radio; the CRS controlling-persons capture is a separate
-                     page driven by the CRS branch. -->
-                <label class="lvp-checkbox" data-show-when="fatcaCrs.fatca.subType=(e)"><input type="checkbox" name="fatcaCrs.fatca.passive.hasSubstantialUsOwners" value="true" data-show-when-trigger="fatcaCrs.fatca.passive.hasSubstantialUsOwners"> The entity has substantial U.S. owners</label>
-                <div data-show-when="fatcaCrs.fatca.passive.hasSubstantialUsOwners=true">
-                  <p class="lvp-hint-small">List each substantial U.S. owner.</p>
-                  <div data-repeating-typed-path="fatcaCrs.fatca.passive.substantialUsOwners" data-repeating-min="1" data-repeating-template="susown"></div>
-                  <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="fatcaCrs.fatca.passive.substantialUsOwners">+ Add a substantial U.S. owner</button>
-                  <template data-row-template="susown">
-                    <div class="lvp-repeating-row" data-row-index="${i}">
-                      <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Substantial U.S. owner ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
-                      <label class="lvp-field" data-required><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].fullName"></label>
-                      <label class="lvp-field" data-required><span class="lvp-field__label">Full residence address</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].address"></label>
-                      <label class="lvp-field" data-required><span class="lvp-field__label">Tax reference type and number</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].taxRefTypeAndNumber"></label>
-                    </div>
-                  </template>
-                </div>
               </div>
             <h3 class="lvp-subhead">CRS classification</h3>
             <p class="lvp-hint-small">Choose exactly one. CRS classification need not match FATCA.</p>
@@ -1279,6 +1260,31 @@
                   <option value="(b)">(b) Governmental Entity, International Organization, or Central Bank</option>
                   <option value="(c)">(c) Other Active NFE</option>
                 </select></label>
+          </div>
+
+          <!-- Passive NFFE substantial-U.S.-owners question - asked for EVERY passive entity,
+               PAGE-LEVEL so it shows on BOTH the simple "Passive holding entity" path
+               (entityClassification=passiveNfe) and the Advanced FATCA 3.3(e) path (subType=(e)).
+               The W-8BEN-E 40b-vs-40c choice is this one deterministic checkbox: unchecked = no
+               substantial U.S. owners (40b, the common Israeli holding corp); checked = has them
+               (40c) and the owner list fills the W-8 Part XXIX. Single instance (one named input)
+               so there is no duplicate-name collectAll collision; OR-trigger matches the
+               controlling-persons page pattern. It can never NOT be asked for a passive entity. -->
+          <div data-show-when="fatcaCrs.fatca.subType=(e);fatcaCrs.entityClassification=passiveNfe">
+            <label class="lvp-checkbox"><input type="checkbox" name="fatcaCrs.fatca.passive.hasSubstantialUsOwners" value="true" data-show-when-trigger="fatcaCrs.fatca.passive.hasSubstantialUsOwners"> The entity has substantial U.S. owners</label>
+            <div data-show-when="fatcaCrs.fatca.passive.hasSubstantialUsOwners=true">
+              <p class="lvp-hint-small">List each substantial U.S. owner.</p>
+              <div data-repeating-typed-path="fatcaCrs.fatca.passive.substantialUsOwners" data-repeating-min="1" data-repeating-template="susown"></div>
+              <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="fatcaCrs.fatca.passive.substantialUsOwners">+ Add a substantial U.S. owner</button>
+              <template data-row-template="susown">
+                <div class="lvp-repeating-row" data-row-index="${i}">
+                  <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">Substantial U.S. owner ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button></div>
+                  <label class="lvp-field" data-required><span class="lvp-field__label">Full name</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].fullName"></label>
+                  <label class="lvp-field" data-required><span class="lvp-field__label">Full residence address</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].address"></label>
+                  <label class="lvp-field" data-required><span class="lvp-field__label">U.S. taxpayer ID number (SSN or EIN)</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.passive.substantialUsOwners[${i}].taxRefTypeAndNumber"></label>
+                </div>
+              </template>
+            </div>
           </div>
         </section>
 
