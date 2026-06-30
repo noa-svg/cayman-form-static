@@ -540,8 +540,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
    perfect-freehand (variable-width committed strokes). Lives inside #login-screen so
    it clears (.off) on auth. Decorative + non-interactive. ----- */
 #login-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-#login-glow { position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(ellipse 30% 33% at 50% 50%, var(--color-bg-page) 50%, rgba(251,247,239,0) 100%); }
+#login-glow { display: none; }
 #login-screen .lc { position: relative; z-index: 2; }
 #login-measure { position: absolute; width: 100px; height: 100px; visibility: hidden; left: -9999px; }
 #login-art .d { position: absolute; }
@@ -3779,7 +3778,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       function sfs(s){if(!s.length)return'';var d=s.reduce(function(a,p,i,arr){var n=arr[(i+1)%arr.length];a.push(p[0],p[1],(p[0]+n[0])/2,(p[1]+n[1])/2);return a;},['M',s[0][0],s[0][1],'Q']);d.push('Z');return d.join(' ');}
       function draw(strokes,sz){var s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 100 100');strokes.forEach(function(d,k){var o=getStroke(pts(d,k*1.7+rnd()*3),{size:sz,thinning:0.72,smoothing:0.5,streamline:0.32,simulatePressure:false,start:{taper:6,cap:true},end:{taper:10,cap:true}});var p=document.createElementNS(NS,'path');p.setAttribute('d',sfs(o));p.setAttribute('fill','#141414');s.appendChild(p);});return s;}
       var PATHS={
-        clap:['M18 46 L82 46 L82 86 L18 86 Z','M16 33 L82 24 L85 39 L20 48 Z','M30 31 L34 46','M44 29 L48 44','M58 27 L62 42','M72 25 L76 40','M30 62 L66 62','M30 73 L56 73'],
+        clap:['M22 44 L78 44 L78 84 L22 84 Z','M22 44 L80 34','M32 60 L66 60'],
         goog:['M74 38 A28 28 0 1 0 76 62 L52 62'],
         fb:['M24 18 L76 18 L82 24 L82 76 L76 82 L24 82 L18 76 L18 24 Z','M60 30 Q47 28 47 44 L47 80','M38 48 L60 48'],
         col:['M30 30 L70 30 L70 36 L30 36 Z','M36 36 L38 76','M50 36 L50 76','M64 36 L62 76','M26 78 L74 78','M22 86 L78 86'],
@@ -3796,37 +3795,89 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         catglass:['M30 86 Q24 58 40 55 Q40 43 48 47 Q54 43 60 47 Q72 56 64 86','M40 49 L35 38 L47 47','M58 49 L63 38 L51 47','M64 82 Q82 80 76 62','M20 62 L36 66','M20 70 L36 70','M58 60 L55 88 L70 88 L67 60','M55 60 L70 60','M61 50 L61 60'],
         buckethead:['M34 88 L38 60 Q50 56 62 60 L66 88','M40 64 Q28 70 28 84','M36 40 L64 40 L61 60 L39 60 Z','M34 40 L66 40','M42 88 L42 96','M58 88 L58 96'],
         fish:['M18 50 Q40 34 66 50 Q40 66 18 50 Z','M66 50 L84 38 L84 62 Z','M32 42 Q37 50 32 58','M28 47 L31 47'],
-        bird:['M22 58 Q40 42 60 48 Q56 36 70 34 Q72 46 64 52 Q86 48 92 64 Q70 70 58 64 L40 78 Q26 72 22 58','M68 42 L72 42']
+        bird:['M22 58 Q40 42 60 48 Q56 36 70 34 Q72 46 64 52 Q86 48 92 64 Q70 70 58 64 L40 78 Q26 72 22 58','M68 42 L72 42'],
+        choop:['M30 20 L48 84','M42 17 L60 82','M33 30 L46 27'],
+        flower:['M50 80 L50 50','M50 50 Q39 38 50 28 Q61 38 50 50','M50 50 Q62 40 72 50 Q62 60 50 50','M50 50 Q60 62 50 72 Q40 62 50 50','M50 50 Q38 60 28 50 Q38 40 50 50'],
+        moon:['M64 22 Q34 30 34 56 Q34 82 64 78 Q44 64 44 50 Q44 36 64 22 Z'],
+        teacup:['M28 50 Q30 74 50 74 Q70 74 72 50 Z','M26 51 L74 51','M72 55 Q87 55 85 66 Q83 73 74 70','M41 44 Q45 38 43 33 M55 44 Q59 38 57 33'],
+        bottle:['M45 18 L54 20 L55 33 Q63 39 61 53 L59 85 Q58 89 50 88 L43 87 Q38 86 39 81 L41 51 Q40 39 45 33 Z','M40 58 L60 60'],
+        diner:['M40 24 Q40 14 50 14 Q60 14 60 24 Q60 32 50 32 Q40 32 40 24','M40 18 Q50 9 61 17','M44 28 Q50 31 56 28','M33 72 L40 40 Q51 36 62 42 L67 72','M40 46 L29 58 L47 59','M62 46 L71 51','M68 49 L72 62 L80 62 L77 49','M20 72 L80 74'],
+        chicken:['M30 60 Q28 44 44 42 Q60 40 64 56 Q64 70 50 70 Q34 72 30 60','M44 42 Q42 30 52 28','M50 28 Q52 22 56 26 Q58 22 61 28','M52 32 L61 34 L52 38','M62 54 Q79 46 81 29','M64 60 Q81 56 85 40','M44 70 L42 82 L35 84','M56 70 L58 82 L65 84'],
+        pour:['M14 28 L34 20 L44 40 L38 58 L18 64 L8 44 Z','M26 24 L33 21','M40 52 Q56 62 70 56 Q86 50 96 64'],
+        cat:['M34 84 Q30 56 50 54 Q70 56 66 84','M40 56 L36 44 L48 52','M60 56 L64 44 L52 52','M66 80 Q80 78 76 64','M30 68 L42 70','M30 74 L42 73','M44 64 L47 64','M53 64 L56 64'],
+        plate:['M12 50 Q12 37 50 37 Q88 37 88 50 Q88 63 50 63 Q12 63 12 50 Z','M24 50 Q24 43 50 43 Q76 43 76 50 Q76 57 50 57 Q24 57 24 50 Z'],
+        jobs:['M37 25 Q37 10 52 10 Q67 10 67 25 Q67 39 52 41 Q37 39 37 25 Z','M40 14 Q46 8 52 11 M65 16 Q62 9 56 11','M39 25 Q39 19 45 19 Q51 19 51 25 Q51 31 45 31 Q39 31 39 25 Z','M54 25 Q54 19 60 19 Q66 19 66 25 Q66 31 60 31 Q54 31 54 25 Z','M51 25 L54 25','M38 25 L33 24 M66 25 L71 24','M45 36 Q52 39 59 36','M40 42 Q52 47 65 42 L67 60 Q67 64 61 64 L44 64 Q38 64 38 60 Z','M43 64 L40 92 M62 64 L65 92','M44 92 L44 100 M61 92 L61 100','M65 47 L82 39 L80 46'],
+        cactus:['M44 92 L44 42 Q44 32 52 32 Q60 32 60 42 L60 92','M44 64 L34 64 Q28 64 28 56 L28 48','M60 56 L70 56 Q76 56 76 48 L76 40','M40 92 L64 92 L62 99 L42 99 Z'],
+        sun:['M34 50 Q34 34 50 34 Q66 34 66 50 Q66 66 50 66 Q34 66 34 50 Z','M50 30 L50 20','M50 70 L50 80','M30 50 L20 50','M70 50 L80 50','M36 36 L30 30','M64 36 L70 30','M36 64 L30 70','M64 64 L70 70'],
+        carrot:['M50 90 L40 50 Q50 45 60 50 Z','M44 50 L40 36','M50 49 L50 32','M56 50 L60 36','M46 62 L52 60','M48 72 L54 70'],
+        tomato:['M30 56 Q30 38 50 38 Q70 38 70 56 Q70 74 50 74 Q30 74 30 56 Z','M50 38 L50 30','M44 36 L38 30','M56 36 L62 30','M48 34 L45 27'],
+        leafy:['M30 80 Q24 50 40 40 Q36 24 50 28 Q49 16 60 26 Q72 22 70 40 Q84 48 74 64 Q78 78 60 78 Q44 86 30 80 Z','M50 72 L50 42','M44 62 L39 48','M58 62 L64 48'],
+        winebottle:['M44 16 L56 16 L56 34 Q62 42 62 56 L62 86 Q62 90 56 90 L44 90 Q38 90 38 86 L38 56 Q38 42 44 34 Z','M40 60 L60 60','M40 74 L60 74','M45 16 L55 16 L55 10 L45 10 Z'],
+        backpack:['M30 40 Q30 24 50 24 Q70 24 70 40 L70 84 Q70 90 62 90 L38 90 Q30 90 30 84 Z','M38 90 Q36 62 47 56 Q55 54 63 58 Q70 72 68 90','M38 42 Q34 30 42 28','M62 42 Q66 30 58 28','M44 66 L56 66'],
+        hat:['M32 52 Q32 30 50 30 Q68 30 68 52','M22 52 Q50 58 78 52 L72 64 Q50 70 28 64 Z','M38 52 L62 52']
       };
       function place(name,sz,css){if(!PATHS[name])return;var d=document.createElement('div');d.className='d';d.style.cssText=css;d.appendChild(draw(PATHS[name],sz));art.appendChild(d);}
       function text(t,css,size){var e=document.createElement('div');e.className='ltr';e.style.cssText=css+';font-size:'+size+'px';t.split('').forEach(function(ch){if(ch==='\n'){e.appendChild(document.createElement('br'));return;}var sp=document.createElement('span');if(ch===' ')sp.innerHTML='&nbsp;';else sp.textContent=ch;sp.style.transform='rotate('+((rnd()-0.5)*16)+'deg) translateY('+((rnd()-0.5)*7)+'px)';sp.style.fontSize=(0.82+rnd()*0.42)+'em';e.appendChild(sp);});art.appendChild(e);}
+      var screen=document.getElementById('login-screen');
+      function placeTop(name,sz,css){if(!PATHS[name])return;var d=document.createElement('div');d.className='d';d.style.cssText='position:absolute;z-index:3;pointer-events:none;'+css;d.appendChild(draw(PATHS[name],sz));screen.appendChild(d);}
+      function quote(css){var e=document.createElement('div');e.className='ltr';e.style.cssText=css;e.innerHTML='<div style="margin-left:0">MAKE</div><div style="margin-left:1.5em">THINGS AS</div><div style="margin-left:0;line-height:1"><span style="font-size:1.8em">SIMPLE</span> AS</div><div style="margin-left:1.3em">POSSIBLE</div><div style="margin-left:0">BUT NOT SIMPLER</div>';art.appendChild(e);}
       if(window.matchMedia('(max-width:560px)').matches){
-        place('clap',8,'top:3vh;left:5vw;width:92px;transform:rotate(-6deg)');
-        place('goog',9,'top:3vh;right:5vw;width:104px;transform:rotate(7deg)');
-        place('fuji',7,'bottom:3vh;left:6vw;width:84px;transform:rotate(4deg)');
-        place('sushi',8,'bottom:3vh;right:6vw;width:88px;transform:rotate(-5deg)');
-        place('fb',8,'bottom:13vh;left:36vw;width:70px;transform:rotate(-4deg)');
+        place('buckethead',6.5,'top:2vh;left:1vw;width:120px;transform:rotate(-3deg)');
+        place('chicken',6,'top:3vh;right:3vw;width:96px;transform:rotate(5deg)');
+        place('sushi',8,'top:13vh;left:6vw;width:64px;transform:rotate(-5deg)');
+        place('coupe',7,'top:13vh;right:8vw;width:56px;transform:rotate(6deg)');
+        placeTop('pour',6,'top:17vh;left:28vw;width:150px;transform:rotate(4deg)');
+        place('cat',6,'bottom:2vh;left:3vw;width:96px;transform:rotate(2deg)');
+        place('fish',6,'bottom:2vh;right:4vw;width:90px;transform:rotate(-5deg)');
+        place('noodle',8,'bottom:12vh;left:8vw;width:78px;transform:rotate(5deg)');
+        place('fb',8,'bottom:12vh;right:8vw;width:56px;transform:rotate(-4deg)');
       } else {
-        place('buckethead',6.5,'top:3vh;left:2vw;width:175px;transform:rotate(-4deg)');
-        place('coupe',7,'top:4vh;left:17vw;width:88px;transform:rotate(7deg)');
-        place('clap',8,'top:7vh;left:28vw;width:150px;transform:rotate(-6deg)');
-        place('cork',10,'top:2vh;right:27vw;width:80px;transform:rotate(5deg)');
-        place('goog',9,'top:5vh;right:8vw;width:170px;transform:rotate(8deg)');
-        place('star',7,'top:3vh;right:3vw;width:46px;transform:rotate(-12deg)');
-        place('wine',8,'top:21vh;left:24vw;width:78px;transform:rotate(6deg)');
-        place('catglass',5.5,'top:30vh;left:1vw;width:140px;transform:rotate(3deg)');
-        place('forkknife',7,'top:33vh;right:2vw;width:70px;transform:rotate(7deg)');
-        place('fb',8,'top:52vh;right:5vw;width:128px;transform:rotate(-5deg)');
-        place('blade',7,'top:55vh;right:23vw;width:74px;transform:rotate(9deg)');
-        place('fish',6,'top:48vh;left:6vw;width:120px;transform:rotate(-7deg)');
-        place('col',8,'bottom:2vh;left:4vw;width:118px;transform:rotate(-4deg)');
-        place('noodle',8,'bottom:4vh;left:20vw;width:128px;transform:rotate(6deg)');
-        place('sake',7,'bottom:6vh;left:36vw;width:72px;transform:rotate(-8deg)');
-        place('bird',6,'bottom:3vh;right:24vw;width:155px;transform:rotate(4deg)');
-        place('sushi',8,'bottom:5vh;right:13vw;width:96px;transform:rotate(-6deg)');
-        place('fuji',7,'bottom:3vh;right:2vw;width:88px;transform:rotate(5deg)');
-        text('MAKE THINGS\nAS SIMPLE AS\nPOSSIBLE BUT\nNOT SIMPLER',"bottom:17vh;left:29vw;transform:rotate(-3deg)",19);
-        place('star',6,'bottom:24vh;right:28vw;width:34px;transform:rotate(10deg)');
+        // figures + creatures = the body of the page
+        place('buckethead',7,'top:5vh;left:0vw;width:225px;transform:rotate(-3deg)');
+        place('diner',7,'top:2vh;left:21vw;width:188px;transform:rotate(2deg)');
+        place('catglass',6,'top:33vh;left:0vw;width:150px;transform:rotate(3deg)');
+        place('chicken',6.5,'top:29vh;right:8vw;width:132px;transform:rotate(4deg)');
+        place('cat',6,'bottom:1vh;left:2vw;width:122px;transform:rotate(2deg)');
+        placeTop('pour',7,'top:15vh;left:41vw;width:200px;transform:rotate(5deg)');
+        place('jobs',7,'top:1vh;left:52vw;width:165px;transform:rotate(2deg)');
+        place('sun',7,'top:3vh;right:2vw;width:60px;transform:rotate(0deg)');
+        place('hat',7,'top:33vh;left:13vw;width:80px;transform:rotate(-5deg)');
+        place('backpack',7,'top:42vh;right:11vw;width:96px;transform:rotate(5deg)');
+        place('cactus',7,'top:60vh;left:33vw;width:64px;transform:rotate(-3deg)');
+        place('winebottle',7,'top:58vh;left:14vw;width:58px;transform:rotate(6deg)');
+        place('carrot',7,'bottom:2vh;left:34vw;width:54px;transform:rotate(8deg)');
+        place('tomato',7,'bottom:13vh;right:27vw;width:60px;transform:rotate(-6deg)');
+        place('leafy',7,'bottom:2vh;right:11vw;width:70px;transform:rotate(5deg)');
+        // heavy columns + named objects
+        place('col',12,'top:56vh;left:2vw;width:122px;transform:rotate(-3deg)');
+        place('fish',6,'top:40vh;left:14vw;width:108px;transform:rotate(-7deg)');
+        place('fb',8,'bottom:3vh;right:5vw;width:74px;transform:rotate(-5deg)');
+        place('blade',6,'bottom:12vh;right:15vw;width:70px;transform:rotate(-7deg)');
+        place('plate',8,'bottom:13vh;left:25vw;width:185px;transform:rotate(-2deg)');
+        // food/drink fill - namable, no holes
+        place('coupe',7,'top:6vh;right:31vw;width:80px;transform:rotate(-5deg)');
+        place('sushi',8,'top:3vh;right:19vw;width:94px;transform:rotate(5deg)');
+        place('teacup',7,'top:5vh;right:5vw;width:82px;transform:rotate(-4deg)');
+        place('fuji',7,'top:20vh;left:17vw;width:88px;transform:rotate(3deg)');
+        place('choop',7,'top:18vh;left:29vw;width:56px;transform:rotate(-7deg)');
+        place('sake',7,'top:19vh;right:31vw;width:62px;transform:rotate(-8deg)');
+        place('teacup',7,'top:20vh;right:21vw;width:76px;transform:rotate(5deg)');
+        place('noodle',8,'top:33vh;right:23vw;width:92px;transform:rotate(6deg)');
+        place('wine',8,'top:46vh;left:7vw;width:74px;transform:rotate(6deg)');
+        place('forkknife',7,'top:45vh;right:4vw;width:64px;transform:rotate(7deg)');
+        place('moon',7,'top:58vh;right:7vw;width:64px;transform:rotate(6deg)');
+        place('sushi',7,'top:50vh;right:18vw;width:72px;transform:rotate(-6deg)');
+        place('coupe',7,'top:35vh;left:26vw;width:64px;transform:rotate(-5deg)');
+        place('wine',7,'top:52vh;left:27vw;width:60px;transform:rotate(5deg)');
+        place('sushi',7,'top:36vh;right:27vw;width:64px;transform:rotate(4deg)');
+        place('sake',7,'bottom:2vh;left:14vw;width:60px;transform:rotate(-7deg)');
+        place('noodle',8,'bottom:2vh;left:20vw;width:100px;transform:rotate(5deg)');
+        place('bottle',7,'bottom:2vh;left:45vw;width:62px;transform:rotate(15deg)');
+        place('teacup',7,'bottom:3vh;right:31vw;width:74px;transform:rotate(5deg)');
+        place('sushi',8,'bottom:2vh;right:21vw;width:88px;transform:rotate(-6deg)');
+        place('fuji',7,'bottom:3vh;right:2vw;width:84px;transform:rotate(4deg)');
+        // text floated on the plate, ragged, one big word
+        quote("bottom:14vh;left:27vw;transform:rotate(-3deg)");
       }
     }).catch(function(){});
   })();
