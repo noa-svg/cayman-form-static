@@ -2379,7 +2379,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size: 13px;padding: 8px 16px;white-space:nowrap">Copy link</button>
       </div>
-      <!-- (Send-to-LP button removed with the Israeli mint path.) -->
+      <button id="resSendBtn" class="cta" data-pid="" style="display:none;margin-top:12px;width:100%">Send invite to the LP</button>
+      <div id="resSendStatus" role="status" aria-live="polite" style="font-size: 13px;color:var(--color-ink-muted);margin-top: 8px"></div>
     </div>
   </div>
 
@@ -2549,6 +2550,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       {itemId:'d-ppl-1',name:'Ido Hagai',nameHe:'עידו חגאי',nameEn:'',email:'ido@example.com',nickname:'עידו'},
       {itemId:'d-ppl-2',name:'Dalya Cohen',nameHe:'',nameEn:'',email:'dalya@example.com',nickname:'דלי'}
     ]};
+    if(qs.indexOf('?admin=mintLink')===0) return {ok:true,processId:'demo-pid-1',url:'https://sign.legacyvpartners.com/flow.html?t=demo'};
+    if(qs.indexOf('?admin=sendIsraeliInvite')===0) return {ok:true,sentTo:'lp@example.com',cc:'omri@legacyvpartners.com'};
     return {ok:true};
   }
   function apiFetch(qs){
@@ -2841,7 +2844,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Mint the "+ttl.toLowerCase()+" link for an existing LP, then send it.";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" - existing LP";
-      el=document.getElementById("createBtn");if(el)el.textContent="Mint link";
+      el=document.getElementById("createBtn");if(el)el.textContent="Create & send invite";
       return;
     }
     el=document.getElementById("typeKindRow");if(el)el.style.display="";
@@ -3255,23 +3258,34 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // increase has a Send-to-LP action server-side).
     if(state.process==="increase"||state.process==="withdrawal"){
       if(!state.selectedPeopleId){showMsg("Pick the existing LP filing the request.",true);return;}
-      btn.disabled=true;btn.textContent="Minting...";
+      btn.disabled=true;btn.textContent="Creating...";
       document.getElementById("res").classList.remove("on");
-      showMsg("Minting the link...",false);
+      showMsg("Creating the request and sending the invite...",false);
+      // Mint, then auto-send the approved Hebrew invite (Noa 2026-06-30: create == send).
       apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId||'')).then(function(res){
-        btn.disabled=false;btn.textContent="Mint link";
-        if(!res||!res.ok){showMsg((res&&res.error)||"Could not mint. Check GAS logs.",true);return;}
-        showMsg("",false);
-        document.getElementById("res").classList.add("on");
-        document.getElementById("lk").textContent=res.url||res.signerLink||"";
-        document.getElementById('resTitle').textContent='Link ready.';
-        document.getElementById('resSub').textContent=(state.process==="withdrawal")
-          ? 'Withdrawal links are sent manually. Test the link, then copy it and email it to the LP yourself.'
-          : 'Increase link ready. Test it, then copy or send it to the LP.';
-        if(window.__lpClearPick)window.__lpClearPick();
-        if(window.__clearCreateDraft)window.__clearCreateDraft();
-        load();
-      }).catch(function(e){btn.disabled=false;btn.textContent="Mint link";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+        if(!res||!res.ok){btn.disabled=false;btn.textContent="Create & send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
+        var processId=res.processId||'', link=res.url||res.signerLink||"";
+        return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId)).then(function(sr){
+          btn.disabled=false;btn.textContent="Create & send invite";
+          showMsg("",false);
+          document.getElementById("res").classList.add("on");
+          document.getElementById("lk").textContent=link;
+          var _sb=document.getElementById('resSendBtn'),_ss=document.getElementById('resSendStatus');
+          if(_sb){_sb.setAttribute('data-pid',processId);_sb.style.display=processId?'':'none';_sb.disabled=false;_sb.textContent='Resend invite';}
+          if(sr&&sr.ok){
+            document.getElementById('resTitle').textContent='Invite sent.';
+            document.getElementById('resSub').textContent='The Hebrew invite was emailed to the LP (cc Omri). The link below is for your reference.';
+            if(_ss){_ss.style.color='var(--color-success)';_ss.textContent='Sent to '+(sr.sentTo||'the LP')+(sr.cc?(' · cc '+sr.cc):'');}
+          } else {
+            document.getElementById('resTitle').textContent='Created, but the invite did NOT send.';
+            document.getElementById('resSub').textContent='The link was created; the invite email failed. Press Resend, or copy the link and send it manually.';
+            if(_ss){_ss.style.color='var(--color-danger)';_ss.textContent=(sr&&sr.error)||'Send failed.';}
+          }
+          if(window.__lpClearPick)window.__lpClearPick();
+          if(window.__clearCreateDraft)window.__clearCreateDraft();
+          load();
+        });
+      }).catch(function(e){btn.disabled=false;btn.textContent="Create & send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
@@ -3301,7 +3315,17 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(!lk)return;
     navigator.clipboard.writeText(lk).then(function(){var b=document.getElementById("copyLinkBtn");b.textContent="Copied";setTimeout(function(){b.textContent="Copy link";},2000);}).catch(function(){});
   };
-  // (Send-to-LP step removed with the Israeli mint path; subscriptions auto-send the invite.)
+  // Send-to-LP: deliver the Hebrew invite (approved invite_increase / invite_redemption copy)
+  // to the existing LP from ir@, cc Omri. The mint never auto-sends; the operator presses this.
+  document.getElementById("resSendBtn").onclick=function(){
+    var b=this; var pid=b.getAttribute('data-pid'); if(!pid)return;
+    b.disabled=true;b.textContent="Sending...";
+    var st=document.getElementById('resSendStatus');if(st){st.style.color='var(--color-ink-muted)';st.textContent='';}
+    apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid)).then(function(r){
+      if(r&&r.ok){b.textContent="Invite sent";if(st){st.style.color='var(--color-success)';st.textContent='Sent to '+(r.sentTo||'the LP')+(r.cc?(' · cc '+r.cc):'');}}
+      else{b.disabled=false;b.textContent="Send invite to the LP";if(st){st.style.color='var(--color-danger)';st.textContent=(r&&r.error)||'Send failed. Try again.';}}
+    }).catch(function(e){b.disabled=false;b.textContent="Send invite to the LP";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&e.message)||'unknown');}});
+  };
 
   // view switching
   function switchView(v){
