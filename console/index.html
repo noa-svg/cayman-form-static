@@ -9,8 +9,8 @@
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 /* ============================================================
-   LEGACY VALUE PARTNERS — OPERATOR CONSOLE
-   Token system v2 — Atrium palette, Vignelli grid, Tel Aviv warmth
+   LEGACY VALUE PARTNERS - OPERATOR CONSOLE
+   Token system v2 - Atrium palette, Vignelli grid, Tel Aviv warmth
    ============================================================ */
 
 :root {
@@ -264,20 +264,29 @@ nav {
 }
 
 .nav.on {
-  color: var(--color-sidebar-ink);
-  background: var(--color-sidebar-active);
+  color: #2B2410;
+  background: var(--color-gold);
   font-weight: var(--weight-semi);
 }
-.nav.on::before { content: ""; }
 
 .nav.on:hover {
-  background: var(--color-sidebar-active);
+  background: var(--color-gold);
+  color: #2B2410;
+}
+
+/* Real Tabler glyph in the rail, shown in expanded (icon + label) state */
+.nav .nav-ic {
+  font-size: 18px;
+  line-height: 1;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
 }
 
 .nav .badge {
   margin-left: auto;
-  background: var(--color-sidebar-active);
-  color: var(--color-sidebar-ink);
+  background: var(--color-gold);
+  color: #2B2410;
   font-size: var(--text-2xs);
   font-weight: var(--weight-semi);
   min-width: 16px;
@@ -288,9 +297,10 @@ nav {
   text-align: center;
 }
 
+/* On the active (gold) pill, invert the badge so it stays legible */
 .nav.on .badge {
-  background: var(--color-gold);
-  color: #2B2410;
+  background: #2B2410;
+  color: var(--color-gold);
 }
 
 /* --- Sidebar footer / auth --- */
@@ -320,6 +330,43 @@ nav {
   text-overflow: ellipsis;
   line-height: var(--leading-tight);
 }
+
+.side-foot .foot-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.side-foot .foot-id .auth-email {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.side-foot .foot-gear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 15px;
+  color: var(--color-sidebar-ink-sub);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    color var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+
+.side-foot .foot-gear:hover {
+  color: var(--color-sidebar-ink);
+  background: var(--color-sidebar-hover);
+}
+
+body.side-coll .side-foot .foot-gear { display: none; }
 
 .side-foot .signout-link {
   font-family: var(--font-body);
@@ -513,34 +560,7 @@ nav {
   gap: 16px;
   flex-shrink: 0;
 }
-.prompt {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-ink-sub);
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-.prompt-host { color: var(--color-atrium); }
-.prompt-path { color: var(--color-ink-sub); }
-.cursor {
-  display: inline-block;
-  width: 7px;
-  height: 13px;
-  background: var(--color-atrium);
-  vertical-align: middle;
-  margin-left: 4px;
-  animation: blink 1.1s step-end infinite;
-  opacity: 0.9;
-}
-@keyframes blink { 0%,100%{opacity:0.9} 50%{opacity:0} }
 .top-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.flagged-badge {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-red);
-  letter-spacing: 0.05em;
-}
 .cmd-btn {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -587,8 +607,8 @@ nav {
   font-size: 11px;
   font-family: var(--font-body);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--color-ink-muted);
   padding: 8px 12px 4px;
 }
@@ -676,72 +696,19 @@ nav {
 }
 
 /* ============================================================
-   LAUNCH-FIRST  (Start a request tiles)
-   ============================================================ */
-
-.launch { margin-bottom: var(--space-8); }
-.launch-h {
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semi);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-  margin-bottom: var(--space-3);
-}
-.launch-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--space-4); }
-.tile {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  text-align: left;
-  padding: var(--space-5) var(--space-5);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-card);
-  cursor: pointer;
-  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
-}
-.tile:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
-.tile:active { transform: translateY(0); }
-.tile-ic {
-  display: flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-atrium-tint);
-  color: var(--color-atrium);
-  font-size: 21px;
-}
-.tile-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tile-t { font-size: var(--text-md); font-weight: var(--weight-semi); color: var(--color-ink); line-height: 1.2; }
-.tile-s { font-size: var(--text-xs); color: var(--color-ink-muted); }
-.tile-hero {
-  background: var(--color-atrium);
-  border-color: var(--color-atrium);
-}
-.tile-hero .tile-ic { background: rgba(255,255,255,0.16); color: #fff; }
-.tile-hero .tile-t { color: #fff; }
-.tile-hero .tile-s { color: rgba(255,255,255,0.78); }
-.tile-hero:hover { background: var(--color-atrium-deep); border-color: var(--color-atrium-deep); }
-
-/* ============================================================
-   BOARD  (heading + filter row + hairline rows)
+   BOARD  (status board - stage rail + hairline rows)
    ============================================================ */
 
 .listhead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
   padding: 0 0 var(--space-3);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
 }
-.listhead h2 {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-semi);
-  text-transform: none;
-  letter-spacing: -0.01em;
-  color: var(--color-ink);
-}
+.listhead .lh-right { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
 .board-search {
   font-family: var(--font-body);
   font-size: 13px;
@@ -758,33 +725,36 @@ nav {
 .board-search::placeholder { color: var(--color-ink-muted); }
 .board-search::-webkit-search-cancel-button { opacity: 0.4; cursor: pointer; }
 
-/* Filter row */
-.filters {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 0 var(--space-2);
-  margin-bottom: var(--space-2);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
+/* Inline primary create button (reuses the atrium .cmd-btn voice) */
+.board-new {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: #fff;
+  background: var(--color-atrium);
+  border: 1px solid var(--color-atrium);
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-base) var(--ease-out);
 }
-.filt {
+.board-new:hover { background: var(--color-atrium-deep); }
+
+/* Quiet demoted "Show completed" toggle (no box) */
+.show-done {
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--color-ink-sub);
+  color: var(--color-ink-muted);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  padding: 4px 12px;
+  border: none;
+  padding: var(--space-3) 2px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+  transition: color var(--dur-base) var(--ease-out);
 }
-.filt:hover { background: var(--color-bg-hover); color: var(--color-ink); }
-.filt.on { background: var(--color-atrium); color: #fff; }
-.filt-n { font-weight: var(--weight-semi); opacity: 0.7; margin-left: 2px; }
-.filt.on .filt-n { opacity: 0.85; }
+.show-done:hover { color: var(--color-ink-sub); }
+.show-done.on { color: var(--color-ink-sub); }
 
 #list { display: block; }
 
@@ -793,11 +763,11 @@ nav {
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--color-border-subtle);
-  padding: 12px 4px;
+  padding: 14px 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-6);
   font-family: var(--font-body);
   transition: background var(--dur-base);
 }
@@ -807,12 +777,13 @@ nav {
   padding-left: 12px;
   padding-right: 12px;
 }
-.row.bk-complete { opacity: 0.5; }
-.row.bk-complete:hover { opacity: 0.72; }
+.row.done { opacity: 0.5; }
+.row.done:hover { opacity: 0.72; }
 
 /* Name column */
 .rn {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 30%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -836,39 +807,55 @@ nav {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.r-cue {
-  font-size: var(--text-xs);
-  color: var(--color-ink-sub);
-  margin-top: 2px;
+
+/* THE STAGE RAIL (dominant per-row element) */
+.rstage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 0;
 }
+.rail {
+  display: flex;
+  gap: 3px;
+  width: 132px;
+}
+.rail .seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);                 /* upcoming = ghost */
+  transition: background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.rail .seg.done    { background: var(--color-atrium); }   /* traveled = solid atrium */
+.rail .seg.current { background: var(--color-gold); }     /* current = solid gold (the anchor) */
+/* Laterals: needs_attention freezes the rail. Traveled drop to grey,
+   current becomes a hollow gold ring (inset shadow, not a fill). */
+.rail.frozen .seg.done    { background: var(--color-border); }
+.rail.frozen .seg.current { background: var(--color-amber); box-shadow: none; }
+/* voided / expired: entire rail ghost */
+.rail.dead .seg { background: var(--color-border); box-shadow: none; }
+.rail-lbl {
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.01em;
+  color: var(--color-ink-sub);
+  line-height: 1;
+  white-space: nowrap;
+}
+.rail-lbl.muted { color: var(--color-ink-muted); }
+.rail-lbl .frac { color: var(--color-ink-muted); }
 
 /* Age column */
 .rage {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   font-size: var(--text-xs);
   color: var(--color-ink-muted);
   text-align: right;
-  min-width: 28px;
+  min-width: 36px;
 }
-
-/* Material status tag */
-.r-tag {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semi);
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-  min-width: 96px;
-  justify-content: center;
-}
-.r-tag.tag-solid-blue { background: var(--color-atrium); color: #fff; border: 1px solid var(--color-atrium); }
-.r-tag.tag-solid-red  { background: var(--color-coral); color: #fff; border: 1px solid var(--color-coral); }
-.r-tag.tag-outline    { background: transparent; color: var(--color-ink-sub); border: 1px solid var(--color-border-strong); }
-.r-tag.tag-quiet      { background: transparent; color: var(--color-ink-muted); border: 1px solid transparent; font-weight: var(--weight-medium); }
 
 /* Quiet sync line under the board */
 .syncline {
@@ -892,7 +879,26 @@ nav {
   color: var(--color-ink-muted);
 }
 
-/* Retain legacy classes used by attention/w8 views */
+/* Shared skeleton loading primitive (geometry, not a "Loading..." string) */
+@keyframes skel-pulse { 0%,100%{opacity:0.55} 50%{opacity:0.25} }
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.skel-bar {
+  height: 11px;
+  border-radius: var(--radius-sm);
+  background: var(--color-border);
+  animation: skel-pulse 1.2s var(--ease-inout) infinite;
+}
+.skel-row .sk-name { flex: 0 0 auto; width: 26%; }
+.skel-row .sk-rail { flex: 1 1 auto; max-width: 132px; height: 4px; margin: 0 auto; }
+.skel-row .sk-age { flex: 0 0 auto; width: 28px; }
+
+/* Retain legacy classes used by the create drawer / signer panel */
 .row-top { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .av {
   width: 26px; height: 26px; border-radius: 3px; font-size: 11px;
@@ -918,40 +924,81 @@ nav {
 .wait { font-family: var(--font-body); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-danger); }
 
 /* ============================================================
-   W-8 RENEWALS  (KPI strip + due list)
+   W-8 RENEWALS  (weighted readout + grouped due list)
    ============================================================ */
-.w8counts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-.w8counts .st {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-}
-.w8counts .ct {
+.w8readout { margin-bottom: var(--space-6); }
+.w8readout .w8-line1 {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: 28px;
   font-weight: var(--weight-semi);
+  line-height: 1.1;
   color: var(--color-ink);
-  line-height: 1;
 }
-.w8counts .st.hot .ct { color: var(--color-atrium); }
-.w8counts .lbl {
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semi);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
+.w8readout .w8-x { color: var(--color-coral); }
+.w8readout .w8-g { color: var(--color-amber); }
+.w8readout .w8-sep { color: var(--color-ink-muted); font-weight: var(--weight-normal); }
+.w8readout .w8-line2 {
+  font-size: 13px;
   color: var(--color-ink-muted);
   margin-top: var(--space-2);
 }
-.w8list .row { cursor: default; }
-.w8list .row:hover { background: transparent; margin: 0; padding-left: 4px; padding-right: 4px; }
+
+/* Group blocks */
+.w8group { margin-bottom: var(--space-5); }
+.w8group.overdue { border-left: 2px solid var(--color-coral); padding-left: var(--space-4); }
+.w8grouplbl {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-muted);
+  padding: 0 0 var(--space-2);
+}
+
+/* Read-only W-8 row primitive (NOT the clickable board .row) */
+.w8row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-family: var(--font-body);
+}
+.w8row:last-child { border-bottom: none; }
+.w8row .w8nm {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.w8row .w8nm .w8nmtxt {
+  font-size: 15px;
+  font-weight: var(--weight-semi);
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.w8row .w8nm .w8var {
+  flex: 0 0 auto;
+  font-weight: var(--weight-normal);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+.w8row .w8when {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.w8row .w8rel { font-size: var(--text-sm); line-height: 1.2; }
+.w8row .w8rel.w8-over { color: var(--color-coral); font-weight: var(--weight-semi); }
+.w8row .w8rel.w8-soon { color: var(--color-amber); font-weight: var(--weight-medium); }
+.w8row .w8iso { font-size: var(--text-xs); color: var(--color-ink-muted); }
 .w8tag {
+  flex-shrink: 0;
   display: inline-flex; align-items: center;
   font-family: var(--font-body);
   font-size: var(--text-xs);
@@ -1226,6 +1273,25 @@ input:focus {
   display: none;
 }
 
+/* Messages view fills the main height as a flex column so the spine + detail
+   panel get a real height to fill (fixes the old 100vh-minus-header bug that
+   ignored the in-view .top). */
+#v-messages:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 180ms opacity ease on the entering view */
+@keyframes view-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.view.view-enter {
+  animation: view-fade-in 180ms var(--ease-out);
+}
+
 .soon,
 .msgempty {
   display: flex;
@@ -1261,147 +1327,225 @@ input:focus {
 .act-lane{font-size: 12px;color:var(--color-ink-muted);text-transform:none;letter-spacing:0}
 
 /* ============================================================
-   MESSAGES
+   MESSAGES  (lifecycle spine + node-detail panel)
    ============================================================ */
 
+/* Flex column so the spine sits under the in-view .top, not 100vh. */
 .msgwrap {
   display: flex;
-  height: calc(100vh - var(--header-h) - 1px);
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
 }
 
-.msglist {
-  width: 300px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--color-border);
+/* THE SPINE (~60%) - vertical rail, phase bands, nodes strung chronologically */
+.spine {
+  flex: 1 1 60%;
+  min-width: 0;
   overflow: auto;
-  padding: var(--space-4);
-  background: var(--color-bg-card);
+  padding: var(--space-6) var(--space-8) var(--space-10);
+  position: relative;
+}
+.spine-rail { position: relative; padding-left: var(--space-6); }
+.spine-rail::before {
+  content: "";
+  position: absolute;
+  left: 5px; top: 6px; bottom: 6px;
+  width: 1px;
+  background: var(--color-border);
 }
 
-.msgitem {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-2);
-  cursor: pointer;
-  background: var(--color-bg-card);
-  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+.phase {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
+  margin-left: calc(-1 * var(--space-6));
+  padding-left: var(--space-6);
 }
-
-.msgitem:hover {
-  border-color: var(--color-border-strong);
-}
-
-.msgitem.on {
-  border-color: var(--color-atrium);
-  background: var(--color-atrium-tint);
-}
-
-.msgitem .t {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semi);
-  color: var(--color-ink);
-}
-
-.msgitem .r {
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
-  margin-top: 4px;
-}
-
-.msgitem .ov {
-  display: inline-block;
+.phase:first-child { margin-top: 0; }
+.phase-lbl {
   font-family: var(--font-body);
   font-size: var(--text-2xs);
   font-weight: var(--weight-semi);
-  font-variant: small-caps;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-atrium);
-  margin-top: var(--space-1);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  letter-spacing: 0;
+  text-transform: none;
 }
+.phase-rule { flex: 1; height: 1px; background: var(--color-border-subtle); }
 
-.msgedit {
-  flex: 1;
-  overflow: auto;
-  padding: var(--space-6) var(--space-8);
-  background: var(--color-bg-page);
-}
-
-.msgedit h2 {
+/* NODE */
+.node {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;       /* gold edge when overridden */
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  margin: 0 0 2px;
+  cursor: pointer;
   font-family: var(--font-body);
-  font-style: normal;
+  transition: background var(--dur-base) var(--ease-out);
+}
+.node:hover { background: var(--color-bg-hover); }
+.node.on { background: var(--color-atrium-tint); }
+/* "Overridden" is already encoded by the he/en coverage tick; no redundant stripe. */
+
+/* rail dot - material by class */
+.node-dot {
+  position: absolute;
+  left: -23px; top: 18px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--color-bg-page);
+  box-sizing: border-box;
+}
+.node-dot.lp           { background: var(--color-atrium); }                          /* solid atrium */
+.node-dot.internal     { background: var(--color-bg-page); box-shadow: inset 0 0 0 1.5px var(--color-ink-muted); }  /* hollow ring */
+.node-dot.counterparty { background: var(--color-gold); }                            /* solid gold */
+
+.node-t {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--color-ink);
+  line-height: 1.3;
+}
+.node-meta {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  margin-top: 2px;
+}
+.node-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* recipient chips - solid tint = direct To, outline = cc */
+.rchip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.rchip.to  { background: var(--color-atrium-tint); color: var(--color-atrium-deep); border: 1px solid transparent; }
+.rchip.cc  { background: transparent; color: var(--color-ink-sub); border: 1px solid var(--color-border-strong); }
+
+/* he/en coverage ticks - solid=custom, outline=default, dotted=no-copy */
+.cov { display: inline-flex; gap: 4px; margin-left: auto; }
+.tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semi);
+  width: 22px; height: 15px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0;
+}
+.tick.custom  { background: var(--color-atrium); color: #fff; }
+.tick.default { background: transparent; color: var(--color-ink-sub); border: 1px solid var(--color-border-strong); }
+.tick.nocopy  { background: transparent; color: var(--color-ink-disabled); border: 1px dotted var(--color-border-strong); text-decoration: line-through; }
+
+/* ---- NODE DETAIL PANEL (~40%, editor + preview stacked) ---- */
+.mdetail {
+  flex: 1 1 40%;
+  min-width: 360px;
+  max-width: 520px;
+  border-left: 1px solid var(--color-border);
+  overflow: auto;
+  padding: var(--space-6) var(--space-6) var(--space-10);
+  background: var(--color-bg-card);
+}
+.md-hd { border-bottom: 1px solid var(--color-border-subtle); padding-bottom: var(--space-4); margin-bottom: var(--space-4); }
+.md-hd h2 {
+  font-family: var(--font-body);
   font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-ink);
   line-height: var(--leading-tight);
 }
+.md-trigger { font-size: var(--text-sm); color: var(--color-ink-muted); margin-top: var(--space-1); }
+.md-rcpts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 
-.msgedit .to {
+/* lang tabs - active = atrium fill + coverage dot; en disabled on he-only */
+.langtabs { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); }
+.langtab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-body);
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-sub);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.langtab:hover:not(.dis):not(.on) { border-color: var(--color-border-strong); color: var(--color-ink); }
+.langtab.on { background: var(--color-atrium); color: #fff; border-color: var(--color-atrium); }
+.langtab.dis { opacity: 0.5; cursor: not-allowed; }
+.langtab .cdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.langtab .cdot.custom { background: var(--color-gold); }
+.langtab .cdot.default { background: var(--color-ink-muted); }
+.langtab.on .cdot.default { background: rgba(255,255,255,0.7); }
+.md-nocopy {
+  font-size: var(--text-sm);
   color: var(--color-ink-muted);
-  margin: var(--space-1) 0 var(--space-3);
+  padding: var(--space-3) 0;
 }
 
+/* token rail - mono code chips, click to insert */
 .ph {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   background: var(--color-atrium-tint);
   color: var(--color-atrium);
-  padding: 4px var(--space-2);
+  padding: 3px var(--space-2);
   border-radius: var(--radius-sm);
   margin: 0 var(--space-2) var(--space-2) 0;
-}
-
-.msgtabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-
-.msgtabs button {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-normal);
-  color: var(--color-ink-sub);
-  padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+  border: 1px solid transparent;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
+.ph:hover { border-color: var(--color-atrium); }
+.ph.auto { background: var(--color-neutral-bg); color: var(--color-ink-sub); }
+.ph .auto-tag { font-family: var(--font-body); font-size: 8px; font-weight: var(--weight-semi); color: var(--color-ink-muted); letter-spacing: 0.04em; text-transform: uppercase; }
 
-.msgtabs button:hover {
-  border-color: var(--color-border-strong);
-  color: var(--color-ink);
-}
-
-.msgtabs button.on {
-  background: var(--color-atrium-tint);
-  color: var(--color-atrium);
-  border-color: var(--color-atrium);
-  font-weight: var(--weight-medium);
-}
-
-.msgedit .lbl {
+/* sentence-case field labels (retire tracked caps) */
+.mfield-lbl {
   display: block;
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--weight-semi);
-  font-variant: small-caps;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-atrium);
+  color: var(--color-ink-sub);
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant: normal;
   margin: var(--space-4) 0 var(--space-2);
 }
-
-.msgedit input,
-.msgedit textarea {
+.mdetail input,
+.mdetail textarea {
   width: 100%;
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -1413,14 +1557,12 @@ input:focus {
   outline: none;
   transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
-
-.msgedit input:focus,
-.msgedit textarea:focus {
+.mdetail input:focus,
+.mdetail textarea:focus {
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 2px var(--color-atrium-muted);
 }
-
-.msgedit textarea {
+.mdetail textarea {
   min-height: 150px;
   line-height: var(--leading-normal);
   resize: vertical;
@@ -1432,7 +1574,6 @@ input:focus {
   gap: var(--space-3);
   align-items: center;
 }
-
 .msgbtns .save {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -1443,13 +1584,10 @@ input:focus {
   padding: var(--space-2) var(--space-6);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--dur-fast);
+  transition: background var(--dur-fast), opacity var(--dur-fast);
 }
-
-.msgbtns .save:hover {
-  background: var(--color-atrium-deep);
-}
-
+.msgbtns .save:hover { background: var(--color-atrium-deep); }
+.msgbtns .save:disabled { opacity: 0.5; cursor: not-allowed; background: var(--color-atrium); }
 .msgbtns .reset {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -1459,14 +1597,10 @@ input:focus {
   padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
+  transition: background var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast);
 }
-
-.msgbtns .reset:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-strong);
-}
-
+.msgbtns .reset:hover:not(:disabled) { background: var(--color-bg-hover); border-color: var(--color-border-strong); }
+.msgbtns .reset:disabled { opacity: 0.5; cursor: not-allowed; }
 .msgbtns .saved {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -1474,38 +1608,20 @@ input:focus {
   color: var(--color-success);
 }
 
-.preview {
-  margin-top: var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--color-bg-card);
-}
-
-.preview .ph-h {
+/* empty detail (no node selected) */
+.msgempty {
+  flex: 1 1 40%;
+  min-width: 360px;
+  max-width: 520px;
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
   font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
+  font-size: var(--text-sm);
   color: var(--color-ink-muted);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-atrium-tint);
-}
-
-.preview .ph-s {
-  padding: var(--space-3) var(--space-4);
-  font-family: var(--font-body);
-  font-weight: var(--weight-semi);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.preview .ph-b {
-  padding: var(--space-4);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: var(--leading-loose);
 }
 
 /* ============================================================
@@ -1553,10 +1669,10 @@ input:focus {
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--weight-semi);
-  font-variant: small-caps;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
-  color: var(--color-ink-muted);
+  font-variant: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-ink-sub);
   margin-bottom: var(--space-3);
 }
 
@@ -1632,48 +1748,71 @@ input:focus {
   color: var(--color-ink-muted);
 }
 
+.pn-wrap { flex: 1; min-width: 0; }
+.pright {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
 .pr {
-  margin-left: auto;
   font-family: var(--font-body);
   font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-muted);
+}
+/* Signer state by material: who is done / current / waiting. */
+.pstate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 11px;
   font-weight: var(--weight-semi);
-  color: var(--color-atrium);
 }
+.pstate .pdot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.pstate.done { color: var(--color-green); }
+.pstate.cur  { color: var(--color-gold); }
+.pstate.wait { color: var(--color-ink-muted); }
+.pstate.wait .pdot { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+.person.is-done .pn, .person.is-done .pe { opacity: 0.55; }
 
+/* Lifecycle actions live at the BOTTOM of the drawer, quiet. Destructive last. */
 .dact {
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-5) var(--space-6);
+  border-top: 1px solid var(--color-border);
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-4);
 }
 
-.dact button {
+.dact .reseal {
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-atrium);
+  background: transparent;
+  color: var(--color-atrium);
   cursor: pointer;
-  transition: background var(--dur-fast), opacity var(--dur-fast);
+  transition: background var(--dur-fast);
 }
-
-.dact button:hover {
-  opacity: 0.9;
-}
-
-.dact .reseal {
-  background: var(--color-gold);
-  color: var(--color-ink-inverse);
-  border-color: var(--color-gold);
-}
+.dact .reseal:hover { background: var(--color-atrium-tint); }
 
 .dact .dvoid {
-  background: transparent;
-  color: var(--color-red);
-  border-color: var(--color-red);
   margin-left: auto;
+  background: transparent;
+  border: none;
+  padding: var(--space-2) 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
 }
+.dact .dvoid:hover { color: var(--color-red); text-decoration: underline; }
 
 .kv {
   display: flex;
@@ -1700,58 +1839,46 @@ input:focus {
 }
 
 /* ============================================================
-   MESSAGES SIDE-BY-SIDE
+   MESSAGES - rendered-email preview card (inside the detail panel)
    ============================================================ */
 
-.medit-wrap {
-  display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(300px, 1fr);
-  gap: var(--space-8);
-  align-items: start;
-}
-
-.medit-left {
-  min-width: 0;
-}
-
-.medit-right {
-  min-width: 0;
-  position: sticky;
-  top: var(--space-6);
-}
-
-.medit-right .preview {
+.preview {
+  margin-top: var(--space-6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--color-bg-card);
 }
-
-.medit-right .ph-h {
+.preview .ph-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--weight-semi);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-widest);
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--color-ink-muted);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-atrium-tint);
+  background: var(--color-bg-strip);
 }
-
-.medit-right .ph-s {
+.preview .ph-h .dir-ind { font-weight: var(--weight-normal); }
+.preview .ph-s {
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-body);
   font-weight: var(--weight-semi);
   font-size: var(--text-base);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
-
-.medit-right .ph-b {
+.preview .ph-b {
   padding: var(--space-4);
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-loose);
+  color: var(--color-ink);
   min-height: 120px;
 }
 
@@ -1837,7 +1964,7 @@ body.side-coll .brand-chip img { height: 18px; }
 body.side-coll #side-collapse { padding: 4px 0; text-align: center; font-size: 13px; letter-spacing: 0; }
 body.side-coll .nav { padding: var(--space-2) 0; justify-content: center; font-size: 0; gap: 0; }
 body.side-coll .nav::before { display: none !important; }
-body.side-coll .nav::after { content: attr(data-icon); font-family: var(--font-body); font-weight: 700; font-size: 13px; color: inherit; }
+body.side-coll .nav .nav-ic { font-size: 18px; }
 body.side-coll .nav .badge { display: none; }
 body.side-coll .side-foot .ver,
 body.side-coll .side-foot .auth-email,
@@ -1908,7 +2035,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     transition: color var(--dur-base) var(--ease-out);
   }
   .tab:active { opacity: 0.65; }
-  .tab.on { color: var(--color-gold); }
+  .tab.on {
+    color: #2B2410;
+    background: var(--color-gold);
+  }
   .tab-icon { font-size: 15px; line-height: 1; display: block; }
   .tab-lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; text-transform: none; line-height: 1; display: block; }
   .tab-badge {
@@ -1916,8 +2046,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     top: 4px;
     right: 50%;
     margin-right: -20px;
-    background: var(--color-danger);
-    color: #fff;
+    background: var(--color-gold);
+    color: #2B2410;
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
@@ -1987,18 +2117,17 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   input, select, textarea { font-size: 16px !important; }
   .board-search { font-size: 16px; width: 100%; }
 
-  /* Search and listhead */
-  .listhead { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  /* Search goes full-width; the top-bar "New" split is the single create affordance
+     on mobile (the inline "+ New onboarding" would be a duplicate). */
+  .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+  .listhead .lh-right { justify-content: flex-end; }
+  .board-new { display: none; }
 
-  /* Hide stage + age columns in board table */
-  .th-st, .rst, .th-age, .rage { display: none; }
-  /* Board rows: keep the material status tag fully visible, drop the age column */
-  .row { gap: var(--space-3); }
-  .rn { min-width: 0; }
-  .r-tag { min-width: 0; padding: 4px 10px; flex-shrink: 0; }
-  /* Launch tiles stack 1-up so no primary action hides behind a swipe */
-  .launch-row { grid-template-columns: 1fr; }
-  .tile { padding: var(--space-4); }
+  /* Board rows: keep name + stage rail; drop the age column for room */
+  .row { gap: var(--space-4); }
+  .rn { width: auto; flex: 1 1 auto; min-width: 0; }
+  .rage { display: none; }
+  .rstage { flex: 0 0 auto; }
 
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
@@ -2007,9 +2136,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   .content{ padding: var(--space-4) var(--grid-gutter); }
   .panel { padding: var(--space-6) var(--space-4); }
 
-  /* Messages: stack panels */
-  .msgwrap { flex-direction: column; height: auto; min-height: 0; }
-  .msglist { width: 100%; border-right: none; border-bottom: 1px solid var(--color-border); max-height: 200px; }
+  /* Messages: stack the spine over the detail panel */
+  .msgwrap { flex-direction: column; min-height: 0; }
+  .spine { flex: none; max-height: 320px; }
+  .mdetail, .msgempty { flex: none; min-width: 0; max-width: none; border-left: none; border-top: 1px solid var(--color-border); }
 
   /* Activity: compact grid, hide flow + lane */
   .act-row { grid-template-columns: 1fr 90px 50px; padding: 8px 12px; }
@@ -2017,10 +2147,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
   /* Quick-create dropdown: keep on screen at narrow widths */
   .new-dd { left: auto; right: 0; max-width: calc(100vw - 24px); }
-
-  /* Messages side-by-side editor: stack */
-  .medit-wrap { grid-template-columns: 1fr; }
-  .medit-right { position: static; }
 }
 
 /* ============================================================
@@ -2058,15 +2184,16 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
-      <button class="nav on" data-view="board" data-icon="B" aria-current="page">Board</button>
-      <button class="nav" data-view="messages" data-icon="M">Messages</button>
-      <button class="nav" data-view="activity" data-icon="A">Activity</button>
-      <button class="nav" data-view="w8" data-icon="W">W-8 renewals</button>
-      <button class="nav" data-view="settings" data-icon="S">Settings</button>
+      <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic"></i><span class="nav-lbl">Board</span></button>
+      <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic"></i><span class="nav-lbl">Messages</span></button>
+      <button class="nav" data-view="w8"><i class="ti ti-id nav-ic"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
     </nav>
     <div class="side-foot">
       <div class="ver" id="ver-side">Synced</div>
-      <div class="auth-email" id="auth-status">not signed in</div>
+      <div class="foot-id">
+        <div class="auth-email" id="auth-status">not signed in</div>
+        <button class="foot-gear" id="foot-gear" title="Settings" aria-label="Settings"><i class="ti ti-settings"></i></button>
+      </div>
       <button class="signout-link" id="sign-out-btn" style="display:none" onclick="clearAuth()">Sign out</button>
       <a class="signout-link" href="https://script.google.com/a/macros/legacyvpartners.com/s/AKfycbxIzQKx6SbDzJj0ezjZUkZVKuBB5Go4amrMyZWvWTIZaI3n92dT-cBjUWX9nIQKPTGf/exec" target="_blank" rel="noopener" style="margin-top: 2px">Open Atrium</a>
     </div>
@@ -2076,7 +2203,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <div class="top">
         <button id="mob-menu" aria-label="Menu">&#9776;</button>
         <div id="mob-fund"><button class="mob-fb on" data-v="cayman">CY</button><button class="mob-fb" data-v="israel">IL</button></div>
-        <div style="font-size:18px;font-weight:500;color:var(--color-ink)">Board</div><span id="prompt-path" hidden></span>
+        <div><h1>Board</h1><div class="sub">Where every in-flight process stands.</div></div><span id="prompt-path" hidden></span>
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
             <div class="cmd-split">
@@ -2092,27 +2219,23 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         </div>
       </div>
       <div class="content">
-        <section class="launch">
-          <div class="launch-h">Start a request</div>
-          <div class="launch-row">
-            <button class="tile tile-hero" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">
-              <span class="tile-ic"><i class="ti ti-user-plus"></i></span>
-              <span class="tile-tx"><span class="tile-t">New onboarding</span><span class="tile-s">New investor</span></span>
-            </button>
+        <div class="listhead">
+          <input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off">
+          <div class="lh-right">
+            <button class="board-new" id="boardNewBtn" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">+ New onboarding</button>
           </div>
-        </section>
-        <div class="listhead"><h2 id="listLabel">In flight</h2><input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off"></div>
-        <div class="filters" id="stages"></div>
+        </div>
         <div id="list"></div>
+        <button class="show-done" id="showDoneToggle" hidden></button>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
       </div>
     </div>
 
     <div class="view" id="v-messages" hidden>
-      <div class="top"><div><h1>Messages</h1><div class="sub">Every email the system sends. Edit safely; clear a field to fall back to the default.</div></div></div>
+      <div class="top"><div><h1>Messages</h1><div class="sub">The journey of every email the system sends, top to bottom.</div></div></div>
       <div class="msgwrap">
-        <div class="msglist" id="msglist"></div>
-        <div class="msgedit" id="msgedit"><div class="msgempty">Pick a message to see who it goes to, its placeholders, and a live preview, then edit the copy.</div></div>
+        <div class="spine" id="msgspine"></div>
+        <div class="msgempty" id="msgdetail">Select an email to edit its copy and preview what sends.</div>
       </div>
     </div>
 
@@ -2135,10 +2258,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <div class="content" style="padding: 0"><div class="act-terminal"><div id="act-table"></div></div></div>
     </div>
     <div class="view" id="v-w8" hidden>
-      <div class="top"><div><h1>W-8 renewals</h1><div class="sub">The 3-year IRS clock. Who is due.</div></div></div>
+      <div class="top"><div><h1>W-8 renewals</h1><div class="sub">The 3-year IRS clock. Who is due first.</div></div></div>
       <div class="content">
-        <div class="w8counts" id="w8counts"></div>
-        <div class="listhead"><h2>Due for renewal</h2></div>
+        <div class="w8readout" id="w8readout"></div>
         <div id="w8list" class="w8list"></div>
       </div>
     </div>
@@ -2277,46 +2399,130 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   // auth or any gateway call. Never active on sign.legacyvpartners.com. Pure render
   // fixtures (generic names, round amounts), never real LP data.
   var DEMO = !IS_PROD_HOST && ((new URLSearchParams(location.search)).get('demo')==='1');
-  function demoResolve_(qs){
-    function P(processId,displayName,nameHebrew,currentStage,ageDays,nextActionPhrase,flowType,lane){
-      return {processId:processId,displayName:displayName,nameHebrew:nameHebrew,currentStage:currentStage,ageDays:ageDays,nextActionPhrase:nextActionPhrase,flowType:flowType,lane:lane};
+  // Demo-only: realistic copy for the full real email set, keyed by the production
+  // email keys. Hebrew-only keys omit `en` entirely so the no-copy state renders.
+  // The chrome metadata (phase/trigger/recipients/class/format/coverage) lives in
+  // the static MSG_META map below; this just supplies subject+body+overridden.
+  function demoMessages_(L){
+    function M(key,he,en,ov){var m={key:key,he:he};if(en)m.en=en;if(ov)m.overridden=ov;return m;}
+    var SIGN='\n\nבברכה\nקרן לגאסי';
+    var all=[
+      M('invite_new',
+        {subject:'קרן לגאסי - הצטרפות - {{name}}',body:'שלום {{name}},\n\nשמחים לקבל אותך כשותף בקרן.\n{{processBlock}}\n\nלהשלמת ההצטרפות:\n{{link}}\n{{wireBlock}}'+SIGN,overridden:true},
+        {subject:'Legacy Value Partners - Subscription - {{name}}',body:'Hello {{name}},\n\nWe are glad to welcome you to the fund.\n{{processBlock}}\n\nTo complete your subscription:\n{{link}}\n{{wireBlock}}\n\nBest,\nLegacy Value Partners'},
+        true),
+      M('invite_existing',
+        {subject:'קרן לגאסי - העברת השקעה לקרן הקיימנית - {{name}}',body:'{{greeting}},\n\nלהשלמת העברת ההשקעה לקרן הקיימנית:\n{{processBlock}}\n{{link}}'+SIGN},
+        {subject:'Legacy Value Partners - Transfer to the Cayman Fund - {{name}}',body:'{{greeting}},\n\nTo complete the transfer to the Cayman fund:\n{{processBlock}}\n{{link}}\n\nBest,\nLegacy Value Partners'}),
+      M('invite_signer_sub_individual',
+        {subject:'קרן לגאסי - הצטרפות - {{lpName}}',body:'שלום,\n\n{{firstFiller}} השלים את חלקו. נותר לחתום על המסמכים:\n{{link}}\n\nזוהי הודעה אוטומטית. אין להשיב.'},
+        {subject:'Legacy Value Partners - Subscription - {{lpName}}',body:'Hello,\n\n{{firstFiller}} has completed their part. Your signature is needed:\n{{link}}\n\nThis is an automated message. Please do not reply.'}),
+      M('invite_signer_sub_entity',
+        {subject:'קרן לגאסי - הצטרפות - {{lpName}}',body:'שלום,\n\nכמורשה חתימה נוסף עבור {{lpName}}, נדרשת חתימתך:\n{{completedSigners}}\n{{link}}\n\nזוהי הודעה אוטומטית.'},
+        {subject:'Legacy Value Partners - Subscription - {{lpName}}',body:'Hello,\n\nAs an additional authorized signatory for {{lpName}}, your signature is required:\n{{completedSigners}}\n{{link}}\n\nThis is an automated message.'}),
+      M('invite_signer_lawyer_individual',
+        {subject:'קרן לגאסי - חתימת עו"ד/רו"ח על טופס כשירות - {{lpName}}',body:'{{greetingName}},\n\nנדרשת חתימתך כעו"ד/רו"ח מאשר על טופס הכשירות של {{lpName}}:\n{{link}}'+SIGN},
+        {subject:'Legacy Value Partners - Lawyer/CPA qualification signature - {{lpName}}',body:'{{greeting}},\n\nYour signature as qualifying lawyer/CPA is required on the qualification form for {{lpName}}:\n{{link}}\n\nBest,\nLegacy Value Partners'}),
+      M('invite_signer_lawyer_entity',
+        {subject:'קרן לגאסי - חתימת עו"ד/רו"ח על טופס כשירות - {{lpName}}',body:'{{greetingName}},\n\n{{firstFiller}} השלים את חלקו. נדרשת חתימתך כמאשר עבור {{lpName}}:\n{{link}}'+SIGN},
+        {subject:'Legacy Value Partners - Lawyer/CPA qualification signature - {{lpName}}',body:'{{greeting}},\n\n{{firstFiller}} has completed their part. Your qualifying signature for {{lpName}} is required:\n{{link}}\n\nBest,\nLegacy Value Partners'}),
+      M('mint_notify',
+        {subject:'תהליך הצטרפות נשלח ל{{name}} בהצלחה',body:'{{link}}'},
+        {subject:'Subscription link sent to {{name}} successfully',body:'{{link}}'}),
+      M('invite_reminder',
+        {subject:'קרן לגאסי - תזכורת - {{name}}',body:'{{greeting}},\n\nתזכורת ידידותית להשלמת ההצטרפות:\n{{link}}'+SIGN,overridden:true},
+        {subject:'Legacy Value Partners - Reminder - {{name}}',body:'{{greeting}},\n\nA friendly reminder to complete your subscription:\n{{link}}\n\nBest,\nLegacy Value Partners',overridden:true},
+        true),
+      M('completion_lp',
+        {subject:'קרן לגאסי - מסמכים חתומים - {{name}}',body:'{{greeting}},\n\nמצורפים המסמכים החתומים. נעדכן אותך לאחר קליטת ההעברה.'+SIGN},
+        {subject:'Legacy Value Partners - Signed documents - {{name}}',body:'{{greeting}},\n\nThe signed documents are attached. We will update you once the transfer is received.\n\nBest,\nLegacy Value Partners'}),
+      M('completion_cp',
+        {subject:'קרן לגאסי - מסמכים חתומים - {{name}}',body:'{{greeting}},\n\nמצורפים המסמכים החתומים על ידך.'+SIGN},
+        {subject:'Legacy Value Partners - Signed documents - {{name}}',body:'{{greeting}},\n\nYour signed documents are attached.\n\nBest,\nLegacy Value Partners'}),
+      M('completion_lawyer',
+        {subject:'קרן לגאסי - מסמכים חתומים - {{name}}',body:'{{greeting}},\n\nמצורף אישור הכשירות החתום.'+SIGN},
+        {subject:'Legacy Value Partners - Signed documents - {{name}}',body:'{{greeting}},\n\nThe signed qualification confirmation is attached.\n\nBest,\nLegacy Value Partners'}),
+      M('completion_internal',
+        {subject:'קרן לגאסי - הצטרפות הושלמה - {{name}}',body:'ההצטרפות של {{name}} הושלמה.\nסכום: {{amountDisplay}}\nאנשי קשר: {{commsEmails}}'},
+        {subject:'Legacy Value Partners - Onboarding complete - {{name}}',body:'Onboarding for {{name}} is complete.\nAmount: {{amountDisplay}}\nContacts: {{commsEmails}}'}),
+      M('bdo_draft',
+        {subject:'קרן לגאסי - הצטרפות משקיע חדש - {{name}}',body:'לכבוד BDO,\n\nמשקיע חדש {{hebrewName}} בסך {{amountDisplay}}.\nאנשי קשר: {{commsEmails}}\n\nבברכה\nנועה'},
+        {subject:'Legacy Value Partners - New investor onboarding - {{name}}',body:'To BDO,\n\nNew investor {{englishName}}, amount {{amountDisplay}}.\nContacts: {{commsEmails}}\n\nBest,\nNoa'}),
+      M('bank_draft',
+        {subject:'קרן לגאסי - הצטרפות משקיע חדש - {{name}}',body:'לכבוד הבנק,\n\nמשקיע חדש נקלט בקרן. נא לעדכן את רשומות החשבון.\n\nבברכה\nנועה'},
+        {subject:'Legacy Value Partners - New investor onboarding - {{name}}',body:'To the bank,\n\nA new investor has joined the fund. Please update the account records.\n\nBest,\nNoa'}),
+      // --- Hebrew-only family (no en sub-object) ---
+      M('invite_increase',
+        {subject:'קרן לגאסי - הגדלת השקעה - {{name}}',body:'{{greeting}},\n\nלהשלמת בקשת הגדלת ההשקעה:\n{{link}}\n{{wireBlock}}'+SIGN},null),
+      M('completion_internal_increase',
+        {subject:'קרן לגאסי - בקשה להגדלת השקעה - {{name}}',body:'בקשת הגדלה הושלמה.\n{{flowSummary}}'},null),
+      M('completion_lp_increase',
+        {subject:'קרן לגאסי - בקשה להגדלת השקעה - {{name}}',body:'{{greeting}},\n\nבקשת הגדלת ההשקעה התקבלה ונקלטה.'+SIGN},null),
+      M('notify_increase',
+        {subject:'קרן לגאסי - הגדלה - {{name}}',body:'בקשה לאישור הפקדה {{investorPhrase}} בסך {{amountSpelled}}.'},null),
+      M('invite_redemption',
+        {subject:'קרן לגאסי - פדיון - {{name}}',body:'{{greeting}},\n\nלהשלמת בקשת הפדיון:\n{{link}}'+SIGN},null),
+      M('completion_internal_withdrawal',
+        {subject:'קרן לגאסי - בקשה לפדיון - {{name}}',body:'בקשת פדיון הושלמה.\n{{flowSummary}}'},null),
+      M('completion_lp_withdrawal',
+        {subject:'קרן לגאסי - בקשה לפדיון - {{name}}',body:'{{greeting}},\n\nבקשת הפדיון התקבלה ונקלטה.'+SIGN},null),
+      M('notify_redemption',
+        {subject:'קרן לגאסי - פדיון - {{name}}',body:'הודעת פדיון {{redemptionClause}} עבור {{name}}.'},null),
+      M('w8_renewal',
+        {subject:'קרן לגאסי - חידוש טופס W-8 - {{name}}',body:'{{greeting}},\n\nטופס ה-W-8 שלך מתקרב לתום תוקפו. לחתימה על טופס מעודכן:\n{{link}}'+SIGN},
+        {subject:'Legacy Value Partners - W-8 renewal - {{name}}',body:'{{greeting}},\n\nYour W-8 form is approaching expiry. To sign a fresh form:\n{{link}}\n\nBest,\nLegacy Value Partners'})
+    ];
+    // Israel lane: only the keys its flows actually use, mirroring production scope.
+    if(L==='israel'){
+      var ilKeys={invite_increase:1,completion_internal_increase:1,completion_lp_increase:1,notify_increase:1,invite_redemption:1,completion_internal_withdrawal:1,completion_lp_withdrawal:1,notify_redemption:1,w8_renewal:1};
+      return all.filter(function(m){return ilKeys[m.key];});
     }
+    return all;
+  }
+  function demoResolve_(qs){
+    function P(processId,displayName,nameHebrew,currentStage,ageDays,nextActionPhrase,flowType,lane,lastActivityTs){
+      return {processId:processId,displayName:displayName,nameHebrew:nameHebrew,currentStage:currentStage,ageDays:ageDays,nextActionPhrase:nextActionPhrase,flowType:flowType,lane:lane,lastActivityTs:lastActivityTs};
+    }
+    // Richer fixture set: processes spread across every stage incl. needs_attention,
+    // voided and complete; ordered so last-activity recency is exercised.
     var cayman=[
-      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Signer 2 of 3','cayman_subscription','cayman'),
-      P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Assemble pack','cayman_subscription','cayman'),
-      P('p3','Tomer Shapira','תומר שפירא','complete',9,'','cayman_increase','cayman'),
-      P('p4','Helena Brandt','הלנה ברנדט','needs_attention',4,'Needs counsel','cayman_subscription','cayman'),
-      P('p5','Yael Adler','יעל אדלר','link_sent',0,'Not opened','cayman_subscription','cayman')
+      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Signer 2 of 3','cayman_subscription','cayman','2026-06-30T08:40'),
+      P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Assemble pack','cayman_subscription','cayman','2026-06-30T09:15'),
+      P('p6','Eitan Galor','איתן גלאור','all_signed',3,'Sealing pack','cayman_subscription','cayman','2026-06-29T17:05'),
+      P('p7','Margaux Lefevre','מרגו לפבר','opened',1,'Opened, not started','cayman_subscription','cayman','2026-06-30T07:20'),
+      P('p4','Helena Brandt','הלנה ברנדט','needs_attention',4,'Needs counsel','cayman_subscription','cayman','2026-06-28T11:30'),
+      P('p5','Yael Adler','יעל אדלר','link_sent',0,'Not opened','cayman_subscription','cayman','2026-06-30T06:00'),
+      P('p3','Tomer Shapira','תומר שפירא','complete',9,'','cayman_increase','cayman','2026-06-25T14:10'),
+      P('p8','Jonathan Pearl','יונתן פרל','complete',12,'','cayman_subscription','cayman','2026-06-22T10:00'),
+      P('p9','Rivka Sela','רבקה סלע','voided',15,'','cayman_subscription','cayman','2026-06-19T16:30')
     ];
     var israel=[
-      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Awaiting signature','israeli_increase','israel'),
-      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israel'),
-      P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israel')
+      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Signer 1 of 2','israeli_increase','israel','2026-06-30T08:00'),
+      P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Assemble pack','israeli_increase','israel','2026-06-29T13:25'),
+      P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israel','2026-06-30T07:45'),
+      P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'Awaiting figure from BDO','israeli_withdrawal','israel','2026-06-27T09:00'),
+      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israel','2026-06-24T15:40')
     ];
     var L=state.lane;
-    if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-27T23:30',version:434};
+    if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
     if(qs.indexOf('?api=activity')===0){
       var rows=(L==='israel'?israel:cayman).map(function(p,i){return {processId:p.processId,displayName:p.displayName,flowType:p.flowType,currentStage:p.currentStage,lane:p.lane,createdAt:'2026-06-2'+(7-(i%2))+'T'+(9+i)+':1'+i+':00'};});
       return {rows:rows};
     }
-    if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:1},due:[
-      {name:'Helena Brandt',variant:'W-8BEN-E',status:'expiring',expiry:'2026-08-15'},
-      {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'}
+    if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
+      {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
+      {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
+      {name:'Helena Brandt',variant:'W-8BEN-E',status:'expiring',expiry:'2026-07-22'},
+      {name:'Tomer Shapira',variant:'W-8BEN',status:'expiring',expiry:'2026-08-15'},
+      {name:'Aurelie Marchand',variant:'W-9',status:'expiring',expiry:'2026-09-04'}
     ]};
     if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
-      signers:[{name:'Daniel Rosen',email:'daniel@example.com',role:'Subscriber'},{name:'Sarah Rosen',email:'sarah@example.com',role:'Controlling person'}],
+      signers:[{name:'Daniel Rosen',email:'daniel@example.com',role:'Subscriber',state:'done'},{name:'Sarah Rosen',email:'sarah@example.com',role:'Controlling person',state:'current'}],
       links:[{label:'Signer link',url:'https://sign.legacyvpartners.com/?t=demo'}],
       fields:{Process:'Cayman subscription',Lane:'Cayman',Created:'2026-06-25'}};
     if(qs.indexOf('?api=lpHistory')===0) return {ok:true,processes:[]};
     if(qs.indexOf('?admin=getConsoleSettings')===0) return {ok:true,allowedEmails:['noa@legacyvpartners.com','omri@legacyvpartners.com']};
-    if(qs.indexOf('?api=messages')===0) return {messages:[
-      {key:'invite',label:'Investor invite',to:'Investor',placeholders:['name','link'],
-        he:{subject:'הזמנה להצטרפות - {{name}}',body:'שלום {{name}},\nמצורף הקישור להשלמת ההצטרפות:\n{{link}}',overridden:false},
-        en:{subject:'Your onboarding link - {{name}}',body:'Hello {{name}},\nHere is your onboarding link:\n{{link}}',overridden:false}},
-      {key:'reminder',label:'Invite reminder',to:'Investor',placeholders:['name','link'],
-        he:{subject:'תזכורת - {{name}}',body:'שלום {{name}},\nתזכורת להשלמת ההצטרפות:\n{{link}}',overridden:true},
-        en:{subject:'Reminder - {{name}}',body:'Hello {{name}},\nA reminder to complete onboarding:\n{{link}}',overridden:true}}
-    ]};
+    if(qs.indexOf('?api=messages')===0) return {messages:demoMessages_(L)};
     if(qs.indexOf('?admin=listOnboardingSubmissions')===0) return {ok:true,submissions:[
       {itemId:'d-onb-1',nameEn:'Ilan Yeshua',nameHe:'אילן ישועה',email:'ilan@example.com',nickname:''},
       {itemId:'d-onb-2',nameEn:'Almog Hazon',nameHe:'אלמוג חזון',email:'almog@example.com',nickname:'מוגי'}
@@ -2352,11 +2558,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // in-memory caches so nothing stays visible behind the login overlay on a
     // shared machine.
     try{
-      ['list','stages','act-table','msglist','w8list','w8counts','dbody'].forEach(function(id){
+      ['list','act-table','msgspine','w8list','w8counts','w8readout','dbody'].forEach(function(id){
         var el=document.getElementById(id);if(el)el.innerHTML='';
       });
-      var me=document.getElementById('msgedit');
-      if(me)me.innerHTML='<div class="msgempty">Pick a message to see who it goes to, its placeholders, and a live preview, then edit the copy.</div>';
+      var me=document.getElementById('msgdetail');
+      if(me){me.className='msgempty';me.innerHTML='Select an email to edit its copy and preview what sends.';}
       var dr=document.getElementById('drawer'),ds=document.getElementById('dscrim');
       if(dr)dr.classList.remove('on');if(ds)ds.classList.remove('on');
       var pn=document.getElementById('panel'),sc=document.getElementById('scrim');
@@ -2411,52 +2617,141 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 
   var state={lane:"cayman",process:"subscription",type:"individual",lpKind:"new",language:"he"};
-  var STAGES=[["link_sent","LINK_SENT"],["opened","OPENED"],["submitted","SUBMITTED"],["signing","SIGNING"],["all_signed","ALL_SIGNED"],["docs_assembled","DOCS_ASSEMBLED"],["dispatched","DISPATCHED"],["complete","COMPLETE"]];
-  var idxOf={}; STAGES.forEach(function(s,i){idxOf[s[0]]=i});
-  // Map each stage to a bucket: the operator either needs to act now, is waiting on
-  // someone else, or it is done. Drives sort order, the filter row, and the material
-  // of the status tag (solid = needs you, quiet outline = waiting, faded = complete).
-  function bucketOf(st){
-    if(st==='complete'||st==='sealed'||st==='voided'||st==='void')return 'complete';
-    if(st==='submitted'||st==='needs_attention'||st==='all_signed'||st==='docs_assembled'||st==='dispatched')return 'needs';
-    return 'waiting'; // link_sent, opened, signing
+  // ============================================================
+  // MESSAGES - static metadata for the real email set. Renders without server
+  // changes; the live ?api=messages payload only supplies subject/body/overridden.
+  // Per key: phase (spine band), trigger (the WHEN), recipients (To + cc),
+  // class (lp|internal|counterparty -> dot material), format (html|text -> render
+  // mode, NOT a "<" sniff), and per-lang base coverage (default-exists|no-copy).
+  // The 8 increase/withdrawal/notify keys are Hebrew-only: en = no-copy.
+  // ============================================================
+  var MSG_PHASES=['Onboarding','Reminders','Completion','Counterparty','Increase','Withdrawal','W-8 renewal'];
+  // recipient chip: {to:[...], cc:[...]} with short role tokens.
+  function R(to,cc){return {to:to||[],cc:cc||[]};}
+  var MSG_META={
+    invite_new:               {phase:'Onboarding', trigger:'On mint',           rcpt:R(['LP'],['Omri','Noa','FO']),  cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_existing:          {phase:'Onboarding', trigger:'On mint',           rcpt:R(['LP'],['Omri','Noa']),       cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_signer_sub_individual:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Co-holder'],[]),         cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_signer_sub_entity: {phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['CP'],[]),                  cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_signer_lawyer_individual:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Lawyer'],[]),        cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_signer_lawyer_entity:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Lawyer'],[]),            cls:'lp',           fmt:'html', en:'default-exists'},
+    mint_notify:              {phase:'Onboarding', trigger:'On mint',           rcpt:R(['Noa','Omri'],[]),           cls:'internal',     fmt:'text', en:'default-exists'},
+    invite_reminder:          {phase:'Reminders',  trigger:'Stalled signer',    rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'default-exists'},
+    completion_lp:            {phase:'Completion', trigger:'All signed',        rcpt:R(['LP'],['Omri','Noa','FO']),  cls:'lp',           fmt:'text', en:'default-exists'},
+    completion_cp:            {phase:'Completion', trigger:'All signed',        rcpt:R(['CP'],[]),                   cls:'lp',           fmt:'text', en:'default-exists'},
+    completion_lawyer:        {phase:'Completion', trigger:'All signed',        rcpt:R(['Lawyer'],[]),               cls:'lp',           fmt:'text', en:'default-exists'},
+    completion_internal:      {phase:'Completion', trigger:'After completion',  rcpt:R(['Noa','Omri'],[]),           cls:'internal',     fmt:'text', en:'default-exists'},
+    bdo_draft:                {phase:'Counterparty', trigger:'After completion', rcpt:R(['BDO'],[]),                 cls:'counterparty', fmt:'text', en:'default-exists'},
+    bank_draft:               {phase:'Counterparty', trigger:'After completion', rcpt:R(['Bank'],[]),               cls:'counterparty', fmt:'text', en:'default-exists'},
+    invite_increase:          {phase:'Increase',   trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'no-copy'},
+    completion_internal_increase:{phase:'Increase', trigger:'After completion', rcpt:R(['Noa','Omri'],[]),          cls:'internal',     fmt:'text', en:'no-copy'},
+    completion_lp_increase:   {phase:'Increase',   trigger:'After completion',  rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'text', en:'no-copy'},
+    notify_increase:          {phase:'Increase',   trigger:'After completion',  rcpt:R(['BDO','Bank','Omri'],[]),    cls:'counterparty', fmt:'text', en:'no-copy'},
+    invite_redemption:        {phase:'Withdrawal', trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'no-copy'},
+    completion_internal_withdrawal:{phase:'Withdrawal', trigger:'After completion', rcpt:R(['Noa','Omri'],[]),      cls:'internal',     fmt:'text', en:'no-copy'},
+    completion_lp_withdrawal: {phase:'Withdrawal', trigger:'After completion',  rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'text', en:'no-copy'},
+    notify_redemption:        {phase:'Withdrawal', trigger:'After completion',  rcpt:R(['BDO','Bank'],[]),           cls:'counterparty', fmt:'text', en:'no-copy'},
+    w8_renewal:               {phase:'W-8 renewal', trigger:'Expiry scan',      rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'default-exists'}
+  };
+  function msgMeta(key){return MSG_META[key]||{phase:'Onboarding',trigger:'',rcpt:R([],[]),cls:'internal',fmt:'text',en:'default-exists'};}
+  // Computed/block tokens render as "auto" in the token rail (filled by the server's
+  // block builders, not typed by the operator).
+  var MSG_AUTO_TOKENS={wireBlock:1,processBlock:1,flowSummary:1,amountSpelled:1,investorPhrase:1,redemptionClause:1,completedSigners:1,commsEmails:1,amountDisplay:1};
+  var MSG_HUMAN_LABEL={
+    invite_new:'New investor invite', invite_existing:'Existing investor transfer',
+    invite_signer_sub_individual:'Co-subscriber signature', invite_signer_sub_entity:'Entity signatory signature',
+    invite_signer_lawyer_individual:'Lawyer qualification (individual)', invite_signer_lawyer_entity:'Lawyer qualification (entity)',
+    mint_notify:'Mint confirmation', invite_reminder:'Invite reminder',
+    completion_lp:'Signed documents to LP', completion_cp:'Signed documents to CP', completion_lawyer:'Signed documents to lawyer',
+    completion_internal:'Onboarding complete (internal)',
+    bdo_draft:'BDO deposit cover', bank_draft:'Bank new-investor cover',
+    invite_increase:'Increase invite', completion_internal_increase:'Increase complete (internal)',
+    completion_lp_increase:'Increase received (LP)', notify_increase:'Increase deposit notice',
+    invite_redemption:'Redemption invite', completion_internal_withdrawal:'Withdrawal complete (internal)',
+    completion_lp_withdrawal:'Withdrawal received (LP)', notify_redemption:'Redemption notice',
+    w8_renewal:'W-8 renewal'
+  };
+  // THE STAGE RAIL. Five milestones the eye reads as a position on a journey.
+  var RAIL_MILESTONES=['Invited','In progress','Signing','Sealing','Done'];
+  // Map each canonical stage to a milestone index 0..4. Laterals (needs_attention,
+  // voided, expired) are handled separately so the rail can freeze or go ghost.
+  var STAGE_TO_MILESTONE={
+    link_sent:0, opened:0,
+    in_progress:1, submitted:1,
+    signing:2,
+    all_signed:3, docs_assembled:3, dispatched:3,
+    complete:4, sealed:4
+  };
+  function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired';}
+  // Pull "N of M" from an explicit signer index/count, else scrape "Signer 2 of 3"
+  // (or "2 of 3") from the next-action / wait string. Returns "" if neither present.
+  function signerFraction(r){
+    if(r.signerIndex!=null&&r.signerCount!=null)return (r.signerIndex)+' of '+(r.signerCount);
+    var hay=(r.wait||'')+'';
+    var m=hay.match(/(\d+)\s*of\s*(\d+)/i);
+    return m?(m[1]+' of '+m[2]):'';
   }
-  var BUCKET_ORDER={needs:0,waiting:1,complete:2};
-  // A short, material status tag per stage. label = what the operator reads;
-  // cls = tag style (solid-blue / solid-red needs you, outline = waiting).
-  function statusTag(st){
-    if(st==='needs_attention')return{label:'Attention',cls:'tag-solid-red'};
-    if(st==='submitted')return{label:'Submitted',cls:'tag-solid-blue'};
-    if(st==='all_signed'||st==='docs_assembled'||st==='dispatched')return{label:'Assemble pack',cls:'tag-solid-blue'};
-    if(st==='signing')return{label:'Signing',cls:'tag-outline'};
-    if(st==='link_sent')return{label:'Link sent',cls:'tag-outline'};
-    if(st==='opened')return{label:'Opened',cls:'tag-outline'};
-    if(st==='complete'||st==='sealed')return{label:'Complete',cls:'tag-quiet'};
-    if(st==='voided'||st==='void')return{label:'Voided',cls:'tag-quiet'};
-    return{label:st.replace(/_/g,' '),cls:'tag-outline'};
+  // Build the 5-segment rail + micro-label for one row. Exactly one gold segment per
+  // active row (the current milestone). Laterals stay quiet, never red.
+  function railHtml(r){
+    var st=String(r.stage||'');
+    var segs, railCls='', lbl='', lblCls='';
+    if(st==='voided'||st==='void'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Voided'; lblCls='muted'; }
+    else if(st==='expired'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Expired'; lblCls='muted'; }
+    else if(st==='needs_attention'){
+      // Freeze at the last real milestone we can infer; default to In progress.
+      var fm=(STAGE_TO_MILESTONE[r.lastStage]!=null)?STAGE_TO_MILESTONE[r.lastStage]:1;
+      railCls='frozen'; segs=[]; for(var i=0;i<5;i++)segs.push(i<fm?'done':(i===fm?'current':'up'));
+      lbl='Needs a look'; lblCls='muted';
+    } else {
+      var mi=(STAGE_TO_MILESTONE[st]!=null)?STAGE_TO_MILESTONE[st]:0;
+      segs=[]; for(var j=0;j<5;j++)segs.push(j<mi?'done':(j===mi?'current':'up'));
+      lbl=RAIL_MILESTONES[mi];
+      if(st==='signing'){ var fr=signerFraction(r); if(fr)lbl='Signing <span class="frac">- '+esc2(fr)+'</span>'; }
+    }
+    var segHtml=segs.map(function(s){
+      var c=(s==='done')?'seg done':(s==='current')?'seg current':'seg';
+      return '<span class="'+c+'"></span>';
+    }).join('');
+    return '<span class="rstage"><span class="rail '+railCls+'">'+segHtml+'</span>'
+      +'<span class="rail-lbl'+(lblCls?' '+lblCls:'')+'">'+lbl+'</span></span>';
   }
   var allRows=[];
-  var stageFilter=null; // null | 'needs' | 'waiting' | 'complete' (bucket filter)
+  var showDone=false; // quiet toggle: append terminal rows below
+  // Sort by last-activity recency, newest first. lastActivityTs (ISO) if present,
+  // else ascending ageDays as a proxy (smaller age = more recent activity).
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
-      var ba=BUCKET_ORDER[bucketOf(a.stage)], bb=BUCKET_ORDER[bucketOf(b.stage)];
-      if(ba!==bb)return ba-bb;
-      return (idxOf[b.stage]||0)-(idxOf[a.stage]||0);
+      if(a.lastActivityTs||b.lastActivityTs){
+        var ta=a.lastActivityTs?Date.parse(a.lastActivityTs):0;
+        var tb=b.lastActivityTs?Date.parse(b.lastActivityTs):0;
+        if(ta!==tb)return tb-ta;
+      }
+      return (a.ageNum||0)-(b.ageNum||0);
     });
   }
+  function rowHtml(r){
+    var nm=r.name||r.he||'?';
+    var he=(r.he&&r.name)?r.he:'';
+    var done=isTerminalStage(r.stage)?' done':'';
+    return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
+      +railHtml(r)
+      +'<span class="rage">'+esc2(r.age||'')+'</span>'
+      +'</div>';
+  }
   function renderRows(rows){
-    rows=sortRows(rows);
-    document.getElementById("list").innerHTML=rows.length?rows.map(function(r){
-      var bk=bucketOf(r.stage), tg=statusTag(r.stage);
-      var nm=r.name||r.he||'?';
-      var he=(r.he&&r.name)?r.he:'';
-      var cue=(bk!=='complete'&&r.wait)?'<span class="r-cue">'+esc2(r.wait)+'</span>':'';
-      return '<div class="row bk-'+bk+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-        +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+cue+'</span>'
-        +'<span class="rage">'+(r.age||'')+'</span>'
-        +'<span class="r-tag '+tg.cls+'">'+esc2(tg.label)+'</span>'
-        +'</div>';
-    }).join(""):'<div class="empty">Nothing in queue.</div>';
+    var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage);}));
+    var terminal=sortRows(rows.filter(function(r){return isTerminalStage(r.stage);}));
+    var html=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">Nothing in flight.</div>';
+    if(showDone&&terminal.length)html+=terminal.map(rowHtml).join("");
+    document.getElementById("list").innerHTML=html;
+    // Quiet "Show completed - N" toggle. Hidden when there are no terminal rows.
+    var tg=document.getElementById("showDoneToggle");
+    if(tg){
+      if(terminal.length){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=(showDone?'Hide completed - ':'Show completed - ')+terminal.length;}
+      else{tg.hidden=true;}
+    }
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){
       var go=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};
       el.onclick=go;
@@ -2464,8 +2759,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     });
   }
   // One haystack per row: every field the row shows or carries, so search matches
-  // name, Hebrew name, stage (raw + spaced so "in progress" hits "in_progress"),
-  // type (word + raw), lane, age, and the next-action phrase.
+  // name, Hebrew name, stage (raw + spaced), type (word + raw), lane, age, next-action.
   function rowHay(r){
     return [r.name,r.he,r.stage,(r.stage||"").replace(/_/g," "),
             r.typeLabel,r.type,r.lane,r.age,r.wait,r.pid]
@@ -2473,48 +2767,35 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
   function applySearch(){
     var q=(document.getElementById("boardSearch").value||"").trim().toLowerCase();
-    var base=stageFilter?allRows.filter(function(r){return bucketOf(r.stage)===stageFilter;}):allRows;
-    if(!q){renderRows(base);return;}
-    var filtered=base.filter(function(r){return rowHay(r).indexOf(q)>=0;});
-    renderRows(filtered);
+    if(!q){renderRows(allRows);return;}
+    renderRows(allRows.filter(function(r){return rowHay(r).indexOf(q)>=0;}));
   }
   function render(rows){
     allRows=rows;
-    // Bucket counts drive the filter row (the single source of truth for counts).
-    // The heading stays a plain "In flight" with no number, so it never fights the
-    // filter totals or implies a Complete row belongs under it.
-    var counts={needs:0,waiting:0,complete:0};
-    rows.forEach(function(r){counts[bucketOf(r.stage)]++;});
-    var FILTERS=[['','All',rows.length],['needs','Needs you',counts.needs],['waiting','Waiting',counts.waiting],['complete','Complete',counts.complete]];
-    document.getElementById("stages").innerHTML=FILTERS.map(function(f){
-      var sel=(stageFilter||'')===f[0];
-      return '<button class="filt'+(sel?' on':'')+'" data-bk="'+f[0]+'">'
-        +esc2(f[1])+' <span class="filt-n">'+f[2]+'</span></button>';
-    }).join("");
-    Array.prototype.forEach.call(document.querySelectorAll("#stages .filt"),function(el){
-      el.onclick=function(){
-        var bk=el.getAttribute("data-bk");
-        stageFilter=bk||null;
-        render(allRows);
-      };
-    });
     applySearch();
   }
   (function(){
     var si=document.getElementById("boardSearch");
     if(si)si.addEventListener("input",applySearch);
+    var tg=document.getElementById("showDoneToggle");
+    if(tg)tg.addEventListener("click",function(){showDone=!showDone;applySearch();});
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
-  var LOAD_SEQ=0, _autoRefreshArmed=false;
+  var LOAD_SEQ=0, _autoRefreshArmed=false, _w8BadgeArmed=false;
+  // Three skeleton rows with ghost rails pulsing (no "Loading..." text).
+  function boardSkeleton(){
+    var one='<div class="skel-row"><span class="skel-bar sk-name"></span><span class="skel-bar sk-rail"></span><span class="skel-bar sk-age"></span></div>';
+    return one+one+one;
+  }
   function load(silent){
     var rid=++LOAD_SEQ;
-    if(!silent) document.getElementById("list").innerHTML='<div class="empty">Loading...</div>';
+    if(!silent) document.getElementById("list").innerHTML=boardSkeleton();
     apiFetch('?api=list&lane='+state.lane).then(function(d){
       if(rid!==LOAD_SEQ)return;
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_onboarding:'onboarding',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',age:it.ageDays!=null?it.ageDays+'d':(it.age||''),wait:it.nextActionPhrase||it.nextAction||it.next||'',type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent=(d.version?'synced @'+d.version+' · ':'synced · ')+t;}
     }).catch(function(){if(rid!==LOAD_SEQ)return;if(!silent)document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
@@ -2522,6 +2803,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // the operator must reload to see truth. Silent (no Loading flash, keeps the current
     // rows on a transient failure). LOAD_SEQ already guards against stale paints.
     if(!_autoRefreshArmed){_autoRefreshArmed=true;setInterval(function(){if(document.visibilityState==='visible')load(true);},45000);}
+    // Populate the W-8 due-count badge once after auth, without waiting for the
+    // operator to open the view. loadW8 renders the badge from the same source as #w8counts.
+    if(!_w8BadgeArmed){_w8BadgeArmed=true;loadW8();}
   }
   // slide-over
   var scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
@@ -2592,11 +2876,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   Array.prototype.forEach.call(document.querySelectorAll(".new-dd-item"),function(btn){
     btn.onclick=function(){quickPick(btn);};
   });
-  // Launch-first quick-create tiles (Start a request). Reuse the same quick-pick
-  // logic + create panel; each tile presets state.process to its flow.
-  Array.prototype.forEach.call(document.querySelectorAll(".launch .tile"),function(btn){
-    btn.onclick=function(){quickPick(btn);};
-  });
+  // Inline primary "+ New onboarding" button on the Board list header. Carries the
+  // same data-proc/type/kind/lang the old hero tile had; reuses the quick-pick path.
+  (function(){var b=document.getElementById("boardNewBtn");if(b)b.onclick=function(){quickPick(b);};})();
 
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
@@ -2616,6 +2898,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   })();
   var currentPid=null;
   function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function signerStateHtml(st){
+    if(st==='done')return '<span class="pstate done"><span class="pdot"></span>signed</span>';
+    if(st==='current')return '<span class="pstate cur"><span class="pdot"></span>current</span>';
+    if(st==='waiting')return '<span class="pstate wait"><span class="pdot"></span>waiting</span>';
+    return '';
+  }
   function renderDrawer(d){
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
@@ -2640,11 +2928,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(!isTerminal){
       dactBtns+='<button class="dvoid" data-act="void">Void</button>';
     }
-    if(dactBtns){
-      h+='<div class="dact">'+dactBtns+'</div>';
-    }else{
-      h+='<div class="dact"><span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span></div>';
-    }
+    // Built here, placed LAST in the drawer (below Details/History). Void is the
+    // quietest control; an irreversible action never leads the panel.
+    var dactHtml = dactBtns
+      ? '<div class="dact">'+dactBtns+'</div>'
+      : '<div class="dact"><span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span></div>';
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -2658,11 +2946,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       });
       h+='</div>';
     }
-    if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){h+='<div class="person"><div><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><span class="pr">'+esc2(s.role)+'</span></div>';});h+='</div>';}
+    if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){var stc=(s.state==='done')?' is-done':'';h+='<div class="person'+stc+'"><div class="pn-wrap"><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><div class="pright"><span class="pr">'+esc2(s.role)+'</span>'+signerStateHtml(s.state)+'</div></div>';});h+='</div>';}
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(k)+'</span><span class="v">'+esc2(fv)+'</span></div>';});h+='</div>';}
     // History placeholder: populated async if mondayItemId is known
     if(d.mondayItemId)h+='<div id="dhist" class="dsec" style="opacity:.5;font-size: 13px;color:var(--color-ink-muted)">Loading history...</div>';
+    h+=dactHtml;
     document.getElementById("dbody").innerHTML=h;
     Array.prototype.forEach.call(document.querySelectorAll("#drawer .cp"),function(b){b.onclick=function(){var t=document.createElement("textarea");t.value=b.getAttribute("data-c");document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(t);b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1200);};});
     Array.prototype.forEach.call(document.querySelectorAll(".dact button"),function(b){
@@ -2748,15 +3037,15 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(v==="israel")?"israel":"cayman";
       var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(v==="israel"?"israel":"cayman")+'$';
       // F3: a lane switch resets every per-lane view state and cache so nothing
-      // from the prior lane bleeds across (filter, search, activity, w8, messages).
-      stageFilter=null;
+      // from the prior lane bleeds across (toggle, search, activity, w8, messages).
+      showDone=false;
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
       ACT_ROWS=null;W8=null;MSGS=null;curMsg=null;
       var at=document.getElementById('act-table');if(at)at.innerHTML='';
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
-      var wc=document.getElementById('w8counts');if(wc)wc.innerHTML='';
-      var ml=document.getElementById('msglist');if(ml)ml.innerHTML='';
-      var me=document.getElementById('msgedit');if(me)me.innerHTML='<div class="msgempty">Pick a message to see who it goes to, its placeholders, and a live preview, then edit the copy.</div>';
+      var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
+      var ml=document.getElementById('msgspine');if(ml)ml.innerHTML='';
+      var me=document.getElementById('msgdetail');if(me){me.className='msgempty';me.innerHTML='Select an email to edit its copy and preview what sends.';}
       load();
       var va=document.getElementById('v-activity');if(va&&!va.hidden)loadActivity();
       var vw=document.getElementById('v-w8');if(vw&&!vw.hidden)loadW8();
@@ -2905,12 +3194,18 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   // view switching
   function switchView(v){
     document.body.classList.remove('side-open');
+    if(drawer&&drawer.classList.contains('on'))dclose();
     Array.prototype.forEach.call(document.querySelectorAll(".nav"),function(x){x.classList.remove("on");x.removeAttribute("aria-current");});
     var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv){nv.classList.add("on");nv.setAttribute("aria-current","page");}
     Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab"),function(x){x.classList.remove("on");});
     var tv=document.querySelector('#tab-bar .tab[data-view="'+v+'"]');if(tv)tv.classList.add("on");
     ["board","messages","activity","w8","settings"].forEach(function(id){
-      var el=document.getElementById("v-"+id);if(el)el.hidden=(id!==v);
+      var el=document.getElementById("v-"+id);if(!el)return;
+      el.hidden=(id!==v);
+      if(id===v){
+        // 180ms opacity ease on the entering view; restart the animation each switch
+        el.classList.remove("view-enter");void el.offsetWidth;el.classList.add("view-enter");
+      }
     });
     if(v==="messages"&&!MSGS)loadMsgs();
     if(v==="w8"&&!W8)loadW8();
@@ -2920,6 +3215,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   Array.prototype.forEach.call(document.querySelectorAll(".nav[data-view]"),function(n){
     n.onclick=function(){switchView(n.getAttribute("data-view"));};
   });
+  (function(){var g=document.getElementById("foot-gear");if(g)g.onclick=function(){switchView("settings");};})();
 
   // Activity (journey tracker)
   var ACT_ROWS=null;
@@ -2983,24 +3279,85 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
   // W-8 renewals
   var W8=null;
+  // Rail/tab badge for the W-8 due count. Reads the SAME object renderW8 renders,
+  // so the badge can never diverge from the in-view #w8counts numbers.
+  function setW8Badge(n){
+    n=n|0;
+    [document.getElementById("nav-w8-badge"),document.getElementById("tab-w8-badge")].forEach(function(b){
+      if(!b)return;
+      if(n>0){b.textContent=n;b.hidden=false;}      // render only when count > 0
+      else{b.textContent="";b.hidden=true;}
+    });
+  }
+  // Days from an ISO expiry to today; new Date(iso+"T00:00:00") avoids the TZ
+  // off-by-one that bites bare new Date("YYYY-MM-DD") (parsed as UTC midnight).
+  function w8DaysLeft(iso){
+    if(!iso)return null;
+    var d=new Date(iso+"T00:00:00");
+    if(isNaN(d))return null;
+    var now=new Date(); var today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    return Math.round((d-today)/86400000);
+  }
+  // Relative-time primary read. Switches to months past ~60d. Negative = overdue.
+  function w8RelTime(days){
+    if(days==null)return {txt:'',cls:''};
+    if(days<0){
+      var od=-days;
+      if(od>60){var m=Math.round(od/30);return {txt:'overdue '+m+'mo',cls:'w8-over'};}
+      return {txt:'overdue '+od+'d',cls:'w8-over'};
+    }
+    if(days>60){var mm=Math.round(days/30);return {txt:'due in '+mm+'mo',cls:'w8-soon'};}
+    return {txt:'due in '+days+'d',cls:'w8-soon'};
+  }
   function renderW8(d){
     d=d||{counts:{valid:0,expiring:0,expired:0},due:[]};
     var c=d.counts||{};
-    var cells=[["valid",c.valid||0,"s6"],["expiring",c.expiring||0,"s4"],["expired",c.expired||0,"s4"]];
-    document.getElementById("w8counts").innerHTML=cells.map(function(x){
-      return '<div class="st'+(x[1]?' hot':'')+'"><div class="ct">'+x[1]+'</div><div class="lbl">'+x[0]+'</div></div>';
-    }).join("");
-    var due=d.due||[];
-    document.getElementById("w8list").innerHTML=due.length?due.map(function(r){
-      var chipc=(r.status==="expired")?"w8-expired":"w8-expiring";
-      return '<div class="row"><div class="row-top"><div class="row-info"><div class="nm">'+esc2(r.name)+'</div><div class="row-he">'+esc2(r.variant)+'</div></div></div><div class="row-foot"><span class="w8tag '+chipc+'">'+esc2(r.status)+'</span><span class="row-age">expires '+esc2(r.expiry)+'</span></div></div>';
-    }).join(""):'<div class="empty">Nothing due. Every W-8 on file is current.</div>';
+    var x=c.expired||0, g=c.expiring||0, v=c.valid||0;
+    // Badge logic preserved verbatim: expiring + expired. Stays in lockstep.
+    setW8Badge(g+x);
+    // ONE weighted readout reading the same counts. When nothing is due, read
+    // "All current" in ink with no coral / no second line (no false alarm).
+    var ro=document.getElementById("w8readout");
+    if(x===0&&g===0){
+      ro.innerHTML='<div class="w8-line1">All current</div>';
+    } else {
+      ro.innerHTML='<div class="w8-line1"><span class="w8-x">'+x+' expired</span>'
+        +'<span class="w8-sep"> · </span><span class="w8-g">'+g+' expiring</span></div>'
+        +'<div class="w8-line2">'+v+' current</div>';
+    }
+    // Group + sort: EXPIRED on top (most-overdue first), then EXPIRING (soonest first).
+    var due=(d.due||[]).map(function(r){var dl=w8DaysLeft(r.expiry);return {r:r,days:dl};});
+    var expired=due.filter(function(o){return o.r.status==='expired';}).sort(function(a,b){return (a.days==null?9e9:a.days)-(b.days==null?9e9:b.days);});
+    var expiring=due.filter(function(o){return o.r.status!=='expired';}).sort(function(a,b){return (a.days==null?9e9:a.days)-(b.days==null?9e9:b.days);});
+    function rowHtmlW8(o){
+      var r=o.r, rel=w8RelTime(o.days);
+      var chipc=(r.status==='expired')?'w8-expired':'w8-expiring';
+      return '<div class="w8row">'
+        +'<span class="w8nm" dir="ltr"><span class="w8nmtxt" dir="auto">'+esc2(r.name)+'</span><span class="w8var" dir="ltr">'+esc2(r.variant)+'</span></span>'
+        +'<span class="w8when"><span class="w8rel '+rel.cls+'">'+esc2(rel.txt)+'</span><span class="w8iso">'+esc2(r.expiry)+'</span></span>'
+        +'<span class="w8tag '+chipc+'">'+esc2(r.status)+'</span>'
+        +'</div>';
+    }
+    var wl=document.getElementById("w8list");
+    if(!expired.length&&!expiring.length){
+      wl.innerHTML='<div class="empty">Nothing due. Every W-8 on file is current.</div>';
+      return;
+    }
+    var h='';
+    if(expired.length)h+='<div class="w8group overdue"><div class="w8grouplbl">overdue</div>'+expired.map(rowHtmlW8).join('')+'</div>';
+    if(expiring.length)h+='<div class="w8group"><div class="w8grouplbl">expiring soon</div>'+expiring.map(rowHtmlW8).join('')+'</div>';
+    wl.innerHTML=h;
+  }
+  // Skeleton: readout bar + a few ghost rows (geometry, not "Loading...").
+  function w8Skeleton(){
+    var row='<div class="skel-row"><span class="skel-bar" style="width:32%"></span><span class="skel-bar" style="flex:0 0 auto;width:70px;margin-left:auto"></span></div>';
+    return row+row+row;
   }
   var W8_SEQ=0;
   function loadW8(){
     var rid=++W8_SEQ;
     var wl=document.getElementById('w8list');
-    if(wl)wl.innerHTML='<div class="empty">Loading...</div>';
+    if(wl)wl.innerHTML=w8Skeleton();
     apiFetch('?api=w8renewals').then(function(d){
       if(rid!==W8_SEQ)return;
       W8=d||{counts:{valid:0,expiring:0,expired:0},due:[]};renderW8(W8);
@@ -3009,7 +3366,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       // "Nothing due" line. That is a false clear on a compliance clock.
       if(rid!==W8_SEQ)return;
       W8=null;
-      var wc=document.getElementById('w8counts');if(wc)wc.innerHTML='';
+      setW8Badge(0);
+      var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
       document.getElementById('w8list').innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';
     });
   }
@@ -3030,90 +3388,226 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     }).catch(function(){st.textContent='Error';st.style.color='var(--color-danger)';});
   };
 
-  // Messages
+  // ============================================================
+  // MESSAGES - lifecycle spine + node-detail panel
+  // ============================================================
   var MSGS=null, curMsg=null, curLang="he";
-  var SAMPLE_VARS={name:"David Cohen", link:"https://sign.legacyvpartners.com/?t=...", applicantType:"individual"};
+  // Representative token fill so the preview reads like a real email. Block tokens
+  // get sample copy (they are server-computed at send time).
+  var SAMPLE_VARS={
+    name:"David Cohen", lpName:"David Cohen", link:"https://sign.legacyvpartners.com/?t=...",
+    greeting:"שלום David", greetingName:"עו\"ד כהן", firstFiller:"David Cohen",
+    completedSigners:"David Cohen", englishName:"David Cohen", hebrewName:"דוד כהן",
+    amountDisplay:"$1,000,000", amountSpelled:"מיליון דולר", commsEmails:"david@example.com",
+    investorPhrase:"לדוד כהן", redemptionClause:"חלקי על סך $250,000",
+    processBlock:"[process steps]", wireBlock:"[wire details]", flowSummary:"[flow summary]"
+  };
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function interp(t){return String(t==null?"":t).replace(/\{\{\s*([\w.]+)\s*\}\}/g,function(_,k){return SAMPLE_VARS[k]!=null?SAMPLE_VARS[k]:"";});}
+  // Tokens present in a message's current copy (subject + body, both langs).
+  function msgTokens(m){
+    var seen={},out=[];
+    ['he','en'].forEach(function(l){
+      var L=m[l]; if(!L)return;
+      String((L.subject||'')+' '+(L.body||'')).replace(/\{\{\s*([\w.]+)\s*\}\}/g,function(_,k){if(!seen[k]){seen[k]=1;out.push(k);}});
+    });
+    return out;
+  }
+  // Per-lang coverage state: custom (overridden) | default (exists) | nocopy (absent).
+  function covState(m,lang){
+    var meta=msgMeta(m.key);
+    if(lang==='en'&&meta.en==='no-copy')return 'nocopy';
+    var L=m[lang];
+    if(!L)return 'nocopy';
+    return L.overridden?'custom':'default';
+  }
   var MSG_SEQ=0;
   function loadMsgs(){
     var rid=++MSG_SEQ;
-    var ml=document.getElementById('msglist');
-    if(ml)ml.innerHTML='<div class="empty">Loading...</div>';
+    var sp=document.getElementById('msgspine');
+    if(sp)sp.innerHTML=msgSkeleton();
     apiFetch('?api=messages&lane='+state.lane).then(function(d){
       if(rid!==MSG_SEQ)return;
-      MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];renderMsgList();
+      MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];renderSpine();
+      // Default-select the first message so the editor + preview are never an empty half-screen.
+      if(!curMsg){var f0=document.querySelector('#msgspine .node');if(f0)openMsg(f0.getAttribute('data-k'));}
     }).catch(function(){
       // F2: explicit error state, not a silent blank list. MSGS stays null so the
       // next visit retries.
       if(rid!==MSG_SEQ)return;
       MSGS=null;
-      document.getElementById('msglist').innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';
+      document.getElementById('msgspine').innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';
     });
   }
-  function renderMsgList(){
-    document.getElementById("msglist").innerHTML=MSGS.map(function(m){
-      var ed=(m.he&&m.he.overridden)||(m.en&&m.en.overridden);
-      return '<div class="msgitem'+(curMsg&&curMsg.key===m.key?" on":"")+'" data-k="'+m.key+'"><div class="t">'+esc(m.label)+'</div><div class="r">'+esc(m.to)+'</div>'+(ed?'<div class="ov">edited</div>':"")+'</div>';
-    }).join("");
-    Array.prototype.forEach.call(document.querySelectorAll(".msgitem"),function(el){el.onclick=function(){openMsg(el.getAttribute("data-k"));};});
+  // Skeleton: a few ghost node bars under a phase header (geometry, not "Loading...").
+  function msgSkeleton(){
+    var node='<div class="skel-row" style="border:none;padding:10px 0 10px 24px"><span class="skel-bar" style="width:40%;height:13px"></span></div>';
+    return '<div class="spine-rail">'+node+node+node+node+'</div>';
   }
-  // F7: write the live textarea values back into the model before any re-render,
-  // so typed edits survive switching message or language tab.
+  function recipientChips(rcpt){
+    var h='';
+    (rcpt.to||[]).forEach(function(r){h+='<span class="rchip to">'+esc(r)+'</span>';});
+    (rcpt.cc||[]).forEach(function(r){h+='<span class="rchip cc">cc '+esc(r)+'</span>';});
+    return h;
+  }
+  function covTicks(m){
+    var hs=covState(m,'he'), es=covState(m,'en');
+    function t(lang,s){var c=(s==='custom')?'custom':(s==='nocopy')?'nocopy':'default';return '<span class="tick '+c+'">'+lang+'</span>';}
+    return '<span class="cov">'+t('he',hs)+t('en',es)+'</span>';
+  }
+  function renderSpine(){
+    var sp=document.getElementById('msgspine'); if(!sp)return;
+    if(!MSGS.length){sp.innerHTML='<div class="empty">No emails configured for this lane.</div>';return;}
+    // group present keys by phase, in the fixed phase order
+    var byPhase={}; MSG_PHASES.forEach(function(p){byPhase[p]=[];});
+    MSGS.forEach(function(m){var ph=msgMeta(m.key).phase; if(!byPhase[ph])byPhase[ph]=[]; byPhase[ph].push(m);});
+    var h='<div class="spine-rail">';
+    MSG_PHASES.forEach(function(ph){
+      var items=byPhase[ph]; if(!items||!items.length)return;
+      h+='<div class="phase"><span class="phase-lbl">'+esc(ph)+'</span><span class="phase-rule"></span></div>';
+      items.forEach(function(m){
+        var meta=msgMeta(m.key);
+        var label=MSG_HUMAN_LABEL[m.key]||m.label||m.key;
+        var toName=(meta.rcpt.to&&meta.rcpt.to[0])||'';
+        var ov=(m.he&&m.he.overridden)||(m.en&&m.en.overridden);
+        var on=(curMsg&&curMsg.key===m.key);
+        h+='<button class="node'+(on?' on':'')+(ov?' ov':'')+'" data-k="'+esc(m.key)+'">'
+          +'<span class="node-dot '+meta.cls+'"></span>'
+          +'<span class="node-t">'+esc(label)+'</span>'
+          +'<span class="node-meta">'+esc(meta.trigger)+(toName?' - to '+esc(toName):'')+'</span>'
+          +'<span class="node-foot">'+recipientChips(meta.rcpt)+covTicks(m)+'</span>'
+          +'</button>';
+      });
+    });
+    h+='</div>';
+    sp.innerHTML=h;
+    Array.prototype.forEach.call(sp.querySelectorAll('.node'),function(el){el.onclick=function(){openMsg(el.getAttribute('data-k'));};});
+  }
+  // F7: write live field values back into the model before any re-render.
   function captureEditor(){
     if(!curMsg)return;
     var se=document.getElementById("m-sub"),be=document.getElementById("m-body");
     if(!se||!be)return;
-    var L=curMsg[curLang];if(!L){L=curMsg[curLang]={subject:"",body:""};}
+    var L=curMsg[curLang];if(!L){return;} // never fabricate a lang sub-object (no-copy stays no-copy)
     L.subject=se.value;L.body=be.value;
   }
-  function openMsg(key){captureEditor();curMsg=MSGS.filter(function(m){return m.key===key;})[0];curLang="he";renderMsgList();renderEditor();}
-  function updatePreview(){
-    var rtl=(curLang==="he");
-    var sub=document.getElementById("m-sub"); var body=document.getElementById("m-body");
-    var ps=document.getElementById("m-prev-s"); var pb=document.getElementById("m-prev-b");
-    if(ps&&sub) ps.textContent=interp(sub.value);
-    if(pb&&body){var bv=interp(body.value); if(/</.test(bv)){pb.innerHTML=bv;}else{pb.innerHTML=esc(bv).replace(/\n/g,"<br>");}}
+  function openMsg(key){
+    captureEditor();
+    curMsg=MSGS.filter(function(m){return m.key===key;})[0];
+    // Default to a lang that has copy: he if present, else en.
+    curLang=(curMsg&&curMsg.he)?'he':'en';
+    renderSpine();renderDetail();
   }
-  function renderEditor(){
+  // Track the last-focused field so token chips insert at the right caret.
+  var _lastFocus=null;
+  function insertToken(tok){
+    var f=_lastFocus||document.getElementById('m-body');
+    if(!f)return;
+    var s=f.selectionStart, e=f.selectionEnd, v=f.value, ins='{{'+tok+'}}';
+    if(s==null){f.value=v+ins;}
+    else{f.value=v.slice(0,s)+ins+v.slice(e);var np=s+ins.length;f.selectionStart=f.selectionEnd=np;}
+    f.focus();
+    f.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  // Render the rendered-email preview honoring the per-key format (NOT a "<" sniff).
+  function renderPreviewBody(){
+    var body=document.getElementById('m-body'), pb=document.getElementById('m-prev-b');
+    if(!pb||!body)return;
+    var meta=msgMeta(curMsg.key), bv=interp(body.value);
+    if(meta.fmt==='html'){pb.innerHTML=bv;}
+    else{pb.innerHTML=esc(bv).replace(/\n/g,'<br>');}
+  }
+  function updatePreview(){
+    var sub=document.getElementById('m-sub'), ps=document.getElementById('m-prev-s');
+    if(ps&&sub)ps.textContent=interp(sub.value);
+    renderPreviewBody();
+    refreshDirtyGate();
+  }
+  // Save dirty-gated (disabled until changed); Revert disabled when already default.
+  function refreshDirtyGate(){
+    if(!curMsg)return;
+    var save=document.getElementById('m-save'), reset=document.getElementById('m-reset');
+    var se=document.getElementById('m-sub'), be=document.getElementById('m-body');
+    if(!save||!se||!be)return;
+    var L=curMsg[curLang]||{subject:'',body:''};
+    var dirty=(se.value!==(L.subject||''))||(be.value!==(L.body||''));
+    save.disabled=!dirty;
+    if(reset)reset.disabled=(covState(curMsg,curLang)!=='custom');
+  }
+  function renderDetail(){
     var m=curMsg; if(!m)return;
-    var L=m[curLang]||{subject:"",body:""};
-    var phs=(m.placeholders||[]).map(function(p){return '<span class="ph">{{'+esc(p)+"}}</span>";}).join("");
-    var rtl=(curLang==="he");
-    var dir=rtl?"rtl":"ltr";
-    document.getElementById("msgedit").innerHTML=
-      '<div class="medit-wrap">'+
-        '<div class="medit-left">'+
-          "<h2>"+esc(m.label)+'</h2><div class="to">Goes to: '+esc(m.to)+"</div>"+
-          "<div style='margin-bottom: 12px'>"+phs+"</div>"+
-          '<div class="msgtabs"><button data-l="he" class="'+(rtl?"on":"")+'">Hebrew</button><button data-l="en" class="'+(rtl?"":"on")+'">English</button></div>'+
-          '<div class="lbl">Subject</div><input id="m-sub" value="'+esc(L.subject)+'" dir="'+dir+'" oninput="updatePreview()">'+
-          '<div class="lbl">Body</div><textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+"</textarea>"+
-          '<div class="msgbtns"><button class="save" id="m-save">Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved" role="status" aria-live="polite"></span></div>'+
-        '</div>'+
-        '<div class="medit-right">'+
-          '<div class="preview">'+
-            '<div class="ph-h">Live preview</div>'+
-            '<div class="ph-s" dir="'+dir+'" id="m-prev-s">'+esc(interp(L.subject))+'</div>'+
-            '<div class="ph-b" dir="'+dir+'" id="m-prev-b"></div>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    var bv=interp(L.body), pb=document.getElementById("m-prev-b");
-    if(/</.test(bv)){pb.innerHTML=bv;}else{pb.innerHTML=esc(bv).replace(/\n/g,"<br>");}
-    Array.prototype.forEach.call(document.querySelectorAll(".msgtabs button"),function(b){b.onclick=function(){captureEditor();curLang=b.getAttribute("data-l");renderEditor();};});
-    document.getElementById("m-save").onclick=function(){
-      var sub=document.getElementById("m-sub").value, body=document.getElementById("m-body").value, sv=document.getElementById("m-saved");
+    var det=document.getElementById('msgdetail');
+    // promote the empty placeholder to the editor container
+    det.className='mdetail'; det.id='msgdetail';
+    var meta=msgMeta(m.key);
+    var label=MSG_HUMAN_LABEL[m.key]||m.label||m.key;
+    var hes=covState(m,'he'), ens=covState(m,'en');
+    var enDisabled=(ens==='nocopy');
+    var L=m[curLang]||{subject:'',body:''};
+    var rtl=(curLang==='he'); var dir=rtl?'rtl':'ltr';
+    var dirInd=rtl?'Hebrew - RTL':'English - LTR';
+    // token rail: computed tokens marked auto
+    var toks=msgTokens(m);
+    var phs=toks.map(function(p){
+      var auto=MSG_AUTO_TOKENS[p];
+      return '<span class="ph'+(auto?' auto':'')+'" data-tok="'+esc(p)+'">{{'+esc(p)+'}}'+(auto?'<span class="auto-tag">auto</span>':'')+'</span>';
+    }).join('');
+    function langTab(lang,s){
+      var cls='langtab'+(curLang===lang?' on':'')+((lang==='en'&&enDisabled)?' dis':'');
+      var dot=(s==='nocopy')?'':'<span class="cdot '+(s==='custom'?'custom':'default')+'"></span>';
+      return '<button class="'+cls+'" data-l="'+lang+'"'+((lang==='en'&&enDisabled)?' disabled title="No English copy for this email"':'')+'>'+(lang==='he'?'Hebrew':'English')+dot+'</button>';
+    }
+    var editorBlock;
+    if(curLang==='en'&&enDisabled){
+      editorBlock='<div class="md-nocopy">No English copy for this email. This email sends in Hebrew only.</div>';
+    } else {
+      editorBlock=
+        '<div style="margin-bottom: 4px">'+phs+'</div>'+
+        '<label class="mfield-lbl" for="m-sub">Subject</label>'+
+        '<input id="m-sub" value="'+esc(L.subject)+'" dir="'+dir+'" oninput="updatePreview()">'+
+        '<label class="mfield-lbl" for="m-body">Body</label>'+
+        '<textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+'</textarea>'+
+        '<div class="msgbtns"><button class="save" id="m-save" disabled>Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved" role="status" aria-live="polite"></span></div>'+
+        '<div class="preview">'+
+          '<div class="ph-h"><span>Preview</span><span class="dir-ind">'+dirInd+'</span></div>'+
+          '<div class="ph-s" dir="'+dir+'" id="m-prev-s">'+esc(interp(L.subject))+'</div>'+
+          '<div class="ph-b" dir="'+dir+'" id="m-prev-b"></div>'+
+        '</div>';
+    }
+    det.innerHTML=
+      '<div class="md-hd"><h2>'+esc(label)+'</h2>'+
+        '<div class="md-trigger">'+esc(meta.trigger)+'</div>'+
+        '<div class="md-rcpts">'+recipientChips(meta.rcpt)+'</div>'+
+      '</div>'+
+      '<div class="langtabs">'+langTab('he',hes)+langTab('en',ens)+'</div>'+
+      editorBlock;
+    // wire lang tabs
+    Array.prototype.forEach.call(det.querySelectorAll('.langtab'),function(b){
+      if(b.classList.contains('dis'))return;
+      b.onclick=function(){captureEditor();curLang=b.getAttribute('data-l');renderDetail();};
+    });
+    if(curLang==='en'&&enDisabled)return;
+    // render preview body + track focus + wire tokens/save/reset
+    renderPreviewBody();
+    var se=document.getElementById('m-sub'), be=document.getElementById('m-body');
+    _lastFocus=be;
+    [se,be].forEach(function(f){if(f)f.addEventListener('focus',function(){_lastFocus=f;});});
+    Array.prototype.forEach.call(det.querySelectorAll('.ph[data-tok]'),function(c){c.onclick=function(){insertToken(c.getAttribute('data-tok'));};});
+    refreshDirtyGate();
+    document.getElementById('m-save').onclick=function(){
+      var sub=document.getElementById('m-sub').value, body=document.getElementById('m-body').value, sv=document.getElementById('m-saved');
       // F8: never persist an empty template; it looks reverted but is not.
       if(!sub.trim()||!body.trim()){sv.textContent='Subject and body are required';return;}
-      L.subject=sub;L.body=body;L.overridden=!!(sub||body);renderMsgList();
+      var L2=curMsg[curLang]||(curMsg[curLang]={subject:'',body:''});
+      L2.subject=sub;L2.body=body;L2.overridden=true;renderSpine();
       sv.textContent="Saving...";
-      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane).then(function(){sv.textContent='Saved';}).catch(function(){sv.textContent='Save failed';});
+      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(){sv.textContent='Save failed';});
     };
-    document.getElementById("m-reset").onclick=function(){
-      var sv=document.getElementById("m-saved");
+    document.getElementById('m-reset').onclick=function(){
+      if(document.getElementById('m-reset').disabled)return;
+      var sv=document.getElementById('m-saved');
       sv.textContent="Reverting...";
-      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane).then(function(){MSGS=null;curMsg=null;document.getElementById('msgedit').innerHTML='<div class="msgempty">Reverted to default. Pick a message.</div>';loadMsgs();}).catch(function(){sv.textContent='Revert failed';});
+      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane).then(function(){MSGS=null;curMsg=null;var d2=document.getElementById('msgdetail');d2.className='msgempty';d2.innerHTML='Select an email to edit its copy and preview what sends.';loadMsgs();}).catch(function(){sv.textContent='Revert failed';});
     };
   }
 </script>
@@ -3135,11 +3629,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
-  <button class="tab on" data-view="board"><span class="tab-icon">&#8801;</span><span class="tab-lbl">Board</span></button>
-  <button class="tab" data-view="messages"><span class="tab-icon">&#9993;</span><span class="tab-lbl">Msgs</span></button>
-  <button class="tab" data-view="activity"><span class="tab-icon">&#9678;</span><span class="tab-lbl">Activity</span></button>
-  <button class="tab" data-view="w8"><span class="tab-icon" style="font-size: 11px;font-weight:700;letter-spacing:-0.02em">W8</span><span class="tab-lbl">W-8</span></button>
-  <button class="tab" data-view="settings"><span class="tab-icon">&#9881;</span><span class="tab-lbl">Settings</span></button>
+  <button class="tab on" data-view="board"><span class="tab-icon"><i class="ti ti-layout-board"></i></span><span class="tab-lbl">Board</span></button>
+  <button class="tab" data-view="messages"><span class="tab-icon"><i class="ti ti-mail"></i></span><span class="tab-lbl">Msgs</span></button>
+  <button class="tab" data-view="w8"><span class="tab-icon"><i class="ti ti-id"></i></span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
 </nav>
 <script>
   Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
