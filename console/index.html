@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 /* ============================================================
@@ -536,37 +536,19 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .google-signin-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .google-signin-btn:active { background: #f1f3f4; }
 
-/* ----- login doodles: playful hand-drawn chrome around the sign-in card.
-   Lives inside #login-screen, so it vanishes (.off) the moment the operator is
-   in. Scattered to the margins (top/bottom on mobile, all corners on desktop) so
-   the card always has clear breathing room. Decorative + non-interactive. ----- */
-#login-art { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+/* ----- login doodles: loose brush-ink collage around the sign-in card. Drawn with
+   perfect-freehand (variable-width committed strokes). Lives inside #login-screen so
+   it clears (.off) on auth. Decorative + non-interactive. ----- */
+#login-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#login-glow { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 30% 33% at 50% 50%, var(--color-bg-page) 50%, rgba(251,247,239,0) 100%); }
 #login-screen .lc { position: relative; z-index: 2; }
-.doodle { position: absolute; width: clamp(78px, 16vw, 138px); height: auto; opacity: 0.9; }
-.doodle svg { width: 100%; height: auto; display: block; }
-.dslot1 { top: 6vh;  left: 7vw; transform: rotate(-4deg); }
-.dslot2 { top: 7vh;  right: 6vw; transform: rotate(5deg); }
-.dslot3 { bottom: 7vh; left: 8vw; transform: rotate(-3deg); }
-.dslot4 { bottom: 5vh; left: 50%; margin-left: -56px; transform: rotate(4deg); width: clamp(70px, 14vw, 112px); }
-.dslot5 { bottom: 8vh; right: 7vw; transform: rotate(-5deg); }
-.h-ju  { top: 5vh; left: 24vw; transform: rotate(-3deg); width: clamp(58px, 10vw, 92px); }
-.h-bag { top: 7vh; right: 23vw; transform: rotate(5deg); width: clamp(58px, 10vw, 96px); }
-.h-tlv { bottom: 8vh; left: 25vw; transform: rotate(-4deg); width: clamp(54px, 9vw, 88px); }
-.h-kri { bottom: 7vh; right: 22vw; transform: rotate(6deg); width: clamp(56px, 9vw, 90px); }
-.spark { position: absolute; color: #1a1a1a; opacity: 0.7; }
-.spark svg { width: 100%; height: auto; display: block; }
-.s1 { top: 22vh; left: 17vw; width: 20px; transform: rotate(8deg); }
-.s2 { top: 17vh; right: 21vw; width: 26px; transform: rotate(-10deg); }
-.s3 { bottom: 23vh; left: 23vw; width: 22px; transform: rotate(6deg); }
-.s4 { bottom: 19vh; right: 19vw; width: 18px; transform: rotate(-6deg); }
-@media (max-width: 560px) {
-  .dslot4, .h-ju, .h-bag, .h-tlv, .h-kri { display: none; }
-  .dslot1, .dslot2 { top: 3vh; }
-  .dslot3, .dslot5 { bottom: 3vh; }
-  .doodle { width: clamp(64px, 23vw, 104px); }
-  .s1, .s2, .s3, .s4 { display: none; }
-}
-@media (max-height: 620px) { #login-art { display: none; } }
+#login-measure { position: absolute; width: 100px; height: 100px; visibility: hidden; left: -9999px; }
+#login-art .d { position: absolute; }
+#login-art .d svg { width: 100%; height: auto; display: block; overflow: visible; }
+#login-art .ltr { position: absolute; font-family: 'Permanent Marker', cursive; color: #141414; line-height: .9; white-space: nowrap; }
+#login-art .ltr span { display: inline-block; }
+@media (max-height: 600px) { #login-art, #login-glow { display: none; } }
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -3780,59 +3762,75 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
-  <div id="login-art" aria-hidden="true">
-    <!-- Slots filled by renderLoginDoodles() from DOODLE_LIB, keyed to the fund's
-         current top-5 positions (served by the gateway ?api=topPositions, refreshed
-         weekly by the routine). Default keys render instantly so it is never blank. -->
-    <div class="doodle dslot1" data-slot="1"></div>
-    <div class="doodle dslot2" data-slot="2"></div>
-    <div class="doodle dslot3" data-slot="3"></div>
-    <div class="doodle dslot4" data-slot="4"></div>
-    <div class="doodle dslot5" data-slot="5"></div>
-    <!-- house doodles: fixed fun elements that sit AMONG the live position doodles -->
-    <div class="doodle h-ju"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-linecap="round" stroke-linejoin="round"><path d="M40 20 L39 82" stroke-width="6.6"/><path d="M14 50 L66 49" stroke-width="6.6"/><circle cx="74" cy="28" r="13" stroke-width="3.2"/></svg></div>
-    <div class="doodle h-bag"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M26 42 Q26 22 50 22 Q74 22 74 42 L74 84 Q74 90 66 90 L34 90 Q26 90 26 84 Z"/><path d="M38 90 Q36 62 47 55 Q55 53 63 57 Q70 70 68 90"/><path d="M44 64 L56 64 L55 74 L45 74 Z"/><path d="M50 64 L50 74" stroke-width="2"/><path d="M34 43 Q30 35 38 33 M66 43 Q70 35 62 33"/></svg></div>
-    <div class="doodle h-tlv"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="46" cy="27" r="14"/><path d="M33 24 L59 22" stroke-width="2.6"/><rect x="35" y="24" width="9" height="7" rx="2.4"/><rect x="48" y="23.5" width="9" height="7" rx="2.4"/><path d="M37 50 Q46 44 56 50 L60 84 L36 84 Z"/><path d="M60 56 Q72 58 74 74"/><rect x="68" y="70" width="13" height="16" rx="2"/><path d="M70 76 L80 76 M74 65 L74 70" stroke-width="2"/></svg></div>
-    <div class="doodle h-kri"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M28 40 L72 40 L66 86 Q50 90 34 86 Z"/><path d="M24 40 Q50 32 76 40 L76 34 Q50 26 24 34 Z"/><path d="M76 37 Q92 22 86 16"/><path d="M40 56 q6 -7 11 0 q5 7 11 0" stroke-width="2.6"/><circle cx="46" cy="68" r="1.8" fill="#1a1a1a" stroke="none"/><circle cx="56" cy="73" r="1.8" fill="#1a1a1a" stroke="none"/></svg></div>
-    <span class="spark s1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3 L12 21 M3 12 L21 12"/></svg></span>
-    <span class="spark s2"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
-    <span class="spark s3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4 L20 20 M20 4 L4 20"/></svg></span>
-    <span class="spark s4"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
-  </div>
+  <div id="login-art" aria-hidden="true"></div>
+  <div id="login-glow" aria-hidden="true"></div>
+  <svg id="login-measure" viewBox="0 0 100 100" aria-hidden="true"></svg>
   <script>
-  /* Loose-ink doodle library, keyed by position. Add a key here when the routine
-     emails that a new top-5 holding has no doodle. Unknown keys fall back to a
-     neutral ink mark (no ticker text) so the public page never leaks a name. */
-  var DOODLE_LIB = {
-    lion: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 45 Q18 44 20 44 L80 47 Q83 47 82 50 L79 84 Q78 87 74 87 L25 85 Q21 85 21 81 Z"/><path d="M17 32 Q16 30 19 30 L83 22 Q86 22 86 25 L88 38 Q88 41 85 41 L21 49 Q18 49 18 46 Z"/><path d="M30 30 L36 48 M45 28 L51 46 M60 26 L66 44 M75 24 L81 42" stroke-width="5.4"/><path d="M31 60 Q50 58 69 60 M31 71 Q46 70 61 71" stroke-width="2.3"/></svg>',
-    ftai: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M46 58 C37 46 40 25 52 15 C61 22 62 42 56 58 Z"/><path d="M41 58 L61 58 L59 63 L43 63 Z"/><path d="M45 63 L43 67 L47 69 L44 73 L48 75 L45 79 L50 86 L55 79 L52 75 L56 73 L53 69 L57 67 L55 63"/><circle cx="45" cy="29" r="1.5" fill="#1a1a1a" stroke="none"/><circle cx="44.5" cy="38" r="1.5" fill="#1a1a1a" stroke="none"/><circle cx="45" cy="47" r="1.5" fill="#1a1a1a" stroke="none"/></svg>',
-    apo:  '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M28 26 Q50 23 72 26 M26 33 Q50 30 74 33"/><path d="M35 26 Q29 18 37 18 M65 26 Q71 18 63 18"/><path d="M37 34 L39 78 M50 33 L50 78 M63 34 L61 78"/><path d="M44 34 L45 78 M57 34 L56 78" stroke-width="2"/><path d="M28 79 Q50 76 72 79 M22 87 Q50 84 78 87"/></svg>',
-    goog: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M62 40 A24 24 0 1 1 61.5 39 Z"/><path d="M60 62 L84 86" stroke-width="6.4"/><path d="M30 38 Q40 28 52 36" stroke-width="2.6"/></svg>',
-    meta: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 50 C41 28 16 28 16 50 C16 72 41 72 50 50 C59 28 84 28 84 50 C84 72 59 72 50 50 Z"/></svg>',
-    avio: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 12 Q64 30 64 56 L60 74 L40 74 L36 56 Q36 30 50 12 Z"/><path d="M40 60 L28 72 L30 80 L40 72 M60 60 L72 72 L70 80 L60 72"/><path d="M44 80 Q50 90 56 80"/><circle cx="50" cy="38" r="6"/></svg>',
-    rocket: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 12 Q64 30 64 56 L60 74 L40 74 L36 56 Q36 30 50 12 Z"/><path d="M40 60 L28 72 L30 80 L40 72 M60 60 L72 72 L70 80 L60 72"/><path d="M44 80 Q50 90 56 80"/><circle cx="50" cy="38" r="6"/></svg>',
-    chip: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M30 30 L70 30 L70 70 L30 70 Z"/><path d="M44 44 L56 44 L56 56 L44 56 Z"/><path d="M38 30 L38 18 M50 30 L50 18 M62 30 L62 18 M38 70 L38 82 M50 70 L50 82 M62 70 L62 82 M30 38 L18 38 M30 50 L18 50 M30 62 L18 62 M70 38 L82 38 M70 50 L82 50 M70 62 L82 62" stroke-width="2.8"/></svg>',
-    generic: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="50" r="30"/><path d="M50 34 L50 58 M50 66 L50 67" stroke-width="4"/></svg>'
-  };
-  var DOODLE_DEFAULT_KEYS = ['lion','ftai','apo','goog','meta'];
-  function renderLoginDoodles(keys){
-    if(!keys||!keys.length) keys = DOODLE_DEFAULT_KEYS;
-    for(var i=0;i<5;i++){
-      var slot=document.querySelector('.dslot'+(i+1));
-      if(!slot) continue;
-      var key=keys[i]||DOODLE_DEFAULT_KEYS[i];
-      slot.innerHTML = DOODLE_LIB[key] || DOODLE_LIB.generic;
-    }
-  }
-  renderLoginDoodles(DOODLE_DEFAULT_KEYS);
+  /* Login brush-doodle collage. Drawn with perfect-freehand (variable-width
+     committed strokes). Decorative + non-blocking: if the engine fails to load the
+     login is unaffected (the catch swallows it and #login-art stays empty). */
   (function(){
-    try{
-      // Pre-auth: hit the OPEN GET route (no token). Simple GET = no CORS preflight.
-      var GW_TOP='https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-      fetch(GW_TOP+'?api=topPositions').then(function(r){return r.json();}).then(function(d){
-        if(d&&d.ok&&d.keys&&d.keys.length) renderLoginDoodles(d.keys);
-      }).catch(function(){});
-    }catch(e){}
+    import('https://esm.sh/perfect-freehand@1.2.0').then(function(mod){
+      var getStroke=mod.getStroke, NS='http://www.w3.org/2000/svg';
+      var measure=document.getElementById('login-measure'), art=document.getElementById('login-art');
+      if(!getStroke||!measure||!art) return;
+      var seed=99; function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;}
+      function pts(d,phase){var t=document.createElementNS(NS,'path');t.setAttribute('d',d);measure.appendChild(t);var L=t.getTotalLength();var n=Math.max(8,Math.round(L/3.2));var out=[];for(var i=0;i<=n;i++){var p=t.getPointAtLength(L*i/n);out.push([p.x+(rnd()-0.5)*1.9,p.y+(rnd()-0.5)*1.9,Math.max(0.08,Math.min(1,0.3+0.62*(0.5+0.5*Math.sin((i/n)*Math.PI*2.3+phase))+(rnd()-0.5)*0.18))]);}measure.removeChild(t);return out;}
+      function sfs(s){if(!s.length)return'';var d=s.reduce(function(a,p,i,arr){var n=arr[(i+1)%arr.length];a.push(p[0],p[1],(p[0]+n[0])/2,(p[1]+n[1])/2);return a;},['M',s[0][0],s[0][1],'Q']);d.push('Z');return d.join(' ');}
+      function draw(strokes,sz){var s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 100 100');strokes.forEach(function(d,k){var o=getStroke(pts(d,k*1.7+rnd()*3),{size:sz,thinning:0.72,smoothing:0.5,streamline:0.32,simulatePressure:false,start:{taper:6,cap:true},end:{taper:10,cap:true}});var p=document.createElementNS(NS,'path');p.setAttribute('d',sfs(o));p.setAttribute('fill','#141414');s.appendChild(p);});return s;}
+      var PATHS={
+        clap:['M18 46 L82 46 L82 86 L18 86 Z','M16 33 L82 24 L85 39 L20 48 Z','M30 31 L34 46','M44 29 L48 44','M58 27 L62 42','M72 25 L76 40','M30 62 L66 62','M30 73 L56 73'],
+        goog:['M74 38 A28 28 0 1 0 76 62 L52 62'],
+        fb:['M24 18 L76 18 L82 24 L82 76 L76 82 L24 82 L18 76 L18 24 Z','M60 30 Q47 28 47 44 L47 80','M38 48 L60 48'],
+        col:['M30 30 L70 30 L70 36 L30 36 Z','M36 36 L38 76','M50 36 L50 76','M64 36 L62 76','M26 78 L74 78','M22 86 L78 86'],
+        blade:['M46 56 C36 44 40 24 54 16 C62 24 62 44 56 56 Z','M42 56 L60 56 L58 62 L44 62 Z','M46 62 L44 66 L48 68 L45 72 L49 74 L46 78 L51 84 L56 78 L53 74 L57 72 L54 68 L58 66 L56 62'],
+        coupe:['M24 32 L76 32 Q72 50 50 52 Q28 50 24 32 Z','M50 52 L50 80','M36 82 Q50 78 64 82'],
+        wine:['M34 26 Q34 50 50 53 Q66 50 66 26 Q50 22 34 26 Z','M50 53 L50 80','M36 82 Q50 78 64 82'],
+        cork:['M26 26 L74 26','M50 26 L50 58','M44 58 Q56 62 44 68 Q56 72 44 78 Q56 82 50 88'],
+        sushi:['M22 60 Q22 50 50 50 Q78 50 78 60 Q78 70 50 70 Q22 70 22 60 Z','M24 52 Q50 44 76 52 Q76 57 50 57 Q24 57 24 52 Z'],
+        noodle:['M22 56 Q50 80 78 56','M20 54 Q50 62 80 54','M38 54 Q34 38 42 30','M50 54 Q48 36 54 28','M62 54 Q60 38 66 32','M40 26 L70 22'],
+        forkknife:['M36 22 L36 82','M30 22 L30 36','M42 22 L42 36','M30 36 Q36 42 42 36','M62 22 Q70 24 66 46 L62 82'],
+        sake:['M44 22 L56 22 L56 34 Q66 40 66 56 L66 80 Q66 86 58 86 L42 86 Q34 86 34 80 L34 56 Q34 40 44 34 Z','M40 56 L60 56'],
+        fuji:['M12 80 L50 24 L88 80','M37 43 L43 51 L49 41 L55 51 L61 43','M10 82 Q50 78 90 82'],
+        star:['M50 28 L50 72','M28 50 L72 50','M36 36 L64 64','M64 36 L36 64'],
+        catglass:['M30 86 Q24 58 40 55 Q40 43 48 47 Q54 43 60 47 Q72 56 64 86','M40 49 L35 38 L47 47','M58 49 L63 38 L51 47','M64 82 Q82 80 76 62','M20 62 L36 66','M20 70 L36 70','M58 60 L55 88 L70 88 L67 60','M55 60 L70 60','M61 50 L61 60'],
+        buckethead:['M34 88 L38 60 Q50 56 62 60 L66 88','M40 64 Q28 70 28 84','M36 40 L64 40 L61 60 L39 60 Z','M34 40 L66 40','M42 88 L42 96','M58 88 L58 96'],
+        fish:['M18 50 Q40 34 66 50 Q40 66 18 50 Z','M66 50 L84 38 L84 62 Z','M32 42 Q37 50 32 58','M28 47 L31 47'],
+        bird:['M22 58 Q40 42 60 48 Q56 36 70 34 Q72 46 64 52 Q86 48 92 64 Q70 70 58 64 L40 78 Q26 72 22 58','M68 42 L72 42']
+      };
+      function place(name,sz,css){if(!PATHS[name])return;var d=document.createElement('div');d.className='d';d.style.cssText=css;d.appendChild(draw(PATHS[name],sz));art.appendChild(d);}
+      function text(t,css,size){var e=document.createElement('div');e.className='ltr';e.style.cssText=css+';font-size:'+size+'px';t.split('').forEach(function(ch){if(ch==='\n'){e.appendChild(document.createElement('br'));return;}var sp=document.createElement('span');if(ch===' ')sp.innerHTML='&nbsp;';else sp.textContent=ch;sp.style.transform='rotate('+((rnd()-0.5)*16)+'deg) translateY('+((rnd()-0.5)*7)+'px)';sp.style.fontSize=(0.82+rnd()*0.42)+'em';e.appendChild(sp);});art.appendChild(e);}
+      if(window.matchMedia('(max-width:560px)').matches){
+        place('clap',8,'top:3vh;left:5vw;width:92px;transform:rotate(-6deg)');
+        place('goog',9,'top:3vh;right:5vw;width:104px;transform:rotate(7deg)');
+        text('十',"top:13vh;left:45vw;transform:rotate(-4deg)",30);
+        place('fuji',7,'bottom:3vh;left:6vw;width:84px;transform:rotate(4deg)');
+        place('sushi',8,'bottom:3vh;right:6vw;width:88px;transform:rotate(-5deg)');
+        place('fb',8,'bottom:13vh;left:36vw;width:70px;transform:rotate(-4deg)');
+      } else {
+        place('buckethead',6.5,'top:3vh;left:2vw;width:175px;transform:rotate(-4deg)');
+        place('coupe',7,'top:4vh;left:17vw;width:88px;transform:rotate(7deg)');
+        place('clap',8,'top:7vh;left:28vw;width:150px;transform:rotate(-6deg)');
+        place('cork',10,'top:2vh;right:27vw;width:80px;transform:rotate(5deg)');
+        place('goog',9,'top:5vh;right:8vw;width:170px;transform:rotate(8deg)');
+        place('star',7,'top:3vh;right:3vw;width:46px;transform:rotate(-12deg)');
+        text('十',"top:20vh;left:21vw;transform:rotate(-6deg)",44);
+        place('wine',8,'top:22vh;left:30vw;width:74px;transform:rotate(6deg)');
+        place('catglass',5.5,'top:30vh;left:1vw;width:140px;transform:rotate(3deg)');
+        place('forkknife',7,'top:33vh;right:2vw;width:70px;transform:rotate(7deg)');
+        place('fb',8,'top:52vh;right:5vw;width:128px;transform:rotate(-5deg)');
+        place('blade',7,'top:55vh;right:23vw;width:74px;transform:rotate(9deg)');
+        place('fish',6,'top:48vh;left:6vw;width:120px;transform:rotate(-7deg)');
+        place('col',8,'bottom:2vh;left:4vw;width:118px;transform:rotate(-4deg)');
+        place('noodle',8,'bottom:4vh;left:20vw;width:128px;transform:rotate(6deg)');
+        place('sake',7,'bottom:6vh;left:36vw;width:72px;transform:rotate(-8deg)');
+        place('bird',6,'bottom:3vh;right:24vw;width:155px;transform:rotate(4deg)');
+        place('sushi',8,'bottom:5vh;right:13vw;width:96px;transform:rotate(-6deg)');
+        place('fuji',7,'bottom:3vh;right:2vw;width:88px;transform:rotate(5deg)');
+        text('MAKE THINGS\nAS SIMPLE AS\nPOSSIBLE BUT\nNOT SIMPLER',"bottom:17vh;left:29vw;transform:rotate(-3deg)",19);
+        place('star',6,'bottom:24vh;right:28vw;width:34px;transform:rotate(10deg)');
+      }
+    }).catch(function(){});
   })();
   </script>
   <div class="lc">
