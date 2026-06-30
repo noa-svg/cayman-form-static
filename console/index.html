@@ -2546,8 +2546,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       {itemId:'d-onb-2',nameEn:'Almog Hazon',nameHe:'אלמוג חזון',email:'almog@example.com',nickname:'מוגי'}
     ]};
     if(qs.indexOf('?admin=searchLps')===0) return {ok:true,matches:[
-      {itemId:'d-ppl-1',nameHe:'עידו חגאי',nameEn:'Ido Hagai',email:'ido@example.com',nickname:'עידו'},
-      {itemId:'d-ppl-2',nameHe:'דליה כהן',nameEn:'Dalya Cohen',email:'dalya@example.com',nickname:'דלי'}
+      {itemId:'d-ppl-1',name:'Ido Hagai',nameHe:'עידו חגאי',nameEn:'',email:'ido@example.com',nickname:'עידו'},
+      {itemId:'d-ppl-2',name:'Dalya Cohen',nameHe:'',nameEn:'',email:'dalya@example.com',nickname:'דלי'}
     ]};
     return {ok:true};
   }
@@ -3106,7 +3106,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
     if(!inp||!box||!picked)return;
     var T=null,rows=[],active=-1;
-    function subline(m){return [(m.nameHe&&m.nameEn)?m.nameEn:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
+    function subline(m){var en=m.name||m.nameEn;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
     function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
     window.__lpClearPick=clearPick;
     function setPick(m){
