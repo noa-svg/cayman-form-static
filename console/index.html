@@ -549,6 +549,10 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .dslot3 { bottom: 7vh; left: 8vw; transform: rotate(-3deg); }
 .dslot4 { bottom: 5vh; left: 50%; margin-left: -56px; transform: rotate(4deg); width: clamp(70px, 14vw, 112px); }
 .dslot5 { bottom: 8vh; right: 7vw; transform: rotate(-5deg); }
+.h-ju  { top: 5vh; left: 24vw; transform: rotate(-3deg); width: clamp(58px, 10vw, 92px); }
+.h-bag { top: 7vh; right: 23vw; transform: rotate(5deg); width: clamp(58px, 10vw, 96px); }
+.h-tlv { bottom: 8vh; left: 25vw; transform: rotate(-4deg); width: clamp(54px, 9vw, 88px); }
+.h-kri { bottom: 7vh; right: 22vw; transform: rotate(6deg); width: clamp(56px, 9vw, 90px); }
 .spark { position: absolute; color: #1a1a1a; opacity: 0.7; }
 .spark svg { width: 100%; height: auto; display: block; }
 .s1 { top: 22vh; left: 17vw; width: 20px; transform: rotate(8deg); }
@@ -556,7 +560,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .s3 { bottom: 23vh; left: 23vw; width: 22px; transform: rotate(6deg); }
 .s4 { bottom: 19vh; right: 19vw; width: 18px; transform: rotate(-6deg); }
 @media (max-width: 560px) {
-  .dslot4 { display: none; }
+  .dslot4, .h-ju, .h-bag, .h-tlv, .h-kri { display: none; }
   .dslot1, .dslot2 { top: 3vh; }
   .dslot3, .dslot5 { bottom: 3vh; }
   .doodle { width: clamp(64px, 23vw, 104px); }
@@ -3785,6 +3789,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <div class="doodle dslot3" data-slot="3"></div>
     <div class="doodle dslot4" data-slot="4"></div>
     <div class="doodle dslot5" data-slot="5"></div>
+    <!-- house doodles: fixed fun elements that sit AMONG the live position doodles -->
+    <div class="doodle h-ju"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-linecap="round" stroke-linejoin="round"><path d="M40 20 L39 82" stroke-width="6.6"/><path d="M14 50 L66 49" stroke-width="6.6"/><circle cx="74" cy="28" r="13" stroke-width="3.2"/></svg></div>
+    <div class="doodle h-bag"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M26 42 Q26 22 50 22 Q74 22 74 42 L74 84 Q74 90 66 90 L34 90 Q26 90 26 84 Z"/><path d="M38 90 Q36 62 47 55 Q55 53 63 57 Q70 70 68 90"/><path d="M44 64 L56 64 L55 74 L45 74 Z"/><path d="M50 64 L50 74" stroke-width="2"/><path d="M34 43 Q30 35 38 33 M66 43 Q70 35 62 33"/></svg></div>
+    <div class="doodle h-tlv"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="46" cy="27" r="14"/><path d="M33 24 L59 22" stroke-width="2.6"/><rect x="35" y="24" width="9" height="7" rx="2.4"/><rect x="48" y="23.5" width="9" height="7" rx="2.4"/><path d="M37 50 Q46 44 56 50 L60 84 L36 84 Z"/><path d="M60 56 Q72 58 74 74"/><rect x="68" y="70" width="13" height="16" rx="2"/><path d="M70 76 L80 76 M74 65 L74 70" stroke-width="2"/></svg></div>
+    <div class="doodle h-kri"><svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M28 40 L72 40 L66 86 Q50 90 34 86 Z"/><path d="M24 40 Q50 32 76 40 L76 34 Q50 26 24 34 Z"/><path d="M76 37 Q92 22 86 16"/><path d="M40 56 q6 -7 11 0 q5 7 11 0" stroke-width="2.6"/><circle cx="46" cy="68" r="1.8" fill="#1a1a1a" stroke="none"/><circle cx="56" cy="73" r="1.8" fill="#1a1a1a" stroke="none"/></svg></div>
     <span class="spark s1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3 L12 21 M3 12 L21 12"/></svg></span>
     <span class="spark s2"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg></span>
     <span class="spark s3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 4 L20 20 M20 4 L4 20"/></svg></span>
@@ -3796,7 +3805,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
      neutral ink mark (no ticker text) so the public page never leaks a name. */
   var DOODLE_LIB = {
     lion: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 45 Q18 44 20 44 L80 47 Q83 47 82 50 L79 84 Q78 87 74 87 L25 85 Q21 85 21 81 Z"/><path d="M17 32 Q16 30 19 30 L83 22 Q86 22 86 25 L88 38 Q88 41 85 41 L21 49 Q18 49 18 46 Z"/><path d="M30 30 L36 48 M45 28 L51 46 M60 26 L66 44 M75 24 L81 42" stroke-width="5.4"/><path d="M31 60 Q50 58 69 60 M31 71 Q46 70 61 71" stroke-width="2.3"/></svg>',
-    ftai: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 58 Q15 51 24 51 L70 53 Q86 54 90 59 Q86 64 70 64 L24 65 Q15 65 14 58 Z"/><path d="M40 62 L50 76 L60 76 L56 61"/><path d="M22 57 L13 42 L23 45 L29 55"/><path d="M78 56 Q82 56 84 58 M70 56 Q74 56 76 57.5" stroke-width="2.6"/><path d="M34 59 L37 59 M44 59.4 L47 59.4 M54 60 L57 60" stroke-width="2.4"/></svg>',
+    ftai: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M46 58 C37 46 40 25 52 15 C61 22 62 42 56 58 Z"/><path d="M41 58 L61 58 L59 63 L43 63 Z"/><path d="M45 63 L43 67 L47 69 L44 73 L48 75 L45 79 L50 86 L55 79 L52 75 L56 73 L53 69 L57 67 L55 63"/><circle cx="45" cy="29" r="1.5" fill="#1a1a1a" stroke="none"/><circle cx="44.5" cy="38" r="1.5" fill="#1a1a1a" stroke="none"/><circle cx="45" cy="47" r="1.5" fill="#1a1a1a" stroke="none"/></svg>',
     apo:  '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M28 26 Q50 23 72 26 M26 33 Q50 30 74 33"/><path d="M35 26 Q29 18 37 18 M65 26 Q71 18 63 18"/><path d="M37 34 L39 78 M50 33 L50 78 M63 34 L61 78"/><path d="M44 34 L45 78 M57 34 L56 78" stroke-width="2"/><path d="M28 79 Q50 76 72 79 M22 87 Q50 84 78 87"/></svg>',
     goog: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M62 40 A24 24 0 1 1 61.5 39 Z"/><path d="M60 62 L84 86" stroke-width="6.4"/><path d="M30 38 Q40 28 52 36" stroke-width="2.6"/></svg>',
     meta: '<svg viewBox="0 0 100 100" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M50 50 C41 28 16 28 16 50 C16 72 41 72 50 50 C59 28 84 28 84 50 C84 72 59 72 50 50 Z"/></svg>',
