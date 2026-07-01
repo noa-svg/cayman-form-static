@@ -3793,8 +3793,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   <path d="M426 30 L426 78 L410 98 L410 190 L462 190 L462 98 L446 78 L446 30 Z"/>
   <path d="M414 128 L458 128"/>
 
-  <!-- ===== pour-line squiggle bottle -> card ===== -->
-  <path d="M436 30 Q460 150 520 214 Q556 250 536 262 Q516 272 524 244 Q536 214 556 236 Q610 288 648 372 Q672 420 712 420"/>
+  <!-- ===== pour-line: pours DOWN-LEFT into the open gap, clear of the card ===== -->
+  <path d="M446 60 Q470 156 452 236 Q436 288 458 302 Q476 312 460 328 Q444 338 450 368 Q456 410 430 452"/>
 
   <!-- ===== CHERRIES ===== -->
   <path d="M600 138 Q586 138 586 154 Q586 172 604 172 Q620 170 620 154 Q618 140 602 138 Z"/>
@@ -3837,7 +3837,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   <path d="M452 840 Q484 836 486 806"/>
 
   <!-- ===== JOBS, below card (left) ===== -->
-  <g transform="translate(500,565) scale(0.6)">
+  <g transform="translate(500,612) scale(0.52)">
     <path d="M20 46 Q32 36 56 36 Q82 36 92 48 Q110 68 106 96 Q100 126 70 134 Q44 138 26 122 Q8 100 12 72 Q15 56 20 46 Z"/>
     <path d="M22 46 L26 34 M40 40 L44 30 M58 38 L62 28 M78 40 L82 30 M94 48 L98 38"/>
     <path d="M26 92 Q26 78 40 78 Q54 78 54 92 Q54 106 40 106 Q26 106 26 92 Z"/>
@@ -3853,7 +3853,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   </g>
 
   <!-- ===== BUFFETT, below card (right) ===== -->
-  <g transform="translate(790,559) scale(0.6)">
+  <g transform="translate(780,606) scale(0.52)">
     <path d="M22 44 Q36 32 62 32 Q90 32 104 46 Q124 68 120 100 Q112 132 78 140 Q48 144 28 126 Q10 100 14 70 Q18 54 22 44 Z"/>
     <path d="M26 56 Q66 40 108 56 M18 78 Q12 62 24 56 M112 78 Q118 62 108 56"/>
     <path d="M28 84 L52 84 L52 106 L28 106 Z"/>
@@ -3887,11 +3887,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
-<svg id="login-top" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
- <g filter="url(#lvink-brush)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke-width="3.2" d="M712 420 Q742 452 726 486 Q762 520 748 560"/>
- </g>
-</svg>
+<svg id="login-top" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"><g></g></svg>
 <script>(function(){
 var GLYPH={
  M:['M10 130 L14 12','M12 14 L50 84','M50 84 L88 14','M86 12 L90 130'],A:['M10 130 L50 12','M50 12 L90 130','M27 92 L73 90'],
@@ -3920,7 +3916,7 @@ word('MAKE',70,26,74,3.4);
 word('THINGS',975,360,42,2.4);
 word('AS',880,150,40,2.4);
 word('SIMPLE',995,238,74,3.4);
-word('AS',600,258,40,2.4);
+word('AS',600,222,38,2.4);
 word('POSSIBLE',286,470,32,2.4);
 word('BUT',300,690,40,2.4);
 word('NOT',620,660,40,2.4);
