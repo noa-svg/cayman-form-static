@@ -3857,10 +3857,30 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
    <path stroke-width="8" d="M894 214 L1000 214 Q986 262 962 266 Q938 262 894 214 Z M962 266 L962 344 M938 350 Q962 340 986 350"/>
    <!-- cherries (right of card, close the gap) -->
    <path stroke-width="6" d="M1066 604 Q1066 616 1078 616 Q1090 616 1090 604 Q1090 592 1078 592 Q1066 592 1066 604 Z M1094 618 Q1094 606 1106 606 Q1118 606 1118 618 Q1118 630 1106 630 Q1094 630 1094 618 Z M1078 592 Q1090 566 1108 566 M1106 606 Q1110 570 1108 566"/>
+   <!-- iter5 density+cluster fills: each placed to touch a neighbour -->
+   <!-- small tumbler beside the man's raised coupe (drinker cluster) -->
+   <path stroke-width="7" d="M298 302 L338 302 L334 372 Q316 380 298 372 Z M300 302 L336 302"/>
+   <!-- little bottle above the man, touching MAKE's M (drinker/top cluster) -->
+   <path stroke-width="6" d="M296 160 L316 160 L316 172 Q322 178 322 190 L322 238 Q322 242 316 242 L300 242 Q294 242 294 238 L294 190 Q294 178 300 172 Z M296 206 L318 206"/>
+   <!-- lemon in the left-mid gap, touching the flutes (bar cluster) -->
+   <path stroke-width="7" d="M300 780 Q300 746 332 746 Q364 746 364 780 Q364 814 332 814 Q300 814 300 780 Z M360 758 Q380 748 388 756"/>
+   <!-- grapes left of card, touching the goblet stem (bar cluster) -->
+   <path stroke-width="5" d="M470 640 Q470 632 478 632 Q486 632 486 640 Q486 648 478 648 Q470 648 470 640 Z M488 654 Q488 646 496 646 Q504 646 504 654 Q504 662 496 662 Q488 662 488 654 Z M454 654 Q454 646 462 646 Q470 646 470 654 Q470 662 462 662 Q454 662 454 654 Z M478 630 Q482 616 496 614"/>
+   <!-- fig by Buffett's feet (ground cluster) -->
+   <path stroke-width="6" d="M604 946 Q584 946 584 972 Q584 1000 616 1000 M604 946 L604 932 M604 932 Q614 924 624 928"/>
+   <!-- iter6: close the sparse upper-right zone (label cluster) -->
+   <path stroke-width="7" d="M1082 236 L1122 236 L1118 300 Q1100 308 1082 300 Z M1084 236 L1120 236 M1100 308 L1100 340"/>
+   <path stroke-width="5" d="M1180 320 Q1180 308 1192 308 Q1204 308 1204 320 Q1204 332 1192 332 Q1180 332 1180 320 Z M1208 334 Q1208 322 1220 322 Q1232 322 1232 334 Q1232 346 1220 346 Q1208 346 1208 334 Z M1192 306 Q1196 292 1210 290"/>
+   <!-- olive branch closing the right-mid gap (still-life cluster) -->
+   <path stroke-width="5" d="M1250 700 Q1300 676 1356 688 M1286 688 Q1284 674 1296 672 Q1308 676 1304 690 M1320 690 Q1318 676 1330 674 Q1342 678 1338 692"/>
   </g>
 
   <!-- white knockouts (eyes on solid fills) -->
   <g fill="none" stroke="#FAFAF7" stroke-width="5"><path d="M1378 776 L1386 776"/><path d="M176 852 L182 852 M232 852 L238 852"/></g>
+  <!-- pinstripes on the man's jacket (criterion 4: patterned clothing) -->
+  <g fill="none" stroke="#FAFAF7" stroke-width="4" filter="url(#lvink-brush)"><path d="M78 300 L214 292 M84 342 L222 334 M90 384 L224 376 M96 424 L214 416"/></g>
+  <!-- Jobs + Buffett: split the pillar bottoms into two legs so they read as standing figures (criterion 8) -->
+  <g fill="none" stroke="#FAFAF7" stroke-width="9" stroke-linecap="round" filter="url(#lvink-brush)"><path d="M516 1000 L516 948 M678 1000 L678 946"/></g>
  </g>
 </svg>
   <div class="lc">
@@ -3894,17 +3914,22 @@ var GLYPH={
  U:['M15 12 L15 96 Q15 130 50 130 Q85 130 85 96 L85 12'],R:['M15 130 L15 12','M15 12 L68 12 Q90 32 68 60 L15 60','M43 60 L86 130']};
 var svgns='http://www.w3.org/2000/svg', ink=document.getElementById('scene');
 var seed=7; function rr(){seed=(seed*16807)%2147483647;return seed/2147483647;}
-function letter(ch,x,y,h,sw,solid){var g=GLYPH[ch];if(!g)return 0;var w=h*0.72;
- var tilt=(rr()-0.5)*7,sx=w/100*(0.9+rr()*0.18),sy=h/130*(0.92+rr()*0.14),oy=(rr()-0.5)*h*0.08;
+function letter(ch,x,y,h,sw,solid){var g=GLYPH[ch];if(!g)return 0;
+ // confident hand-lettering: per-letter SIZE + WEIGHT variation, minimal tilt (not shaky).
+ var hv=0.80+rr()*0.40;                 // 0.80..1.20 -> letters genuinely differ in size within a word
+ var w=h*0.72*hv;
+ var tilt=(rr()-0.5)*4.5, sx=w/100*(0.92+rr()*0.14), sy=h/130*hv*(0.96+rr()*0.10), oy=(rr()-0.5)*h*0.06;
+ var wv=sw*(0.75+rr()*0.7);             // weight varies per letter (thick/thin brush)
  var grp=document.createElementNS(svgns,'g');
  grp.setAttribute('transform','translate('+x+' '+(y+oy)+') rotate('+tilt+') scale('+sx+' '+sy+')');grp.setAttribute('filter','url(#brush)');
- g.forEach(function(d){var p=document.createElementNS(svgns,'path');p.setAttribute('d',d);p.setAttribute('fill',solid?'#1A1A1A':'none');
-   p.setAttribute('stroke','#1A1A1A');p.setAttribute('stroke-width',(sw/((sx+sy)/2)));p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');grp.appendChild(p);});
- ink.appendChild(grp);return w+h*0.14;}
+ g.forEach(function(d,i){var jd=d.replace(/-?\d+\.?\d*/g,function(m){return (parseFloat(m)+(rr()-0.5)*6.5).toFixed(1);});var p=document.createElementNS(svgns,'path');p.setAttribute('d',jd);p.setAttribute('fill',solid?'#1A1A1A':'none');
+   p.setAttribute('stroke','#1A1A1A');p.setAttribute('stroke-width',((wv*(0.85+((i*97)%7)/23))/((sx+sy)/2)));
+   p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');grp.appendChild(p);});
+ ink.appendChild(grp);return w+h*0.13;}
 function word(str,x,y,h,sw,solid){var cx=x;for(var i=0;i<str.length;i++){cx+=letter(str[i],cx,y,h,sw,solid)+h*0.05;}return cx;}
 // heroes MAKE + SIMPLE; rest mid. all fit inside 40..1560, off the card center.
-word('MAKE',360,40,128,15,true);       // hero top-center -> ~ends 816
-word('SIMPLE',904,40,118,15,true);     // hero top-right -> ~ends 1496
+word('MAKE',360,40,128,26,true);       // hero top-center, bold -> ~ends 816
+word('SIMPLE',904,40,118,24,true);     // hero top-right, bold -> ~ends 1496
 word('THINGS',1188,470,60,8,false);    // mid, right -> ends ~1520 (touches right)
 word('AS',430,616,62,8,false);
 word('AS',1246,624,58,8,false);
