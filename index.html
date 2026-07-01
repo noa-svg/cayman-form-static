@@ -1327,7 +1327,11 @@
         <!-- ========================= PAGE: COMMUNICATIONS (shared; additional emails + family-office opt-in) ========================= -->
         <section class="lvp-page" data-page="comms">
           <h2 class="lvp-page__title">Communications</h2>
-          <p class="lvp-hint-small">Add any additional email addresses for regular communication. Optional.</p>
+          <p class="lvp-page__hint">The signed documents and monthly updates go to your email. Add anyone else who should be copied.</p>
+          <!-- Actual LP email, shown for reassurance. Non-translatable (dir=ltr), set by
+               updateCommsEcho() from the applicant email field; hidden when blank. -->
+          <div id="commsEchoEmail" dir="ltr" style="font-size:14px;font-weight:600;color:var(--lvp-navy,#0D3F6A);margin:-2px 0 8px" hidden></div>
+          <label class="lvp-field__label" style="display:block;margin:0 0 6px">Additional recipients (up to 2)</label>
           <div data-repeating-typed-path="comms.additionalEmails" data-repeating-min="0" data-repeating-max="2" data-repeating-template="email"></div>
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="comms.additionalEmails">+ Add an email</button>
           <template data-row-template="email">
@@ -1336,8 +1340,8 @@
               <button type="button" class="lvp-btn--link" data-action="remove-row">Remove</button>
             </div>
           </template>
-          <label class="lvp-checkbox"><input type="checkbox" name="comms.ccFamilyOffice" value="true" data-show-when-trigger="comms.ccFamilyOffice"> Copy my family office on my regular communications with the fund, including monthly yield confirmations.</label>
-          <label class="lvp-field" data-required data-show-when="comms.ccFamilyOffice=true"><span class="lvp-field__label">Family office email</span><input class="lvp-input" type="email" name="comms.foEmail" inputmode="email" autocomplete="off"></label>
+          <label class="lvp-checkbox" style="margin-top:20px"><input type="checkbox" name="comms.ccFamilyOffice" value="true"> Copy my family office</label>
+          <input class="lvp-input" type="email" name="comms.foEmail" inputmode="email" autocomplete="off" placeholder="office@family.com" style="margin-top:8px">
         </section>
 
         <!-- ========================= PAGE: REVIEW + SUBMIT ========================= -->
@@ -2774,7 +2778,7 @@
       if (page.getAttribute('data-page') === 'fatcaCrs') { seedTaxResidencyFirstRow_(); }
       // One page before review (comms is always last before it): start the
       // pack render in the background so review opens already loaded.
-      if (page.getAttribute('data-page') === 'comms') { prefetchDocPreview(); }
+      if (page.getAttribute('data-page') === 'comms') { prefetchDocPreview(); updateCommsEcho(); }
       if (page.getAttribute('data-page') === 'review') { loadDocPreview(); }
       setStatus('');
       window.scrollTo(0, 0);
@@ -2787,6 +2791,20 @@
         try { pageHeading.focus({ preventScroll: true }); } catch (e) { pageHeading.focus(); }
       }
     }
+    // Echo the LP's own email into the Communications page so they see where their
+    // documents go. Reads the applicant email field (individual or entity); hides the
+    // line when blank. Non-translatable (dir=ltr on the element).
+    function updateCommsEcho() {
+      var span = document.getElementById('commsEchoEmail');
+      if (!span) return;
+      var iv = form.querySelector('[name="individual.email"]');
+      var ev = form.querySelector('[name="entity.email"]');
+      var e = ((iv && iv.value) || (ev && ev.value) || '').trim();
+      if (e) { span.textContent = e; span.hidden = false; } else { span.textContent = ''; span.hidden = true; }
+    }
+    form.addEventListener('input', function (ev) {
+      if (ev.target && (ev.target.name === 'individual.email' || ev.target.name === 'entity.email')) updateCommsEcho();
+    });
     // Map a saved resumePage data-page id to its index in the CURRENT visible-page
     // sequence (the sequence depends on applicant type + conditionals, so resolve it
     // live). Returns -1 when the id is unknown (e.g. a page now filtered out).
