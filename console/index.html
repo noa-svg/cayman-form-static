@@ -3758,144 +3758,105 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
- <svg id="login-ink" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <filter id="lvink-brush" x="-30%" y="-30%" width="160%" height="160%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.014 0.02" numOctaves="2" seed="5" result="c"/>
-    <feDisplacementMap in="SourceGraphic" in2="c" scale="8" result="d1"/>
-    <feTurbulence type="fractalNoise" baseFrequency="0.85 1.0" numOctaves="2" seed="3" result="f"/>
-    <feDisplacementMap in="d1" in2="f" scale="4"/>
-    <feComponentTransfer><feFuncA type="discrete" tableValues="0 0 1 1 1"/></feComponentTransfer>
-  </filter>
-</defs>
-<g filter="url(#lvink-brush)">
- <!-- ============ STROKED PRIMITIVES ============ -->
- <g fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-  <!-- mustache man face (head outline; body is solid below) top-left, hair to top -->
-  <path stroke-width="6" d="M74 74 Q74 44 106 44 Q138 44 138 74 Q138 102 106 106 Q74 102 74 74 Z"/>
-  <path stroke-width="4" d="M88 70 L100 70 M112 70 L124 70"/>
-  <path stroke-width="4" d="M106 74 L102 88 L112 88"/>
-  <!-- coupe in his raised hand -->
-  <path stroke-width="5" d="M168 120 L226 120 Q212 150 190 154 Q168 150 168 120 Z"/>
-  <path stroke-width="5" d="M190 154 L190 188 M172 192 Q190 184 208 192"/>
-  <path stroke-width="5" d="M150 176 Q182 150 196 138"/>
-  <!-- two coupe glasses -->
-  <path stroke-width="5" d="M250 150 L326 150 Q310 184 288 188 Q266 184 250 150 Z"/>
-  <path stroke-width="5" d="M288 188 L288 236 M270 240 Q288 232 306 240"/>
-  <path stroke-width="5" d="M232 210 L300 210 Q286 240 266 244 Q246 240 232 210 Z"/>
-  <path stroke-width="5" d="M266 244 L266 288 M248 292 Q266 284 284 292"/>
-  <!-- flower stem -->
-  <path stroke-width="4" d="M356 244 Q352 190 346 150"/>
-  <path stroke-width="3" d="M350 188 Q328 180 322 162 M350 214 Q374 206 380 188"/>
-  <path stroke-width="4" d="M346 150 Q334 134 352 132 Q370 130 372 150 Q362 164 348 158"/>
-  <!-- champagne flutes (left edge) -->
-  <path stroke-width="5" d="M12 470 L12 512 M44 466 L44 512 M76 470 L76 512"/>
-  <path stroke-width="4" d="M4 520 L88 520"/>
-  <path stroke-width="5" d="M7 466 L17 466 L14 440 L4 440 Z M39 466 L49 466 L46 436 L36 436 Z M71 466 L81 466 L78 440 L68 440 Z"/>
-  <!-- large wine goblet (center-left of card) -->
-  <path stroke-width="6" d="M250 520 Q250 600 312 610 Q374 600 374 520 Q312 508 250 520 Z"/>
-  <path stroke-width="6" d="M312 610 L312 686 M276 692 Q312 682 348 692"/>
-  <path stroke-width="4" d="M262 534 Q312 544 362 534"/>
-  <!-- face + lips -->
-  <path stroke-width="4" d="M400 640 Q400 616 426 616 Q452 616 452 640 Q452 664 426 666 Q400 664 400 640 Z"/>
-  <path stroke-width="3" d="M410 634 L420 634 M432 634 L442 634 M420 650 Q426 656 434 650"/>
-  <!-- big corkscrew (center) -->
-  <path stroke-width="6" d="M470 470 Q580 458 686 470"/>
-  <path stroke-width="6" d="M578 470 L578 540"/>
-  <path stroke-width="5" d="M578 540 Q556 552 578 568 Q600 584 578 600 Q556 616 578 632 Q562 644 582 656"/>
-  <!-- knife (right-center) -->
-  <path stroke-width="6" d="M980 560 L1082 544 Q1124 544 1116 562 L992 574 Z"/>
-  <path stroke-width="6" d="M992 574 L968 580 L964 564 L988 560"/>
-  <!-- wine bottle pouring (top-center) -->
-  <path stroke-width="6" d="M640 150 L724 112 L740 146 L716 208 L640 236 L622 190 Z"/>
-  <path stroke-width="5" d="M664 142 L680 135"/>
-  <!-- candle (right) -->
-  <path stroke-width="6" d="M1240 470 L1240 600 L1290 600 L1290 470 Z"/>
-  <path stroke-width="5" d="M1265 470 Q1252 448 1265 418 Q1280 448 1265 470 Z"/>
-  <!-- small corkscrew bottom-center -->
-  <path stroke-width="5" d="M654 760 Q654 736 680 736 Q706 736 706 760 Q706 784 680 784 Q654 784 654 760 Z"/>
-  <path stroke-width="5" d="M680 784 L680 830 Q662 842 680 858 Q700 874 680 890"/>
- </g>
+ <svg id="login-ink" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+ <defs><filter id="lvink-brush" x="-6%" y="-6%" width="112%" height="112%">
+   <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed="4" result="n"/>
+   <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+ </filter></defs>
+ <g id="scene" filter="url(#lvink-brush)">
+  <!-- ============ solid-black hero fills ============ -->
+  <g fill="#1A1A1A" stroke="none">
+   <!-- mustache man body (seated, suit) LEFT+TOP edge -->
+   <path d="M60 250 Q34 314 52 430 Q30 520 86 548 L118 548 L116 470 L182 470 Q178 540 220 544 Q272 540 258 484 Q242 388 230 332 Q222 250 158 240 Q100 234 60 250 Z"/>
+   <path d="M90 548 L78 640 L138 640 L132 548 Z"/>
+   <path d="M182 548 L196 640 L256 634 L236 548 Z"/>
+   <!-- corkscrew T-bar (center) -->
+   <path d="M820 360 L1010 360 L1010 396 L820 396 Z"/>
+   <!-- dove body RIGHT edge -->
+   <path d="M1230 800 Q1286 736 1366 754 Q1352 722 1396 716 Q1412 744 1382 766 Q1448 756 1478 800 Q1420 826 1378 808 L1298 846 Q1242 830 1230 800 Z"/>
+   <!-- cat BOTTOM edge -->
+   <path d="M150 1000 L152 860 Q120 828 152 800 L128 770 L168 786 Q190 770 212 786 L254 772 Q286 802 258 832 Q290 864 270 1000 Z"/>
+   <!-- Jobs turtleneck -->
+   <path d="M474 1000 L468 830 Q464 788 496 778 Q538 770 562 784 Q578 832 572 872 L570 1000 Z"/>
+   <!-- Buffett body -->
+   <path d="M636 1000 L632 850 Q630 802 666 792 Q712 784 736 800 Q752 850 744 892 L742 1000 Z"/>
+   <!-- palm pot BOTTOM+RIGHT -->
+   <path d="M1418 1000 L1408 908 L1508 908 L1496 1000 Z"/>
+  </g>
 
- <!-- ============ SOLID-BLACK HEROES ============ -->
- <g fill="#1A1A1A" stroke="none">
-  <!-- mustache man body (seated solid) -->
-  <path d="M78 108 Q58 168 68 254 L54 396 Q52 408 68 408 L102 406 L104 300 L120 300 L122 406 L156 404 Q172 404 168 392 L156 254 Q176 166 150 112 Q114 96 78 108 Z"/>
-  <path d="M90 90 Q106 100 124 90 Q114 98 106 96 Q98 98 90 90 Z"/>
-  <!-- dove (right, wing to right edge) -->
-  <path d="M1120 660 Q1170 610 1235 622 Q1224 594 1260 586 Q1276 612 1250 632 Q1310 618 1360 652 L1360 668 Q1310 684 1256 668 L1180 710 Q1132 700 1120 660 Z"/>
-  <path d="M1190 662 L1280 638 L1272 666 Z"/>
-  <!-- cat + patterned glass (bottom-left) -->
-  <path d="M120 850 Q112 780 158 774 Q204 780 196 850 L120 850 Z"/>
-  <path d="M138 780 L130 754 L154 772 Z M182 780 L190 754 L166 772 Z"/>
-  <circle cx="146" cy="806" r="3.5"/><circle cx="170" cy="806" r="3.5"/>
-  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
-   <path d="M198 812 L250 792"/>
-   <path d="M250 744 Q250 792 288 800 Q326 792 326 744 Q288 736 250 744 Z"/>
-   <path d="M288 800 L288 872 M266 878 Q288 870 310 878"/>
-   <path d="M86 818 L118 822 M86 832 L118 830"/>
-  </g>
-  <circle cx="270" cy="760" r="3.5"/><circle cx="300" cy="770" r="3.5"/><circle cx="282" cy="782" r="3.5"/>
-  <!-- palm in pot (bottom-right, planted on bottom) -->
-  <path d="M1290 900 L1280 828 L1350 828 L1340 900 Z"/>
-  <g fill="none" stroke="#1A1A1A" stroke-width="7" stroke-linecap="round">
-   <path d="M1315 828 L1313 736"/>
-   <path d="M1313 740 Q1276 722 1256 736 M1313 746 Q1350 724 1372 740 M1313 736 Q1298 702 1276 694 M1313 736 Q1332 704 1356 698"/>
-  </g>
-  <!-- STEVE JOBS (mandatory) bottom-center -->
-  <path d="M470 900 L470 792 Q470 774 498 770 Q552 764 580 770 Q608 774 608 792 L610 900 Z"/>
-  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
-   <path d="M496 752 Q496 722 540 722 Q584 722 584 752 Q584 780 540 784 Q496 780 496 752 Z"/>
-   <path d="M506 750 Q506 734 522 734 Q538 734 538 750 Q538 766 522 766 Q506 766 506 750 Z"/>
-   <path d="M544 750 Q544 734 560 734 Q576 734 576 750 Q576 766 560 766 Q544 766 544 750 Z"/>
-   <path d="M538 750 L544 750 M496 750 L487 748 M584 750 L593 748"/>
-   <path d="M514 770 Q540 780 566 770"/>
-  </g>
-  <!-- WARREN BUFFETT (mandatory) bottom-center-right, coke bottle -->
-  <path d="M770 900 L762 800 Q762 782 790 778 Q838 772 866 778 Q894 782 894 800 L890 900 Z"/>
-  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
-   <path d="M790 760 Q790 730 834 730 Q878 730 878 760 Q878 788 834 792 Q790 788 790 760 Z"/>
-   <path d="M800 762 Q800 748 816 748 Q832 748 832 762 M832 762 Q832 748 848 748 Q864 748 864 762"/>
-   <path d="M804 748 Q796 736 808 736 Q820 736 818 748 M840 762 Q838 748 850 748"/>
-   <path d="M812 778 Q834 786 856 778"/>
-   <path d="M892 812 L908 814 L904 878 L884 876"/>
-  </g>
-  <!-- cherries, grapes fill -->
-  <circle cx="400" cy="330" r="15"/><circle cx="434" cy="348" r="15"/>
-  <g fill="none" stroke="#1A1A1A" stroke-width="3"><path d="M400 315 Q418 288 444 288 M434 333 Q440 292 444 288"/></g>
-  <circle cx="128" cy="650" r="11"/><circle cx="152" cy="664" r="11"/><circle cx="110" cy="670" r="11"/><circle cx="136" cy="682" r="11"/>
- </g>
+  <!-- ============ line objects + figure details ============ -->
+  <g fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+   <!-- man head + hair + face + mustache (over black body) -->
+   <path stroke-width="7" fill="#FAFAF7" d="M84 138 Q58 138 58 186 Q58 236 118 238 Q178 236 178 186 Q178 138 146 136 Q116 134 84 138 Z"/>
+   <path stroke-width="10" fill="#1A1A1A" d="M62 140 Q88 82 120 100 Q108 122 88 128 M120 100 Q158 82 172 140 Q146 108 130 124"/>
+   <path stroke-width="5" d="M88 188 L104 188 M136 188 L152 188"/>
+   <path stroke-width="6" d="M118 196 L114 210 L126 210"/>
+   <path stroke-width="11" fill="#1A1A1A" d="M84 224 Q120 246 158 224 Q138 240 120 240 Q102 240 84 224 Z"/>
+   <path stroke-width="10" d="M230 342 Q306 360 344 424"/>
+   <path stroke-width="7" d="M316 434 L380 434 Q368 476 348 482 Q328 476 316 434 Z M348 482 L348 548 M324 554 Q348 546 372 554"/>
+   <path stroke-width="6" d="M300 470 L300 660 M300 500 L360 494"/>
 
- <!-- hand-lettered quote, brushed via the ink filter (legible; raw-path letters garbled) -->
- <g fill="#1A1A1A" stroke="none" font-family="'Arial Black',Impact,sans-serif" font-weight="900">
-  <text x="466" y="122" font-size="80" transform="rotate(-2 466 122)">MAKE</text>
-  <text x="470" y="196" font-size="42" transform="rotate(1 470 196)">THINGS</text>
-  <text x="628" y="196" font-size="42" transform="rotate(-1 628 196)">AS</text>
-  <text x="968" y="300" font-size="42" transform="rotate(2 968 300)">AS</text>
-  <text x="968" y="362" font-size="42" transform="rotate(-1 968 362)">POSSIBLE</text>
-  <text x="632" y="692" font-size="56" transform="rotate(1 632 692)">BUT NOT</text>
-  <text x="1156" y="250" font-size="184" transform="rotate(-1 1156 250)">SIM</text>
-  <text x="1156" y="446" font-size="184" transform="rotate(1 1156 446)">PLE</text>
-  <text x="956" y="702" font-size="54" transform="rotate(-2 956 702)">SIMPLER</text>
- </g>
- <!-- density fill objects -->
- <g fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke-width="6" d="M470 300 L470 232 Q470 216 482 208 L482 190 L510 190 L510 208 Q522 216 522 232 L522 300 Q522 306 514 306 L478 306 Q470 306 470 300 Z"/>
-  <path stroke-width="4" d="M476 262 L516 262"/>
-  <path stroke-width="5" d="M150 560 Q200 540 258 552"/>
-  <path stroke-width="5" d="M186 550 Q184 536 196 534 Q208 538 204 552 M220 554 Q218 540 230 538 Q242 542 238 556"/>
-  <path stroke-width="6" d="M1000 470 Q1000 442 1030 442 Q1060 442 1060 470 Q1060 498 1030 498 Q1000 498 1000 470 Z"/>
-  <path stroke-width="5" d="M1056 448 Q1072 440 1080 448"/>
-  <path stroke-width="5" d="M820 560 Q820 586 876 586 Q932 586 932 560 Q876 550 820 560 Z"/>
-  <path stroke-width="5" d="M892 566 L964 538"/>
-  <path stroke-width="6" d="M470 560 Q506 526 552 538 Q546 522 570 518 Q580 534 562 546 Q596 540 606 562 Q580 574 560 564 L520 588 Q484 580 470 560 Z"/>
-  <path stroke-width="6" d="M360 810 Q340 806 340 836 Q340 866 372 864 Q400 862 398 838 Q396 812 372 810 Z"/>
-  <path stroke-width="4" d="M372 810 L376 796"/>
-  <path stroke-width="5" d="M470 760 L546 760 Q530 794 508 798 Q486 794 470 760 Z"/>
-  <path stroke-width="5" d="M508 798 L508 846 M490 850 Q508 842 526 850"/>
-  <path stroke-width="6" d="M1108 620 Q1108 700 1160 706 Q1210 700 1210 620 Q1160 610 1108 620 Z"/>
-  <path stroke-width="6" d="M1160 706 L1160 770 M1132 776 Q1160 768 1188 776"/>
- </g>
+   <!-- champagne flutes x3 (LEFT band, near bottom) -->
+   <path stroke-width="7" d="M40 668 L36 796 M40 668 L92 668 L88 796 M62 796 L62 890 M40 896 L84 896"/>
+   <path stroke-width="7" d="M116 668 L112 796 M116 668 L168 668 L164 796 M140 796 L140 890 M118 896 L162 896"/>
+   <path stroke-width="7" d="M192 668 L188 796 M192 668 L244 668 L240 796 M216 796 L216 890 M194 896 L238 896"/>
+
+   <!-- coupe (near his hand) + wine goblet + cherries + flower, LEFT-CENTER -->
+   <path stroke-width="8" d="M400 300 L520 300 Q504 360 462 364 Q420 360 400 300 Z M462 364 L462 448 M438 454 Q462 444 486 454"/>
+   <path stroke-width="9" d="M406 120 Q406 236 470 248 Q534 236 534 120 Q470 106 406 120 Z M470 248 L470 344 M438 350 Q470 340 502 350 M420 138 Q470 150 520 138"/>
+   <path stroke-width="6" d="M470 372 Q470 384 482 384 Q494 384 494 372 Q494 360 482 360 Q470 360 470 372 Z M498 386 Q498 374 510 374 Q522 374 522 386 Q522 398 510 398 Q498 398 498 386 Z M482 360 Q494 334 512 334 M510 374 Q514 338 512 334"/>
+   <path stroke-width="6" d="M478 580 Q468 490 448 452 M456 490 Q428 478 418 454 M464 520 Q492 510 502 486 M448 452 Q438 436 450 428 Q464 432 460 450"/>
+
+   <!-- bottle pouring (above card) -->
+   <path stroke-width="9" d="M636 300 L654 250 L702 268 L714 300 Q730 356 702 420 L652 470 Q616 456 614 400 Q630 350 636 300 Z M654 250 L666 220 L690 230 L678 260"/>
+
+   <!-- corkscrew spiral (below the solid T-bar) -->
+   <path stroke-width="10" d="M912 396 L912 496"/>
+   <path stroke-width="10" d="M912 496 Q884 512 912 536 Q940 560 912 584 Q884 608 912 632 Q928 646 918 662"/>
+
+   <!-- large wine goblet (below card, crosses card bottom) -->
+   <path stroke-width="10" d="M660 560 Q660 700 736 712 Q812 700 812 560 Q736 548 660 560 Z M736 712 L736 820 M700 826 Q736 816 772 826 M672 582 Q736 596 800 582"/>
+   <!-- face + lips (bottom-center) -->
+   <path stroke-width="7" d="M700 892 Q700 862 744 862 Q788 862 788 892 M716 906 Q744 922 772 906 M712 880 L726 880 M762 880 L776 880"/>
+
+   <!-- knife (mid-right) -->
+   <path stroke-width="9" d="M1080 660 L1210 642 Q1252 642 1244 664 L1096 682 Z M1096 682 L1070 688 L1066 670 L1090 666"/>
+   <!-- candle (right) -->
+   <path stroke-width="7" d="M1300 420 L1300 560 L1350 560 L1350 420 Z M1325 420 Q1312 398 1325 368 Q1338 398 1325 420 Z"/>
+   <!-- ashtray + cig (right-center) -->
+   <path stroke-width="6" d="M1160 500 Q1160 524 1214 524 Q1268 524 1268 500 Q1214 488 1160 500 Z M1220 506 L1300 476"/>
+   <!-- grapes (right-center top) -->
+   <path stroke-width="5" d="M1130 330 Q1130 322 1138 322 Q1146 322 1146 330 Q1146 338 1138 338 Q1130 338 1130 330 Z M1148 346 Q1148 338 1156 338 Q1164 338 1164 346 Q1164 354 1156 354 Q1148 354 1148 346 Z M1114 346 Q1114 338 1122 338 Q1130 338 1130 346 Q1130 354 1122 354 Q1114 354 1114 346 Z M1138 320 Q1142 306 1156 304"/>
+
+   <!-- dove eye (white knockout is separate) + cat features + patterned glass -->
+   <path stroke-width="6" d="M120 866 L152 872 M120 882 L152 880"/>
+   <path stroke-width="7" d="M278 832 L270 1000 M320 832 L328 1000 M270 848 L328 848"/>
+
+   <!-- Jobs glasses -->
+   <path stroke-width="7" fill="#FAFAF7" d="M490 748 Q466 748 466 780 Q466 812 514 814 Q556 812 556 780 Q556 748 528 746 Q508 744 490 748 Z"/>
+   <path stroke-width="5" d="M480 778 Q480 764 494 764 Q508 764 508 778 Q508 792 494 792 Q480 792 480 778 Z M522 778 Q522 764 536 764 Q550 764 550 778 Q550 792 536 792 Q522 792 522 778 Z M508 778 L522 778"/>
+   <!-- Buffett glasses + cola -->
+   <path stroke-width="7" fill="#FAFAF7" d="M660 752 Q636 752 636 784 Q636 816 686 818 Q730 816 730 784 Q730 752 700 750 Q678 748 660 752 Z"/>
+   <path stroke-width="4" d="M650 780 Q650 768 664 768 Q678 768 678 780 Q678 792 664 792 Q650 792 650 780 Z M690 780 Q690 768 704 768 Q718 768 718 780 Q718 792 704 792 Q690 792 690 780 Z M678 780 L690 780"/>
+   <path stroke-width="6" d="M748 858 L762 858 L762 872 Q770 878 770 892 L770 946 Q770 950 764 950 L748 950 Q742 950 742 946 L742 892 Q742 878 748 872 Z"/>
+
+   <!-- palm fronds -->
+   <path stroke-width="8" d="M1462 908 L1462 748 M1462 748 Q1420 706 1378 718 M1462 748 Q1504 706 1552 720 M1462 752 Q1430 710 1398 682 M1462 752 Q1502 712 1536 692"/>
+
+   <!-- scattered fill: lemon, olive, fish, fig (kill holes) -->
+   <path stroke-width="7" d="M320 720 Q320 684 356 684 Q392 684 392 720 Q392 756 356 756 Q320 756 320 720 Z M388 698 Q408 688 416 696"/>
+   <path stroke-width="5" d="M820 960 Q870 936 926 948 M856 948 Q854 934 866 932 Q878 936 874 950 M890 950 Q888 936 900 934 Q912 938 908 952"/>
+   <path stroke-width="6" d="M360 946 Q412 914 480 946 Q412 978 360 946 Z M480 946 L516 928 L516 966 Z M380 940 L388 940"/>
+   <path stroke-width="6" d="M556 340 Q536 340 536 366 Q536 396 568 398 Q600 396 598 366 Q596 344 576 342 M568 342 L568 328 M568 328 Q578 320 588 324"/>
+   <path stroke-width="6" d="M1092 300 Q1092 340 1064 356 M1092 300 Q1120 340 1148 356 M1078 328 L1106 328"/>
+   <!-- coupe (top-center gap, above card) -->
+   <path stroke-width="8" d="M894 214 L1000 214 Q986 262 962 266 Q938 262 894 214 Z M962 266 L962 344 M938 350 Q962 340 986 350"/>
+   <!-- cherries (right of card, close the gap) -->
+   <path stroke-width="6" d="M1066 604 Q1066 616 1078 616 Q1090 616 1090 604 Q1090 592 1078 592 Q1066 592 1066 604 Z M1094 618 Q1094 606 1106 606 Q1118 606 1118 618 Q1118 630 1106 630 Q1094 630 1094 618 Z M1078 592 Q1090 566 1108 566 M1106 606 Q1110 570 1108 566"/>
+  </g>
+
+  <!-- white knockouts (eyes on solid fills) -->
+  <g fill="none" stroke="#FAFAF7" stroke-width="5"><path d="M1378 776 L1386 776"/><path d="M176 852 L182 852 M232 852 L238 852"/></g>
  </g>
 </svg>
   <div class="lc">
@@ -3912,13 +3873,42 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
- <svg id="login-top" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
- <g filter="url(#lvink-brush)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-  <path stroke-width="5" d="M640 236 Q700 286 660 346 Q630 396 580 416 Q548 430 558 470"/>
-  <path stroke-width="4" d="M356 244 Q320 300 344 350 Q362 388 342 418"/>
-  <path stroke-width="4" d="M342 418 Q328 402 342 390 Q358 386 360 404 Q354 418 342 418"/>
+ <svg id="login-top" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+ <g filter="url(#lvink-brush)" fill="none" stroke="#1A1A1A" stroke-linecap="round">
+  <path stroke-width="6" d="M702 420 Q672 470 720 500 Q800 542 812 610 Q818 648 776 664"/>
  </g>
 </svg>
+<script>(function(){
+var GLYPH={
+ M:['M10 130 L14 12','M12 14 L50 84','M50 84 L88 14','M86 12 L90 130'],A:['M10 130 L50 12','M50 12 L90 130','M27 92 L73 90'],
+ K:['M15 12 L15 130','M15 74 L84 12','M17 72 L86 130'],E:['M82 12 L15 10','M15 12 L16 130','M15 130 L82 128','M15 68 L64 66'],
+ T:['M10 14 L90 12','M50 14 L49 130'],H:['M15 12 L16 130','M85 10 L84 130','M15 70 L85 68'],I:['M50 12 L49 130'],
+ N:['M15 130 L14 12','M16 12 L85 130','M84 130 L86 12'],G:['M86 30 Q50 2 24 30 Q0 66 26 102 Q52 132 86 106 L86 72 L57 72'],
+ S:['M86 26 Q50 0 22 26 Q9 46 41 60 Q76 74 62 102 Q40 132 11 108'],P:['M15 130 L15 12','M15 12 L70 12 Q94 32 70 62 L15 60'],
+ L:['M18 12 L17 130','M17 130 L83 128'],O:['M50 12 Q11 12 11 71 Q11 130 50 130 Q89 130 89 71 Q89 12 50 12 Z'],
+ B:['M15 130 L15 12','M15 12 L64 12 Q88 30 66 56 L15 58','M15 58 L70 58 Q96 90 68 122 L15 130'],
+ U:['M15 12 L15 96 Q15 130 50 130 Q85 130 85 96 L85 12'],R:['M15 130 L15 12','M15 12 L68 12 Q90 32 68 60 L15 60','M43 60 L86 130']};
+var svgns='http://www.w3.org/2000/svg', ink=document.getElementById('scene');
+var seed=7; function rr(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+function letter(ch,x,y,h,sw,solid){var g=GLYPH[ch];if(!g)return 0;var w=h*0.72;
+ var tilt=(rr()-0.5)*7,sx=w/100*(0.9+rr()*0.18),sy=h/130*(0.92+rr()*0.14),oy=(rr()-0.5)*h*0.08;
+ var grp=document.createElementNS(svgns,'g');
+ grp.setAttribute('transform','translate('+x+' '+(y+oy)+') rotate('+tilt+') scale('+sx+' '+sy+')');grp.setAttribute('filter','url(#brush)');
+ g.forEach(function(d){var p=document.createElementNS(svgns,'path');p.setAttribute('d',d);p.setAttribute('fill',solid?'#1A1A1A':'none');
+   p.setAttribute('stroke','#1A1A1A');p.setAttribute('stroke-width',(sw/((sx+sy)/2)));p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');grp.appendChild(p);});
+ ink.appendChild(grp);return w+h*0.14;}
+function word(str,x,y,h,sw,solid){var cx=x;for(var i=0;i<str.length;i++){cx+=letter(str[i],cx,y,h,sw,solid)+h*0.05;}return cx;}
+// heroes MAKE + SIMPLE; rest mid. all fit inside 40..1560, off the card center.
+word('MAKE',360,40,128,15,true);       // hero top-center -> ~ends 816
+word('SIMPLE',904,40,118,15,true);     // hero top-right -> ~ends 1496
+word('THINGS',1188,470,60,8,false);    // mid, right -> ends ~1520 (touches right)
+word('AS',430,616,62,8,false);
+word('AS',1150,300,58,8,false);
+word('POSSIBLE',56,436,62,8,false);    // left band -> ends ~530
+word('BUT',44,930,62,8,false);
+word('NOT',1384,616,62,8,false);       // right edge -> ends ~1556
+word('SIMPLER',1004,904,64,8,false);   // bottom-right -> ends ~1436
+})();</script>
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
