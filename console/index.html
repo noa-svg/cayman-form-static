@@ -538,7 +538,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 
 /* ----- login sketchbook: one contained inline-SVG page (liori-style ink), the
    sign-in card parked on top. Clears (.off) on auth. ----- */
-#login-screen { background: #F5F1E8; }
+#login-screen { background: #FAFAF7; }
 #login-ink, #login-top { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #login-ink { z-index: 0; }
 #login-top { z-index: 3; }
@@ -3758,158 +3758,145 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
-  <svg id="login-ink" aria-hidden="true" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid slice">
-  <defs>
-    <filter id="lvink-rough" x="-5%" y="-5%" width="110%" height="110%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.013 0.015" numOctaves="2" seed="7" result="n"/>
-      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-    <filter id="lvink-paper"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" result="t"/><feColorMatrix in="t" type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer></filter>
-  </defs>
+ <svg id="login-ink" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <filter id="lvink-brush" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.014 0.02" numOctaves="2" seed="5" result="c"/>
+    <feDisplacementMap in="SourceGraphic" in2="c" scale="8" result="d1"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.85 1.0" numOctaves="2" seed="3" result="f"/>
+    <feDisplacementMap in="d1" in2="f" scale="4"/>
+    <feComponentTransfer><feFuncA type="discrete" tableValues="0 0 1 1 1"/></feComponentTransfer>
+  </filter>
+</defs>
+<g filter="url(#lvink-brush)">
+ <!-- ============ STROKED PRIMITIVES ============ -->
+ <g fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+  <!-- mustache man face (head outline; body is solid below) top-left, hair to top -->
+  <path stroke-width="6" d="M74 74 Q74 44 106 44 Q138 44 138 74 Q138 102 106 106 Q74 102 74 74 Z"/>
+  <path stroke-width="4" d="M88 70 L100 70 M112 70 L124 70"/>
+  <path stroke-width="4" d="M106 74 L102 88 L112 88"/>
+  <!-- coupe in his raised hand -->
+  <path stroke-width="5" d="M168 120 L226 120 Q212 150 190 154 Q168 150 168 120 Z"/>
+  <path stroke-width="5" d="M190 154 L190 188 M172 192 Q190 184 208 192"/>
+  <path stroke-width="5" d="M150 176 Q182 150 196 138"/>
+  <!-- two coupe glasses -->
+  <path stroke-width="5" d="M250 150 L326 150 Q310 184 288 188 Q266 184 250 150 Z"/>
+  <path stroke-width="5" d="M288 188 L288 236 M270 240 Q288 232 306 240"/>
+  <path stroke-width="5" d="M232 210 L300 210 Q286 240 266 244 Q246 240 232 210 Z"/>
+  <path stroke-width="5" d="M266 244 L266 288 M248 292 Q266 284 284 292"/>
+  <!-- flower stem -->
+  <path stroke-width="4" d="M356 244 Q352 190 346 150"/>
+  <path stroke-width="3" d="M350 188 Q328 180 322 162 M350 214 Q374 206 380 188"/>
+  <path stroke-width="4" d="M346 150 Q334 134 352 132 Q370 130 372 150 Q362 164 348 158"/>
+  <!-- champagne flutes (left edge) -->
+  <path stroke-width="5" d="M12 470 L12 512 M44 466 L44 512 M76 470 L76 512"/>
+  <path stroke-width="4" d="M4 520 L88 520"/>
+  <path stroke-width="5" d="M7 466 L17 466 L14 440 L4 440 Z M39 466 L49 466 L46 436 L36 436 Z M71 466 L81 466 L78 440 L68 440 Z"/>
+  <!-- large wine goblet (center-left of card) -->
+  <path stroke-width="6" d="M250 520 Q250 600 312 610 Q374 600 374 520 Q312 508 250 520 Z"/>
+  <path stroke-width="6" d="M312 610 L312 686 M276 692 Q312 682 348 692"/>
+  <path stroke-width="4" d="M262 534 Q312 544 362 534"/>
+  <!-- face + lips -->
+  <path stroke-width="4" d="M400 640 Q400 616 426 616 Q452 616 452 640 Q452 664 426 666 Q400 664 400 640 Z"/>
+  <path stroke-width="3" d="M410 634 L420 634 M432 634 L442 634 M420 650 Q426 656 434 650"/>
+  <!-- big corkscrew (center) -->
+  <path stroke-width="6" d="M470 470 Q580 458 686 470"/>
+  <path stroke-width="6" d="M578 470 L578 540"/>
+  <path stroke-width="5" d="M578 540 Q556 552 578 568 Q600 584 578 600 Q556 616 578 632 Q562 644 582 656"/>
+  <!-- knife (right-center) -->
+  <path stroke-width="6" d="M980 560 L1082 544 Q1124 544 1116 562 L992 574 Z"/>
+  <path stroke-width="6" d="M992 574 L968 580 L964 564 L988 560"/>
+  <!-- wine bottle pouring (top-center) -->
+  <path stroke-width="6" d="M640 150 L724 112 L740 146 L716 208 L640 236 L622 190 Z"/>
+  <path stroke-width="5" d="M664 142 L680 135"/>
+  <!-- candle (right) -->
+  <path stroke-width="6" d="M1240 470 L1240 600 L1290 600 L1290 470 Z"/>
+  <path stroke-width="5" d="M1265 470 Q1252 448 1265 418 Q1280 448 1265 470 Z"/>
+  <!-- small corkscrew bottom-center -->
+  <path stroke-width="5" d="M654 760 Q654 736 680 736 Q706 736 706 760 Q706 784 680 784 Q654 784 654 760 Z"/>
+  <path stroke-width="5" d="M680 784 L680 830 Q662 842 680 858 Q700 874 680 890"/>
+ </g>
 
-  <g filter="url(#lvink-rough)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-    <!-- ===== TOP-LEFT: floral vase (hero) + wine bottle (hero) + cherries ===== -->
-    <!-- vase -->
-    <path stroke-width="6" d="M150 256 Q138 366 200 372 Q262 366 250 256 Q224 246 200 246 Q176 246 150 256 Z"/>
-    <path stroke-width="4" d="M152 258 Q200 270 248 258"/>
-    <!-- stems + leaves to the top edge -->
-    <path stroke-width="5" d="M188 248 Q176 150 158 40"/>
-    <path stroke-width="5" d="M200 246 Q204 140 196 30"/>
-    <path stroke-width="5" d="M214 250 Q236 150 262 56"/>
-    <path stroke-width="4" d="M180 170 Q150 158 138 132"/>
-    <path stroke-width="4" d="M210 190 Q244 178 256 150"/>
-    <path stroke-width="4" d="M196 110 Q170 96 162 70"/>
-    <!-- blooms -->
-    <path stroke-width="5" d="M150 44 Q136 26 158 24 Q178 18 182 44 Q172 62 156 56"/>
-    <path stroke-width="5" d="M250 60 Q236 40 258 38 Q280 34 282 60 Q272 78 256 72"/>
-    <path stroke-width="4" d="M150 132 Q132 124 134 108 Q140 94 156 100 Q162 116 150 132"/>
-    <!-- wine bottle (hero) -->
-    <path stroke-width="7" d="M348 372 L348 188 Q348 156 362 134 L362 84 L410 84 L410 134 Q424 156 424 188 L424 372 Q424 386 410 386 L362 386 Q348 386 348 372 Z"/>
-    <path stroke-width="6" d="M362 84 L410 84 L410 62 L362 62 Z"/>
-    <path stroke-width="4" d="M360 314 L412 314"/>
-    <!-- ===== TOP-RIGHT: clapping hands + butterfly (hero, right edge) + heel shoe ===== -->
-    <!-- clapping hands -->
-    <path stroke-width="6" d="M788 200 Q772 150 794 138 L820 196 Z"/>
-    <path stroke-width="6" d="M858 200 Q874 150 852 138 L826 196 Z"/>
-    <path stroke-width="3" d="M778 120 L786 134 M868 120 L860 134 M824 108 L824 124"/>
-    <!-- butterfly (hero) touching right edge -->
-    <path stroke-width="6" d="M1024 168 L1024 320"/>
-    <path stroke-width="6" d="M1022 184 Q930 120 904 196 Q884 268 1020 274 Z"/>
-    <path stroke-width="6" d="M1026 184 Q1130 108 1198 176 Q1224 252 1028 274 Z"/>
-    <path stroke-width="3" d="M1022 168 Q1004 144 996 154 M1026 168 Q1046 144 1054 154"/>
-    <!-- high-heel shoe -->
-    <path stroke-width="5" d="M806 432 Q806 410 838 408 L928 400 Q962 400 956 418 L902 432 L880 472 L864 470 L878 432 Z"/>
-    <path stroke-width="5" d="M864 470 L856 432"/>
-    <!-- ===== MID-LEFT: walking figure (hero, left+bottom edge) + chair + cat ===== -->
-    <!-- head + face -->
-    <path stroke-width="6" d="M118 512 Q118 478 152 478 Q186 478 186 512 Q186 546 152 550 Q118 546 118 512 Z"/>
-    <path stroke-width="5" d="M116 494 Q152 468 188 494"/>
-    <path stroke-width="3" d="M132 510 L142 510 M162 510 L172 510"/>
-    <path stroke-width="3" d="M152 514 L149 526 L158 526"/>
-    <path stroke-width="3" d="M138 532 Q152 540 168 532"/>
-    <!-- jacket (patterned) -->
-    <path stroke-width="7" d="M104 566 L88 730 L150 740 L152 566"/>
-    <path stroke-width="7" d="M198 566 L216 726 L150 740"/>
-    <path stroke-width="4" d="M112 606 L150 600 M110 648 L150 642 M114 690 L150 684"/>
-    <path stroke-width="6" d="M200 588 Q238 628 232 694"/>
-    <!-- legs to bottom edge -->
-    <path stroke-width="7" d="M118 740 L94 920 L74 1110"/>
-    <path stroke-width="7" d="M172 740 L200 920 L222 1110"/>
-    <path stroke-width="4" d="M104 840 L100 844 M96 900 L92 904 M188 840 L192 844 M200 900 L204 904"/>
-    <path stroke-width="6" d="M64 1110 L104 1116 M212 1110 L252 1116"/>
-    <!-- chair -->
-    <path stroke-width="5" d="M300 740 L300 920 M300 760 L388 752 L388 920 M300 836 L388 828"/>
-    <!-- cat -->
-    <path stroke-width="6" d="M318 962 Q312 884 358 880 Q404 884 398 962"/>
-    <path stroke-width="5" d="M346 882 L342 858 L358 874 M370 882 L374 858 L358 874"/>
-    <path stroke-width="5" d="M398 952 Q430 948 424 900"/>
-    <path stroke-width="3" d="M306 916 L330 920 M306 930 L330 928"/>
-    <!-- ===== MID-RIGHT: candle (right edge) + ashtray + wine glass + bird ===== -->
-    <path stroke-width="6" d="M1104 562 L1104 704 L1156 704 L1156 562 Z"/>
-    <path stroke-width="5" d="M1130 562 Q1116 540 1130 506 Q1146 540 1130 562 Z"/>
-    <path stroke-width="4" d="M1104 588 Q1096 612 1104 626"/>
-    <!-- ashtray + cigarette -->
-    <path stroke-width="5" d="M936 794 Q936 822 1000 822 Q1064 822 1064 794 Q1000 782 936 794 Z"/>
-    <path stroke-width="5" d="M1010 800 L1086 770"/>
-    <path stroke-width="3" d="M1066 778 Q1074 760 1066 750 Q1080 760 1074 744"/>
-    <!-- wine glass (standard) -->
-    <path stroke-width="6" d="M812 584 Q812 662 852 672 Q892 662 892 584 Q852 572 812 584 Z"/>
-    <path stroke-width="6" d="M852 672 L852 744"/>
-    <path stroke-width="6" d="M822 748 Q852 740 882 748"/>
-    <path stroke-width="4" d="M820 596 Q852 606 884 596"/>
-    <!-- bird (dove) -->
-    <path stroke-width="6" d="M982 856 Q1024 814 1078 826 Q1070 804 1098 800 Q1108 820 1088 834 Q1132 826 1144 852 Q1110 866 1086 854 L1034 882 Q996 874 982 856 Z"/>
-    <!-- ===== BOTTOM: corkscrew + knife + fish (bottom edge) + moon + lemon ===== -->
-    <path stroke-width="5" d="M602 924 Q602 908 620 908 Q638 908 638 924 Q638 940 620 940 Q602 940 602 924 Z"/>
-    <path stroke-width="6" d="M620 940 L620 992"/>
-    <path stroke-width="5" d="M620 992 Q602 1004 620 1018 Q638 1032 620 1046 Q602 1060 622 1074"/>
-    <path stroke-width="6" d="M842 1044 L936 1030 Q976 1030 970 1048 L854 1060 Z"/>
-    <path stroke-width="6" d="M854 1060 L832 1066 L828 1052 L850 1048"/>
-    <path stroke-width="6" d="M306 1150 Q360 1116 432 1150 Q360 1186 306 1150 Z"/>
-    <path stroke-width="6" d="M432 1150 L470 1130 L470 1172 Z"/>
-    <path stroke-width="4" d="M334 1144 L342 1144"/>
-    <path stroke-width="6" d="M256 988 Q192 998 192 1032 Q192 1066 256 1060 Q214 1044 214 1024 Q214 1004 256 988 Z"/>
-    <path stroke-width="5" d="M508 1132 Q480 1132 480 1158 Q480 1184 512 1182 Q540 1180 538 1156 Q536 1134 508 1132 Z"/>
-    <path stroke-width="4" d="M512 1132 L516 1120"/>
-    <!-- ===== DENSITY FILL (keep the visible band hole-free) ===== -->
-    <!-- espresso cup above card -->
-    <path stroke-width="6" d="M636 286 Q636 320 678 320 Q720 320 720 286 Z"/>
-    <path stroke-width="5" d="M720 294 Q740 294 738 310 Q736 322 722 318"/>
-    <path stroke-width="4" d="M624 326 L730 326"/>
-    <!-- coupe glass -->
-    <path stroke-width="6" d="M516 176 L598 176 Q582 220 558 224 Q534 220 516 176 Z"/>
-    <path stroke-width="6" d="M558 224 L558 268 M540 272 Q558 264 578 272"/>
-    <!-- grapes cluster -->
-    <path stroke-width="4" d="M500 330 Q500 320 510 320 Q520 320 520 330 Q520 340 510 340 Q500 340 500 330 Z"/>
-    <path stroke-width="4" d="M520 346 Q520 336 530 336 Q540 336 540 346 Q540 356 530 356 Q520 356 520 346 Z"/>
-    <path stroke-width="4" d="M482 348 Q482 338 492 338 Q502 338 502 348 Q502 358 492 358 Q482 358 482 348 Z"/>
-    <path stroke-width="4" d="M510 318 Q514 300 528 298"/>
-    <!-- small bottle left of card -->
-    <path stroke-width="6" d="M306 478 L306 404 Q306 388 318 380 L318 362 L348 362 L348 380 Q360 388 360 404 L360 478 Q360 484 352 484 L314 484 Q306 484 306 478 Z"/>
-    <path stroke-width="4" d="M312 440 L354 440"/>
-    <!-- lemon -->
-    <path stroke-width="6" d="M300 604 Q300 566 340 566 Q380 566 380 604 Q380 642 340 642 Q300 642 300 604 Z"/>
-    <path stroke-width="5" d="M376 580 Q396 570 404 578"/>
-    <!-- fork right edge -->
-    <path stroke-width="6" d="M1150 566 L1150 720"/>
-    <path stroke-width="5" d="M1138 566 L1138 596 M1150 566 L1150 590 M1162 566 L1162 596 M1138 596 Q1150 606 1162 596"/>
-    <!-- olive branch -->
-    <path stroke-width="5" d="M960 1006 Q1010 980 1070 992"/>
-    <path stroke-width="5" d="M996 994 Q994 980 1006 978 Q1018 982 1014 996 M1030 998 Q1028 984 1040 982 Q1052 986 1048 1000"/>
-    <!-- dog (loose, like the reference) -->
-    <path stroke-width="6" d="M556 1142 Q574 1092 624 1100 Q636 1080 654 1092 Q650 1108 638 1108 Q700 1106 712 1140 L704 1186 M624 1130 L624 1188 M690 1126 L690 1186"/>
-    <path stroke-width="5" d="M654 1092 Q648 1086 654 1080"/>
-    <!-- plate bottom-center -->
-    <path stroke-width="6" d="M452 1118 Q452 1098 528 1098 Q604 1098 604 1118 Q604 1138 528 1138 Q452 1138 452 1118 Z"/>
-    <path stroke-width="4" d="M474 1118 Q474 1106 528 1106 Q582 1106 582 1118"/>
-    <!-- spoon by ashtray -->
-    <path stroke-width="6" d="M1048 858 L1086 770"/>
-    <path stroke-width="5" d="M1080 760 Q1094 762 1092 776 Q1090 788 1076 786 Q1066 778 1072 766"/>
-    <!-- a second standing bottle right of card -->
-    <path stroke-width="6" d="M928 372 L928 300 Q928 284 940 276 L940 258 L968 258 L968 276 Q980 284 980 300 L980 372 Q980 378 972 378 L936 378 Q928 378 928 372 Z"/>
-    <!-- a moon-glass cluster near figure -->
-    <path stroke-width="6" d="M470 660 L470 740 M452 664 Q470 656 488 664 M452 736 Q470 744 488 736"/>
+ <!-- ============ SOLID-BLACK HEROES ============ -->
+ <g fill="#1A1A1A" stroke="none">
+  <!-- mustache man body (seated solid) -->
+  <path d="M78 108 Q58 168 68 254 L54 396 Q52 408 68 408 L102 406 L104 300 L120 300 L122 406 L156 404 Q172 404 168 392 L156 254 Q176 166 150 112 Q114 96 78 108 Z"/>
+  <path d="M90 90 Q106 100 124 90 Q114 98 106 96 Q98 98 90 90 Z"/>
+  <!-- dove (right, wing to right edge) -->
+  <path d="M1120 660 Q1170 610 1235 622 Q1224 594 1260 586 Q1276 612 1250 632 Q1310 618 1360 652 L1360 668 Q1310 684 1256 668 L1180 710 Q1132 700 1120 660 Z"/>
+  <path d="M1190 662 L1280 638 L1272 666 Z"/>
+  <!-- cat + patterned glass (bottom-left) -->
+  <path d="M120 850 Q112 780 158 774 Q204 780 196 850 L120 850 Z"/>
+  <path d="M138 780 L130 754 L154 772 Z M182 780 L190 754 L166 772 Z"/>
+  <circle cx="146" cy="806" r="3.5"/><circle cx="170" cy="806" r="3.5"/>
+  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
+   <path d="M198 812 L250 792"/>
+   <path d="M250 744 Q250 792 288 800 Q326 792 326 744 Q288 736 250 744 Z"/>
+   <path d="M288 800 L288 872 M266 878 Q288 870 310 878"/>
+   <path d="M86 818 L118 822 M86 832 L118 830"/>
   </g>
-
-  <!-- ===== RED ACCENTS (~6 small spots) ===== -->
-  <g filter="url(#lvink-rough)" fill="#C9302C" stroke="#C9302C" stroke-linejoin="round">
-    <rect x="356" y="232" width="60" height="68" rx="2"/>                                <!-- wine label -->
-    <path stroke-width="0" d="M268 408 Q258 398 268 392 Q280 388 282 400 Q282 412 270 414 Q260 412 268 408 Z"/>  <!-- cherry 1 -->
-    <path stroke-width="0" d="M296 416 Q286 406 296 400 Q308 396 310 408 Q310 420 298 422 Q288 420 296 416 Z"/>  <!-- cherry 2 -->
-    <circle cx="950" cy="206" r="9"/><circle cx="1090" cy="206" r="9"/>                  <!-- butterfly wing spots -->
-    <circle cx="86" cy="1120" r="7"/><circle cx="232" cy="1120" r="7"/>                  <!-- figure shoe dots -->
-    <path stroke-width="0" d="M712 1104 Q742 1086 762 1104 Q782 1086 812 1104 Q782 1134 762 1128 Q742 1134 712 1104 Z"/>  <!-- lips -->
+  <circle cx="270" cy="760" r="3.5"/><circle cx="300" cy="770" r="3.5"/><circle cx="282" cy="782" r="3.5"/>
+  <!-- palm in pot (bottom-right, planted on bottom) -->
+  <path d="M1290 900 L1280 828 L1350 828 L1340 900 Z"/>
+  <g fill="none" stroke="#1A1A1A" stroke-width="7" stroke-linecap="round">
+   <path d="M1315 828 L1313 736"/>
+   <path d="M1313 740 Q1276 722 1256 736 M1313 746 Q1350 724 1372 740 M1313 736 Q1298 702 1276 694 M1313 736 Q1332 704 1356 698"/>
   </g>
-  <g fill="none" stroke="#C9302C" stroke-width="4" stroke-linecap="round" filter="url(#lvink-rough)">
-    <path d="M264 386 Q276 360 296 360 M298 396 Q302 364 296 360"/>                       <!-- cherry stems -->
-    <path d="M640 470 L640 510 M620 490 L660 490 M628 476 L652 504 M652 476 L628 504"/>   <!-- red sparkle -->
-    <path d="M1156 980 L1156 1016 M1138 998 L1174 998 M1146 986 L1166 1010 M1166 986 L1146 1010"/> <!-- red sparkle -->
+  <!-- STEVE JOBS (mandatory) bottom-center -->
+  <path d="M470 900 L470 792 Q470 774 498 770 Q552 764 580 770 Q608 774 608 792 L610 900 Z"/>
+  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
+   <path d="M496 752 Q496 722 540 722 Q584 722 584 752 Q584 780 540 784 Q496 780 496 752 Z"/>
+   <path d="M506 750 Q506 734 522 734 Q538 734 538 750 Q538 766 522 766 Q506 766 506 750 Z"/>
+   <path d="M544 750 Q544 734 560 734 Q576 734 576 750 Q576 766 560 766 Q544 766 544 750 Z"/>
+   <path d="M538 750 L544 750 M496 750 L487 748 M584 750 L593 748"/>
+   <path d="M514 770 Q540 780 566 770"/>
   </g>
+  <!-- WARREN BUFFETT (mandatory) bottom-center-right, coke bottle -->
+  <path d="M770 900 L762 800 Q762 782 790 778 Q838 772 866 778 Q894 782 894 800 L890 900 Z"/>
+  <g fill="none" stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
+   <path d="M790 760 Q790 730 834 730 Q878 730 878 760 Q878 788 834 792 Q790 788 790 760 Z"/>
+   <path d="M800 762 Q800 748 816 748 Q832 748 832 762 M832 762 Q832 748 848 748 Q864 748 864 762"/>
+   <path d="M804 748 Q796 736 808 736 Q820 736 818 748 M840 762 Q838 748 850 748"/>
+   <path d="M812 778 Q834 786 856 778"/>
+   <path d="M892 812 L908 814 L904 878 L884 876"/>
+  </g>
+  <!-- cherries, grapes fill -->
+  <circle cx="400" cy="330" r="15"/><circle cx="434" cy="348" r="15"/>
+  <g fill="none" stroke="#1A1A1A" stroke-width="3"><path d="M400 315 Q418 288 444 288 M434 333 Q440 292 444 288"/></g>
+  <circle cx="128" cy="650" r="11"/><circle cx="152" cy="664" r="11"/><circle cx="110" cy="670" r="11"/><circle cx="136" cy="682" r="11"/>
+ </g>
 
-  <!-- ===== hand-lettered text ===== -->
-  <text class="cap" x="560" y="250" font-size="46" transform="rotate(-3 560 250)">MAKE <tspan font-size="72">IT</tspan> SIMPLE</text>
-
-  <rect width="1200" height="1200" filter="url(#lvink-paper)" style="mix-blend-mode:multiply"/>
+ <!-- hand-lettered quote, brushed via the ink filter (legible; raw-path letters garbled) -->
+ <g fill="#1A1A1A" stroke="none" font-family="'Arial Black',Impact,sans-serif" font-weight="900">
+  <text x="466" y="122" font-size="80" transform="rotate(-2 466 122)">MAKE</text>
+  <text x="470" y="196" font-size="42" transform="rotate(1 470 196)">THINGS</text>
+  <text x="628" y="196" font-size="42" transform="rotate(-1 628 196)">AS</text>
+  <text x="968" y="300" font-size="42" transform="rotate(2 968 300)">AS</text>
+  <text x="968" y="362" font-size="42" transform="rotate(-1 968 362)">POSSIBLE</text>
+  <text x="632" y="692" font-size="56" transform="rotate(1 632 692)">BUT NOT</text>
+  <text x="1156" y="250" font-size="184" transform="rotate(-1 1156 250)">SIM</text>
+  <text x="1156" y="446" font-size="184" transform="rotate(1 1156 446)">PLE</text>
+  <text x="956" y="702" font-size="54" transform="rotate(-2 956 702)">SIMPLER</text>
+ </g>
+ <!-- density fill objects -->
+ <g fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke-width="6" d="M470 300 L470 232 Q470 216 482 208 L482 190 L510 190 L510 208 Q522 216 522 232 L522 300 Q522 306 514 306 L478 306 Q470 306 470 300 Z"/>
+  <path stroke-width="4" d="M476 262 L516 262"/>
+  <path stroke-width="5" d="M150 560 Q200 540 258 552"/>
+  <path stroke-width="5" d="M186 550 Q184 536 196 534 Q208 538 204 552 M220 554 Q218 540 230 538 Q242 542 238 556"/>
+  <path stroke-width="6" d="M1000 470 Q1000 442 1030 442 Q1060 442 1060 470 Q1060 498 1030 498 Q1000 498 1000 470 Z"/>
+  <path stroke-width="5" d="M1056 448 Q1072 440 1080 448"/>
+  <path stroke-width="5" d="M820 560 Q820 586 876 586 Q932 586 932 560 Q876 550 820 560 Z"/>
+  <path stroke-width="5" d="M892 566 L964 538"/>
+  <path stroke-width="6" d="M470 560 Q506 526 552 538 Q546 522 570 518 Q580 534 562 546 Q596 540 606 562 Q580 574 560 564 L520 588 Q484 580 470 560 Z"/>
+  <path stroke-width="6" d="M360 810 Q340 806 340 836 Q340 866 372 864 Q400 862 398 838 Q396 812 372 810 Z"/>
+  <path stroke-width="4" d="M372 810 L376 796"/>
+  <path stroke-width="5" d="M470 760 L546 760 Q530 794 508 798 Q486 794 470 760 Z"/>
+  <path stroke-width="5" d="M508 798 L508 846 M490 850 Q508 842 526 850"/>
+  <path stroke-width="6" d="M1108 620 Q1108 700 1160 706 Q1210 700 1210 620 Q1160 610 1108 620 Z"/>
+  <path stroke-width="6" d="M1160 706 L1160 770 M1132 776 Q1160 768 1188 776"/>
+ </g>
+ </g>
 </svg>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
@@ -3925,16 +3912,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
-  <svg id="login-top" aria-hidden="true" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid slice">
-  <g filter="url(#lvink-rough)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
-    <!-- pour squiggle from the bottle area crossing onto the card -->
-    <path stroke-width="5" d="M418 380 Q470 430 520 440 Q580 452 600 510 Q616 560 560 580"/>
-    <!-- a flower stem from the vase reaching over the card's left edge -->
-    <path stroke-width="5" d="M250 240 Q360 300 430 360 Q470 392 452 430"/>
-    <path stroke-width="5" d="M452 430 Q436 412 448 396 Q466 390 470 410 Q462 430 448 430"/>
-    <!-- cursive text passing under the card bottom edge -->
-    <text class="cur" x="360" y="864" font-size="86" transform="rotate(-4 360 864)">drink slowly</text>
-  </g>
+ <svg id="login-top" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+ <g filter="url(#lvink-brush)" fill="none" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke-width="5" d="M640 236 Q700 286 660 346 Q630 396 580 416 Q548 430 558 470"/>
+  <path stroke-width="4" d="M356 244 Q320 300 344 350 Q362 388 342 418"/>
+  <path stroke-width="4" d="M342 418 Q328 402 342 390 Q358 386 360 404 Q354 418 342 418"/>
+ </g>
 </svg>
 </div>
 <script>initAuth();</script>
