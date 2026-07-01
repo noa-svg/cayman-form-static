@@ -950,7 +950,7 @@
               <label class="lvp-radio"><input type="radio" name="jointHolderAuth" value="all"> All joint holders must sign any instruction</label>
             </fieldset>
             <p class="lvp-hint-small">Each additional investor signs their own copy and completes their own Self-Certification.</p>
-            <div data-repeating-typed-path="additionalInvestors" data-repeating-min="1" data-repeating-max="1" data-repeating-template="addinv"></div>
+            <div data-repeating-typed-path="additionalInvestors" data-repeating-min="1" data-repeating-max="2" data-repeating-template="addinv"></div>
             <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--sm" data-action="add-row" data-target="additionalInvestors">+ Add another investor</button>
           </div>
           <template data-row-template="addinv">
@@ -2058,7 +2058,7 @@
       // rather than silently adding a row the server will later reject.
       var max = parseInt(host.getAttribute('data-repeating-max'), 10);
       if (!isNaN(max) && host.querySelectorAll('[data-row-index]').length >= max) {
-        setStatus(displayFor('This subscription supports up to 2 joint holders. Please contact Legacy Value Partners to add more.', curLang), true);
+        setStatus(displayFor('This subscription supports up to 3 joint holders. Please contact Legacy Value Partners to add more.', curLang), true);
         return;
       }
       var tmplName = host.getAttribute('data-repeating-template');
