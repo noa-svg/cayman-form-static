@@ -3777,12 +3777,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
    <path d="M1230 800 Q1286 736 1366 754 Q1352 722 1396 716 Q1412 744 1382 766 Q1448 756 1478 800 Q1420 826 1378 808 L1298 846 Q1242 830 1230 800 Z"/>
    <!-- cat BOTTOM edge -->
    <path d="M150 1000 L152 860 Q120 828 152 800 L128 770 L168 786 Q190 770 212 786 L254 772 Q286 802 258 832 Q290 864 270 1000 Z"/>
-   <!-- Jobs: shouldered turtleneck body + bent arm (hand toward chin) -->
-   <path d="M470 1000 L468 862 Q464 818 476 802 Q472 782 502 776 Q540 770 558 788 Q566 814 560 862 L562 1000 Z"/>
-   <path d="M476 806 Q448 816 450 852 Q452 878 480 876 L490 860 Q470 856 470 834 Q472 818 488 816 Z"/>
-   <!-- Buffett: hunched shouldered body + arm reaching the cola -->
-   <path d="M634 1000 L632 858 Q626 812 650 798 Q682 784 710 800 Q724 816 718 862 L720 1000 Z"/>
-   <path d="M710 808 Q746 822 758 862 L744 872 Q734 840 704 828 Z"/>
+   <!-- Jobs + Buffett rebuilt from scratch as full standing figures; see #figures group at scene end (iterA) -->
    <!-- palm pot BOTTOM+RIGHT, lopsided (iter14b) -->
    <path d="M1416 1000 L1400 910 L1512 916 L1498 1000 Z"/>
   </g>
@@ -3838,13 +3833,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
    <path stroke-width="6" d="M120 866 L152 872 M120 882 L152 880"/>
    <path stroke-width="7" d="M278 832 L270 1000 M320 832 L328 1000 M270 848 L328 848"/>
 
-   <!-- Jobs glasses -->
-   <path stroke-width="7" fill="#FAFAF7" d="M490 748 Q466 748 466 780 Q466 812 514 814 Q556 812 556 780 Q556 748 528 746 Q508 744 490 748 Z"/>
-   <path stroke-width="5" d="M480 778 Q480 764 494 764 Q508 764 508 778 Q508 792 494 792 Q480 792 480 778 Z M522 778 Q522 764 536 764 Q550 764 550 778 Q550 792 536 792 Q522 792 522 778 Z M508 778 L522 778"/>
-   <!-- Buffett glasses + cola -->
-   <path stroke-width="7" fill="#FAFAF7" d="M660 752 Q636 752 636 784 Q636 816 686 818 Q730 816 730 784 Q730 752 700 750 Q678 748 660 752 Z"/>
-   <path stroke-width="4" d="M650 780 Q650 768 664 768 Q678 768 678 780 Q678 792 664 792 Q650 792 650 780 Z M690 780 Q690 768 704 768 Q718 768 718 780 Q718 792 704 792 Q690 792 690 780 Z M678 780 L690 780"/>
-   <path stroke-width="6" d="M748 858 L762 858 L762 872 Q770 878 770 892 L770 946 Q770 950 764 950 L748 950 Q742 950 742 946 L742 892 Q742 878 748 872 Z"/>
+   <!-- (Jobs/Buffett heads, glasses, cola now part of the rebuilt #figures group at scene end) -->
 
    <!-- palm fronds, drooping asymmetric (iter14b) -->
    <path stroke-width="8" d="M1460 910 Q1466 830 1458 748"/>
@@ -3886,8 +3875,36 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   <g fill="none" stroke="#FAFAF7" stroke-width="5"><path d="M1378 776 L1386 776"/><path d="M176 852 L182 852 M232 852 L238 852"/></g>
   <!-- pinstripes on the man's jacket (criterion 4: patterned clothing) -->
   <g fill="none" stroke="#FAFAF7" stroke-width="4" filter="url(#lvink-brush)"><path d="M78 300 L214 292 M84 342 L222 334 M90 384 L224 376 M96 424 L214 416"/></g>
-  <!-- Jobs + Buffett: split the pillar bottoms into two legs so they read as standing figures (criterion 8) -->
-  <g fill="none" stroke="#FAFAF7" stroke-width="9" stroke-linecap="round" filter="url(#lvink-brush)"><path d="M516 1000 L516 948 M678 1000 L678 946"/></g>
+  <!-- ============ Jobs + Buffett: full standing figures, rebuilt from scratch (iterA) ============ -->
+  <g id="figures" stroke="#1A1A1A" stroke-linecap="round" stroke-linejoin="round">
+   <!-- JOBS: thin, round glasses, hand-to-chin thinking pose -->
+   <path fill="#FAFAF7" stroke-width="6" d="M484 754 Q484 726 512 724 Q542 726 542 756 Q542 786 512 788 Q484 786 484 754 Z"/>
+   <g fill="none" stroke-width="4"><circle cx="500" cy="752" r="10"/><circle cx="524" cy="752" r="10"/><path d="M510 752 L514 752"/></g>
+   <path fill="none" stroke-width="4" d="M486 742 Q496 730 512 730 Q528 730 538 744"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M504 786 L520 786 L520 800 L504 800 Z"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M472 810 Q470 800 482 798 L542 798 Q554 800 552 810 L540 886 L484 886 Z"/>
+   <path fill="none" stroke="#FAFAF7" stroke-width="4" d="M500 802 Q512 810 524 802"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M486 886 L482 1000 L508 1000 L508 886 Z"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M516 886 L516 1000 L540 1000 L538 886 Z"/>
+   <path fill="none" stroke-width="9" d="M486 1000 L470 1006 M534 1000 L552 1006"/>
+   <path fill="none" stroke-width="16" d="M478 816 L448 860 L505 792"/>
+   <path fill="none" stroke-width="15" d="M546 812 L552 858 L548 878"/>
+   <!-- BUFFETT: short, portly, balding, square glasses, drink in hand -->
+   <path fill="#FAFAF7" stroke-width="6" d="M668 760 Q668 728 702 726 Q738 728 738 762 Q738 794 702 796 Q668 794 668 760 Z"/>
+   <g fill="none" stroke-width="4"><path d="M676 758 h20 v16 h-20 z"/><path d="M708 758 h20 v16 h-20 z"/><path d="M696 764 L708 764"/></g>
+   <path fill="none" stroke-width="4" d="M668 752 Q664 736 676 732 M738 752 Q742 736 730 732"/>
+   <path fill="none" stroke-width="3" d="M690 784 Q702 792 716 784"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M692 794 L714 794 L714 806 L692 806 Z"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M654 818 Q650 806 668 802 L738 802 Q756 806 750 820 Q762 850 760 900 L642 900 Q636 852 654 818 Z"/>
+   <path fill="none" stroke="#FAFAF7" stroke-width="4" d="M700 806 L700 820 M694 806 L708 806"/>
+   <path fill="#FAFAF7" stroke-width="0" d="M697 820 L707 820 L710 860 L694 860 Z"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M664 900 L660 1000 L694 1000 L694 900 Z"/>
+   <path fill="#1A1A1A" stroke-width="0" d="M710 900 L710 1000 L744 1000 L740 900 Z"/>
+   <path fill="none" stroke-width="9" d="M666 1000 L648 1006 M738 1000 L756 1006"/>
+   <path fill="none" stroke-width="17" d="M650 828 L644 892"/>
+   <path fill="none" stroke-width="17" d="M752 826 L762 892"/>
+   <path fill="none" stroke-width="6" d="M626 892 L654 892 L652 934 L628 934 Z M626 902 L654 902"/>
+  </g>
  </g>
 </svg>
   <div class="lc">
