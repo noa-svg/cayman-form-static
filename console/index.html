@@ -587,15 +587,13 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .cmd-btn:hover {
   background: var(--color-atrium-deep);
 }
-/* ---- quick-create split button + dropdown ---- */
-/* On desktop the 3 launch tiles are always visible, so the top-right New
-   split-button is redundant; hidden here and re-shown on mobile (where the
-   tiles scroll out of view) via the max-width:600px query. */
+/* ---- quick-create New button + dropdown ---- */
+/* One control, one behavior: a single "New" button opens the lane-aware create
+   menu. The caret rotates when the menu is open. */
 .new-wrap { position: relative; display: inline-flex; align-items: stretch; }
-.cmd-split { display: flex; }
-.cmd-btn-main { border-radius: var(--radius-sm) 0 0 var(--radius-sm); border-right: 1px solid rgba(232,163,61,0.2); }
-.cmd-btn-arr  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 4px 8px; font-size: 11px; line-height: 1; }
-.cmd-btn-arr.open { background: var(--color-atrium-muted); }
+.cmd-caret { font-size: 10px; margin-left: 6px; opacity: 0.85; display: inline-block; transition: transform var(--dur-base); }
+.cmd-btn.open .cmd-caret { transform: rotate(180deg); }
+.cmd-btn.open { background: var(--color-atrium-deep); }
 .new-dd {
   position: absolute;
   top: calc(100% + 6px);
@@ -1798,6 +1796,11 @@ input:focus {
   padding: var(--space-5) var(--space-6);
   border-top: 1px solid var(--color-border);
   display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.dact-btns {
+  display: flex;
   align-items: center;
   gap: var(--space-4);
 }
@@ -1828,6 +1831,55 @@ input:focus {
   transition: color var(--dur-fast);
 }
 .dact .dvoid:hover { color: var(--color-red); text-decoration: underline; }
+
+/* Inline confirm strip (replaces native confirm/alert for void + reseal) */
+.dact-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-hover);
+}
+.dact-confirm .dac-msg {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  line-height: 1.5;
+}
+.dact-confirm .dac-btns { display: flex; gap: var(--space-3); justify-content: flex-end; }
+.dact-confirm .dac-cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-ink-sub);
+  cursor: pointer;
+}
+.dact-confirm .dac-cancel:hover { background: var(--color-bg-card); }
+.dact-confirm .dac-go {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-atrium);
+  background: var(--color-atrium);
+  color: #fff;
+  cursor: pointer;
+}
+.dact-confirm .dac-go.danger { border-color: var(--color-red); background: var(--color-red); }
+.dact-confirm .dac-go[disabled], .dact-confirm .dac-cancel[disabled] { opacity: 0.55; cursor: default; }
+.dact-status {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+.dact-status.error { color: var(--color-danger); }
 
 .kv {
   display: flex;
@@ -2120,7 +2172,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   /* Touch targets */
   .row { min-height: 44px; align-items: center; }
   .cmd-btn { min-height: 36px; padding: 8px 16px; }
-  .cmd-btn-arr { min-height: 36px; min-width: 40px; }
   .x { min-width: 40px; min-height: 40px; }
   .pi { min-height: 36px; padding: 8px 16px; }
   .dact button { min-height: 40px; }
@@ -2221,9 +2272,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div><h1>Board</h1></div><span id="prompt-path" hidden></span>
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
-            <div class="cmd-split">
-              <button class="cmd-btn cmd-btn-main" id="newBtn">New</button><button class="cmd-btn cmd-btn-arr" id="newArr" title="Quick create">&#9660;</button>
-            </div>
+            <button class="cmd-btn" id="newBtn" aria-haspopup="menu" aria-expanded="false">New <span class="cmd-caret" aria-hidden="true">&#9662;</span></button>
             <div class="new-dd" id="newDd">
               <div class="dd-onboarding">
                 <div class="new-dd-hdr">onboarding</div>
@@ -2263,14 +2312,15 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div><h1>Activity</h1><div class="sub">Every process, including completed and voided. Click to open.</div></div>
         <div style="display:flex;gap: 12px;align-items:center">
           <select id="actFilter" style="font-family:var(--font-body);font-size:13px;border:1px solid var(--color-border);border-radius:6px;padding: 8px 12px;background:var(--color-bg-card);color:var(--color-ink);cursor:pointer">
+            <!-- Filter by human milestone so the options match the chip labels exactly. -->
             <option value="">All stages</option>
-            <option value="link_sent">link_sent</option>
-            <option value="opened">opened</option>
-            <option value="submitted">submitted</option>
-            <option value="signing">signing</option>
-            <option value="all_signed">all_signed</option>
-            <option value="complete">complete</option>
-            <option value="voided">voided</option>
+            <option value="Invited">Invited</option>
+            <option value="In progress">In progress</option>
+            <option value="Signing">Signing</option>
+            <option value="Sealing">Sealing</option>
+            <option value="Needs a look">Needs a look</option>
+            <option value="Done">Done</option>
+            <option value="Voided">Voided</option>
           </select>
         </div>
       </div>
@@ -2714,6 +2764,25 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     complete:4, sealed:4
   };
   function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired';}
+  // Human milestone label for any canonical stage. Reuses the board rail's map so the
+  // drawer + activity read the SAME words the board shows; laterals get their own words.
+  // Unknown stages fall back to a humanized key rather than a raw machine string.
+  function stageMilestone(st){
+    st=String(st==null?'':st);
+    if(st==='voided'||st==='void')return 'Voided';
+    if(st==='expired')return 'Expired';
+    if(st==='needs_attention')return 'Needs a look';
+    var mi=STAGE_TO_MILESTONE[st];
+    return (mi!=null)?RAIL_MILESTONES[mi]:(st?humanKey(st):'');
+  }
+  // snake_case / camelCase machine key -> "Title Case" label (for Details rows etc.).
+  function humanKey(k){
+    return String(k==null?'':k)
+      .replace(/[_\-]+/g,' ')
+      .replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+      .replace(/\s+/g,' ').trim()
+      .replace(/\b\w/g,function(c){return c.toUpperCase();});
+  }
   // Pull "N of M" from an explicit signer index/count, else scrape "Signer 2 of 3"
   // (or "2 of 3") from the next-action / wait string. Returns "" if neither present.
   function signerFraction(r){
@@ -2854,7 +2923,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Mint the "+ttl.toLowerCase()+" link for an existing LP, then send it.";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" - existing LP";
-      el=document.getElementById("createBtn");if(el)el.textContent="Create & send invite";
+      el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
       return;
     }
     el=document.getElementById("typeKindRow");if(el)el.style.display="";
@@ -2903,13 +2972,15 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
   // "New" opens the lane-aware menu (Israel: Increase/Withdrawal; Cayman: + Onboarding),
   // never a fixed subscription panel - so the Israel operator always picks a valid flow.
-  document.getElementById("newBtn").onclick=function(e){e.stopPropagation();var on=newDd.classList.toggle("on");newArr.classList.toggle("open",on);};
+  document.getElementById("newBtn").onclick=function(e){e.stopPropagation();toggleNewDd();};
   document.getElementById("closeBtn").onclick=close;
   scrim.onclick=close;
   // quick-pick dropdown
-  var newDd=document.getElementById("newDd"),newWrap=document.getElementById("newWrap"),newArr=document.getElementById("newArr");
-  newArr.onclick=function(e){e.stopPropagation();var on=newDd.classList.toggle("on");newArr.classList.toggle("open",on);};
-  document.addEventListener("click",function(e){if(newWrap&&!newWrap.contains(e.target)){newDd.classList.remove("on");newArr.classList.remove("open");}});
+  var newDd=document.getElementById("newDd"),newWrap=document.getElementById("newWrap"),newBtn=document.getElementById("newBtn");
+  // Single "New" button: one control, one behavior. Toggle keeps the caret + aria in sync.
+  function closeNewDd(){newDd.classList.remove("on");newBtn.classList.remove("open");newBtn.setAttribute("aria-expanded","false");}
+  function toggleNewDd(){var on=newDd.classList.toggle("on");newBtn.classList.toggle("open",on);newBtn.setAttribute("aria-expanded",on?"true":"false");}
+  document.addEventListener("click",function(e){if(newWrap&&!newWrap.contains(e.target)){closeNewDd();}});
   function setToggleSilent(id,key,val){var s=document.getElementById(id);if(!s)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");});var b=s.querySelector('[data-v="'+val+'"]');if(b){b.classList.add("on");state[key]=val;}}
   function quickPick(btn){
     state.process=btn.getAttribute("data-proc")||"subscription";
@@ -2917,7 +2988,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     setToggleSilent("segType","type",btn.getAttribute("data-type"));
     setToggleSilent("segKind","lpKind",btn.getAttribute("data-kind"));
     setToggleSilent("segLang","language",btn.getAttribute("data-lang"));
-    newDd.classList.remove("on");newArr.classList.remove("open");
+    closeNewDd();
     open();
     setTimeout(function(){var f=document.getElementById("email");if(f)f.focus();},160);
   }
@@ -2955,7 +3026,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top: 4px">'+esc2(d.nameHebrew)+'</div>';
-    h+='<span class="st">'+esc2(d.stage||d.currentStage||"")+'</span></div>';
+    h+='<span class="st">'+esc2(stageMilestone(d.stage||d.currentStage))+'</span></div>';
     // F44: gate lifecycle actions on stage so a footgun (reseal with no docs,
     // void on a completed sub) can never be clicked.
     // 2026-06-11 Noa decision: Resend invite + Nudge signer buttons removed.
@@ -2977,9 +3048,19 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     }
     // Built here, placed LAST in the drawer (below Details/History). Void is the
     // quietest control; an irreversible action never leads the panel.
-    var dactHtml = dactBtns
-      ? '<div class="dact">'+dactBtns+'</div>'
-      : '<div class="dact"><span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span></div>';
+    // The confirm strip + status line live inside .dact so both void AND reseal are
+    // gated by an inline material confirm (never a native confirm/alert). The strip is
+    // hidden until an action is armed; the status line carries the result or a real error.
+    var dactInner = dactBtns
+      ? '<div class="dact-btns">'+dactBtns+'</div>'
+      : '<span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span>';
+    var dactHtml = '<div class="dact">'+dactInner
+      + '<div class="dact-confirm" id="dactConfirm" hidden>'
+      +   '<span class="dac-msg" id="dacMsg"></span>'
+      +   '<div class="dac-btns"><button type="button" class="dac-cancel" id="dacCancel">Cancel</button><button type="button" class="dac-go" id="dacGo"></button></div>'
+      + '</div>'
+      + '<div class="dact-status" id="dactStatus" role="status" aria-live="polite" hidden></div>'
+      + '</div>';
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -2995,28 +3076,60 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     }
     if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){var stc=(s.state==='done')?' is-done':'';h+='<div class="person'+stc+'"><div class="pn-wrap"><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><div class="pright"><span class="pr">'+esc2(s.role)+'</span>'+signerStateHtml(s.state)+'</div></div>';});h+='</div>';}
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
-    if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(k)+'</span><span class="v">'+esc2(fv)+'</span></div>';});h+='</div>';}
+    if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});h+='</div>';}
     // History placeholder: populated async if mondayItemId is known
     if(d.mondayItemId)h+='<div id="dhist" class="dsec" style="opacity:.5;font-size: 13px;color:var(--color-ink-muted)">Loading history...</div>';
     h+=dactHtml;
     document.getElementById("dbody").innerHTML=h;
     Array.prototype.forEach.call(document.querySelectorAll("#drawer .cp"),function(b){b.onclick=function(){var t=document.createElement("textarea");t.value=b.getAttribute("data-c");document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(t);b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1200);};});
-    Array.prototype.forEach.call(document.querySelectorAll(".dact button"),function(b){
+    // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
+    // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
+    // the status line with real context, never a bare native alert('Error').
+    var ACT_CONFIRM={
+      void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
+      reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'}
+    };
+    var confEl=document.getElementById('dactConfirm'),msgEl=document.getElementById('dacMsg'),
+        goEl=document.getElementById('dacGo'),cancelEl=document.getElementById('dacCancel'),
+        statusEl=document.getElementById('dactStatus');
+    var pendingAct=null;
+    function dStatus(msg,kind){
+      if(!statusEl)return;
+      if(!msg){statusEl.hidden=true;statusEl.textContent='';statusEl.className='dact-status';return;}
+      statusEl.hidden=false;statusEl.textContent=msg;statusEl.className='dact-status'+(kind?(' '+kind):'');
+    }
+    function dHideConfirm(){if(confEl)confEl.hidden=true;pendingAct=null;}
+    function dActError(act,r){
+      var base=(act==='void')?'Could not void this process':'Could not reseal the documents';
+      return base+((r&&r.error)?(': '+r.error):'. Refresh and try again, or check the process in Monday.');
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".dact-btns button"),function(b){
       var act=b.getAttribute("data-act");
       b.onclick=function(){
-        if(act==='void'&&!confirm('Void this process? Signer links will stop working.'))return;
-        b.disabled=true;
-        apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
-          b.disabled=false;
-          if(r&&r.ok){
-            // F1: void closes the drawer; live-looking actions on a dead process are a misfire hazard.
-            if(act==='void'){dclose();load();}
-            else{load();if(currentPid)openDrawer(currentPid);}
-          }
-          else{alert((r&&r.error)||'Error');}
-        }).catch(function(){b.disabled=false;alert('Error');});
+        var c=ACT_CONFIRM[act];if(!c||!confEl)return;
+        pendingAct=act;dStatus('',null);
+        msgEl.textContent=c.msg;
+        goEl.textContent=c.cta;goEl.className='dac-go'+(c.danger?' danger':'');
+        goEl.disabled=false;cancelEl.disabled=false;
+        confEl.hidden=false;
+        goEl.focus();
       };
     });
+    if(cancelEl)cancelEl.onclick=function(){dHideConfirm();};
+    if(goEl)goEl.onclick=function(){
+      var act=pendingAct;if(!act)return;
+      var c=ACT_CONFIRM[act];
+      goEl.disabled=true;cancelEl.disabled=true;
+      dStatus(c.working,'');
+      apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
+        if(r&&r.ok){
+          // F1: void closes the drawer; live-looking actions on a dead process are a misfire hazard.
+          if(act==='void'){dHideConfirm();dclose();load();}
+          else{load();if(currentPid)openDrawer(currentPid);}
+        }
+        else{goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,r),'error');}
+      }).catch(function(){goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,null),'error');});
+    };
     // Async history load
     if(d.mondayItemId){
       apiFetch('?api=lpHistory&mondayItemId='+encodeURIComponent(d.mondayItemId)).then(function(hr){
@@ -3025,15 +3138,16 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
         if(!others.length){el.remove();return;}
         var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
-        var STAGE_DOT={complete:'#16A34A',sealed:'#16A34A',voided:'#9CA3AF',void:'#9CA3AF',needs_attention:'#DC2626'};
+        // Dot color from the design-system CSS vars (not raw hex), matching the board.
+        var STAGE_DOT={complete:'var(--color-green)',sealed:'var(--color-green)',voided:'var(--color-ink-muted)',void:'var(--color-ink-muted)',needs_attention:'var(--color-red)'};
         var rows='';
         others.forEach(function(p){
           var label=FLOW_LABEL[p.flowType]||p.flowType||'Process';
-          var dot=STAGE_DOT[p.currentStage]||'#F59E0B';
+          var dot=STAGE_DOT[p.currentStage]||'var(--color-amber)';
           var when=p.daysAgo!=null?(p.daysAgo===0?'today':p.daysAgo+'d ago'):'';
           rows+='<div class="kv hist" data-pid="'+esc2(p.processId)+'" style="cursor:pointer;border-radius:6px;padding: 4px 8px;transition:background .12s">'
             +'<span class="k" style="display:flex;align-items:center;gap: 8px"><span style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;display:inline-block"></span>'+esc2(label)+'</span>'
-            +'<span class="v" style="display:flex;align-items:center;gap: 8px"><span style="color:var(--color-ink-muted)">'+esc2(p.currentStage)+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
+            +'<span class="v" style="display:flex;align-items:center;gap: 8px"><span style="color:var(--color-ink-muted)">'+esc2(stageMilestone(p.currentStage))+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
             +'</div>';
         });
         el.innerHTML='<h3>History ('+others.length+')</h3>'+rows;
@@ -3056,7 +3170,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   // sidebar, one per press); '/' focuses the board search when not typing.
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'){
-      if(newDd.classList.contains('on')){newDd.classList.remove('on');newArr.classList.remove('open');return;}
+      if(newDd.classList.contains('on')){closeNewDd();return;}
       if(panel.classList.contains('on')){close();return;}
       if(drawer.classList.contains('on')){dclose();return;}
       if(document.body.classList.contains('side-open')){document.body.classList.remove('side-open');return;}
@@ -3273,10 +3387,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       showMsg("Creating the request and sending the invite...",false);
       // Mint, then auto-send the approved Hebrew invite (Noa 2026-06-30: create == send).
       apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId||'')).then(function(res){
-        if(!res||!res.ok){btn.disabled=false;btn.textContent="Create & send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
+        if(!res||!res.ok){btn.disabled=false;btn.textContent="Send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
         var processId=res.processId||'', link=res.url||res.signerLink||"";
         return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId)).then(function(sr){
-          btn.disabled=false;btn.textContent="Create & send invite";
+          btn.disabled=false;btn.textContent="Send invite";
           showMsg("",false);
           document.getElementById("res").classList.add("on");
           document.getElementById("lk").textContent=link;
@@ -3295,7 +3409,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
           if(window.__clearCreateDraft)window.__clearCreateDraft();
           load();
         });
-      }).catch(function(e){btn.disabled=false;btn.textContent="Create & send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+      }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
@@ -3369,7 +3483,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var TERMINAL={complete:1,sealed:1,voided:1,void:1};
     var WARN={needs_attention:1};
     var cls=TERMINAL[stage]?'off':(WARN[stage]?'warn':'live');
-    return '<span class="act-chip '+cls+'">'+esc2(stage)+'</span>';
+    return '<span class="act-chip '+cls+'">'+esc2(stageMilestone(stage))+'</span>';
   }
   function actFlowLabel(f){
     var M={cayman_subscription:'sub',cayman_increase:'increase',cayman_withdrawal:'withdrawal',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
@@ -3405,7 +3519,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function applyActFilter(){
     if(!ACT_ROWS)return;
     var f=document.getElementById('actFilter');var val=f?f.value:'';
-    renderActivity(val?ACT_ROWS.filter(function(r){return r.currentStage===val;}):ACT_ROWS);
+    // Match on the human milestone so the filter and the chip labels stay one vocabulary.
+    renderActivity(val?ACT_ROWS.filter(function(r){return stageMilestone(r.currentStage)===val;}):ACT_ROWS);
   }
   var ACT_SEQ=0;
   function loadActivity(){
