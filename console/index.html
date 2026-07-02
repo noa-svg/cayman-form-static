@@ -1958,28 +1958,6 @@ input:focus {
 .set-p strong { color: var(--color-atrium); font-weight: var(--weight-semi); }
 
 /* ============================================================
-   HAMBURGER + MOBILE SIDEBAR SCRIM
-   ============================================================ */
-
-#mob-menu {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 18px;
-  color: var(--color-atrium);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  flex-shrink: 0;
-  line-height: 1;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-#mob-menu:hover { background: var(--color-bg-hover); }
-
-/* ============================================================
    SIDEBAR COLLAPSE (desktop toggle)
    ============================================================ */
 
@@ -2019,17 +1997,6 @@ body.side-coll .side-foot .auth-email,
 body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
-#side-scrim {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 49;
-  background: var(--color-bg-overlay);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-drawer) var(--ease-out);
-}
-
 /* ============================================================
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
    ============================================================ */
@@ -2049,7 +2016,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
   /* Sidebar: tab bar replaces it entirely on mobile */
   .side { display: none !important; }
-  #mob-menu { display: none !important; }
 
   /* Bottom tab bar */
   #tab-bar {
@@ -2246,7 +2212,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   <div class="main">
     <div class="view" id="v-board">
       <div class="top">
-        <button id="mob-menu" aria-label="Menu">&#9776;</button>
         <div id="mob-fund"><button class="mob-fb" data-v="cayman">CY</button><button class="mob-fb on" data-v="israel">IL</button></div>
         <div><h1>Board</h1></div><span id="prompt-path" hidden></span>
         <div class="top-right">
@@ -2332,7 +2297,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </div>
   </div>
 
-  <div id="side-scrim"></div>
   <div class="scrim" id="dscrim"></div>
   <div class="panel" id="drawer"><button class="x" id="dclose" aria-label="Close">&times;</button><div id="dbody"></div></div>
 
@@ -2986,9 +2950,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   var drawerOpener=null;
   function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
-  // mobile sidebar
-  document.getElementById('mob-menu').onclick=function(){document.body.classList.toggle('side-open');};
-  document.getElementById('side-scrim').onclick=function(){document.body.classList.remove('side-open');};
   // desktop sidebar collapse
   (function(){
     var btn=document.getElementById('side-collapse');
@@ -3149,14 +3110,13 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(){document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process.</div></div>';});
   }
 
-  // F18: keyboard shortcuts. Escape closes (dropdown > panel > drawer > mobile
-  // sidebar, one per press); '/' focuses the board search when not typing.
+  // F18: keyboard shortcuts. Escape closes (dropdown > panel > drawer, one per
+  // press); '/' focuses the board search when not typing.
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'){
       if(newDd.classList.contains('on')){closeNewDd();return;}
       if(panel.classList.contains('on')){close();return;}
       if(drawer.classList.contains('on')){dclose();return;}
-      if(document.body.classList.contains('side-open')){document.body.classList.remove('side-open');return;}
       return;
     }
     if(e.key==='/'){
@@ -3436,7 +3396,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
   // view switching
   function switchView(v){
-    document.body.classList.remove('side-open');
     if(drawer&&drawer.classList.contains('on'))dclose();
     Array.prototype.forEach.call(document.querySelectorAll(".nav"),function(x){x.classList.remove("on");x.removeAttribute("aria-current");});
     var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv){nv.classList.add("on");nv.setAttribute("aria-current","page");}
