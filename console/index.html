@@ -454,7 +454,6 @@ body.side-coll .side-foot .foot-gear { display: none; }
   text-shadow: none;
 }
 
-/* (activity table uses light editorial tokens directly; no separate light override) */
 
 /* LOGIN SCREEN
    ============================================================ */
@@ -1300,27 +1299,6 @@ input:focus {
 }
 
 /* ============================================================
-   ACTIVITY TABLE (journey tracker)
-   ============================================================ */
-.act-terminal{background:var(--color-bg-page);min-height:calc(100vh - 100px);font-family:var(--font-body)}
-.act-date-group{font-family:var(--font-body);font-size: 11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-ink-muted);padding: 20px 24px 6px;border-bottom:none;display:flex;align-items:center;gap: 12px}
-.act-date-group::after{content:"";border-top:1px solid var(--color-border-subtle);flex:1}
-.act-row{display:grid;grid-template-columns:1fr 90px 110px 50px 55px;align-items:center;gap: 0;padding: 12px 24px;border-bottom:1px solid var(--color-border-subtle);cursor:pointer;transition:background var(--dur-base) var(--ease-out);font-family:var(--font-body);font-size: 14px}
-.act-row:hover{background:var(--color-bg-hover)}
-.act-row.hdr{cursor:default;font-size: 11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-ink-muted);background:var(--color-bg-page);border-bottom:1px solid var(--color-border);position:sticky;top:0;z-index:1}
-.act-row.hdr:hover{background:var(--color-bg-page)}
-.act-nm{font-weight:600;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.act-nm small{display:block;font-size: 11px;color:var(--color-ink-muted);margin-top: 1px}
-.act-flow{color:var(--color-ink-sub);font-size:13px}
-.act-time{color:var(--color-ink-muted);font-size: 12px;font-family:var(--font-body)}
-.act-chip{font-size: 11px;font-weight:600;font-family:var(--font-body);padding: 4px 12px;border-radius:var(--radius-pill);letter-spacing:0;text-transform:none;justify-self:start}
-.act-chip.ok{background:transparent;color:var(--color-ink-muted);border:1px solid transparent}
-.act-chip.off{background:transparent;color:var(--color-ink-muted);border:1px solid transparent}
-.act-chip.warn{background:var(--color-coral);color:#fff;border:1px solid var(--color-coral)}
-.act-chip.live{background:transparent;color:var(--color-ink-sub);border:1px solid var(--color-border-strong)}
-.act-lane{font-size: 12px;color:var(--color-ink-muted);text-transform:none;letter-spacing:0}
-
-/* ============================================================
    MESSAGES  (lifecycle spine + node-detail panel)
    ============================================================ */
 
@@ -2152,10 +2130,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   .spine { flex: none; max-height: 320px; }
   .mdetail, .msgempty { flex: none; min-width: 0; max-width: none; border-left: none; border-top: 1px solid var(--color-border); }
 
-  /* Activity: compact grid, hide flow + lane */
-  .act-row { grid-template-columns: 1fr 90px 50px; padding: 8px 12px; }
-  .act-flow, .act-lane { display: none; }
-
   /* Quick-create dropdown: keep on screen at narrow widths */
   .new-dd { left: auto; right: 0; max-width: calc(100vw - 24px); }
 }
@@ -2253,25 +2227,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       </div>
     </div>
 
-    <div class="view" id="v-activity" hidden>
-      <div class="top">
-        <div><h1>Activity</h1><div class="sub">Every process, including completed and voided. Click to open.</div></div>
-        <div style="display:flex;gap: 12px;align-items:center">
-          <select id="actFilter" style="font-family:var(--font-body);font-size:13px;border:1px solid var(--color-border);border-radius:6px;padding: 8px 12px;background:var(--color-bg-card);color:var(--color-ink);cursor:pointer">
-            <!-- Filter by human milestone so the options match the chip labels exactly. -->
-            <option value="">All stages</option>
-            <option value="Invited">Invited</option>
-            <option value="In progress">In progress</option>
-            <option value="Signing">Signing</option>
-            <option value="Sealing">Sealing</option>
-            <option value="Needs a look">Needs a look</option>
-            <option value="Done">Done</option>
-            <option value="Voided">Voided</option>
-          </select>
-        </div>
-      </div>
-      <div class="content" style="padding: 0"><div class="act-terminal"><div id="act-table"></div></div></div>
-    </div>
     <div class="view" id="v-w8" hidden>
       <div class="top"><div><h1>W-8 renewals</h1><div class="sub">The 3-year IRS clock. Who is due first.</div></div></div>
       <div class="content">
@@ -2529,10 +2484,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     ];
     var L=state.lane;
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
-    if(qs.indexOf('?api=activity')===0){
-      var rows=(L==='israel'?israel:cayman).map(function(p,i){return {processId:p.processId,displayName:p.displayName,flowType:p.flowType,currentStage:p.currentStage,lane:p.lane,createdAt:'2026-06-2'+(7-(i%2))+'T'+(9+i)+':1'+i+':00'};});
-      return {rows:rows};
-    }
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
       {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
       {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
@@ -2584,7 +2535,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // in-memory caches so nothing stays visible behind the login overlay on a
     // shared machine.
     try{
-      ['list','act-table','msgspine','w8list','w8counts','w8readout','dbody'].forEach(function(id){
+      ['list','msgspine','w8list','w8counts','w8readout','dbody'].forEach(function(id){
         var el=document.getElementById(id);if(el)el.innerHTML='';
       });
       var me=document.getElementById('msgdetail');
@@ -2594,7 +2545,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var pn=document.getElementById('panel'),sc=document.getElementById('scrim');
       if(pn)pn.classList.remove('on');if(sc)sc.classList.remove('on');
       document.body.style.overflow='';
-      allRows=[];ACT_ROWS=null;W8=null;MSGS=null;curMsg=null;currentPid=null;
+      allRows=[];W8=null;MSGS=null;curMsg=null;currentPid=null;
     }catch(e){}
   }
   function startGoogleSignIn(){
@@ -3142,17 +3093,15 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(v==="israel")?"israel":"cayman";
       var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(v==="israel"?"israel":"cayman")+'$';
       // F3: a lane switch resets every per-lane view state and cache so nothing
-      // from the prior lane bleeds across (toggle, search, activity, w8, messages).
+      // from the prior lane bleeds across (toggle, search, w8, messages).
       showDone=false;
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
-      ACT_ROWS=null;W8=null;MSGS=null;curMsg=null;
-      var at=document.getElementById('act-table');if(at)at.innerHTML='';
+      W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
       var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
       var ml=document.getElementById('msgspine');if(ml)ml.innerHTML='';
       var me=document.getElementById('msgdetail');if(me){me.className='msgempty';me.innerHTML='Select an email to edit its copy and preview what sends.';}
       load();
-      var va=document.getElementById('v-activity');if(va&&!va.hidden)loadActivity();
       var vw=document.getElementById('v-w8');if(vw&&!vw.hidden)loadW8();
       var vm=document.getElementById('v-messages');if(vm&&!vm.hidden)loadMsgs();
     }
@@ -3401,7 +3350,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv){nv.classList.add("on");nv.setAttribute("aria-current","page");}
     Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab"),function(x){x.classList.remove("on");});
     var tv=document.querySelector('#tab-bar .tab[data-view="'+v+'"]');if(tv)tv.classList.add("on");
-    ["board","messages","activity","w8","settings"].forEach(function(id){
+    ["board","messages","w8","settings"].forEach(function(id){
       var el=document.getElementById("v-"+id);if(!el)return;
       el.hidden=(id!==v);
       if(id===v){
@@ -3411,74 +3360,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     });
     if(v==="messages"&&!MSGS)loadMsgs();
     if(v==="w8"&&!W8)loadW8();
-    if(v==="activity")loadActivity();
     if(v==="settings")loadSettings();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".nav[data-view]"),function(n){
     n.onclick=function(){switchView(n.getAttribute("data-view"));};
   });
   (function(){var g=document.getElementById("foot-gear");if(g)g.onclick=function(){switchView("settings");};})();
-
-  // Activity (journey tracker)
-  var ACT_ROWS=null;
-  function actChip(stage){
-    var TERMINAL={complete:1,sealed:1,voided:1,void:1};
-    var WARN={needs_attention:1};
-    var cls=TERMINAL[stage]?'off':(WARN[stage]?'warn':'live');
-    return '<span class="act-chip '+cls+'">'+esc2(stageMilestone(stage))+'</span>';
-  }
-  function actFlowLabel(f){
-    var M={cayman_subscription:'sub',cayman_increase:'increase',cayman_withdrawal:'withdrawal',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-    return M[f]||f||'';
-  }
-  function renderActivity(rows){
-    var el=document.getElementById('act-table');if(!el)return;
-    if(!rows||!rows.length){el.innerHTML='<div class="empty">Nothing here yet.</div>';return;}
-    var h='<div class="act-row hdr"><span>LP</span><span>Type</span><span>Stage</span><span>Time</span><span>Lane</span></div>';
-    var lastDate='';
-    rows.forEach(function(r){
-      var dt=r.createdAt?r.createdAt.slice(0,10):'';
-      var tm=r.createdAt?r.createdAt.slice(11,16):'';
-      if(dt!==lastDate){
-        // format date as DD.MM.YYYY
-        var parts=dt.split('-');var disp=parts.length===3?(parts[2]+'.'+parts[1]+'.'+parts[0]):dt;
-        h+='<div class="act-date-group">'+esc2(disp)+'</div>';
-        lastDate=dt;
-      }
-      h+='<div class="act-row" data-pid="'+esc2(r.processId||'')+'">'
-        +'<span class="act-nm">'+esc2(r.displayName||(r.processId||'').slice(0,8))+'</span>'
-        +'<span class="act-flow">'+esc2(actFlowLabel(r.flowType))+'</span>'
-        +actChip(r.currentStage)
-        +'<span class="act-time">'+esc2(tm)+'</span>'
-        +'<span class="act-lane">'+esc2(r.lane==='cayman'?'Cayman':'Israel')+'</span>'
-        +'</div>';
-    });
-    el.innerHTML=h;
-    Array.prototype.forEach.call(el.querySelectorAll('.act-row[data-pid]'),function(row){
-      row.onclick=function(){var p=row.getAttribute('data-pid');if(p)openDrawer(p);};
-    });
-  }
-  function applyActFilter(){
-    if(!ACT_ROWS)return;
-    var f=document.getElementById('actFilter');var val=f?f.value:'';
-    // Match on the human milestone so the filter and the chip labels stay one vocabulary.
-    renderActivity(val?ACT_ROWS.filter(function(r){return stageMilestone(r.currentStage)===val;}):ACT_ROWS);
-  }
-  var ACT_SEQ=0;
-  function loadActivity(){
-    var rid=++ACT_SEQ;
-    var el=document.getElementById('act-table');
-    if(el)el.innerHTML='<div style="color:var(--color-ink-muted);padding: 24px">Loading...</div>';
-    apiFetch('?api=activity&lane='+state.lane).then(function(d){
-      if(rid!==ACT_SEQ)return;
-      ACT_ROWS=(d&&d.rows)||[];
-      applyActFilter();
-    }).catch(function(){if(rid!==ACT_SEQ)return;if(el)el.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Check auth.</div>';});
-  }
-  (function(){
-    var f=document.getElementById('actFilter');
-    if(f)f.addEventListener('change',applyActFilter);
-  })();
 
   // W-8 renewals
   var W8=null;
