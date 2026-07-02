@@ -589,7 +589,9 @@ body.side-coll .side-foot .foot-gear { display: none; }
 }
 /* ---- quick-create New button + dropdown ---- */
 /* One control, one behavior: a single "New" button opens the lane-aware create
-   menu. The caret rotates when the menu is open. */
+   menu. The caret rotates when the menu is open. This is the single create
+   entry point on every viewport (earlier builds had desktop launch tiles; they
+   were removed, so this affordance shows at all widths). */
 .new-wrap { position: relative; display: inline-flex; align-items: stretch; }
 .cmd-caret { font-size: 10px; margin-left: 6px; opacity: 0.85; display: inline-block; transition: transform var(--dur-base); }
 .cmd-btn.open .cmd-caret { transform: rotate(180deg); }
@@ -611,15 +613,6 @@ body.side-coll .side-foot .foot-gear { display: none; }
 @keyframes ddIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
 .new-dd.on { display: block; }
 .new-dd-sep { height: 1px; background: var(--color-border); margin: 4px 8px; }
-.new-dd-hdr {
-  font-size: 11px;
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-ink-muted);
-  padding: 8px 12px 4px;
-}
 .new-dd-item {
   display: flex;
   align-items: center;
@@ -733,25 +726,13 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .board-search::placeholder { color: var(--color-ink-muted); }
 .board-search::-webkit-search-cancel-button { opacity: 0.4; cursor: pointer; }
 
-/* Inline primary create button (reuses the atrium .cmd-btn voice) */
-.board-new {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semi);
-  color: #fff;
-  background: var(--color-atrium);
-  border: 1px solid var(--color-atrium);
-  border-radius: var(--radius-md);
-  padding: 6px 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--dur-base) var(--ease-out);
-}
-.board-new:hover { background: var(--color-atrium-deep); }
-/* Onboarding is Cayman-only; Israel does increase/withdrawal for existing LPs.
-   Hide the onboarding-only affordances when Israel is active (the dropdown still
-   offers Increase/Withdrawal for both lanes). */
-body[data-lane="israel"] .board-new,
+/* Onboarding is Cayman-only today; Israel does increase/withdrawal for existing
+   LPs, so the onboarding group is hidden when Israel is the active lane (the
+   dropdown still offers Increase/Withdrawal on both lanes).
+   DEPENDENCY: a separate task is building Israeli-fund onboarding. When it ships,
+   LIFT this guard so Onboarding shows on both funds. Do not delete the rule;
+   at that point just drop the [data-lane="israel"] scope so .dd-onboarding
+   always shows. */
 body[data-lane="israel"] .dd-onboarding { display: none; }
 
 /* Quiet demoted "Show completed" toggle (no box) */
@@ -2183,11 +2164,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   input, select, textarea { font-size: 16px !important; }
   .board-search { font-size: 16px; width: 100%; }
 
-  /* Search goes full-width; the top-bar "New" split is the single create affordance
-     on mobile (the inline "+ New onboarding" would be a duplicate). */
+  /* Search goes full-width; the top-bar "New" split is the create affordance. */
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
-  .board-new { display: none; }
 
   /* Board rows: keep name + stage rail; drop the age column for room */
   .row { gap: var(--space-4); }
@@ -2273,18 +2252,20 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
             <button class="cmd-btn" id="newBtn" aria-haspopup="menu" aria-expanded="false">New <span class="cmd-caret" aria-hidden="true">&#9662;</span></button>
+            <!-- One convention: FLOW primary, TYPE secondary. Language is chosen once,
+                 in the panel (#segLang), defaulted by fund; no he/en here. The sep
+                 lives inside .dd-onboarding so hiding that group on Israel hides the
+                 divider too, leaving the existing-LP items clean. -->
             <div class="new-dd" id="newDd">
               <div class="dd-onboarding">
-                <div class="new-dd-hdr">onboarding</div>
-                <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="he">Individual <span class="ndt">he</span></button>
-                <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" data-lang="en">Individual <span class="ndt">en</span></button>
-                <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new" data-lang="he">Entity <span class="ndt">he</span></button>
+                <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new">Onboarding <span class="ndt">individual</span></button>
+                <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new">Onboarding <span class="ndt">entity</span></button>
+                <div class="new-dd-sep"></div>
               </div>
-              <div class="new-dd-hdr">existing LP</div>
-              <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing" data-lang="he">Increase <span class="ndt">individual</span></button>
-              <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing" data-lang="he">Increase <span class="ndt">entity</span></button>
-              <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing" data-lang="he">Withdrawal <span class="ndt">individual</span></button>
-              <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing" data-lang="he">Withdrawal <span class="ndt">entity</span></button>
+              <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing">Increase <span class="ndt">individual</span></button>
+              <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing">Increase <span class="ndt">entity</span></button>
+              <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing">Withdrawal <span class="ndt">individual</span></button>
+              <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing">Withdrawal <span class="ndt">entity</span></button>
             </div>
           </div>
         </div>
@@ -2370,8 +2351,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <div class="hint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
     </div>
     <div class="g2" id="typeKindRow">
-      <div><label>Subscriber</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
-      <div id="kindCell"><label>Investor</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
+      <div><label>Investor type</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
+      <div id="kindCell"><label>Investor status</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
     </div>
     <div id="langRow">
     <label>Email language <span class="tag">required</span></label>
@@ -2439,7 +2420,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size: 13px;padding: 8px 16px;white-space:nowrap">Copy link</button>
       </div>
-      <button id="resSendBtn" class="cta" data-pid="" style="display:none;margin-top:12px;width:100%">Send invite to the LP</button>
+      <button id="resSendBtn" class="cta" data-pid="" style="display:none;margin-top:12px;width:100%">Resend invite</button>
       <div id="resSendStatus" role="status" aria-live="polite" style="font-size: 13px;color:var(--color-ink-muted);margin-top: 8px"></div>
     </div>
   </div>
@@ -2921,8 +2902,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(isExisting){
       ["typeKindRow","manualLpFields","foRow","langRow","revShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
-      el=document.getElementById("panelLead");if(el)el.textContent="Mint the "+ttl.toLowerCase()+" link for an existing LP, then send it.";
-      el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" - existing LP";
+      el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
+      el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
       el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
       return;
     }
@@ -2938,9 +2919,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     el=document.getElementById("revShareSection");if(el)el.style.display=rsOn?"":"none";
     if(!rsOn){var _rs=document.getElementById("revShareSel");if(_rs)_rs.value="";var _rw=document.getElementById("revShareCustomWrap");if(_rw)_rw.style.display="none";}
     el=document.getElementById("panelLead");if(el)el.textContent="Creates the Monday item, emails the investor, and notifies the team.";
-    el=document.getElementById("panelTitle");if(el)el.textContent="Subscription";
+    el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
   }
+  // Title-cased investor type for the panel heading (#3): "Individual" / "Entity".
+  function _typeLabel(){return state.type==="entity"?"Entity":"Individual";}
   var panelOpener=null;
   // Wipe the create form. Called AFTER a successful submit, NOT on open, so an
   // accidental click-out + reopen preserves what the operator typed (Noa 2026-06-28:
@@ -2987,7 +2970,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(window.__lpClearPick)window.__lpClearPick();
     setToggleSilent("segType","type",btn.getAttribute("data-type"));
     setToggleSilent("segKind","lpKind",btn.getAttribute("data-kind"));
-    setToggleSilent("segLang","language",btn.getAttribute("data-lang"));
+    // Language is chosen once, in the panel. Default it by fund (Israel -> Hebrew,
+    // Cayman -> English); the operator can still flip #segLang before sending.
+    setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
     closeNewDd();
     open();
     setTimeout(function(){var f=document.getElementById("email");if(f)f.focus();},160);
@@ -2995,8 +2980,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   Array.prototype.forEach.call(document.querySelectorAll(".new-dd-item"),function(btn){
     btn.onclick=function(){quickPick(btn);};
   });
-  // Inline primary "+ New onboarding" button on the Board list header. Carries the
-  // same data-proc/type/kind/lang the old hero tile had; reuses the quick-pick path.
 
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
@@ -3447,8 +3430,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var st=document.getElementById('resSendStatus');if(st){st.style.color='var(--color-ink-muted)';st.textContent='';}
     apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid)).then(function(r){
       if(r&&r.ok){b.textContent="Invite sent";if(st){st.style.color='var(--color-success)';st.textContent='Sent to '+(r.sentTo||'the LP')+(r.cc?(' · cc '+r.cc):'');}}
-      else{b.disabled=false;b.textContent="Send invite to the LP";if(st){st.style.color='var(--color-danger)';st.textContent=(r&&r.error)||'Send failed. Try again.';}}
-    }).catch(function(e){b.disabled=false;b.textContent="Send invite to the LP";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&e.message)||'unknown');}});
+      else{b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent=(r&&r.error)||'Send failed. Try again.';}}
+    }).catch(function(e){b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&e.message)||'unknown');}});
   };
 
   // view switching
