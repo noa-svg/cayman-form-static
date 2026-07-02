@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&family=Caveat:wght@600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 /* ============================================================
@@ -16,7 +16,7 @@
 :root {
   /* LIGHT EDITORIAL PALETTE - warm cream ground, factsheet blue + gold signature */
   --color-bg-page:        #FBF7EF;
-  --color-bg-sidebar:     #1F5A8F;
+  --color-bg-sidebar:     #3A6485;
   --color-bg-card:        #FFFFFF;
   --color-bg-panel:       #FFFFFF;
   --color-bg-input:       #FFFFFF;
@@ -24,13 +24,13 @@
   --color-bg-strip:       #FBF7EF;
   --color-bg-drawer:      #FFFFFF;
   --color-bg-overlay:     rgba(20,30,40,0.40);
-  --color-atrium:         #23649E;
-  --color-atrium-deep:    #1C5182;
+  --color-atrium:         #3F729A;
+  --color-atrium-deep:    #355E80;
   --color-atrium-tint:    #EAF1F8;
   --color-atrium-tint-md: #D9E6F2;
   --color-atrium-muted:   rgba(35,100,158,0.12);
-  --color-ink:            #1B2A35;
-  --color-ink-sub:        #5C6B74;
+  --color-ink:            #2A231C;
+  --color-ink-sub:        #6E6252;
   --color-ink-muted:      #8C887A;
   --color-ink-disabled:   #C2BBA8;
   --color-ink-inverse:    #FFFFFF;
@@ -40,8 +40,8 @@
   --color-border-focus:   #23649E;
   --color-gold:           #D9A93A;
   --color-gold-tint:      #FBF1D9;
-  --color-coral:          #C2483C;
-  --color-coral-tint:     #F8E5E1;
+  --color-coral:          #C0563E;
+  --color-coral-tint:     #F6E4DA;
   --color-green:          #4E8C6A;
   --color-green-tint:     #E4F0E9;
   --color-amber:          #C99A2E;
@@ -62,7 +62,7 @@
   --color-info-bg:        #EAF1F8;
   --color-neutral:        #8C887A;
   --color-neutral-bg:     #F0ECE2;
-  --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
+  --font-display:         'Fraunces', 'Assistant', Georgia, serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
   --text-2xs:   10px;  --text-xs:    12px; --text-sm:    13px;
@@ -78,18 +78,18 @@
   --sidebar-w: 210px; --sidebar-w-coll: 52px; --header-h: 48px;
   --strip-h: 40px; --drawer-w: 420px; --panel-w: 480px;
   --grid-gutter: 24px; --grid-max: 1440px;
-  --radius-sm: 2px; --radius-md: 4px; --radius-lg: 6px; --radius-pill: 100px;
+  --radius-sm: 4px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px; --radius-pill: 100px;
   --color-sidebar-ink:      #FFFFFF;
   --color-sidebar-ink-sub:  rgba(255,255,255,0.66);
   --color-sidebar-ink-dim:  rgba(255,255,255,0.42);
   --color-sidebar-hover:    rgba(255,255,255,0.10);
   --color-sidebar-active:   rgba(255,255,255,0.16);
   --color-sidebar-line:     rgba(255,255,255,0.14);
-  --shadow-card:   0 1px 3px rgba(21,32,63,0.07);
-  --shadow-hover:  0 2px 10px rgba(21,32,63,0.10), 0 0 0 1px var(--color-border);
-  --shadow-panel:  0 6px 28px rgba(21,32,63,0.14);
-  --shadow-drawer: -2px 0 26px rgba(21,32,63,0.12);
-  --shadow-modal:  0 10px 44px rgba(21,32,63,0.18);
+  --shadow-card:   0 2px 8px rgba(74,54,32,0.08);
+  --shadow-hover:  0 6px 20px rgba(74,54,32,0.12), 0 0 0 1px var(--color-border);
+  --shadow-panel:  0 10px 34px rgba(74,54,32,0.16);
+  --shadow-drawer: -4px 0 30px rgba(74,54,32,0.14);
+  --shadow-modal:  0 14px 50px rgba(74,54,32,0.20);
   --ease-out: cubic-bezier(0.16,1,0.3,1);
   --ease-in: cubic-bezier(0.4,0,1,1);
   --ease-inout: cubic-bezier(0.65,0,0.35,1);
@@ -400,7 +400,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 :root[data-theme="light"] {
   /* LIGHT EDITORIAL - cream ground, factsheet blue primary, gold accent */
   --color-bg-page:        #FBF7EF;
-  --color-bg-sidebar:     #1F5A8F;
+  --color-bg-sidebar:     #3A6485;
   --color-bg-card:        #FFFFFF;
   --color-bg-panel:       #FFFFFF;
   --color-bg-input:       #FFFFFF;
@@ -408,13 +408,13 @@ body.side-coll .side-foot .foot-gear { display: none; }
   --color-bg-strip:       #FBF7EF;
   --color-bg-drawer:      #FFFFFF;
   --color-bg-overlay:     rgba(20,30,40,0.40);
-  --color-atrium:         #23649E;
-  --color-atrium-deep:    #1C5182;
+  --color-atrium:         #3F729A;
+  --color-atrium-deep:    #355E80;
   --color-atrium-tint:    #EAF1F8;
   --color-atrium-tint-md: #D9E6F2;
   --color-atrium-muted:   rgba(35,100,158,0.12);
-  --color-ink:            #1B2A35;
-  --color-ink-sub:        #5C6B74;
+  --color-ink:            #2A231C;
+  --color-ink-sub:        #6E6252;
   --color-ink-muted:      #8C887A;
   --color-ink-disabled:   #C2BBA8;
   --color-ink-inverse:    #FFFFFF;
@@ -424,8 +424,8 @@ body.side-coll .side-foot .foot-gear { display: none; }
   --color-border-focus:   #23649E;
   --color-gold:           #D9A93A;
   --color-gold-tint:      #FBF1D9;
-  --color-coral:          #C2483C;
-  --color-coral-tint:     #F8E5E1;
+  --color-coral:          #C0563E;
+  --color-coral-tint:     #F6E4DA;
   --color-green:          #4E8C6A;
   --color-green-tint:     #E4F0E9;
   --color-amber:          #C99A2E;
@@ -537,7 +537,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 
 /* ----- login sketchbook: one contained inline-SVG page (liori-style ink), the
    sign-in card parked on top. Clears (.off) on auth. ----- */
-#login-screen { background: #F3F1EA; }
+#login-screen { background: radial-gradient(125% 95% at 50% -5%, #FCF4E3 0%, #F5EEDE 52%, #EFE6D2 100%); }
 #login-ink, #login-top { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #login-ink { z-index: 0; }
 #login-top { z-index: 3; }
@@ -576,15 +576,18 @@ body.side-coll .side-foot .foot-gear { display: none; }
   font-weight: var(--weight-semi);
   letter-spacing: 0;
   color: #fff;
-  background: var(--color-atrium);
-  border: 1px solid var(--color-atrium);
-  border-radius: var(--radius-md);
-  padding: 6px 16px;
+  background: var(--color-coral);
+  border: 1px solid var(--color-coral);
+  border-radius: var(--radius-pill);
+  padding: 8px 18px;
   cursor: pointer;
-  transition: background var(--dur-base), box-shadow var(--dur-base);
+  box-shadow: 0 2px 8px rgba(192,86,62,0.24);
+  transition: background var(--dur-base), box-shadow var(--dur-base), transform var(--dur-base) var(--ease-out);
 }
+.cmd-btn:active { transform: scale(0.95); }
 .cmd-btn:hover {
-  background: var(--color-atrium-deep);
+  background: #A8462F;
+  border-color: #A8462F;
 }
 /* ---- quick-create New button + dropdown ---- */
 /* One control, one behavior: a single "New" button opens the lane-aware create
@@ -594,7 +597,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .new-wrap { position: relative; display: inline-flex; align-items: stretch; }
 .cmd-caret { font-size: 10px; margin-left: 6px; opacity: 0.85; display: inline-block; transition: transform var(--dur-base); }
 .cmd-btn.open .cmd-caret { transform: rotate(180deg); }
-.cmd-btn.open { background: var(--color-atrium-deep); }
+.cmd-btn.open { background: #A8462F; border-color: #A8462F; }
 .new-dd {
   position: absolute;
   top: calc(100% + 6px);
@@ -636,10 +639,10 @@ body.side-coll .side-foot .foot-gear { display: none; }
 .top h1 {
   font-family: var(--font-display);
   font-style: normal;
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: var(--weight-semi);
   color: var(--color-ink);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-transform: none;
   line-height: var(--leading-tight);
 }
@@ -769,7 +772,10 @@ body[data-lane="israel"] .dd-onboarding { display: none; }
   margin: 0 -12px;
   padding-left: 12px;
   padding-right: 12px;
+  border-radius: var(--radius-lg);
+  border-bottom-color: transparent;
 }
+.row:active { transform: scale(0.994); }
 .row.done { opacity: 0.5; }
 .row.done:hover { opacity: 0.72; }
 
@@ -817,13 +823,13 @@ body[data-lane="israel"] .dd-onboarding { display: none; }
 }
 .rail .seg {
   flex: 1;
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 100px;
   background: var(--color-border);                 /* upcoming = ghost */
   transition: background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
-.rail .seg.done    { background: var(--color-atrium); }   /* traveled = solid atrium */
-.rail .seg.current { background: var(--color-gold); }     /* current = solid gold (the anchor) */
+.rail .seg.done    { background: var(--color-atrium); }   /* traveled = dusty Mediterranean blue */
+.rail .seg.current { background: var(--color-gold); box-shadow: 0 0 0 3px var(--color-gold-tint); }     /* current = saffron with a sunlit halo (the anchor) */
 /* Laterals: needs_attention freezes the rail. Traveled drop to grey,
    current becomes a hollow gold ring (inset shadow, not a fill). */
 .rail.frozen .seg.done    { background: var(--color-border); }
@@ -2001,9 +2007,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     flex-direction: row;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 56px;
-    background: var(--color-bg-sidebar);
-    border-top: 1px solid var(--color-border);
+    height: 62px;
+    background: rgba(255,253,248,0.92);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--color-border-subtle);
+    box-shadow: 0 -8px 24px rgba(74,54,32,0.08);
     z-index: 30;
     padding-bottom: env(safe-area-inset-bottom);
     -webkit-tap-highlight-color: transparent;
@@ -2026,12 +2035,14 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     -webkit-tap-highlight-color: transparent;
     transition: color var(--dur-base) var(--ease-out);
   }
-  .tab:active { opacity: 0.65; }
-  .tab.on {
-    color: #2B2410;
-    background: var(--color-gold);
+  .tab:active { transform: scale(0.94); }
+  .tab.on { color: var(--color-coral); background: transparent; }
+  .tab-icon {
+    font-size: 15px; line-height: 1; display: block;
+    padding: 5px 18px; border-radius: 100px;
+    transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
   }
-  .tab-icon { font-size: 15px; line-height: 1; display: block; }
+  .tab.on .tab-icon { background: var(--color-coral-tint); color: var(--color-coral); }
   .tab-lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; text-transform: none; line-height: 1; display: block; }
   .tab-badge {
     position: absolute;
@@ -2215,6 +2226,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
         </div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
+        <button class="show-done" id="showCanceledToggle" hidden></button>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
       </div>
     </div>
@@ -2660,12 +2672,14 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     complete:4, sealed:4
   };
   function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired';}
+  function isCompletedStage(st){return st==='complete'||st==='sealed';}
+  function isCanceledStage(st){return st==='voided'||st==='void'||st==='expired';}
   // Human milestone label for any canonical stage. Reuses the board rail's map so the
   // drawer + activity read the SAME words the board shows; laterals get their own words.
   // Unknown stages fall back to a humanized key rather than a raw machine string.
   function stageMilestone(st){
     st=String(st==null?'':st);
-    if(st==='voided'||st==='void')return 'Voided';
+    if(st==='voided'||st==='void')return 'Canceled';
     if(st==='expired')return 'Expired';
     if(st==='needs_attention')return 'Needs a look';
     var mi=STAGE_TO_MILESTONE[st];
@@ -2692,7 +2706,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function railHtml(r){
     var st=String(r.stage||'');
     var segs, railCls='', lbl='', lblCls='';
-    if(st==='voided'||st==='void'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Voided'; lblCls='muted'; }
+    if(st==='voided'||st==='void'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Canceled'; lblCls='muted'; }
     else if(st==='expired'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Expired'; lblCls='muted'; }
     else if(st==='needs_attention'){
       // Freeze at the last real milestone we can infer; default to In progress.
@@ -2713,7 +2727,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       +'<span class="rail-lbl'+(lblCls?' '+lblCls:'')+'">'+lbl+'</span></span>';
   }
   var allRows=[];
-  var showDone=false; // quiet toggle: append terminal rows below
+  var showDone=false, showCanceled=false; // quiet toggles: append completed / canceled rows below
   // Sort by last-activity recency, newest first. lastActivityTs (ISO) if present,
   // else ascending ageDays as a proxy (smaller age = more recent activity).
   function sortRows(rows){
@@ -2738,15 +2752,23 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
   function renderRows(rows){
     var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage);}));
-    var terminal=sortRows(rows.filter(function(r){return isTerminalStage(r.stage);}));
+    var completed=sortRows(rows.filter(function(r){return isCompletedStage(r.stage);}));
+    var canceled=sortRows(rows.filter(function(r){return isCanceledStage(r.stage);}));
     var html=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">Nothing in flight.</div>';
-    if(showDone&&terminal.length)html+=terminal.map(rowHtml).join("");
+    if(showDone&&completed.length)html+=completed.map(rowHtml).join("");
+    if(showCanceled&&canceled.length)html+=canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
-    // Quiet "Show completed - N" toggle. Hidden when there are no terminal rows.
+    // Two quiet, independent toggles: completed (complete/sealed) and canceled
+    // (voided/expired) filter separately, mirroring each other.
     var tg=document.getElementById("showDoneToggle");
     if(tg){
-      if(terminal.length){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=(showDone?'Hide completed - ':'Show completed - ')+terminal.length;}
+      if(completed.length){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=(showDone?'Hide completed - ':'Show completed - ')+completed.length;}
       else{tg.hidden=true;}
+    }
+    var tc=document.getElementById("showCanceledToggle");
+    if(tc){
+      if(canceled.length){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=(showCanceled?'Hide canceled - ':'Show canceled - ')+canceled.length;}
+      else{tc.hidden=true;}
     }
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){
       var go=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};
@@ -2775,6 +2797,8 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     if(si)si.addEventListener("input",applySearch);
     var tg=document.getElementById("showDoneToggle");
     if(tg)tg.addEventListener("click",function(){showDone=!showDone;applySearch();});
+    var tc=document.getElementById("showCanceledToggle");
+    if(tc)tc.addEventListener("click",function(){showCanceled=!showCanceled;applySearch();});
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
@@ -2948,7 +2972,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     // hidden until an action is armed; the status line carries the result or a real error.
     var dactInner = dactBtns
       ? '<div class="dact-btns">'+dactBtns+'</div>'
-      : '<span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Voided. No actions available.')+'</span>';
+      : '<span class="pe" style="font-size: 13px;color:var(--color-ink-muted)">'+(isComplete?'Complete. No actions available.':'Canceled. No actions available.')+'</span>';
     var dactHtml = '<div class="dact">'+dactInner
       + '<div class="dact-confirm" id="dactConfirm" hidden>'
       +   '<span class="dac-msg" id="dacMsg"></span>'
@@ -3094,7 +3118,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(v==="israel"?"israel":"cayman")+'$';
       // F3: a lane switch resets every per-lane view state and cache so nothing
       // from the prior lane bleeds across (toggle, search, w8, messages).
-      showDone=false;
+      showDone=false; showCanceled=false;
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
       W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
@@ -3709,7 +3733,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </defs>
-<g id="scene" filter="url(#lvink-brush)" fill="none" stroke="#1A1A1A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+<g id="scene" filter="url(#lvink-brush)" fill="none" stroke="#241F1A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
 
   <!-- ===== MUSTACHE MAN (verified) bottom-left ===== -->
   <g transform="translate(-72,214) scale(1.07)">
