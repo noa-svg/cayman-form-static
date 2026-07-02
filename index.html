@@ -1029,6 +1029,8 @@
 
           <!-- Individual conditions: single-select. Israeli Securities Law's three
                individual buckets (liquid, income, combined) are mutually exclusive. -->
+          <fieldset class="lvp-fieldset" data-required>
+            <legend class="lvp-fieldset__legend lvp-sr-only">Accredited investor qualification</legend>
           <div data-applicant="individual">
             <label class="lvp-radio"><input type="radio" name="qualification.conditions" value="ind_liquid" data-qual> Liquid assets exceed ILS 9,411,809</label>
             <label class="lvp-radio"><input type="radio" name="qualification.conditions" value="ind_income" data-qual> Earned income exceeded ILS 1,411,772 (or ILS 2,117,657 with spouse) in each of the prior two years</label>
@@ -1055,6 +1057,7 @@
                checkbox so it composes with the entity multi-select (and the
                change handler enforces mutual exclusion either direction). -->
           <label class="lvp-checkbox"><input type="checkbox" name="qualification.conditions" value="none" data-qual-none> None of the above</label>
+          </fieldset>
           <input type="hidden" name="qualification.noneOfTheAbove" value="false">
           <p class="lvp-hint-small" data-show-when="qualification.noneOfTheAbove=true" data-applicant="individual">I am joining as a non-qualified investor with the knowledge of the fund manager Omri Velvart.</p>
           <p class="lvp-hint-small" data-show-when="qualification.noneOfTheAbove=true" data-applicant="entity">We are joining as a non-qualified entity with the knowledge of the fund manager Omri Velvart.</p>
@@ -3393,7 +3396,12 @@
       if (!gUrl) return Promise.reject(new Error('Form is still loading. Please wait a moment and try again.'));
       var body = { action: action, token: gToken, lane: 'cayman', payload: payload || {} };
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 30000) : null;
+      // 'submit' assembles + classifies the full conditional pack (~30pp for an
+      // entity) server-side before responding, which can exceed a 30s budget; a
+      // premature abort shows "Request timed out" even though the server completes.
+      // Give submit a generous budget; keep other actions snappy.
+      var timeoutMs = (action === 'submit') ? 120000 : 30000;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
       return fetch(gUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body),
