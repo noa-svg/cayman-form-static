@@ -544,7 +544,12 @@
       { slot: 'nationalIdAppendix', label: 'National ID appendix (ספח)', hint: 'Separate appendix page.' },
       { slot: 'nationalIdBack', label: 'National ID (back side)', hint: 'Biometric cards only.' }
     ];
-    function isControllingPersonRole(role) { return /^cp/.test(String(role || '')); }
+    // Roles that must upload ID for KYC: controlling persons AND joint holders
+    // (subscriber2 / subscriber3). Both are co-parties whose identity must be on file.
+    // The primary subscriber uploads ID on the main form and signs inline (never hits
+    // signer.html); joint co-holders complete their leg here, so the uploader renders
+    // for them too. (Name kept for its call sites; semantics = "role needs ID upload".)
+    function isControllingPersonRole(role) { return /^(cp|subscriber[23])/.test(String(role || '')); }
 
     // Read a chosen file into pendingIdUploads as base64 (post-comma), matching the
     // main form's FileReader pattern. Rejects >10MB visibly (reuses the shared
