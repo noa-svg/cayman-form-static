@@ -2839,6 +2839,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var isExisting=(state.process==="increase"||state.process==="withdrawal");
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isExisting?"block":"none";
     if(isExisting){
+      state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
       ["typeKindRow","manualLpFields","foRow","langRow","revShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
@@ -2847,7 +2848,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       return;
     }
     el=document.getElementById("typeKindRow");if(el)el.style.display="";
-    el=document.getElementById("kindCell");if(el)el.style.display="";
+    // Onboarding is necessarily a NEW LP, so the New/Existing chooser can only confirm the
+    // obvious. Set the status from the process and keep the chooser hidden.
+    state.lpKind="new";
+    el=document.getElementById("kindCell");if(el)el.style.display="none";
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
