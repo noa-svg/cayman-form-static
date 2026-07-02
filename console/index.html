@@ -544,6 +544,8 @@ body.side-coll .side-foot .foot-gear { display: none; }
 #login-screen .lc { position: relative; z-index: 2; }
 #login-ink text.cap, #login-top text.cap { font-family: 'Permanent Marker', cursive; fill: #1A1A1A; }
 #login-ink text.cur, #login-top text.cur { font-family: 'Caveat', cursive; fill: #1A1A1A; }
+#login-ink .ln { fill: none; stroke: #241F1A; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+#login-ink .el { transform-box: fill-box; transform-origin: center; }
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -3731,130 +3733,78 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 </script>
 <div id="login-screen">
 <svg id="login-ink" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
- <defs>
-  <filter id="lvink-brush" x="-3%" y="-3%" width="106%" height="106%">
-    <feTurbulence type="fractalNoise" baseFrequency="1.05" numOctaves="1" seed="4" result="n"/>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</defs>
-<g id="scene" filter="url(#lvink-brush)" fill="none" stroke="#241F1A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Chic line-and-summer-color scene: confident black line + flat Mediterranean color. Card keep-out = center. -->
 
-  <!-- ===== MUSTACHE MAN (verified) bottom-left ===== -->
-  <g transform="translate(-72,214) scale(1.07)">
-    <path d="M188 100 Q200 90 224 90 Q250 90 262 100 Q282 120 278 150 Q272 182 240 192 Q212 198 192 182 Q172 158 176 128 Q180 110 188 100 Z"/>
-    <path d="M278 138 L288 144 L284 158 L274 156"/>
-    <path d="M198 92 L206 78 M220 88 L226 76 M242 90 L248 80"/>
-    <path d="M196 134 L214 132 M236 132 L254 132"/>
-    <path d="M224 140 L218 158 L230 158"/>
-    <path d="M210 170 L226 180 L246 170"/>
-    <path d="M214 196 L213 218 M238 196 L240 218"/>
-    <path d="M180 226 L212 220 Q226 230 240 220 L274 226 L278 356 L176 356 Z"/>
-    <path d="M190 264 L250 262 M188 292 L252 290 M188 320 L246 318"/>
-    <path d="M178 238 L166 330"/>
-    <path d="M276 238 L288 330"/>
-    <path d="M196 356 L182 560 L160 576"/>
-    <path d="M258 356 L276 560 L298 574"/>
+  <!-- SUN, top-right -->
+  <g class="el" transform="translate(1240,70) scale(1.5)">
+    <circle cx="42" cy="42" r="30" fill="#E7A93C"/><circle cx="42" cy="42" r="30" class="ln"/>
+    <path class="ln" d="M42 -2 L42 -14 M42 86 L42 98 M-2 42 L-14 42 M86 42 L98 42 M12 12 L4 4 M72 12 L80 4 M12 72 L4 80 M72 72 L80 80"/>
   </g>
 
-  <!-- ===== PLANTER (rounded U pot, elliptical rim, small sprouts), top-left ===== -->
-  <path d="M216 120 Q210 202 268 234 Q326 202 320 120"/>
-  <path d="M216 120 Q268 104 320 120"/>
-  <path d="M216 120 Q268 138 320 120"/>
-  <path d="M256 116 L254 100 M268 116 L270 98 M280 116 L285 102"/>
-
-  <!-- ===== BOTTLE (upright) with a label box, top center-left ===== -->
-  <path d="M426 30 L426 78 L410 98 L410 190 L462 190 L462 98 L446 78 L446 30 Z"/>
-  <path d="M414 120 L458 120 L458 154 L414 154 Z"/>
-
-  <!-- ===== string/streamer tied to the bottle neck, cascading down-left, clear of the card ===== -->
-  <path d="M440 32 Q478 42 500 70 Q474 168 480 240 Q484 268 464 288 Q448 298 458 278 Q468 262 482 282 Q500 336 450 402 Q424 432 396 452"/>
-
-  <!-- ===== CHERRIES (three berries in a cluster), top-center ===== -->
-  <path d="M622 104 Q607 104 607 119 Q607 134 622 134 Q637 134 637 119 Q637 104 622 104 Z"/>
-  <path d="M600 142 Q584 142 584 158 Q584 174 600 174 Q616 174 616 158 Q616 142 600 142 Z"/>
-  <path d="M648 144 Q632 144 632 160 Q632 176 648 176 Q664 176 664 160 Q664 144 648 144 Z"/>
-  <path d="M623 134 L625 140 L608 150 M625 140 L643 152 M625 140 Q636 112 627 92"/>
-
-  <!-- ===== COUPE (shallow rounded champagne bowl + stem + foot), top center ===== -->
-  <path d="M770 92 Q804 132 838 92"/>
-  <path d="M770 92 Q804 100 838 92"/>
-  <path d="M804 132 L804 170"/>
-  <path d="M786 176 Q804 167 822 176"/>
-
-  <!-- ===== DOVE (thin-line bird, side profile facing right) ===== -->
-  <path d="M1096 150 Q1120 118 1178 126 Q1206 130 1198 150 Q1178 168 1128 165 Q1106 160 1096 150 Z"/>
-  <path d="M1198 142 L1222 136 L1202 152"/>
-  <path d="M1186 141 Q1189 143 1186 146"/>
-  <path d="M1116 137 Q1147 154 1178 142"/>
-  <path d="M1096 150 L1064 139 M1097 154 L1066 155 M1098 158 L1069 168"/>
-  <path d="M1138 165 L1136 186 M1160 164 L1162 185"/>
-
-  <!-- ===== CANDLE (straight body, slim flame, wax drip), right ===== -->
-  <path d="M1306 432 L1304 580 L1356 578 L1352 432 Z"/>
-  <path d="M1330 432 Q1322 414 1330 394 Q1338 414 1330 432 Z"/>
-  <path d="M1330 394 L1331 382"/>
-  <path d="M1306 472 Q1297 490 1306 508"/>
-  <path d="M1346 440 L1346 472"/>
-
-  <!-- ===== WINE GOBLET (rounded tulip bowl + wine line + stem + foot), center-right ===== -->
-  <path d="M986 450 Q982 522 1030 558 Q1078 522 1074 450"/>
-  <path d="M986 450 Q1030 462 1074 450"/>
-  <path d="M998 472 Q1030 482 1062 472"/>
-  <path d="M1030 558 L1030 610"/>
-  <path d="M1004 616 Q1030 606 1058 616"/>
-
-  <!-- ===== CORKSCREW (T-handle + shaft + coiled helix), bottom right ===== -->
-  <path d="M1212 634 L1270 632"/>
-  <path d="M1241 620 L1241 634 M1241 634 L1241 660"/>
-  <path d="M1241 660 Q1262 670 1248 684 Q1232 696 1252 707 Q1270 717 1250 730 Q1240 738 1244 750"/>
-
-  <!-- ===== THREE FLUTES (neat trio), mid-left below POSSIBLE ===== -->
-  <path d="M347 538 L356 600 L364 600 L373 536 M347 538 L373 536 M360 600 L360 648 M345 652 L375 650"/>
-  <path d="M394 536 L402 602 L410 602 L418 538 M394 536 L418 536 M406 602 L406 650 M391 654 L421 652"/>
-  <path d="M440 540 L448 598 L456 598 L464 538 M440 540 L464 538 M452 598 L452 646 M437 650 L467 648"/>
-
-  <!-- ===== CAT (rounded dome body, small ears, whiskers, tail down), bottom-center-left ===== -->
-  <path d="M368 878 L368 806 Q368 764 412 764 Q456 764 456 806 L456 878"/>
-  <path d="M384 770 L380 748 L399 763 M428 763 L441 747 L444 768"/>
-  <path d="M366 826 L340 822 M366 836 L340 838"/>
-  <path d="M456 818 Q486 826 484 860 Q482 882 466 880"/>
-
-  <!-- ===== JOBS, below card (left) ===== -->
-  <g transform="translate(500,612) scale(0.52)">
-    <path d="M20 46 Q32 36 56 36 Q82 36 92 48 Q110 68 106 96 Q100 126 70 134 Q44 138 26 122 Q8 100 12 72 Q15 56 20 46 Z"/>
-    <path d="M22 46 L26 34 M40 40 L44 30 M58 38 L62 28 M78 40 L82 30 M94 48 L98 38"/>
-    <path d="M26 92 Q26 78 40 78 Q54 78 54 92 Q54 106 40 106 Q26 106 26 92 Z"/>
-    <path d="M66 92 Q66 78 80 78 Q94 78 94 92 Q94 106 80 106 Q66 106 66 92 Z"/>
-    <path d="M54 92 L66 92 M94 90 L108 86"/>
-    <path d="M60 154 L60 178"/>
-    <path d="M28 186 L26 320 L96 320 L92 186 Q76 176 60 192 Q44 176 28 186 Z"/>
-    <path d="M48 178 Q60 188 74 178"/>
-    <path d="M28 200 Q16 250 22 300"/>
-    <path d="M92 200 Q104 250 98 300"/>
-    <path d="M42 320 L30 520 L10 534"/>
-    <path d="M78 320 L94 520 L114 532"/>
+  <!-- BACKPACK, top-left -->
+  <g class="el" transform="translate(120,70) scale(1.5)">
+    <path d="M16 40 Q16 14 42 14 Q68 14 68 40 L68 120 Q68 130 58 130 L26 130 Q16 130 16 120 Z" fill="#C8623B"/>
+    <path class="ln" d="M16 40 Q16 14 42 14 Q68 14 68 40 L68 120 Q68 130 58 130 L26 130 Q16 130 16 120 Z"/>
+    <path class="ln" d="M16 52 Q42 66 68 52"/>
+    <rect x="30" y="80" width="24" height="30" rx="5" fill="#E7A93C"/><rect x="30" y="80" width="24" height="30" rx="5" class="ln"/>
+    <path class="ln" d="M26 14 Q20 0 32 0 M58 14 Q64 0 52 0"/>
   </g>
 
-  <!-- ===== BUFFETT, below card (right) ===== -->
-  <g transform="translate(780,606) scale(0.52)">
-    <path d="M22 44 Q36 32 62 32 Q90 32 104 46 Q124 68 120 100 Q112 132 78 140 Q48 144 28 126 Q10 100 14 70 Q18 54 22 44 Z"/>
-    <path d="M26 56 Q66 40 108 56 M18 78 Q12 62 24 56 M112 78 Q118 62 108 56"/>
-    <path d="M28 84 L52 84 L52 106 L28 106 Z"/>
-    <path d="M70 84 L94 84 L94 106 L70 106 Z"/>
-    <path d="M52 94 L70 94"/>
-    <path d="M48 122 Q64 132 82 122"/>
-    <path d="M56 156 L56 180"/>
-    <path d="M32 190 L26 348 L104 348 L98 190 Q80 178 65 200 Q50 178 32 190 Z"/>
-    <path d="M50 186 L65 214 L80 186"/>
-    <path d="M60 216 L58 286 L65 300 L72 286 L70 216 Z"/>
-    <path d="M32 196 Q20 250 24 300"/>
-    <path d="M98 196 Q112 250 110 300"/>
-    <path d="M112 300 L134 300 L132 336 L114 336 Z"/>
-    <path d="M46 348 L38 540 L20 552"/>
-    <path d="M82 348 L92 540 L112 552"/>
+  <!-- CHERRIES, top-center (above card) -->
+  <g class="el" transform="translate(670,44) scale(1.4)">
+    <circle cx="18" cy="46" r="16" fill="#C8352F"/><circle cx="18" cy="46" r="16" class="ln"/>
+    <circle cx="52" cy="52" r="16" fill="#C8352F"/><circle cx="52" cy="52" r="16" class="ln"/>
+    <path class="ln" d="M18 30 Q30 4 46 2 M52 36 Q48 6 46 2"/>
   </g>
 
-</g>
+  <!-- WINE BOTTLE, left-mid -->
+  <g class="el" transform="translate(120,360) scale(1.5)">
+    <path d="M24 6 L24 42 L10 60 L10 158 L54 158 L54 60 L40 42 L40 6 Z" fill="#5E6E36"/>
+    <path class="ln" d="M24 6 L24 42 L10 60 L10 158 L54 158 L54 60 L40 42 L40 6 Z"/>
+    <rect x="12" y="92" width="40" height="38" fill="#F1E6CE"/><rect x="12" y="92" width="40" height="38" class="ln"/>
+  </g>
+
+  <!-- WINE GLASS, bottom-left -->
+  <g class="el" transform="translate(250,640) scale(1.5)">
+    <path d="M8 6 L22 64 Q44 88 66 64 L80 6 Z" fill="#FBF6EA"/>
+    <path d="M17 40 L22 64 Q44 88 66 64 L71 40 Z" fill="#B23A48"/>
+    <path class="ln" d="M8 6 L22 64 Q44 88 66 64 L80 6 Z"/>
+    <path class="ln" d="M44 84 L44 122 M22 128 Q44 120 66 128"/>
+  </g>
+
+  <!-- FTAI TURBINE, bottom-center (below card) -->
+  <g class="el" transform="translate(560,700) scale(1.4)">
+    <path d="M70 16 L164 24 L164 76 L70 84 Z" fill="#8FA6BC"/>
+    <path class="ln" d="M70 16 L164 24 L164 76 L70 84 Z"/>
+    <path class="ln" d="M150 30 L150 70 M136 30 L136 70"/>
+    <ellipse cx="44" cy="50" rx="34" ry="40" fill="#3E7CB1"/><ellipse cx="44" cy="50" rx="34" ry="40" class="ln"/>
+    <path class="ln" d="M44 12 L44 34 M44 66 L44 88 M10 50 L30 50 M58 50 L78 50 M20 26 L36 40 M52 60 L68 74 M68 26 L52 40 M36 60 L20 74"/>
+    <ellipse cx="44" cy="50" rx="12" ry="15" fill="#F1E6CE"/><ellipse cx="44" cy="50" rx="12" ry="15" class="ln"/>
+  </g>
+
+  <!-- MICHAEL JACKSON, right-mid -->
+  <g class="el" transform="translate(1150,300) scale(1.4)">
+    <path d="M62 44 Q76 40 86 50 L96 132 L76 186 L46 186 L40 130 Q42 70 62 44 Z" fill="#2C2C3C"/>
+    <path d="M62 44 Q76 40 86 50 L96 132 L76 186 L46 186 L40 130 Q42 70 62 44 Z" class="ln" stroke-width="3"/>
+    <path class="ln" style="stroke-width:13" d="M50 186 L44 258"/>
+    <path class="ln" style="stroke-width:13" d="M78 186 L92 256"/>
+    <circle cx="68" cy="38" r="16" fill="#E8C39E"/><circle cx="68" cy="38" r="16" class="ln" stroke-width="2.6"/>
+    <path d="M40 26 Q68 8 100 26 Q68 38 40 26 Z" fill="#241F1A"/>
+    <path d="M50 24 Q58 2 70 2 Q88 4 88 24 Z" fill="#241F1A"/>
+    <path class="ln" style="stroke-width:12" d="M60 62 L34 68 L48 34"/>
+    <circle cx="40" cy="30" r="10" fill="#FBF6EA"/><circle cx="40" cy="30" r="10" class="ln" stroke-width="2.4"/>
+    <path class="ln" style="stroke-width:12" d="M88 62 L108 114"/>
+    <path d="M28 258 L56 250 L58 266 L26 270 Z" fill="#241F1A"/>
+    <path d="M84 256 L112 268 L106 282 L78 268 Z" fill="#241F1A"/>
+  </g>
+
+  <!-- OLIVE BRANCH, bottom-right -->
+  <g class="el" transform="translate(1130,720) scale(1.4)">
+    <path class="ln" d="M6 44 Q70 22 140 46"/>
+    <g fill="#5E6E36"><ellipse cx="34" cy="32" rx="7" ry="12" transform="rotate(-32 34 32)"/><ellipse cx="70" cy="24" rx="7" ry="12" transform="rotate(-18 70 24)"/><ellipse cx="106" cy="30" rx="7" ry="12" transform="rotate(-40 106 30)"/></g>
+    <g class="ln" style="stroke-width:2.4" fill="none"><ellipse cx="34" cy="32" rx="7" ry="12" transform="rotate(-32 34 32)"/><ellipse cx="70" cy="24" rx="7" ry="12" transform="rotate(-18 70 24)"/><ellipse cx="106" cy="30" rx="7" ry="12" transform="rotate(-40 106 30)"/></g>
+  </g>
+
 </svg>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
