@@ -258,7 +258,8 @@
       .lvp-lang { top: 8px; left: 8px; }
       .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
     }
-  </style>
+      [data-row-index="0"] .lvp-same-addr { display: none; }
+</style>
 </head>
 <body>
   <div class="lvp-lang" role="group" aria-label="שפה">
@@ -706,6 +707,9 @@
                    from the approved investor address block (investorsArray[0].israelAddress). -->
               <fieldset class="lvp-fieldset">
                 <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
+                <!-- Same-as-first convenience (Noa-approved wording 2026-07-03). Client-side copy
+                     only: no name attr so it never enters the payload; hidden on row 0 via CSS. -->
+                <label class="lvp-checkbox lvp-same-addr"><input type="checkbox" data-same-addr> הכתובת זהה לזו של בעל/ת השליטה הראשון/ה</label>
                 <div class="lvp-grid-2">
                   <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.city"></label>
                   <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.street"></label>
@@ -1060,6 +1064,7 @@
     // language, so they keep working in both display languages.
     // ===================================================================
     var EN_MAP = {
+      'הכתובת זהה לזו של בעל/ת השליטה הראשון/ה': 'Same address as the first controlling shareholder',
       "ברוכים הבאים לקרן לגאסי":"Welcome to Legacy Value Partners",
       "טופס זה אוסף את המידע הדרוש להצטרפותך לקרן לגאסי ואליו פרטנרס. לאחר מילוי וחתימה, יישלחו למייל עותקים חתומים של טפסי ההצטרפות.":"This form collects the information required for your subscription to Legacy Value Partners. Upon completion and signature, signed copies of the subscription documents will be sent to your email.",
       "אם פמילי אופיס מסייע במילוי הפרטים, ניתן להיכנס לטופס דרך הקישור, למלא את הפרטים ולאחר מכן לשלוח את אותו קישור למשקיע/ה לצורך חתימה.":"If a family office is helping you, they can open the form through the link, fill in the details, and then forward the same link to the investor to sign.",
@@ -1637,6 +1642,20 @@
         if (def) first.value = def;
       }
     }
+    // Same-as-first address copy (CS rows 2+). Copies the FIRST shareholder's four
+    // address values into this row; unchecking leaves them editable.
+    form.addEventListener('change', function (e) {
+      var cb = e.target.closest('[data-same-addr]');
+      if (!cb || !cb.checked) return;
+      var row = cb.closest('[data-row-index]');
+      var first = row.parentElement && row.parentElement.querySelector('[data-row-index="0"]');
+      if (!row || !first || row === first) return;
+      ['city','street','houseNumber','postalCode'].forEach(function (k) {
+        var src = first.querySelector('[name$=".israelAddress.' + k + '"]');
+        var dst = row.querySelector('[name$=".israelAddress.' + k + '"]');
+        if (src && dst) { dst.value = src.value; dst.dispatchEvent(new Event('input', { bubbles: true })); }
+      });
+    });
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
         row.setAttribute('data-row-index', i);
