@@ -200,7 +200,11 @@
     .lvp-card[dir="rtl"] .lvp-input--textarea { direction: ltr; text-align: left; }
     .lvp-card[dir="rtl"] .lvp-input[data-script="he"],
     .lvp-card[dir="rtl"] .lvp-input--textarea[data-script="he"] { direction: rtl; text-align: right; }
-    .lvp-card[dir="rtl"] .lvp-actions { flex-direction: row-reverse; }
+    /* RTL pager: forward (הבא/סיום) belongs on the LEFT, back (הקודם) on the RIGHT
+       -- the mirror of LTR. The default `row` in an RTL flex container already
+       places the first DOM child (prev) on the right and the last (next/submit)
+       on the left, so we do NOT reverse. Do not change back to row-reverse. */
+    .lvp-card[dir="rtl"] .lvp-actions { flex-direction: row; }
     .lvp-card[dir="ltr"] .lvp-note { border-right: none; border-left: 3px solid var(--lvp-navy); }
     @media (max-width: 480px) {
       .lvp-lang { top: 8px; left: 8px; }
