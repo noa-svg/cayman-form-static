@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>קרן לגאסי ואליו פרטנרס - הצטרפות</title>
+
+  <!--
+    index.html - the ONE unified Israel (domestic) LP onboarding form.
+
+    Project Ju, Israeli lane. Hebrew is the SOURCE language (the form is authored
+    in Hebrew, RTL, default). The EN toggle is a translation overlay for the rare
+    foreign LP via EN_MAP (Hebrew-string -> English). This is the inverse of the
+    Cayman form (which is English-authored with a HE_MAP); same machinery, flipped.
+
+    The operator presets the applicant type when sending the link
+    (?type=individual|entity). The LP NEVER self-classifies; there is no
+    "who is subscribing" question. INDIVIDUAL vs ENTITY pages are filtered by the
+    preset type, mirroring the Cayman page-sequence machinery.
+
+    SOURCE OF TRUTH for fields/required/validation/options and the VERBATIM Hebrew:
+    the EasySend captures under ~/.claude/plans/phase4-references/easysend-capture/
+    (onboarding-individual + onboarding-entity, fidelity/*). Field name= paths match
+    the ju-israel gateway submission model exactly (OnboardingIndividualModel.js /
+    OnboardingEntityModel.js), so collectAll() produces the typed submission the
+    OnboardingIndividualGateway / OnboardingEntityGateway normalize directly.
+
+    HOSTING: served by the ju-israel GAS web app. State-changing actions POST JSON
+    to doPost with ?source=lp, the Foundation gateway envelope:
+      { action, token, lane:'israeli', flowType, payload:{submission, files} }.
+    The form never writes the state log; the gateway does, once, per action.
+
+    SECURITY: KYC uploads are collected as base64 and routed to a token-gated Drive
+    folder by the server (collect-and-route; never public-shared). No PII in URLs.
+
+    HOUSE RULES: no em-dashes / en-dashes in LP-visible copy. No comma directly
+    before the ו conjunction in Hebrew. תעודה מזהה (not זהות/דרכון). אסמכתא not
+    אסמכתה. Stored dates ISO 8601 (the model converts the dd/mm/yyyy the form
+    collects); display dd/mm/yyyy only. Full firm name לגאסי ואליו פרטנרס.
+  -->
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
+
+    :root {
+      --lvp-navy: #0D3F6A;
+      --lvp-navy-700: #0a3257;
+      --lvp-yellow: #FFB42C;
+      --lvp-yellow-700: #e09e1f;
+      --lvp-text: #1d1d1d;
+      --lvp-text-muted: #545454;
+      --lvp-input-line: #C2C2C2;
+      --lvp-input-line-active: #0D3F6A;
+      --lvp-card-bg: #FFFFFF;
+      --lvp-error: #c0392b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+      color: var(--lvp-text);
+      line-height: 1.5;
+      background: #ffffff;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* EasySend skyline: fixed full-bleed at 0.5 opacity over white. Public LVP brand asset. */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      /* De-EasySend-ification (2026-07-03): the vendor CDN is decommissioned; serve
+         the same brand background from this repo, as the Cayman form does. */
+      background: url("brand-bg.png") no-repeat center center;
+      background-size: 100% 100%; opacity: 0.5;
+    }
+    .lvp-app {
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 48px;
+    }
+    .lvp-header { width: 100%; max-width: 760px; margin-bottom: 28px; display: flex; justify-content: flex-start; }
+    .lvp-header__logo { height: 56px; width: auto; display: block; }
+    .lvp-card {
+      background: var(--lvp-card-bg); width: 100%; max-width: 760px;
+      border-radius: 6px;
+      box-shadow: 0 8px 32px rgba(13, 63, 106, 0.18), 0 2px 6px rgba(0,0,0,0.06);
+      padding: 28px 28px 24px;
+    }
+    .lvp-progress {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; gap: 12px;
+    }
+    .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; min-width: 92px; }
+    .lvp-progress__bar { flex: 1; height: 4px; background: #EFEFEF; border-radius: 2px; overflow: hidden; }
+    .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
+
+    .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 14px; }
+    .lvp-page__title::after { content: ""; display: block; height: 4px; width: 90px; margin-top: 8px;
+      background: linear-gradient(to right, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 24px; }
+
+    .lvp-field { display: block; margin-bottom: 24px; }
+    .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 6px; font-weight: 500; }
+    .lvp-input, .lvp-input--select {
+      width: 100%; padding: 8px 0; border: none;
+      border-bottom: 1px solid var(--lvp-input-line);
+      background: transparent; font: inherit; color: var(--lvp-text);
+      outline: none; transition: border-color 150ms ease;
+    }
+    .lvp-input:focus, .lvp-input--select:focus { border-bottom-color: var(--lvp-input-line-active); border-bottom-width: 2px; padding-bottom: 7px; }
+
+    .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+    .lvp-btn {
+      font: inherit; font-weight: 700; padding: 13px 36px;
+      border-radius: 999px; cursor: pointer; border: none;
+      transition: background 120ms ease, transform 60ms ease;
+    }
+    .lvp-btn:active { transform: translateY(1px); }
+    .lvp-btn--primary { background: var(--lvp-navy); color: #fff; }
+    .lvp-btn--primary:hover { background: var(--lvp-navy-700); }
+    .lvp-btn--secondary { background: rgba(255,255,255,0.85); color: var(--lvp-navy); border: 1px solid var(--lvp-input-line); }
+    .lvp-btn--secondary:hover { background: #fff; }
+    .lvp-btn--small { padding: 6px 14px; font-size: 13px; margin: 8px 0 16px; }
+    .lvp-btn--link { background: none; border: none; color: var(--lvp-navy); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 2px 6px; }
+    .lvp-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    .lvp-status { margin-top: 12px; font-size: 13px; color: var(--lvp-text-muted); min-height: 18px; }
+    .lvp-status--error { color: var(--lvp-error); }
+
+    .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
+    .lvp-hint-small { color: var(--lvp-text-muted); font-size: 12px; margin: 4px 0 12px; }
+
+    .lvp-fieldset { border: none; padding: 0; margin: 0 0 20px; }
+    .lvp-fieldset__legend { color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 8px; font-weight: 500; padding: 0; }
+    .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; cursor: pointer; font-size: 14px; line-height: 1.5; }
+    .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; }
+
+    .lvp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 480px) { .lvp-grid-2 { grid-template-columns: 1fr; gap: 0; } }
+    .lvp-input--textarea { padding: 8px; border: 1px solid var(--lvp-input-line); border-radius: 4px; resize: vertical; width: 100%; font: inherit; }
+    .lvp-or-separator { text-align: center; margin: 16px 0; color: var(--lvp-text-muted); font-size: 13px; }
+
+    .lvp-repeating-row { background: #F8F9FB; border: 1px solid #E4E8EE; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+    .lvp-repeating-row__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .lvp-repeating-row__title { color: var(--lvp-navy); font-size: 14px; }
+    .lvp-email-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; margin-bottom: 8px; }
+    .lvp-email-row .lvp-input { flex: 1; margin: 0; }
+
+    .lvp-note { background: #F6F8FB; border-right: 3px solid var(--lvp-navy); border-radius: 4px; padding: 12px 16px; color: var(--lvp-text-muted); font-size: 13px; line-height: 1.7; margin: 0 0 20px; white-space: pre-line; }
+    .lvp-note strong { color: var(--lvp-navy); }
+
+    [data-show-when][hidden] { display: none !important; }
+    .lvp-page[hidden] { display: none !important; }
+
+    .lvp-field--error .lvp-input, .lvp-field--error .lvp-input--select { border-bottom-color: var(--lvp-error); border-bottom-width: 2px; padding-bottom: 7px; }
+    .lvp-field--error .lvp-field__label { color: var(--lvp-error); }
+    .lvp-fieldset--error .lvp-fieldset__legend { color: var(--lvp-error); }
+    .lvp-fieldset--error .lvp-fieldset__legend::after, .lvp-field--error .lvp-field__label::after { content: " חובה"; font-weight: 400; opacity: 0.85; }
+    [dir="ltr"] .lvp-fieldset--error .lvp-fieldset__legend::after, [dir="ltr"] .lvp-field--error .lvp-field__label::after { content: " required"; }
+
+    /* Submit: full-card loading + branded confirmation states. */
+    .lvp-result { text-align: center; padding: 24px 8px 12px; }
+    .lvp-result__spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #EFEFEF; border-top-color: var(--lvp-navy); animation: lvp-spin 800ms linear infinite; margin: 8px auto 20px; }
+    @keyframes lvp-spin { to { transform: rotate(360deg); } }
+    .lvp-result__check { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--lvp-yellow); margin-bottom: 16px; }
+    .lvp-result__check svg { width: 28px; height: 28px; }
+    .lvp-result__divider { width: 64px; height: 3px; background: var(--lvp-yellow); margin: 0 auto 20px; border-radius: 2px; }
+    .lvp-result h2 { color: var(--lvp-navy); font-size: 22px; font-weight: 700; margin: 0 0 10px; }
+    .lvp-result p { color: var(--lvp-text-muted); font-size: 16px; line-height: 1.6; margin: 6px 0; }
+
+    @media (max-width: 480px) {
+      .lvp-card { padding: 20px 18px; border-radius: 4px; }
+      .lvp-header__logo { height: 44px; }
+      .lvp-page__title { font-size: 19px; }
+    }
+
+    /* Language toggle: fixed top corner, simple עברית | EN segmented control. */
+    .lvp-lang {
+      position: fixed; top: 14px; left: 16px; z-index: 50;
+      display: inline-flex; align-items: stretch;
+      background: #fff; border: 1px solid var(--lvp-input-line);
+      border-radius: 999px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(13, 63, 106, 0.12);
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
+    }
+    .lvp-lang__btn {
+      font: inherit; font-size: 13px; font-weight: 700;
+      border: none; background: transparent; color: var(--lvp-navy);
+      padding: 7px 16px; cursor: pointer; line-height: 1.2;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .lvp-lang__btn[aria-pressed="true"] { background: var(--lvp-navy); color: #fff; }
+    .lvp-lang__btn:not([aria-pressed="true"]):hover { background: #f0f3f7; }
+    /* RTL default; inputs forced LTR for numbers/emails/dates/account fields,
+       EXCEPT the Hebrew-script fields which stay RTL. */
+    .lvp-card[dir="rtl"] { text-align: right; }
+    .lvp-card[dir="rtl"] .lvp-input,
+    .lvp-card[dir="rtl"] .lvp-input--select,
+    .lvp-card[dir="rtl"] .lvp-input--textarea { direction: ltr; text-align: left; }
+    .lvp-card[dir="rtl"] .lvp-input[data-script="he"],
+    .lvp-card[dir="rtl"] .lvp-input--textarea[data-script="he"] { direction: rtl; text-align: right; }
+    .lvp-card[dir="rtl"] .lvp-actions { flex-direction: row-reverse; }
+    .lvp-card[dir="ltr"] .lvp-note { border-right: none; border-left: 3px solid var(--lvp-navy); }
+    @media (max-width: 480px) {
+      .lvp-lang { top: 8px; left: 8px; }
+      .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="lvp-lang" role="group" aria-label="שפה">
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
+  </div>
+  <div class="lvp-app">
+    <header class="lvp-header">
+      <img class="lvp-header__logo" src="brand-logo.png" data-brand-logo alt="לגאסי ואליו פרטנרס">
+    </header>
+
+    <main class="lvp-card" dir="rtl">
+      <div class="lvp-progress" aria-label="התקדמות" data-progress hidden>
+        <!-- dir=ltr: keeps the "2 / 13" page counter in reading order; RTL bidi
+             otherwise swaps the two numbers ("13 / 2"). Numbers only, no copy. -->
+        <span class="lvp-progress__indicator" data-progress-indicator dir="ltr"></span>
+        <div class="lvp-progress__bar"><span data-progress-bar style="width: 0%"></span></div>
+      </div>
+
+      <form id="lvp-form" autocomplete="on" novalidate>
+
+        <!-- ========================= PAGE: WELCOME ========================= -->
+        <section class="lvp-page" data-page="welcome">
+          <h2 class="lvp-page__title">ברוכים הבאים לקרן לגאסי</h2>
+          <p class="lvp-page__hint">טופס זה אוסף את המידע הדרוש להצטרפותך לקרן לגאסי ואליו פרטנרס. לאחר מילוי וחתימה, יישלחו למייל עותקים חתומים של טפסי ההצטרפות.</p>
+          <p class="lvp-page__hint">אם פמילי אופיס מסייע במילוי הפרטים, ניתן להיכנס לטופס דרך הקישור, למלא את הפרטים ולאחר מכן לשלוח את אותו קישור למשקיע/ה לצורך חתימה.</p>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- ===================  INDIVIDUAL FLOW  ======================== -->
+        <!-- ============================================================== -->
+
+        <!-- PAGE: primary investor personal details (investorsArray[0]) -->
+        <section class="lvp-page" data-page="ind.personal" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">פרטים אישיים</h2>
+          <p class="lvp-page__hint">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
+
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].firstName" data-help="כפי שמופיע בתעודת הזהות"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].lastName" data-help="כפי שמופיע בתעודת הזהות"></label>
+          </div>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.lastName"></label>
+          </div>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">מין</legend>
+            <label class="lvp-radio"><input type="radio" name="investorsArray[0].gender" value="זכר"> זכר</label>
+            <label class="lvp-radio"><input type="radio" name="investorsArray[0].gender" value="נקבה"> נקבה</label>
+          </fieldset>
+
+          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="investorsArray[0].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת"></label>
+
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="investorsArray[0].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+            <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="investorsArray[0].birthCountry" data-country data-show-when-trigger="investorsArray[0].birthCountry"></select></label>
+          </div>
+          <label class="lvp-field" data-show-when="investorsArray[0].birthCountry!=ישראל"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="investorsArray[0].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+
+          <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="investorsArray[0].citizenship" data-country data-show-when-trigger="investorsArray[0].citizenship"></select></label>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isAdditionalCitizenship" value="true" data-show-when-trigger="investorsArray[0].isAdditionalCitizenship"> אזרחות נוספת</label>
+          <label class="lvp-field" data-show-when="investorsArray[0].isAdditionalCitizenship=true"><span class="lvp-field__label">אזרחות נוספת</span><select class="lvp-input--select" name="investorsArray[0].additionalCitizenship" data-country data-show-when-trigger="investorsArray[0].additionalCitizenship"></select></label>
+          <label class="lvp-field" data-show-when="__usPerson.investorsArray[0]=true"><span class="lvp-field__label">מספר SSN</span><input class="lvp-input" type="text" name="investorsArray[0].ssn" data-validate="ssn"></label>
+
+          <label class="lvp-field"><span class="lvp-field__label">תחום עיסוק</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].occupation"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="investorsArray[0].residencyCountry" data-country></select></label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddress.street"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.street"></label>
+            </div>
+          </fieldset>
+
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
+          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="05x-xxxxxxx"></label>
+        </section>
+
+        <!-- PAGE: qualification (investorsArray[0].qualification) -->
+        <section class="lvp-page" data-page="ind.qualification" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">כשירות</h2>
+          <p class="lvp-page__hint">יש לבחור אפשרות אחת.</p>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isLiquidAssets" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isIncomeLevel" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isBoth" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isNotQualified" value="true" data-qual-none="indQual" data-show-when-trigger="__indQual"> אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.</label>
+
+          <div data-show-when="__indQualified=true">
+            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
+              <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="כן" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> כן</label>
+              <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="לא" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> לא</label>
+            </fieldset>
+            <p class="lvp-hint-small" data-show-when="investorsArray[0].qualification.isSignedQualification=כן">את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.</p>
+            <p class="lvp-hint-small" data-show-when="investorsArray[0].qualification.isSignedQualification=לא">עו"ד או רו"ח בלתי תלוי/ה יקבל/תקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו/ה.</p>
+          </div>
+        </section>
+
+        <!-- PAGE: lawyer details (investorsArray[0] route-to-lawyer; lawyerDetails) -->
+        <section class="lvp-page" data-page="ind.lawyer" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
+          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.</p>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
+          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric"></label>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- =====================  ENTITY FLOW  ========================== -->
+        <!-- ============================================================== -->
+
+        <!-- PAGE: corporation details (corporationDetails) -->
+        <section class="lvp-page" data-page="ent.corp" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">פרטי התאגיד</h2>
+          <p class="lvp-page__hint">יש להזין את שם התאגיד וכתובתו בעברית ובאנגלית כפי שהם מופיעים בתעודת ההתאגדות.</p>
+
+          <label class="lvp-field"><span class="lvp-field__label">שם התאגיד</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.corporationName"></label>
+          <label class="lvp-field"><span class="lvp-field__label">שם התאגיד באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.corporationName"></label>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">סוג התאגיד</legend>
+            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="חברה"> חברה</label>
+            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="עמותה"> עמותה</label>
+            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="שותפות"> שותפות</label>
+          </fieldset>
+          <label class="lvp-field"><span class="lvp-field__label">מספר תאגיד/ח.פ</span><input class="lvp-input" type="text" name="corporationDetails.companyNumber" data-validate="company-num" inputmode="numeric"></label>
+          <label class="lvp-field"><span class="lvp-field__label">פעילות התאגיד</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.corporateActivity"></label>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">מדינת התאגדות</span><select class="lvp-input--select" name="corporationDetails.stateOfIncorporation" data-country></select></label>
+            <label class="lvp-field"><span class="lvp-field__label">מדינת התאגדות באנגלית</span><select class="lvp-input--select" name="corporationDetails.englishDetails.stateOfIncorporation" data-country></select></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">תאריך התאגדות</span><input class="lvp-input" type="text" name="corporationDetails.incorporationDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="corporationDetails.email"></label>
+            <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="corporationDetails.phoneNumber" data-validate="cell-il"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="corporationDetails.residencyCountry" data-country></select></label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">כתובת התאגיד</legend>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.israelAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.israelAddress.street"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.houseNumber"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.postalCode" inputmode="numeric"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.englishAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.englishAddress.street"></label>
+            </div>
+          </fieldset>
+        </section>
+
+        <!-- PAGE: entity qualification (corporationDetails.qualification) -->
+        <section class="lvp-page" data-page="ent.qualification" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">כשירות התאגיד</h2>
+          <p class="lvp-page__hint">יש לבחור אפשרות אחת.</p>
+          <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="equity50M" data-show-when-trigger="corporationDetails.qualification"> הננו תאגיד, למעט תאגיד שהתאגד למטרת רכישת ניירות ערך בהצעה נוכחית זו, שההון העצמי שלו עולה על 50 מיליון שקלים חדשים. בפסקה זו, "הון עצמי", לרבות לפי כללי חשבונאות זרים, תקני חשבונאות בין-לאומיים, וכללי חשבונאות מקובלים בארצות הברית כהגדרתם לפי סעיפים 17(ב)(1) ו-36 לחוק ניירות ערך;</label>
+          <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="whollyOwned" data-show-when-trigger="corporationDetails.qualification"> הננו תאגיד הנמצא בבעלות מלאה של משקיעים המנויים בסעיף 15א(ב) לחוק ניירות ערך, תשכ"ח-1968*</label>
+          <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="nonQualified" data-show-when-trigger="corporationDetails.qualification"> אנו מצטרפים כתאגיד לא כשיר בידיעת מנהל הקרן עומרי ולורט</label>
+
+          <div data-show-when="__entQualified=true">
+            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
+              <label class="lvp-radio"><input type="radio" name="corporationDetails.isSignedQualification" value="כן" data-show-when-trigger="corporationDetails.isSignedQualification"> כן</label>
+              <label class="lvp-radio"><input type="radio" name="corporationDetails.isSignedQualification" value="לא" data-show-when-trigger="corporationDetails.isSignedQualification"> לא</label>
+            </fieldset>
+            <p class="lvp-hint-small" data-show-when="corporationDetails.isSignedQualification=כן">את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.</p>
+          </div>
+        </section>
+
+        <!-- PAGE: authorized signatories (firstAuthorized + optional secondAuthorized) -->
+        <section class="lvp-page" data-page="ent.authorized" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">פרטי נציגים מורשים</h2>
+          <h3 class="lvp-subhead">פרטי הנציג/ה המורשה</h3>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.lastName"></label>
+          </div>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.lastName"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="firstAuthorized.idNumber" data-validate="il-id"></label>
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email"></label>
+          <label class="lvp-checkbox"><input type="checkbox" name="firstAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם לפי פרוטוקול מורשי החתימה יש נציג/ה נוסף/ת שמחויב/ת בחתימה?</legend>
+            <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="כן" data-show-when-trigger="isSecondAuthorized"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="לא" data-show-when-trigger="isSecondAuthorized"> לא</label>
+          </fieldset>
+
+          <div data-show-when="isSecondAuthorized=כן">
+            <h3 class="lvp-subhead">פרטי הנציג/ה המורשה הנוסף/ת</h3>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="secondAuthorized.firstName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="secondAuthorized.lastName"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.firstName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.lastName"></label>
+            </div>
+            <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="secondAuthorized.idNumber" data-validate="il-id"></label>
+            <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
+            <label class="lvp-checkbox"><input type="checkbox" name="secondAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">האם הנציג/ה המורשה הנוסף/ת הוא/היא בעל/ת שליטה בתאגיד?</legend>
+              <label class="lvp-radio"><input type="radio" name="secondAuthorized.isControlling" value="כן"> כן</label>
+              <label class="lvp-radio"><input type="radio" name="secondAuthorized.isControlling" value="לא"> לא</label>
+            </fieldset>
+          </div>
+        </section>
+
+        <!-- PAGE: entity tax residency + W-8BEN-E / FATCA (taxResidency + entityW8) -->
+        <section class="lvp-page" data-page="ent.entityW8" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">תושבות מס של הישות וסיווגה</h2>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
+            <label class="lvp-radio"><input type="radio" name="taxResidency.taxCountry" value="ישראל בלבד" data-show-when-trigger="taxResidency.taxCountry"> תושב/ת מס בישראל בלבד</label>
+            <label class="lvp-radio"><input type="radio" name="taxResidency.taxCountry" value="ישראל ומדינה אחרת" data-show-when-trigger="taxResidency.taxCountry"> תושב/ת מס בישראל ומדינה/ות אחרת/ות</label>
+            <label class="lvp-radio"><input type="radio" name="taxResidency.taxCountry" value="מדינה אחרת" data-show-when-trigger="taxResidency.taxCountry"> תושב/ת מס במדינה/ות אחרת/ות</label>
+            <label class="lvp-radio"><input type="radio" name="taxResidency.taxCountry" value="אין לישות תושבות לצרכי מס" data-show-when-trigger="taxResidency.taxCountry"> אין לישות תושבות לצרכי מס</label>
+          </fieldset>
+          <div data-show-when="taxResidency.taxCountry=ישראל ומדינה אחרת">
+            <div data-repeating-typed-path="taxResidency.israelAndOtherCountries.countriesArray" data-repeating-min="1" data-repeating-template="entres"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="taxResidency.israelAndOtherCountries.countriesArray">הוספת מדינה +</button>
+          </div>
+          <div data-show-when="taxResidency.taxCountry=מדינה אחרת">
+            <div data-repeating-typed-path="taxResidency.otherCountries.countriesArray" data-repeating-min="1" data-repeating-template="entres2"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="taxResidency.otherCountries.countriesArray">הוספת מדינה +</button>
+          </div>
+          <template data-row-template="entres">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+            </div>
+          </template>
+          <template data-row-template="entres2">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+            </div>
+          </template>
+
+          <h3 class="lvp-subhead">סיווג היישות (W-8BEN-E)</h3>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">סוג התאגיד לצרכי הטופס</legend>
+            <label class="lvp-radio"><input type="radio" name="entityW8.activeOrPassive" value="יישות אקטיבית שאינה פיננסית" data-show-when-trigger="entityW8.activeOrPassive"> יישות אקטיבית שאינה פיננסית</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.activeOrPassive" value="מוסד פיננסי" data-show-when-trigger="entityW8.activeOrPassive"> מוסד פיננסי</label>
+          </fieldset>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">סיווג היישות לצורכי FATCA</legend>
+            <label class="lvp-radio"><input type="radio" name="entityW8.fatcaStatus" value="Active NFFE" data-show-when-trigger="entityW8.fatcaStatus"> יישות אקטיבית שאינה פיננסית (Active NFFE)</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.fatcaStatus" value="Passive NFFE" data-show-when-trigger="entityW8.fatcaStatus"> ישות זרה שאינה פיננסית פסיבית (Passive NFFE)</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.fatcaStatus" value="Other" data-show-when-trigger="entityW8.fatcaStatus"> אחר (Other)</label>
+          </fieldset>
+
+          <fieldset class="lvp-fieldset" data-show-when="entityW8.fatcaStatus=Passive NFFE">
+            <legend class="lvp-fieldset__legend">אישור Passive NFFE (סעיף 40 בטופס)</legend>
+            <label class="lvp-radio"><input type="radio" name="entityW8.ifPassive.passiveAorB" value="A"> (A)</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.ifPassive.passiveAorB" value="B"> (B)</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.ifPassive.passiveAorB" value="C"> (C)</label>
+          </fieldset>
+
+          <div data-show-when="entityW8.fatcaStatus=Other">
+            <label class="lvp-field"><span class="lvp-field__label">סיווג היישות לצורכי FATCA</span>
+              <select class="lvp-input--select" name="entityW8.fatca.isOtherFatcaStatus">
+                <option value="">נא לבחור</option>
+                <option value="opt1">Nonparticipating FFI</option>
+                <option value="opt2">Participating FFI</option>
+                <option value="opt3">Reporting Model 1 FFI</option>
+                <option value="opt4">Reporting Model 2 FFI</option>
+                <option value="opt5">Registered deemed-compliant FFI</option>
+                <option value="opt6">Sponsored FFI</option>
+                <option value="opt7">Certified deemed-compliant nonregistering local bank</option>
+                <option value="opt8">Certified deemed-compliant FFI with only low-value accounts</option>
+                <option value="opt9">Certified deemed-compliant sponsored, closely held investment vehicle</option>
+                <option value="opt10">Certified deemed-compliant limited life debt investment entity</option>
+                <option value="opt11">Certain investment entities that do not maintain financial accounts</option>
+                <option value="opt12">Owner-documented FFI</option>
+                <option value="opt13">Restricted distributor</option>
+                <option value="opt14">Nonreporting IGA FFI</option>
+                <option value="opt15">Foreign government, government of a U.S. possession, or foreign central bank of issue</option>
+                <option value="opt16">International organization</option>
+                <option value="opt17">Exempt retirement plans</option>
+                <option value="opt18">Entity wholly owned by exempt beneficial owners</option>
+                <option value="opt19">Territory financial institution</option>
+                <option value="opt20">Excepted nonfinancial group entity</option>
+                <option value="opt21">Excepted nonfinancial start-up company</option>
+                <option value="opt22">Excepted nonfinancial entity in liquidation or bankruptcy</option>
+                <option value="opt23">501(c) organization</option>
+                <option value="opt24">Nonprofit organization</option>
+                <option value="opt25">Publicly traded NFFE or NFFE affiliate of a publicly traded corporation</option>
+                <option value="opt26">Excepted territory NFFE</option>
+                <option value="opt27">Excepted inter-affiliate FFI</option>
+                <option value="opt28">Direct reporting NFFE</option>
+                <option value="opt29">Sponsored direct reporting NFFE</option>
+                <option value="opt30">Account that is not a financial account</option>
+              </select>
+            </label>
+            <label class="lvp-field"><span class="lvp-field__label">פירוט</span><input class="lvp-input" type="text" data-script="en" name="entityW8.isOtherType.explain"></label>
+          </div>
+
+          <label class="lvp-field"><span class="lvp-field__label">סוג הישות (Chapter 3)</span>
+            <select class="lvp-input--select" name="entityW8.type">
+              <option value="">נא לבחור</option>
+              <option value="opt1">Simple trust</option>
+              <option value="opt2">Central Bank of Issue</option>
+              <option value="opt3">Grantor trust</option>
+              <option value="opt4">Tax-exempt organization</option>
+              <option value="opt5">Corporation</option>
+              <option value="opt6">Complex trust</option>
+              <option value="opt7">Private foundation</option>
+              <option value="opt8">Disregarded entity</option>
+              <option value="opt9">Estate</option>
+              <option value="opt10">International organization</option>
+              <option value="opt11">Partnership</option>
+              <option value="opt12">Government</option>
+            </select>
+          </label>
+          <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות הישות (לצורכי הטופס)</span><select class="lvp-input--select" name="entityW8.residentCountry" data-country></select></label>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם הישות היא יישות היברידית התובעת הטבות אמנה?</legend>
+            <label class="lvp-radio"><input type="radio" name="entityW8.specialDefenitions.hybridClaim" value="Yes" data-show-when-trigger="entityW8.specialDefenitions.hybridClaim"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="entityW8.specialDefenitions.hybridClaim" value="No" data-show-when-trigger="entityW8.specialDefenitions.hybridClaim"> לא</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="entityW8.specialDefenitions.hybridClaim=Yes"><span class="lvp-field__label">מבחן הגבלת ההטבות (LOB)</span>
+            <select class="lvp-input--select" name="entityW8.defenetion">
+              <option value="">נא לבחור</option>
+              <option value="opt1">Government</option>
+              <option value="opt2">Tax exempt pension trust or pension fund</option>
+              <option value="opt3">Other tax exempt organization</option>
+              <option value="opt4">Publicly traded corporation</option>
+              <option value="opt5">Subsidiary of a publicly traded corporation</option>
+              <option value="opt6">Company that meets the ownership and base erosion test</option>
+              <option value="opt7">Company that meets the derivative benefits test</option>
+              <option value="opt8">Company with an item of income that meets active trade or business test</option>
+              <option value="opt9">Favorable discretionary determination by the U.S. competent authority received</option>
+              <option value="opt10">Other</option>
+            </select>
+          </label>
+          <label class="lvp-checkbox"><input type="checkbox" name="entityW8.isSignForEntity" value="true"> אני מוסמך/ת לחתום בשם הישות.</label>
+        </section>
+
+        <!-- PAGE: controlling persons gate + array (controllingShareholdersContainer) -->
+        <section class="lvp-page" data-page="ent.controlling" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">בעלי שליטה</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם ישנם בעלי שליטה בתאגיד?</legend>
+            <label class="lvp-radio"><input type="radio" name="isControllingShareholders" value="כן" data-show-when-trigger="isControllingShareholders"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="isControllingShareholders" value="לא" data-show-when-trigger="isControllingShareholders"> לא</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="isControllingShareholders=לא"><span class="lvp-field__label">הסיבה לכך</span><input class="lvp-input" type="text" data-script="he" name="ifNoControllingShareholders"></label>
+
+          <div data-show-when="isControllingShareholders=כן">
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">האם הנציג/ה המורשה הראשון/ה הוא/היא בעל/ת שליטה בתאגיד?</legend>
+              <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.isFirstControlling" value="כן"> כן</label>
+              <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.isFirstControlling" value="לא"> לא</label>
+            </fieldset>
+            <p class="lvp-hint-small">מסמכי ההצטרפות יישלחו לכל בעל/ת שליטה למילוי וחתימה לאחר חתימת הנציג/ה המורשה. שיעור ההחזקה של כלל בעלי השליטה צריך להסתכם ב-100 אחוז. ניתן להזין עד 4 בעלי שליטה.</p>
+            <div data-repeating-typed-path="controllingShareholdersContainer.controllingShareholdersArray" data-repeating-min="1" data-repeating-max="4" data-repeating-template="cp"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="controllingShareholdersContainer.controllingShareholdersArray">הוספת בעל/ת שליטה +</button>
+          </div>
+
+          <template data-row-template="cp">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">פרטי בעל/ת השליטה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].lastName"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.lastName"></label>
+              </div>
+              <fieldset class="lvp-fieldset">
+                <legend class="lvp-fieldset__legend">מין</legend>
+                <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].gender" value="זכר"> זכר</label>
+                <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].gender" value="נקבה"> נקבה</label>
+              </fieldset>
+              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].idNumber" data-validate="il-id"></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+                <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthCountry" data-country></select></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].citizenship" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">עיסוק</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].occupation"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].residencyCountry" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">שיעור ההחזקה (אחוז)</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].ownershipPercentage" data-validate="pct" inputmode="decimal"></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].email" data-help="יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה"></label>
+                <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].phoneNumber" data-validate="cell-il"></label>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- PAGE: entity lawyer (lawyerDetails + lawyerQualificationApprove) -->
+        <section class="lvp-page" data-page="ent.lawyer" data-applicant="entity" hidden>
+          <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
+          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.</p>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
+          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric"></label>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- ===================  SHARED PAGES  =========================== -->
+        <!-- ============================================================== -->
+
+        <!-- PAGE: money invested + bank (moneyInvestedInFund) -->
+        <section class="lvp-page" data-page="money">
+          <h2 class="lvp-page__title">כספים המושקעים בקרן</h2>
+
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">מטבע השקעה</span>
+              <select class="lvp-input--select" name="moneyInvestedInFund.investedAmountArray[0].investedCurrency">
+                <option value="">נא לבחור</option>
+                <option value="שקל">שקל</option>
+                <option value="דולר">דולר</option>
+                <option value="יורו">יורו</option>
+              </select>
+            </label>
+            <label class="lvp-field"><span class="lvp-field__label">סכום השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investedAmount" data-amount data-validate="gt50000" inputmode="numeric" placeholder="לדוגמה: 500,000"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="date-future" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב"></label>
+
+          <h3 class="lvp-subhead">המוסד ממנו יועברו הכספים</h3>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.bankDetails.bankNameIsrael"></label>
+            <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric"></label>
+          </div>
+          <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" inputmode="numeric"></label>
+
+          <label class="lvp-field"><span class="lvp-field__label">מקור הכספים</span>
+            <select class="lvp-input--select" name="moneyInvestedInFund.moneySource" data-show-when-trigger="moneyInvestedInFund.moneySource">
+              <option value="">נא לבחור</option>
+              <option value="פעילות עסקית">פעילות עסקית</option>
+              <option value="מכירת זכויות ו/או נכסים">מכירת זכויות ו/או נכסים</option>
+              <option value="מתן שירותים">מתן שירותים</option>
+              <option value="ירושה">ירושה</option>
+              <option value="הון עצמי">הון עצמי</option>
+              <option value="אחר">אחר</option>
+            </select>
+          </label>
+          <label class="lvp-field" data-show-when="moneyInvestedInFund.moneySource=אחר"><span class="lvp-field__label">פירוט מקור הכספים</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.otherSource"></label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם יש לך או לבן/בת משפחתך קשר לפעילות ציבורית או פוליטית?</legend>
+            <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.publicOrPoliticalActivity" value="כן" data-show-when-trigger="moneyInvestedInFund.publicOrPoliticalActivity"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.publicOrPoliticalActivity" value="לא" data-show-when-trigger="moneyInvestedInFund.publicOrPoliticalActivity"> לא</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="moneyInvestedInFund.publicOrPoliticalActivity=כן"><span class="lvp-field__label">פירוט הפעילות הציבורית או הפוליטית</span><textarea class="lvp-input--textarea" data-script="he" name="moneyInvestedInFund.publicOrPoliticalActivityDescription" rows="2"></textarea></label>
+
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם מתנהלים נגדך הליכים משפטיים או מנהליים?</legend>
+            <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.legalOrAdministrativeProceedings" value="כן" data-show-when-trigger="moneyInvestedInFund.legalOrAdministrativeProceedings"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.legalOrAdministrativeProceedings" value="לא" data-show-when-trigger="moneyInvestedInFund.legalOrAdministrativeProceedings"> לא</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="moneyInvestedInFund.legalOrAdministrativeProceedings=כן"><span class="lvp-field__label">פירוט ההליכים</span><textarea class="lvp-input--textarea" data-script="he" name="moneyInvestedInFund.legalOrAdministrativeProceedingsDescription" rows="2"></textarea></label>
+        </section>
+
+        <!-- PAGE: beneficiary declaration (beneficiaryStatement) -->
+        <section class="lvp-page" data-page="beneficiary">
+          <h2 class="lvp-page__title">הצהרה על נהנים ובעלי שליטה</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">המשקיע/ה מצהיר/ה בזאת:</legend>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="self" data-show-when-trigger="beneficiaryStatement.statement"> אני פועל/ת עבור עצמי בלבד</label>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="unknown" data-show-when-trigger="beneficiaryStatement.statement"> יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים</label>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> הנהנים בפעולה הם:</label>
+          </fieldset>
+          <label class="lvp-field" data-show-when="beneficiaryStatement.statement=unknown"><span class="lvp-field__label">הסיבה לכך</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.reasonUnknown"></label>
+
+          <div data-show-when="beneficiaryStatement.statement=named">
+            <div data-repeating-typed-path="beneficiaryStatement.beneficiariesDetails.beneficiariesArray" data-repeating-min="1" data-repeating-template="bnf"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="beneficiaryStatement.beneficiariesDetails.beneficiariesArray">הוספת נהנה/ית +</button>
+            <label class="lvp-field"><span class="lvp-field__label">הזיקה ביני לבין הנהנה / ים המצוין / ים לעיל</span><textarea class="lvp-input--textarea" data-script="he" name="beneficiaryStatement.beneficiariesDetails.connectionBetweenBeneficiaries" rows="2"></textarea></label>
+          </div>
+          <template data-row-template="bnf">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">נהנה/ית ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">שם מלא</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].fullName"></label>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">מספר תעודה מזהה/ח.פ</span><input class="lvp-input" type="text" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].idOrCompanyNumber"></label>
+                <label class="lvp-field"><span class="lvp-field__label">תאריך לידה/תאריך התאגדות</span><input class="lvp-input" type="text" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].birthOrIncorporationDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">מין</span>
+                  <select class="lvp-input--select" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].gender"><option value="">נא לבחור</option><option value="זכר">זכר</option><option value="נקבה">נקבה</option></select>
+                </label>
+                <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].country" data-country></select></label>
+              </div>
+            </div>
+          </template>
+        </section>
+
+        <!-- PAGE: tax status declaration (taxDeclaration) -->
+        <section class="lvp-page" data-page="tax">
+          <h2 class="lvp-page__title">הצהרה על מעמד מס</h2>
+          <p class="lvp-note">אני/ו מתחייב/ים להודיע לשותף הכללי של השותפות אודות כל שינוי במעמד המס שלי/נו ו/או שיעורו, אשר יחולו לאחר חתימתי/נו על הצהרה זו.</p>
+
+          <fieldset class="lvp-fieldset" data-applicant="individual">
+            <legend class="lvp-fieldset__legend">מעמד מס</legend>
+            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isNonBusinessIncome" value="true"> הכנסה שלא מעסק (תחויב במס רווח הון בהתאם לתנאי האישור המקדמי)</label>
+          </fieldset>
+          <fieldset class="lvp-fieldset" data-applicant="entity">
+            <legend class="lvp-fieldset__legend">מעמד מס</legend>
+            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isBusinessIncome" value="true"> הכנסה מעסק (תחויב במס בשיעור הקבוע בסעיף 121 או בסעיף 126(א) לפקודה בהתאם לתנאי האישור המקדמי)</label>
+          </fieldset>
+        </section>
+
+        <!-- PAGE: waiver of claims (investorsArray[0].isReadClaims) - individual only -->
+        <section class="lvp-page" data-page="ind.waiver" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">כתב ויתור טענות</h2>
+          <p class="lvp-note">אני הח"מ, ת.ז. שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
+1. ביום נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
+2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
+3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
+          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label>
+        </section>
+
+        <!-- PAGE: FATCA / CRS tax residency (investorsArray[0].taxResidency) - individual only -->
+        <section class="lvp-page" data-page="ind.taxres" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">הצהרה על מעמד מס</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
+            <label class="lvp-radio"><input type="radio" name="investorsArray[0].taxResidency.taxCountry" value="ישראל בלבד" data-show-when-trigger="investorsArray[0].taxResidency.taxCountry"> תושב/ת מס בישראל בלבד</label>
+            <label class="lvp-radio"><input type="radio" name="investorsArray[0].taxResidency.taxCountry" value="ישראל ומדינה אחרת" data-show-when-trigger="investorsArray[0].taxResidency.taxCountry"> תושב/ת מס בישראל ומדינה/ות אחרת/ות</label>
+            <label class="lvp-radio"><input type="radio" name="investorsArray[0].taxResidency.taxCountry" value="מדינה אחרת" data-show-when-trigger="investorsArray[0].taxResidency.taxCountry"> תושב/ת מס במדינה/ות אחרת/ות</label>
+          </fieldset>
+          <div data-show-when="investorsArray[0].taxResidency.taxCountry=ישראל ומדינה אחרת">
+            <div data-repeating-typed-path="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray" data-repeating-min="1" data-repeating-template="indres"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray">הוספת מדינה +</button>
+          </div>
+          <div data-show-when="investorsArray[0].taxResidency.taxCountry=מדינה אחרת">
+            <div data-repeating-typed-path="investorsArray[0].taxResidency.otherCountries.countriesArray" data-repeating-min="1" data-repeating-template="indres2"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="investorsArray[0].taxResidency.otherCountries.countriesArray">הוספת מדינה +</button>
+          </div>
+          <template data-row-template="indres">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+            </div>
+          </template>
+          <template data-row-template="indres2">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+            </div>
+          </template>
+        </section>
+
+        <!-- PAGE: additional investors gate (additionalInvestors) - individual only -->
+        <section class="lvp-page" data-page="ind.additional" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">משקיעים נוספים</h2>
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">האם יהיו שותפים להשקעתך בקרן (כולל בן/בת זוג)?</legend>
+            <label class="lvp-radio"><input type="radio" name="additionalInvestors" value="כן" data-show-when-trigger="additionalInvestors"> כן</label>
+            <label class="lvp-radio"><input type="radio" name="additionalInvestors" value="לא" data-show-when-trigger="additionalInvestors"> לא</label>
+          </fieldset>
+          <fieldset class="lvp-fieldset" data-show-when="additionalInvestors=כן">
+            <legend class="lvp-fieldset__legend">מספר משקיעים נוספים</legend>
+            <label class="lvp-radio"><input type="radio" name="additionalInvestorsNumber" value="1"> 1</label>
+            <label class="lvp-radio"><input type="radio" name="additionalInvestorsNumber" value="2"> 2</label>
+          </fieldset>
+          <p class="lvp-hint-small" data-show-when="additionalInvestors=כן">מסמכי ההצטרפות יועברו למשקיעים הנוספים בשותפות למילוי וחתימה לאחר חתימתך. ניתן להזין עד שני משקיעים נוספים.</p>
+          <div data-show-when="additionalInvestors=כן">
+            <div data-repeating-typed-path="__additionalInvestorsArray" data-repeating-min="1" data-repeating-max="2" data-repeating-template="addinv"></div>
+          </div>
+          <template data-row-template="addinv">
+            <div class="lvp-repeating-row" data-row-index="${i}">
+              <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">משקיע/ה נוסף/ת ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].firstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].lastName"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishFirstName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishLastName"></label>
+              </div>
+              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="__addinv[${i}].idNumber" data-validate="il-id"></label>
+              <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="__addinv[${i}].email"></label>
+            </div>
+          </template>
+        </section>
+
+        <!-- PAGE: file uploads (collect-and-route) -->
+        <section class="lvp-page" data-page="uploads">
+          <h2 class="lvp-page__title">העלאת קבצים</h2>
+          <p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p>
+
+          <!-- INDIVIDUAL uploads (investor[0].fileUpload) -->
+          <div data-applicant="individual">
+            <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isBiometric" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isBiometric"> ברשותי תעודת זהות ביומטרית</label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=false"><span class="lvp-field__label">צילום תעודת הזהות</span><input class="lvp-input" type="file" data-upload="investors.0.id" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד קדמי</span><input class="lvp-input" type="file" data-upload="investors.0.idFront" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד אחורי</span><input class="lvp-input" type="file" data-upload="investors.0.idBack" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isSeparateAppendix" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isSeparateAppendix"> ברצוני להעלות ספח תעודת זהות כצרופה נפרדת</label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isSeparateAppendix=true"><span class="lvp-field__label">ספח תעודת הזהות</span><input class="lvp-input" type="file" data-upload="investors.0.idAppendix" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="__nonIsrael.investorsArray[0]=true"><span class="lvp-field__label">צילום דרכון</span><input class="lvp-input" type="file" data-upload="investors.0.passport" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-input" type="file" data-upload="investors.0.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].qualification.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-input" type="file" data-upload="investors.0.qualification" accept="image/jpeg,image/png,application/pdf"></label>
+          </div>
+
+          <!-- ENTITY uploads (fileUpload + corporationDetails.corporateSeal) -->
+          <div data-applicant="entity">
+            <label class="lvp-field"><span class="lvp-field__label">תעודת התאגדות</span><input class="lvp-input" type="file" data-upload="entity.certificateOfIncorporation" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">תקנון התאגיד</span><input class="lvp-input" type="file" data-upload="entity.corporateBylaws" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">פרוטוקול מורשי החתימה</span><input class="lvp-input" type="file" data-upload="entity.protocol" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-input" type="file" data-upload="entity.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">חותמת התאגיד</span><input class="lvp-input" type="file" data-upload="entity.stamp" accept="image/jpeg,image/png"><p class="lvp-hint-small">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא רקע כדי לוודא שהיא תופיע כראוי במסמכים.</p></label>
+            <label class="lvp-field" data-show-when="corporationDetails.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-input" type="file" data-upload="entity.qualification" accept="image/jpeg,image/png,application/pdf"></label>
+          </div>
+        </section>
+
+        <!-- PAGE: contact details (familyOfficeDetails / contactArray) -->
+        <section class="lvp-page" data-page="contact">
+          <h2 class="lvp-page__title">פרטי התקשרות</h2>
+          <p class="lvp-page__hint">כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.</p>
+          <div data-repeating-typed-path="contactArray" data-repeating-min="0" data-repeating-template="email"></div>
+          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
+          <template data-row-template="email">
+            <div class="lvp-email-row" data-row-index="${i}">
+              <input class="lvp-input" type="email" name="contactArray[${i}].finalEmail" placeholder="name@example.com">
+              <button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button>
+            </div>
+          </template>
+        </section>
+
+        <!-- PAGE: review + submit -->
+        <section class="lvp-page" data-page="review">
+          <h2 class="lvp-page__title">סיום ושליחה</h2>
+          <p class="lvp-page__hint">עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור חתימה בדואר האלקטרוני. כל חותם/ת (את/ה, עורך/ת הדין או רואה/ת החשבון במידת הצורך, כל בעל/ת שליטה והשותף הכללי) חותם/ת בתורו/ה.</p>
+          <div data-review-summary></div>
+        </section>
+
+        <div class="lvp-actions">
+          <button type="button" class="lvp-btn lvp-btn--secondary" data-action="prev" hidden>הקודם</button>
+          <span style="flex:1"></span>
+          <button type="button" class="lvp-btn lvp-btn--primary" data-action="next">הבא</button>
+          <button type="button" class="lvp-btn lvp-btn--primary" data-action="submit" hidden>סיום ושליחה</button>
+        </div>
+        <div class="lvp-status" data-status aria-live="polite"></div>
+      </form>
+    </main>
+  </div>
+
+  <!-- Static bootstrap (cayman-form-static adaptation, 2026-07-03): the recovered
+       EasySend-era form was served by the ju-israel GAS web app (server-injected
+       config), then by a Netlify /api/gw proxy. On this static host it bootstraps
+       CFG straight from the unified ju-cayman GAS /exec ?api=config, mirroring the
+       proven Cayman index.html pattern (async fetch + sessionStorage cache +
+       __israelOnCfgUpdate re-apply hook). The deployment token in the URL is the
+       lane's shared secret by design; the localhost-only ?gas= override targets the
+       dev HEAD deployment during testing and is inert in production. -->
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      // Dev override: only honored when the page itself is served from localhost.
+      var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+      if (isLocal && p.get('gas')) gasUrl = p.get('gas');
+      window.ISRAEL_CFG = { gatewayUrl: gasUrl, token: p.get('t') || '' };
+      var cacheKey = 'lvp_il_cfg_v1_' + (p.get('t') || '');
+      function applyCfg(cfg) {
+        if (!cfg) return;
+        for (var k in cfg) { if (Object.prototype.hasOwnProperty.call(cfg, k)) window.ISRAEL_CFG[k] = cfg[k]; }
+        window.ISRAEL_CFG.gatewayUrl = gasUrl; // never let a cached/echoed URL redirect the POST target
+        // The unified gateway's ?api=config serves the Cayman ENGLISH country list.
+        // This form is Hebrew-authored and the Israeli validator compares Hebrew
+        // country strings, so the config list is dropped and the form's own Hebrew
+        // list is used until the gateway serves a Hebrew list for the israeli lane.
+        delete window.ISRAEL_CFG.countries;
+        if (typeof window.__israelOnCfgUpdate === 'function') window.__israelOnCfgUpdate(window.ISRAEL_CFG);
+      }
+      try {
+        var raw = sessionStorage.getItem(cacheKey);
+        if (raw) applyCfg(JSON.parse(raw));
+      } catch (e) {}
+      var url = gasUrl + '?api=config'
+        + '&t='    + encodeURIComponent(p.get('t')    || '')
+        + '&type=' + encodeURIComponent(p.get('type') || '')
+        + '&lang=' + encodeURIComponent(p.get('lang') || '');
+      try {
+        fetch(url)
+          .then(function (r) { return r.json(); })
+          .then(function (cfg) {
+            applyCfg(cfg);
+            try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch (e) {}
+          })
+          .catch(function () {});
+      } catch (err) {
+        if (window.console) console.warn('[IsraelForm] CFG load failed:', err);
+      }
+    })();
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    var CFG = window.ISRAEL_CFG || {};
+    var form = document.getElementById('lvp-form');
+    var statusEl = form.querySelector('[data-status]');
+    var prevBtn = form.querySelector('[data-action="prev"]');
+    var nextBtn = form.querySelector('[data-action="next"]');
+    var submitBtn = form.querySelector('[data-action="submit"]');
+    var progWrap = document.querySelector('[data-progress]');
+    var progIndicator = document.querySelector('[data-progress-indicator]');
+    var progBar = document.querySelector('[data-progress-bar]');
+
+    // Pending file uploads, keyed by upload slot. base64 client-side, routed to a
+    // token-gated Drive folder by the server (never public-shared).
+    var pendingUploads = {};
+
+    // ===================================================================
+    // Bilingual HE/EN toggle.
+    //
+    // The page is AUTHORED in Hebrew (source language). EN_MAP is the Hebrew-string
+    // to English map (the inverse of the Cayman form's HE_MAP). applyLang walks the
+    // translatable surfaces and swaps text via the map, caching the original Hebrew
+    // in el.dataset.he (or a parallel dataset key for attributes) so toggling back
+    // to Hebrew restores exactly.
+    //
+    // DEFAULT = Hebrew. window.ISRAEL_CFG.language === 'en' starts English.
+    //
+    // Untranslated strings are LEFT in Hebrew (never blanked). The script-guard data
+    // handlers (Hebrew/Latin enforcement) key off data-script, not the visible UI
+    // language, so they keep working in both display languages.
+    // ===================================================================
+    var EN_MAP = {
+      "ברוכים הבאים לקרן לגאסי":"Welcome to Legacy Value Partners",
+      "טופס זה אוסף את המידע הדרוש להצטרפותך לקרן לגאסי ואליו פרטנרס. לאחר מילוי וחתימה, יישלחו למייל עותקים חתומים של טפסי ההצטרפות.":"This form collects the information required for your subscription to Legacy Value Partners. Upon completion and signature, signed copies of the subscription documents will be sent to your email.",
+      "אם פמילי אופיס מסייע במילוי הפרטים, ניתן להיכנס לטופס דרך הקישור, למלא את הפרטים ולאחר מכן לשלוח את אותו קישור למשקיע/ה לצורך חתימה.":"If a family office is helping you, they can open the form through the link, fill in the details, and then forward the same link to the investor to sign.",
+      "פרטים אישיים":"Personal details",
+      "יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.":"Enter the details in English as they appear on your ID document.",
+      "שם פרטי":"First name",
+      "שם משפחה":"Last name",
+      "שם פרטי באנגלית":"First name in English",
+      "שם משפחה באנגלית":"Last name in English",
+      "כפי שמופיע בתעודת הזהות":"As it appears on your ID",
+      "מין":"Gender",
+      "זכר":"Male",
+      "נקבה":"Female",
+      "מספר תעודת זהות":"ID number",
+      "כולל ספרת ביקורת":"Including the check digit",
+      "תאריך לידה":"Date of birth",
+      "ארץ לידה":"Country of birth",
+      "תאריך עליה":"Aliyah date",
+      "מדינת אזרחות":"Citizenship",
+      "אזרחות נוספת":"Additional citizenship",
+      "מספר SSN":"SSN",
+      "תחום עיסוק":"Occupation",
+      "מדינת תושבות":"Country of residence",
+      "כתובת מגורים":"Residential address",
+      "עיר":"City",
+      "רחוב":"Street",
+      "מספר בית":"House number",
+      "מיקוד":"Post code",
+      "עיר באנגלית":"City in English",
+      "רחוב באנגלית":"Street in English",
+      "דואר אלקטרוני":"Email",
+      "טלפון נייד":"Mobile phone",
+      "נא לבחור":"Select",
+      "כשירות":"Qualification",
+      "יש לבחור אפשרות אחת.":"Select one option.",
+      "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 9,411,809.",
+      "גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.":"My income in each of the last two years exceeds ILS 1,411,772, or my household income exceeds ILS 2,117,657.",
+      "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 5,882,380 and my income in each of the last two years exceeds ILS 705,885, or my household income exceeds ILS 1,058,827.",
+      "אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.":"I am joining as a non-qualified investor, with the knowledge of the fund manager Omri Velvart.",
+      "אישור כשירות":"Qualification verification",
+      "האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?":"Do you have a signed qualification form issued within the last 12 months?",
+      "כן":"Yes",
+      "לא":"No",
+      "את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.":"You can upload the signed qualification form on the File Upload page.",
+      "עו\"ד או רו\"ח בלתי תלוי/ה יקבל/תקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו/ה.":"An independent lawyer or CPA will receive a link to sign the qualification form after your documents are completed. Please let them know.",
+      "פרטי עורך/ת דין / רואה/ת חשבון":"Lawyer or CPA details",
+      "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when a qualified investor has not uploaded a signed qualification form.",
+      "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when the entity is qualified and has not uploaded a signed qualification form.",
+      "לכתובת זו יישלח קישור החתימה":"The signing link will be sent to this address",
+      "מספר רישיון":"License number",
+      "פרטי התאגיד":"Entity details",
+      "יש להזין את שם התאגיד וכתובתו בעברית ובאנגלית כפי שהם מופיעים בתעודת ההתאגדות.":"Enter the entity name and address in Hebrew and English as they appear on the Certificate of Incorporation.",
+      "שם התאגיד":"Entity name",
+      "שם התאגיד באנגלית":"Entity name in English",
+      "סוג התאגיד":"Entity type",
+      "חברה":"Company",
+      "עמותה":"Nonprofit",
+      "שותפות":"Partnership",
+      "מספר תאגיד/ח.פ":"Entity / company number",
+      "פעילות התאגיד":"Entity activity",
+      "מדינת התאגדות":"Country of incorporation",
+      "מדינת התאגדות באנגלית":"Country of incorporation in English",
+      "תאריך התאגדות":"Date of incorporation",
+      "כתובת התאגיד":"Entity address",
+      "כשירות התאגיד":"Entity qualification",
+      "הננו תאגיד, למעט תאגיד שהתאגד למטרת רכישת ניירות ערך בהצעה נוכחית זו, שההון העצמי שלו עולה על 50 מיליון שקלים חדשים. בפסקה זו, \"הון עצמי\", לרבות לפי כללי חשבונאות זרים, תקני חשבונאות בין-לאומיים, וכללי חשבונאות מקובלים בארצות הברית כהגדרתם לפי סעיפים 17(ב)(1) ו-36 לחוק ניירות ערך;":"We are a corporation, other than a corporation incorporated for the purpose of purchasing securities in this offering, whose equity exceeds ILS 50 million. In this paragraph, equity includes equity under foreign accounting rules, international accounting standards, and U.S. generally accepted accounting principles as defined in sections 17(b)(1) and 36 of the Securities Law;",
+      "הננו תאגיד הנמצא בבעלות מלאה של משקיעים המנויים בסעיף 15א(ב) לחוק ניירות ערך, תשכ\"ח-1968*":"We are a corporation wholly owned by investors listed in section 15A(b) of the Securities Law, 5728-1968*",
+      "אנו מצטרפים כתאגיד לא כשיר בידיעת מנהל הקרן עומרי ולורט":"We are joining as a non-qualified entity, with the knowledge of the fund manager Omri Velvart",
+      "פרטי נציגים מורשים":"Authorized signatories",
+      "פרטי הנציג/ה המורשה":"Authorized signatory details",
+      "קראתי והנני מאשר/ת את כתב ויתור הטענות.":"I have read and hereby confirm the waiver of claims.",
+      "האם לפי פרוטוקול מורשי החתימה יש נציג/ה נוסף/ת שמחויב/ת בחתימה?":"Per the signatory protocol, is there an additional signatory required to sign?",
+      "פרטי הנציג/ה המורשה הנוסף/ת":"Additional authorized signatory details",
+      "האם הנציג/ה המורשה הנוסף/ת הוא/היא בעל/ת שליטה בתאגיד?":"Is the additional authorized signatory a controlling person of the entity?",
+      "תושבות מס של הישות וסיווגה":"Entity tax residency and classification",
+      "סמן/י את האפשרות המתאימה":"Mark the appropriate option",
+      "תושב/ת מס בישראל בלבד":"Tax resident in Israel only",
+      "תושב/ת מס בישראל ומדינה/ות אחרת/ות":"Tax resident in Israel and another country or countries",
+      "תושב/ת מס במדינה/ות אחרת/ות":"Tax resident in another country or countries",
+      "אין לישות תושבות לצרכי מס":"The entity has no tax residency",
+      "מדינה":"Country",
+      "מדינה מספר משלם מס מקומי (TIN)":"Local taxpayer number (TIN)",
+      "הוספת מדינה +":"Add a country +",
+      "מחיקה":"Remove",
+      "סיווג היישות (W-8BEN-E)":"Entity classification (W-8BEN-E)",
+      "סוג התאגיד לצרכי הטופס":"Entity type for the form",
+      "יישות אקטיבית שאינה פיננסית":"Active non-financial entity",
+      "מוסד פיננסי":"Financial institution",
+      "סיווג היישות לצורכי FATCA":"Entity FATCA classification",
+      "יישות אקטיבית שאינה פיננסית (Active NFFE)":"Active non-financial entity (Active NFFE)",
+      "ישות זרה שאינה פיננסית פסיבית (Passive NFFE)":"Passive non-financial foreign entity (Passive NFFE)",
+      "אחר (Other)":"Other",
+      "אישור Passive NFFE (סעיף 40 בטופס)":"Passive NFFE certification (line 40 of the form)",
+      "פירוט":"Details",
+      "סוג הישות (Chapter 3)":"Entity type (Chapter 3)",
+      "מדינת תושבות הישות (לצורכי הטופס)":"Entity country of residence (for the form)",
+      "האם הישות היא יישות היברידית התובעת הטבות אמנה?":"Is the entity a hybrid making a treaty claim?",
+      "מבחן הגבלת ההטבות (LOB)":"Limitation on Benefits test",
+      "אני מוסמך/ת לחתום בשם הישות.":"I am authorized to sign on behalf of the entity.",
+      "בעלי שליטה":"Controlling persons",
+      "האם ישנם בעלי שליטה בתאגיד?":"Are there controlling persons in the entity?",
+      "הסיבה לכך":"The reason for this",
+      "האם הנציג/ה המורשה הראשון/ה הוא/היא בעל/ת שליטה בתאגיד?":"Is the first authorized signatory a controlling person of the entity?",
+      "מסמכי ההצטרפות יישלחו לכל בעל/ת שליטה למילוי וחתימה לאחר חתימת הנציג/ה המורשה. שיעור ההחזקה של כלל בעלי השליטה צריך להסתכם ב-100 אחוז. ניתן להזין עד 4 בעלי שליטה.":"The subscription documents will be sent to each controlling person for completion and signature after the authorized signatory signs. The total ownership of all controlling persons must sum to 100 percent. Up to 4 controlling persons can be entered.",
+      "הוספת בעל/ת שליטה +":"Add a controlling person +",
+      "פרטי בעל/ת השליטה":"Controlling person details",
+      "שיעור ההחזקה (אחוז)":"Ownership percentage",
+      "יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה":"A personal link to complete details and sign will be sent to them",
+      "כספים המושקעים בקרן":"Funds invested in the fund",
+      "מטבע השקעה":"Investment currency",
+      "שקל":"Shekel",
+      "דולר":"Dollar",
+      "יורו":"Euro",
+      "סכום השקעה":"Investment amount",
+      "לדוגמה: 500,000":"e.g., 500,000",
+      "תאריך השקעה":"Investment date",
+      "נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב":"Please state the first business day of the upcoming calendar month",
+      "המוסד ממנו יועברו הכספים":"The institution the funds will be transferred from",
+      "שם הבנק":"Bank name",
+      "מספר סניף":"Branch number",
+      "מספר חשבון":"Account number",
+      "מקור הכספים":"Source of funds",
+      "פעילות עסקית":"Business activity",
+      "מכירת זכויות ו/או נכסים":"Sale of rights and/or assets",
+      "מתן שירותים":"Provision of services",
+      "ירושה":"Inheritance",
+      "הון עצמי":"Equity",
+      "אחר":"Other",
+      "פירוט מקור הכספים":"Source of funds details",
+      "האם יש לך או לבן/בת משפחתך קשר לפעילות ציבורית או פוליטית?":"Do you or a family member have a connection to public or political activity?",
+      "פירוט הפעילות הציבורית או הפוליטית":"Details of the public or political activity",
+      "האם מתנהלים נגדך הליכים משפטיים או מנהליים?":"Are there legal or administrative proceedings against you?",
+      "פירוט ההליכים":"Details of the proceedings",
+      "הצהרה על נהנים ובעלי שליטה":"Declaration of beneficiaries and controlling persons",
+      "המשקיע/ה מצהיר/ה בזאת:":"The investor hereby declares:",
+      "אני פועל/ת עבור עצמי בלבד":"I am acting on my own behalf only",
+      "יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים":"There is a beneficiary or beneficiaries in the said rights, but their identifying details are not yet known",
+      "הנהנים בפעולה הם:":"The beneficiaries of the transaction are:",
+      "הוספת נהנה/ית +":"Add a beneficiary +",
+      "נהנה/ית":"Beneficiary",
+      "שם מלא":"Full name",
+      "מספר תעודה מזהה/ח.פ":"ID / company number",
+      "תאריך לידה/תאריך התאגדות":"Date of birth / date of incorporation",
+      "הזיקה ביני לבין הנהנה / ים המצוין / ים לעיל":"The connection between me and the beneficiary or beneficiaries listed above",
+      "הצהרה על מעמד מס":"Tax status declaration",
+      "אני/ו מתחייב/ים להודיע לשותף הכללי של השותפות אודות כל שינוי במעמד המס שלי/נו ו/או שיעורו, אשר יחולו לאחר חתימתי/נו על הצהרה זו.":"I/we undertake to notify the General Partner of the partnership of any change in my/our tax status and/or its rate occurring after I/we sign this declaration.",
+      "מעמד מס":"Tax status",
+      "הכנסה שלא מעסק (תחויב במס רווח הון בהתאם לתנאי האישור המקדמי)":"Non-business income (will be taxed as capital gains per the terms of the pre-ruling)",
+      "הכנסה מעסק (תחויב במס בשיעור הקבוע בסעיף 121 או בסעיף 126(א) לפקודה בהתאם לתנאי האישור המקדמי)":"Business income (will be taxed at the rate fixed in section 121 or section 126(a) of the Ordinance per the terms of the pre-ruling)",
+      "כתב ויתור טענות":"Waiver of claims",
+      "אני הח\"מ, ת.ז. שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: \"הקרן\"), מאשר/ת בזה האמור להלן:\n1. ביום נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: \"השותף הכללי\") הסכם השקעה/שותפות (להלן: \"הסכם ההשקעה\").\n2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.\n3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.":"I, the undersigned, ID number, a limited partner in Legacy Value Partners L.P. (the \"Fund\"), hereby confirm the following:\n1. On the date an investment/partnership agreement (the \"Investment Agreement\") was signed between me and Velvert Capital Management Ltd. (the \"General Partner\").\n2. I hereby confirm, for the avoidance of doubt, that the Bank shall bear no liability whatsoever toward me, the General Partner, the limited partners, or the Fund regarding the General Partner's performance of its obligations under the Investment Agreement, including the manner in which the General Partner manages the investments and the General Partner's compliance with the Fund's investment policy.\n3. I further confirm by my signature on this document that I have and will have no claim and/or demand against the Bank and/or anyone on its behalf as detailed in section 2 above.",
+      "קראתי והנני מאשר/ת את הכתוב לעיל":"I have read and hereby confirm the above",
+      "משקיעים נוספים":"Additional investors",
+      "האם יהיו שותפים להשקעתך בקרן (כולל בן/בת זוג)?":"Will there be partners to your investment in the fund (including a spouse)?",
+      "מספר משקיעים נוספים":"Number of additional investors",
+      "מסמכי ההצטרפות יועברו למשקיעים הנוספים בשותפות למילוי וחתימה לאחר חתימתך. ניתן להזין עד שני משקיעים נוספים.":"The subscription documents will be forwarded to the additional partners for completion and signature after you sign. Up to two additional investors can be entered.",
+      "משקיע/ה נוסף/ת":"Additional investor",
+      "העלאת קבצים":"File upload",
+      "נא להעלות קובץ בפורמט JPG או PNG בלבד.":"Please upload a file in JPG or PNG format only.",
+      "ברשותי תעודת זהות ביומטרית":"I hold a biometric ID card",
+      "צילום תעודת הזהות":"Scan of the ID card",
+      "תעודת זהות, צד קדמי":"ID card, front side",
+      "תעודת זהות, צד אחורי":"ID card, back side",
+      "ברצוני להעלות ספח תעודת זהות כצרופה נפרדת":"I wish to upload the ID appendix as a separate attachment",
+      "ספח תעודת הזהות":"ID appendix",
+      "צילום דרכון":"Passport scan",
+      "אישור ניהול חשבון":"Account management approval",
+      "טופס כשירות חתום":"Signed qualification form",
+      "תעודת התאגדות":"Certificate of incorporation",
+      "תקנון התאגיד":"Entity articles",
+      "פרוטוקול מורשי החתימה":"Signatory protocol",
+      "חותמת התאגיד":"Entity seal",
+      "נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא רקע כדי לוודא שהיא תופיע כראוי במסמכים.":"Please upload an image of the seal at its original size and without a background so it appears properly in the documents.",
+      "פרטי התקשרות":"Communication contacts",
+      "כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.":"The email addresses to be used for regular communication with the fund and its service providers, including monthly yield notices.",
+      "ברצוני להוסיף מייל +":"Add an email +",
+      "סיום ושליחה":"Finish and send",
+      "עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור חתימה בדואר האלקטרוני. כל חותם/ת (את/ה, עורך/ת הדין או רואה/ת החשבון במידת הצורך, כל בעל/ת שליטה והשותף הכללי) חותם/ת בתורו/ה.":"Upon submission, we assemble your subscription pack and send you a signing link by email. Each signer (you, your lawyer or CPA if needed, each controlling person, and the General Partner) signs in turn.",
+      "הקודם":"Back",
+      "הבא":"Continue",
+      "יש להזין לפחות רשומה אחת כאן.":"At least one entry is required here.",
+      "נא להזין אותיות באנגלית בלבד":"Please use English letters only.",
+      "נא להזין אותיות בעברית בלבד":"Please use Hebrew letters only.",
+      "נא להשלים את שדות החובה.":"Please complete the required fields.",
+      "הקובץ גדול מ-10 מ\"ב. יש להעלות קובץ קטן יותר.":"The file is larger than 10 MB. Please upload a smaller file.",
+      "תאריך לא תקין. נא להזין dd/mm/yyyy.":"Invalid date. Please enter dd/mm/yyyy.",
+      "מספר תעודת הזהות אינו תקין.":"The ID number is not valid.",
+      "סכום ההשקעה חייב להיות גדול מ-50,000.":"The investment amount must be greater than 50,000."
+    };
+
+    var curLang = 'he';
+    var langCard = document.querySelector('.lvp-card');
+
+    // Look up an English translation for a Hebrew string; null if no entry.
+    function lookupEn(he) {
+      if (he == null) return null;
+      var raw = String(he).replace(/\s+$/, '').replace(/^\s+/, '');
+      if (Object.prototype.hasOwnProperty.call(EN_MAP, raw)) return EN_MAP[raw];
+      return null;
+    }
+    // Resolve the display string for cached Hebrew origHe at the given lang.
+    function displayFor(origHe, lang) {
+      if (lang === 'he') return origHe;
+      var en = lookupEn(origHe);
+      return (en == null) ? origHe : en; // no entry: leave Hebrew (never blank)
+    }
+    // Swap ONLY the trailing text node of a radio/checkbox label so the control + any
+    // nested applicant-variant span are never touched.
+    function swapTrailingTextNode(el, lang) {
+      var node = null;
+      for (var i = el.childNodes.length - 1; i >= 0; i--) {
+        var c = el.childNodes[i];
+        if (c.nodeType === 3 && c.nodeValue && c.nodeValue.trim()) { node = c; break; }
+      }
+      if (!node) return;
+      if (el.dataset.heText == null) el.dataset.heText = node.nodeValue;
+      var lead = /^\s*/.exec(el.dataset.heText)[0];
+      node.nodeValue = lead + displayFor(el.dataset.heText.trim(), lang);
+    }
+    function swapTextContent(el, lang) {
+      if (el.dataset.he == null) el.dataset.he = el.textContent;
+      el.textContent = displayFor(el.dataset.he, lang);
+    }
+    function swapAttr(el, attr, cacheKey, lang) {
+      if (!el.hasAttribute(attr)) return;
+      if (el.dataset[cacheKey] == null) el.dataset[cacheKey] = el.getAttribute(attr);
+      el.setAttribute(attr, displayFor(el.dataset[cacheKey], lang));
+    }
+    function swapScopeText(root, lang) {
+      var blockSel = '.lvp-page__title, .lvp-subhead, .lvp-field__label, ' +
+        '.lvp-fieldset__legend, .lvp-page__hint, .lvp-hint-small, .lvp-note, ' +
+        '.lvp-repeating-row__title';
+      root.querySelectorAll(blockSel).forEach(function (el) { swapTextContent(el, lang); });
+      root.querySelectorAll('option').forEach(function (op) { swapTextContent(op, lang); });
+      root.querySelectorAll('label.lvp-radio, label.lvp-checkbox').forEach(function (lbl) { swapTrailingTextNode(lbl, lang); });
+      root.querySelectorAll('button[data-action="prev"], button[data-action="next"], button[data-action="submit"], button[data-action="add-row"]').forEach(function (b) { swapTextContent(b, lang); });
+      root.querySelectorAll('[placeholder]').forEach(function (el) { swapAttr(el, 'placeholder', 'enPlaceholder', lang); });
+      root.querySelectorAll('[data-help]').forEach(function (el) { swapAttr(el, 'data-help', 'enHelp', lang); });
+    }
+    function applyLang(lang) {
+      lang = (lang === 'en') ? 'en' : 'he';
+      curLang = lang;
+      swapScopeText(langCard || document, lang);
+      if (langCard) langCard.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+      document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+      });
+    }
+    // Re-translate a freshly cloned repeating row (template HTML is Hebrew).
+    function translateScope(node) {
+      if (node && curLang === 'en') swapScopeText(node, 'en');
+    }
+    document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+      b.addEventListener('click', function () { applyLang(b.getAttribute('data-lang-set')); });
+    });
+
+    // ---- page sequence (visible pages filtered by applicant type) ----
+    var ALL_PAGES = Array.prototype.slice.call(form.querySelectorAll('.lvp-page'));
+    var state = (CFG.prefill && JSON.parse(JSON.stringify(CFG.prefill))) || {};
+
+    // The operator presets individual vs entity when sending the link. The LP never
+    // self-classifies (no chooser page). Default to individual if unset.
+    // Static adaptation: config arrives async now, so seed from the link's &type=
+    // param first (the operator mint link carries it) and let the config update
+    // hook below re-derive if the session says otherwise.
+    var URL_TYPE = new URLSearchParams(location.search).get('type') || '';
+    var APPLICANT = (URL_TYPE === 'entity' || CFG.applicantType === 'entity') ? 'entity' : 'individual';
+    var FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
+
+    // Async-config re-apply hook (mirrors the Cayman form's __caymanOnCfgUpdate):
+    // the bootstrap merges the fetched config into the same CFG object this IIFE
+    // holds, then calls this so late-arriving session facts (applicant type,
+    // resume page, language) take effect on the already-booted form.
+    window.__israelOnCfgUpdate = function (cfg) {
+      var ap = (cfg.applicantType === 'entity') ? 'entity' : (cfg.applicantType === 'individual' ? 'individual' : '');
+      if (ap && ap !== APPLICANT) {
+        APPLICANT = ap;
+        FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
+        idx = 0;
+        applyConditionals();
+        showPage(idx);
+      }
+      if (cfg.resumePage && idx === 0) {
+        var pages = visiblePages();
+        for (var i = 0; i < pages.length; i++) {
+          if (pages[i].getAttribute('data-page') === cfg.resumePage) { idx = i; showPage(idx); break; }
+        }
+      }
+      if (cfg.language === 'en' && typeof applyLang === 'function') applyLang('en');
+    };
+
+    function applicant() { return APPLICANT; }
+
+    function visiblePages() {
+      var ap = applicant();
+      return ALL_PAGES.filter(function (p) {
+        var only = p.getAttribute('data-applicant');
+        if (!only) return true;        // shared page
+        return only === ap;
+      });
+    }
+
+    var idx = 0;
+
+    function populateCountries() {
+      var list = CFG.countries || ['ישראל', 'ארצות הברית', 'בריטניה', 'שווייץ', 'גרמניה', 'צרפת', 'קפריסין', 'לוקסמבורג', 'אירלנד', 'קנדה', 'אוסטרליה', 'סינגפור', 'איי קיימן', 'איחוד האמירויות'];
+      form.querySelectorAll('select[data-country]').forEach(function (sel) {
+        if (sel.options.length > 1) return;
+        if (!sel.options.length) sel.appendChild(new Option('נא לבחור', ''));
+        list.forEach(function (c) { sel.appendChild(new Option(c, c)); });
+      });
+    }
+
+    function readRadio(name) {
+      var el = form.querySelector('input[name="' + cssEsc(name) + '"]:checked');
+      return el ? el.value : '';
+    }
+    function cssEsc(s) { return String(s).replace(/(["\\\]\[])/g, '\\$1'); }
+
+    // ---- US-person + non-Israel derivations (drive SSN / passport show/hide) ----
+    function isUsPerson(prefix) {
+      var c = currentValueFor(prefix + '.citizenship');
+      var ac = currentValueFor(prefix + '.additionalCitizenship');
+      return (c === 'ארצות הברית' || ac === 'ארצות הברית');
+    }
+    function isNonIsraelResidency(prefix) {
+      var r = currentValueFor(prefix + '.residencyCountry');
+      return !!r && r !== 'ישראל';
+    }
+    // Individual qualification: any of the 3 threshold boxes checked.
+    function indQualified() {
+      return ['isLiquidAssets', 'isIncomeLevel', 'isBoth'].some(function (k) {
+        var el = form.querySelector('input[name="investorsArray[0].qualification.' + k + '"]');
+        return el && el.checked;
+      });
+    }
+    // Entity qualification: a qualified clause chosen (not the non-qualified one).
+    function entQualified() {
+      var v = readRadio('corporationDetails.qualification');
+      return v === 'equity50M' || v === 'whollyOwned';
+    }
+
+    // ---- conditional show/hide ----
+    function applyConditionals(scope) {
+      var root = scope || form;
+      // Derived virtual triggers: __usPerson.<prefix>, __nonIsrael.<prefix>,
+      // __indQualified, __entQualified resolve to true/false at evaluation time.
+      root.querySelectorAll('[data-show-when]').forEach(function (el) {
+        var cond = el.getAttribute('data-show-when');
+        var cur, want, neg = false, path;
+        var neq = cond.indexOf('!=');
+        if (neq !== -1) { path = cond.slice(0, neq); want = cond.slice(neq + 2); neg = true; }
+        else { var eq = cond.indexOf('='); path = cond.slice(0, eq); want = cond.slice(eq + 1); }
+        cur = resolveTrigger(path);
+        var match = String(cur) === String(want);
+        el.hidden = neg ? match : !match;
+      });
+      // applicant-type inline sub-blocks (tax declaration variant, upload variant)
+      var ap = applicant();
+      root.querySelectorAll('[data-applicant]').forEach(function (el) {
+        if (el.classList.contains('lvp-page')) return; // page-level handled by sequence
+        el.style.display = (el.getAttribute('data-applicant') === ap) ? '' : 'none';
+      });
+    }
+    function resolveTrigger(path) {
+      if (path === '__indQualified') return indQualified() ? 'true' : 'false';
+      if (path === '__entQualified') return entQualified() ? 'true' : 'false';
+      if (path.indexOf('__usPerson.') === 0) return isUsPerson(path.slice('__usPerson.'.length)) ? 'true' : 'false';
+      if (path.indexOf('__nonIsrael.') === 0) return isNonIsraelResidency(path.slice('__nonIsrael.'.length)) ? 'true' : 'false';
+      if (path === '__indQual') return ''; // marker only (mutex handler), no show role
+      return currentValueFor(path);
+    }
+    function currentValueFor(path) {
+      var byName = form.querySelector('[name="' + cssEsc(path) + '"]');
+      if (byName && byName.type === 'radio') return readRadio(path);
+      if (byName && byName.type === 'checkbox') return byName.checked ? (byName.value || 'true') : 'false';
+      if (byName) return byName.value;
+      return readRadio(path);
+    }
+
+    // Qualification mutual-exclusion (radio-group semantics over checkboxes):
+    // the 3 threshold boxes disable while "not qualified" is checked, and "not
+    // qualified" disables while any threshold box is checked (EasySend enableCondition).
+    function enforceQualMutex() {
+      var thresholds = form.querySelectorAll('input[data-qual-group="indQual"]');
+      var none = form.querySelector('input[data-qual-none="indQual"]');
+      if (!none) return;
+      var anyThreshold = Array.prototype.some.call(thresholds, function (c) { return c.checked; });
+      none.disabled = anyThreshold;
+      thresholds.forEach(function (c) { c.disabled = none.checked; });
+    }
+
+    form.addEventListener('change', function (e) {
+      if (e.target.getAttribute && (e.target.getAttribute('data-qual-group') === 'indQual' || e.target.getAttribute('data-qual-none') === 'indQual')) {
+        enforceQualMutex();
+      }
+      applyConditionals();
+    });
+    form.addEventListener('input', function () { clearError(currentPageEl()); });
+
+    // ---- repeating rows ----
+    function templateFor(name) {
+      var t = form.querySelector('template[data-row-template="' + name + '"]');
+      return t ? t.innerHTML : '';
+    }
+    form.addEventListener('click', function (e) {
+      var add = e.target.closest('[data-action="add-row"]');
+      if (add) { addRow(add.getAttribute('data-target')); return; }
+      var rm = e.target.closest('[data-action="remove-row"]');
+      if (rm) {
+        var row = rm.closest('[data-row-index]');
+        var host = row.parentNode;
+        var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+        var count = host.querySelectorAll('[data-row-index]').length;
+        if (count <= min) {
+          setStatus(displayFor('יש להזין לפחות רשומה אחת כאן.', curLang), true);
+          return;
+        }
+        row.remove(); reindex(host); return;
+      }
+    });
+    function repeatHost(path) { return form.querySelector('[data-repeating-typed-path="' + path + '"]'); }
+    function addRow(path) {
+      var host = repeatHost(path);
+      var max = parseInt(host.getAttribute('data-repeating-max'), 10);
+      var i = host.querySelectorAll('[data-row-index]').length;
+      if (!isNaN(max) && i >= max) { return; }
+      var tmplName = host.getAttribute('data-repeating-template');
+      var html = templateFor(tmplName).replace(/\$\{i1\}/g, i + 1).replace(/\$\{i\}/g, i);
+      var wrap = document.createElement('div'); wrap.innerHTML = html;
+      var node = wrap.firstElementChild;
+      host.appendChild(node);
+      populateCountries();
+      translateScope(node);
+      applyConditionals(node);
+    }
+    function reindex(host) {
+      Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
+        row.setAttribute('data-row-index', i);
+        row.querySelectorAll('[name]').forEach(function (inp) {
+          inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
+        });
+        var title = row.querySelector('.lvp-repeating-row__title');
+        if (title && title.dataset.he) title.dataset.he = title.dataset.he.replace(/\d+$/, i + 1);
+        if (title) title.textContent = title.textContent.replace(/\d+\s*$/, (i + 1));
+      });
+    }
+    function ensureMinRows() {
+      form.querySelectorAll('[data-repeating-typed-path]').forEach(function (host) {
+        var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+        while (host.querySelectorAll('[data-row-index]').length < min) addRow(host.getAttribute('data-repeating-typed-path'));
+      });
+    }
+
+    // ---- file uploads ----
+    form.addEventListener('change', function (e) {
+      var inp = e.target;
+      if (!inp.hasAttribute('data-upload')) return;
+      var slot = inp.getAttribute('data-upload');
+      var f = inp.files && inp.files[0];
+      if (!f) { delete pendingUploads[slot]; return; }
+      if (f.size > 10 * 1024 * 1024) { setStatus(displayFor('הקובץ גדול מ-10 מ"ב. יש להעלות קובץ קטן יותר.', curLang), true); inp.value = ''; return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        pendingUploads[slot] = { slot: slot, filename: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: String(reader.result).split(',')[1] };
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // ---- script guard: Hebrew-script fields reject Latin; English-mirror fields
+    //      reject Hebrew. EasySend message נא להזין אותיות באנגלית בלבד for EN fields. ----
+    var RE_HEBREW = /[֐-׿יִ-ﭏ]/g;
+    var RE_LATIN = /[A-Za-z]/g;
+    form.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+      var script = el.getAttribute('data-script');
+      if (script !== 'he' && script !== 'en') return;
+      var t = el.type || 'text';
+      if (t !== 'text' && t !== 'search') return;
+      var cleaned, msg;
+      if (script === 'en') { cleaned = el.value.replace(RE_HEBREW, ''); msg = 'נא להזין אותיות באנגלית בלבד'; }
+      else { cleaned = el.value.replace(RE_LATIN, ''); msg = 'נא להזין אותיות בעברית בלבד'; }
+      if (cleaned !== el.value) {
+        var pos = el.selectionStart;
+        el.value = cleaned;
+        try { el.setSelectionRange(pos - 1, pos - 1); } catch (_) {}
+        setStatus(displayFor(msg, curLang), true);
+      }
+    }, true);
+
+    // ---- collect the full submission object from all fields ----
+    function collectAll() {
+      var data = {};
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
+        if (inp.disabled) return;
+        if (inp.type === 'radio' && !inp.checked) return;
+        if (inp.type === 'checkbox') {
+          setPath(data, inp.name, inp.checked ? (inp.value === 'true' ? true : inp.value) : false);
+          return;
+        }
+        if (inp.value === '' || inp.value == null) return;
+        setPath(data, inp.name, coerce(inp.value));
+      });
+      // additional-investors UI rows (__addinv) -> investorsArray[1..N], the
+      // gateway model holds all investors in one investorsArray.
+      var addinv = data.__addinv;
+      if (Array.isArray(addinv) && String(data.additionalInvestors) === 'כן') {
+        if (!Array.isArray(data.investorsArray)) data.investorsArray = [];
+        addinv.forEach(function (a, n) {
+          if (!a) return;
+          data.investorsArray[n + 1] = {
+            firstName: a.firstName || '', lastName: a.lastName || '',
+            idNumber: a.idNumber || '', email: a.email || '',
+            englishDetails: { firstName: a.englishFirstName || '', lastName: a.englishLastName || '' }
+          };
+        });
+      }
+      delete data.__addinv;
+      delete data.__additionalInvestorsArray;
+      // meta.mondayItemId from the server config (operator-resolved People row id).
+      if (!data.meta) data.meta = {};
+      if (CFG.mondayItemId) data.meta.mondayItemId = CFG.mondayItemId;
+      // Static adaptation: the old build routed individual vs entity by separate
+      // flowType endpoints, so the snapshot never carried the type. The unified
+      // gateway's sanitize reads raw.applicantType; emit it (the mint session
+      // remains the authoritative source server-side).
+      data.applicantType = applicant();
+      return data;
+    }
+    function coerce(v) { if (v === 'true') return true; if (v === 'false') return false; return v; }
+    function setPath(obj, path, value) { assign(obj, path, value); }
+    function getPath(obj, path) {
+      var parts = tokenize(path), cur = obj;
+      for (var i = 0; i < parts.length; i++) { if (cur == null) return undefined; cur = cur[parts[i]]; }
+      return cur;
+    }
+    function assign(obj, path, value) {
+      var parts = tokenize(path), cur = obj;
+      for (var i = 0; i < parts.length - 1; i++) {
+        var k = parts[i], nextIsIdx = /^\d+$/.test(parts[i + 1]);
+        if (cur[k] == null) cur[k] = nextIsIdx ? [] : {};
+        cur = cur[k];
+      }
+      cur[parts[parts.length - 1]] = value;
+    }
+    function tokenize(path) {
+      return path.replace(/\[(\d+)\]/g, '.$1').split('.').filter(function (s) { return s !== ''; });
+    }
+
+    // ---- the files payload the gateway persists (per-investor + entity + lawyer) ----
+    function collectFiles() {
+      var files = { investors: [], entity: {}, lawyer: {} };
+      Object.keys(pendingUploads).forEach(function (slot) {
+        var u = pendingUploads[slot];
+        var m;
+        if ((m = slot.match(/^investors\.(\d+)\.(.+)$/))) {
+          var n = Number(m[1]);
+          if (!files.investors[n]) files.investors[n] = { id: 'investor-' + (n + 1) };
+          files.investors[n][m[2]] = u;
+        } else if ((m = slot.match(/^entity\.(.+)$/))) {
+          files.entity[m[1]] = u;
+        } else if ((m = slot.match(/^lawyer\.(.+)$/))) {
+          files.lawyer[m[1]] = u;
+        }
+      });
+      return files;
+    }
+
+    // ---- validation: required visible fields on the current page ----
+    function isValidIlId(v) {
+      var s = String(v || '').replace(/\D/g, '');
+      if (s.length === 0 || s.length > 9) return false;
+      s = ('00000000' + s).slice(-9);
+      var sum = 0;
+      for (var i = 0; i < 9; i++) {
+        var n = Number(s[i]) * ((i % 2) + 1);
+        if (n > 9) n -= 9;
+        sum += n;
+      }
+      return sum % 10 === 0;
+    }
+    function parseDdMmYyyy(v) {
+      var m = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      var d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+      if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+      var dt = new Date(y, mo - 1, d);
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+      return dt;
+    }
+    function validateField(inp) {
+      // returns null if ok, else an error message string (Hebrew source key)
+      var v = (inp.value || '').trim();
+      if (!v) return null; // emptiness handled by the required pass
+      var rule = inp.getAttribute('data-validate');
+      if (rule === 'il-id' && !isValidIlId(v)) return 'מספר תעודת הזהות אינו תקין.';
+      if ((rule === 'date-past' || rule === 'date-future') && v) {
+        var dt = parseDdMmYyyy(v);
+        if (!dt) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+        if (rule === 'date-past' && dt >= today) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        if (rule === 'date-future' && dt <= today) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        var minAge = inp.getAttribute('data-min-age');
+        if (minAge) {
+          var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - Number(minAge));
+          if (dt > cutoff) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        }
+      }
+      if (rule === 'gt50000') {
+        var n = Number(v.replace(/[,\s]/g, ''));
+        if (!isFinite(n) || n <= 50000) return 'סכום ההשקעה חייב להיות גדול מ-50,000.';
+      }
+      return null;
+    }
+    function validatePage(pageEl) {
+      var ok = true;
+      var firstError = null;
+      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); });
+      // Required-field pass: every label/legend carries its field; a required field
+      // is one whose holder is visible and whose label has no opt-out. EasySend
+      // model: every visible field in these pages is required unless flagged optional.
+      var holders = pageEl.querySelectorAll('.lvp-field, .lvp-fieldset');
+      holders.forEach(function (holder) {
+        if (isHidden(holder)) return;
+        if (holder.hasAttribute('data-optional')) return;
+        var inputs = holder.querySelectorAll('input, select, textarea');
+        if (!inputs.length) return;
+        var filled = false, sawControl = false;
+        inputs.forEach(function (i) {
+          if (i.disabled) return;
+          sawControl = true;
+          if (i.type === 'radio' || i.type === 'checkbox') { if (i.checked) filled = true; }
+          else if (i.hasAttribute('data-upload')) { if (pendingUploads[i.getAttribute('data-upload')]) filled = true; }
+          else if (i.value && i.value.trim()) filled = true;
+        });
+        if (sawControl && !filled) {
+          ok = false;
+          holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--error' : 'lvp-field--error');
+          if (!firstError) firstError = holder;
+        }
+      });
+      // Format-validation pass (IL ID checksum, dates, min-age, amount floor).
+      pageEl.querySelectorAll('input[data-validate]').forEach(function (i) {
+        var holder = i.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder)) return;
+        var err = validateField(i);
+        if (err) {
+          ok = false; holder.classList.add('lvp-field--error'); if (!firstError) firstError = holder;
+          setStatus(displayFor(err, curLang), true);
+        }
+      });
+      if (firstError) {
+        try { firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        catch (_) { firstError.scrollIntoView(); }
+        var focusable = firstError.querySelector('input, select, textarea');
+        if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (_) {} }
+      }
+      return ok;
+    }
+    function isHidden(el) {
+      while (el && el !== form) { if (el.hidden || el.style.display === 'none') return true; el = el.parentElement; }
+      return false;
+    }
+    function clearError(pageEl) { if (pageEl) pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); }); }
+
+    // ---- navigation ----
+    function currentPageEl() { return visiblePages()[idx]; }
+    function showPage(n) {
+      var pages = visiblePages();
+      idx = Math.min(Math.max(n, 0), pages.length - 1);
+      ALL_PAGES.forEach(function (p) { p.hidden = true; });
+      var page = pages[idx];
+      page.hidden = false;
+      applyConditionals(page);
+      enforceQualMutex();
+      prevBtn.hidden = idx === 0;
+      var last = idx === pages.length - 1;
+      nextBtn.hidden = last;
+      submitBtn.hidden = !last;
+      var onWelcome = page.getAttribute('data-page') === 'welcome';
+      if (progWrap) progWrap.hidden = onWelcome;
+      if (!onWelcome) {
+        progIndicator.textContent = (idx + 1) + ' / ' + pages.length;
+        progBar.style.width = Math.round(((idx + 1) / pages.length) * 100) + '%';
+      }
+      if (page.getAttribute('data-page') === 'review') renderReview();
+      setStatus('');
+      window.scrollTo(0, 0);
+    }
+    prevBtn.addEventListener('click', function () { showPage(idx - 1); });
+    nextBtn.addEventListener('click', function () {
+      var page = currentPageEl();
+      if (!validatePage(page)) { setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      // Advance INSTANTLY (optimistic); persist for resume in the background so
+      // Continue never waits on the GAS round-trip. A failed save surfaces a note
+      // but does not block navigation (state held client-side).
+      showPage(idx + 1);
+      savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+    });
+    submitBtn.addEventListener('click', function () {
+      var page = currentPageEl();
+      if (!validatePage(page)) { setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      doSubmit();
+    });
+
+    function renderReview() {
+      var data = collectAll();
+      var host = form.querySelector('[data-review-summary]');
+      var rows = [];
+      if (applicant() === 'entity') {
+        rows.push(['משקיע/ה', getPath(data, 'corporationDetails.corporationName') || 'תאגיד']);
+      } else {
+        var inv0 = (data.investorsArray && data.investorsArray[0]) || {};
+        rows.push(['משקיע/ה', ((inv0.firstName || '') + ' ' + (inv0.lastName || '')).trim()]);
+      }
+      var cur = getPath(data, 'moneyInvestedInFund.investedAmountArray.0.investedCurrency') || '';
+      var amt = getPath(data, 'moneyInvestedInFund.investedAmount') || '';
+      rows.push(['השקעה', (cur + ' ' + amt).trim()]);
+      rows.push(['קבצים שהועלו', String(Object.keys(pendingUploads).length)]);
+      host.innerHTML = '<dl class="lvp-note" style="display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;">' +
+        rows.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd style="color:#1d1d1d;font-weight:600">' + esc(r[1]) + '</dd>'; }).join('') + '</dl>';
+    }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
+
+    // ---- gateway calls (Foundation source=lp envelope) ----
+    function gateway(action, payload) {
+      // Static adaptation: flowType is OMITTED from the envelope. The unified
+      // ju-cayman gateway's caymanResolveFlowType_ accepts only its four cayman_*
+      // flow names (it throws on the legacy onboarding_individual/onboarding_entity
+      // strings) and defaults the empty case to the onboarding flow; the authoritative
+      // lane + applicant type live on the operator's mint session, not the envelope.
+      var body = { action: action, token: CFG.token, lane: 'israeli', payload: payload || {} };
+      return fetch(CFG.gatewayUrl + '?source=lp', {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res || res.ok === false) throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+        return res;
+      });
+    }
+    function savePage() {
+      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() })
+        .then(function (res) { return res; })
+        .catch(function () { setStatus(displayFor('לא ניתן היה לשמור את ההתקדמות. הפרטים נשמרים מקומית, ניתן להמשיך.', curLang), true); return null; });
+    }
+    var submitting = false;
+    function doSubmit() {
+      if (submitting) return;
+      submitting = true;
+      var submission = collectAll();
+      var files = collectFiles();
+      showResultCard(
+        '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
+        '<h2>' + esc(displayFor('מכינים את המסמכים שלך', curLang)) + '</h2>' +
+        '<p>' + esc(displayFor('אנו מרכיבים את חבילת ההצטרפות שלך. זה עשוי לקחת רגע. נא להשאיר חלון זה פתוח.', curLang)) + '</p>');
+      gateway('submit', { submission: submission, files: files }).then(function (res) {
+        if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
+        showSubmittedCard();
+      }).catch(function (err) {
+        submitting = false;
+        hideResultCard();
+        if (window.console) console.log('submit error:', err && err.message || err);
+        setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
+      });
+    }
+    function showSubmittedCard() {
+      showResultCard(
+        '<div class="lvp-result__check" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</div>' +
+        '<div class="lvp-result__divider"></div>' +
+        '<h2>' + esc(displayFor('המסמכים נשלחו בהצלחה!', curLang)) + '</h2>' +
+        '<p>' + esc(displayFor('קיבלנו את פרטי ההצטרפות שלך. אנו מכינים את המסמכים ונשלח אליך קישור לחתימה בדואר האלקטרוני בהקדם.', curLang)) + '</p>',
+        true);
+    }
+    var resultEl = null;
+    function showResultCard(innerHtml, isConfirmation) {
+      if (progWrap) progWrap.hidden = true;
+      form.style.display = 'none';
+      if (!resultEl) {
+        resultEl = document.createElement('div');
+        resultEl.className = 'lvp-result';
+        form.parentNode.insertBefore(resultEl, form);
+      }
+      if (isConfirmation) { resultEl.setAttribute('role', 'status'); resultEl.setAttribute('aria-live', 'polite'); }
+      resultEl.innerHTML = innerHtml;
+      try { window.scrollTo(0, 0); } catch (_) {}
+    }
+    function hideResultCard() {
+      if (resultEl) { resultEl.parentNode.removeChild(resultEl); resultEl = null; }
+      form.style.display = '';
+      if (progWrap) progWrap.hidden = currentPageEl().getAttribute('data-page') === 'welcome';
+    }
+
+    function setStatus(msg, isError) {
+      statusEl.textContent = msg || '';
+      statusEl.classList.toggle('lvp-status--error', !!isError);
+    }
+
+    // ---- init ----
+    populateCountries();
+    ensureMinRows();
+    applyConditionals();
+    // Amount: whole-number, thousands separators on blur.
+    (function () {
+      var a = form.querySelector('[data-amount]');
+      if (a) a.addEventListener('blur', function () {
+        var n = (a.value || '').replace(/[^0-9]/g, '');
+        a.value = n ? Number(n).toLocaleString('en-US') : '';
+      });
+    })();
+    // resume to the last saved page if the server supplied one
+    if (CFG.resumePage) {
+      var pages = visiblePages();
+      for (var i = 0; i < pages.length; i++) { if (pages[i].getAttribute('data-page') === CFG.resumePage) { idx = i; break; } }
+    }
+    // Language: default Hebrew. Start English only when server config carries
+    // language === 'en'. Run AFTER countries + min-rows so their text is translated.
+    applyLang(CFG.language === 'en' ? 'en' : 'he');
+    showPage(idx);
+  })();
+  </script>
+</body>
+</html>
