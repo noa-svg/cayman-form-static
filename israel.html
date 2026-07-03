@@ -464,6 +464,19 @@
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.lastName"></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="firstAuthorized.idNumber" data-validate="il-id"></label>
+          <!-- EasySend production model: representative Israeli address. Labels + legend cloned
+               verbatim from the approved investor address block. -->
+          <fieldset class="lvp-fieldset">
+            <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.israelAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.israelAddress.street"></label>
+            </div>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="firstAuthorized.israelAddress.houseNumber"></label>
+              <label class="lvp-field" data-optional><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="firstAuthorized.israelAddress.postalCode" inputmode="numeric"></label>
+            </div>
+          </fieldset>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email"></label>
           <label class="lvp-checkbox"><input type="checkbox" name="firstAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
 
@@ -484,6 +497,19 @@
               <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.lastName"></label>
             </div>
             <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="secondAuthorized.idNumber" data-validate="il-id"></label>
+            <!-- EasySend production model: representative Israeli address. Labels + legend cloned
+                 verbatim from the approved investor address block. -->
+            <fieldset class="lvp-fieldset">
+              <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="secondAuthorized.israelAddress.city"></label>
+                <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="secondAuthorized.israelAddress.street"></label>
+              </div>
+              <div class="lvp-grid-2">
+                <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="secondAuthorized.israelAddress.houseNumber"></label>
+                <label class="lvp-field" data-optional><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="secondAuthorized.israelAddress.postalCode" inputmode="numeric"></label>
+              </div>
+            </fieldset>
             <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
             <label class="lvp-checkbox"><input type="checkbox" name="secondAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
             <fieldset class="lvp-fieldset">
@@ -675,6 +701,20 @@
               <label class="lvp-field"><span class="lvp-field__label">עיסוק</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].occupation"></label>
               <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].residencyCountry" data-country></select></label>
               <label class="lvp-field"><span class="lvp-field__label">שיעור ההחזקה (אחוז)</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].ownershipPercentage" data-validate="pct" inputmode="decimal"></label>
+              <!-- EasySend production model: per-shareholder Israeli address (city/street/houseNumber
+                   required, postalCode optional via data-optional). Labels + legend cloned verbatim
+                   from the approved investor address block (investorsArray[0].israelAddress). -->
+              <fieldset class="lvp-fieldset">
+                <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
+                <div class="lvp-grid-2">
+                  <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.city"></label>
+                  <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.street"></label>
+                </div>
+                <div class="lvp-grid-2">
+                  <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber"></label>
+                  <label class="lvp-field" data-optional><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.postalCode" inputmode="numeric"></label>
+                </div>
+              </fieldset>
               <div class="lvp-grid-2">
                 <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].email" data-help="יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה"></label>
                 <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].phoneNumber" data-validate="cell-il"></label>
