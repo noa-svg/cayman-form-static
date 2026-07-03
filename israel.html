@@ -1236,7 +1236,6 @@
 
     // ---- page sequence (visible pages filtered by applicant type) ----
     var ALL_PAGES = Array.prototype.slice.call(form.querySelectorAll('.lvp-page'));
-    var state = (CFG.prefill && JSON.parse(JSON.stringify(CFG.prefill))) || {};
 
     // The operator presets individual vs entity when sending the link. The LP never
     // self-classifies (no chooser page). Default to individual if unset.
@@ -1552,6 +1551,66 @@
       return path.replace(/\[(\d+)\]/g, '.$1').split('.').filter(function (s) { return s !== ''; });
     }
 
+    // Prefill hydration -- the inverse of collectAll(). On resume the gateway returns
+    // the LP's saved snapshot in CFG.prefill (the same nested shape collectAll emits).
+    // Before this, resume restored only the page POSITION with blank fields, and the
+    // first Next's savePage() re-collected empties and overwrote the server snapshot
+    // (silent data loss). This walks the snapshot back into the form: rebuild the
+    // repeating rows to the saved counts (inputs must exist before they can be set),
+    // set every [name] control, then re-derive the conditionals + mutex.
+    function hydrateFromPrefill() {
+      var pf = (CFG && CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
+      if (!pf || !Object.keys(pf).length) return;
+
+      // 1) Rebuild repeating rows to the saved lengths. Each host's typed-path indexes
+      //    straight into the snapshot, except __additionalInvestorsArray whose UI rows
+      //    fold into investorsArray[1..] on save (see collectAll).
+      form.querySelectorAll('[data-repeating-typed-path]').forEach(function (host) {
+        var path = host.getAttribute('data-repeating-typed-path');
+        var want;
+        if (path === '__additionalInvestorsArray') {
+          var inv = getPath(pf, 'investorsArray');
+          want = (Array.isArray(inv) && String(pf.additionalInvestors) === 'כן') ? inv.length - 1 : 0;
+        } else {
+          var arr = getPath(pf, path);
+          want = Array.isArray(arr) ? arr.length : 0;
+        }
+        var max = parseInt(host.getAttribute('data-repeating-max'), 10);
+        if (!isNaN(max)) want = Math.min(want, max);
+        var have = host.querySelectorAll('[data-row-index]').length;
+        while (have < want) { addRow(path); have++; }
+      });
+
+      // 2) Set every control from the snapshot. __addinv[i] fields map back from
+      //    investorsArray[i+1]; everything else resolves by its own name path.
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
+        var name = inp.name, val;
+        var m = name.match(/^__addinv\[(\d+)\]\.(.+)$/);
+        if (m) {
+          var src = getPath(pf, 'investorsArray.' + (Number(m[1]) + 1));
+          if (!src) return;
+          var f = m[2];
+          val = (f === 'englishFirstName') ? getPath(src, 'englishDetails.firstName')
+              : (f === 'englishLastName')  ? getPath(src, 'englishDetails.lastName')
+              : src[f];
+        } else {
+          val = getPath(pf, name);
+        }
+        if (val === undefined || val === null) return;
+        if (inp.hasAttribute('data-upload')) return;   // files are not restorable from a snapshot
+        if (inp.type === 'radio') { if (String(inp.value) === String(val)) inp.checked = true; return; }
+        if (inp.type === 'checkbox') { inp.checked = (val === true || val === 'true' || String(inp.value) === String(val)); return; }
+        inp.value = val;
+      });
+
+      // 3) Re-derive show/hide + qualification mutex + amount formatting from the
+      //    restored values, so dependent blocks and the amount separators are correct.
+      applyConditionals();
+      enforceQualMutex();
+      var amt = form.querySelector('[data-amount]');
+      if (amt && amt.value) { var n = String(amt.value).replace(/[^0-9]/g, ''); amt.value = n ? Number(n).toLocaleString('en-US') : ''; }
+    }
+
     // ---- the files payload the gateway persists (per-investor + entity + lawyer) ----
     function collectFiles() {
       var files = { investors: [], entity: {}, lawyer: {} };
@@ -1805,6 +1864,7 @@
     // ---- init ----
     populateCountries();
     ensureMinRows();
+    hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
     applyConditionals();
     // Amount: whole-number, thousands separators on blur.
     (function () {
