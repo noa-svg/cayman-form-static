@@ -762,7 +762,7 @@
             </label>
             <label class="lvp-field"><span class="lvp-field__label">סכום השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investedAmount" data-amount data-validate="gt50000" inputmode="numeric" placeholder="לדוגמה: 500,000"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="date-future" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב"></label>
+          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-business-day" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב"></label>
 
           <h3 class="lvp-subhead">המוסד ממנו יועברו הכספים</h3>
           <div class="lvp-grid-2">
@@ -1546,7 +1546,7 @@
       var el = e.target;
       if (!el || !el.getAttribute) return;
       var rule = el.getAttribute('data-validate');
-      if (rule === 'date-past' || rule === 'date-future') maskDate(el);
+      if (rule === 'date-past' || rule === 'date-future' || rule === 'first-business-day') maskDate(el);
       else if (rule === 'ssn') maskSsn(el);
     });
     function applyInputmodes(scope) {
@@ -1881,6 +1881,22 @@
       }
       return sum % 10 === 0;
     }
+    // First business day (Sun-Thu) of next month, as a LOCAL-midnight Date comparable
+    // to parseDdMmYyyy output. The y/m/d themselves are computed on the UTC calendar
+    // to mirror the server's israeliFirstBusinessDayOfNextMonth_ exactly (Israel local
+    // runs 2-3h ahead of UTC; near midnight on the 1st the local month is already
+    // next month while the server's UTC ref is not. UTC is the contract.)
+    function firstBusinessDayNextMonth() {
+      var now = new Date();
+      var d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      while (d.getUTCDay() === 5 || d.getUTCDay() === 6) d = new Date(d.getTime() + 24 * 3600 * 1000);
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    }
+    function firstBusinessDayNextMonthDdMmYyyy() {
+      var d = firstBusinessDayNextMonth();
+      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+      return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear();
+    }
     function parseDdMmYyyy(v) {
       var m = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       if (!m) return null;
@@ -1912,6 +1928,17 @@
           var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - Number(minAge));
           if (dt > cutoff) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
         }
+      }
+      if (rule === 'first-business-day') {
+        // investmentDate rule: must be EXACTLY the first business day (Sun-Thu) of
+        // next month. Mirrors the server's israeliFirstBusinessDayOfNextMonth_
+        // (IsraeliValidation.js) so the LP never hits the opaque server bounce
+        // must_be_first_business_day_next_month. Error text reuses the field's own
+        // approved data-help sentence (already in EN_MAP).
+        var fbdDt = parseDdMmYyyy(v);
+        if (!fbdDt) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        var fbd = firstBusinessDayNextMonth();
+        if (fbdDt.getTime() !== fbd.getTime()) return 'נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב';
       }
       if (rule === 'gt50000') {
         var n = Number(v.replace(/[,\s]/g, ''));
@@ -2261,6 +2288,12 @@
     populateCountries();
     ensureMinRows();
     hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
+    // investmentDate: only one value passes the server rule, so prefill it (still
+    // editable; the first-business-day validator gates edits). Snapshot wins.
+    (function () {
+      var inv = form.querySelector('[name="moneyInvestedInFund.investmentDate"]');
+      if (inv && !inv.value) inv.value = firstBusinessDayNextMonthDdMmYyyy();
+    })();
     renderHelpHints();      // surface the approved data-help strings under their fields
     applyInputmodes();      // numeric keypad on ID + SSN fields
     applyAutocomplete();    // autofill tokens on the primary subject's identity fields
