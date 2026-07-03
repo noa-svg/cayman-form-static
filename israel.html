@@ -127,6 +127,10 @@
 
     .lvp-status { margin-top: 12px; font-size: 13px; color: var(--lvp-text-muted); min-height: 18px; }
     .lvp-status--error { color: var(--lvp-error); }
+    /* Save-progress note: muted, NOT the red error color. A failed background save
+       is non-blocking (the data is held client-side), so it must not read as a
+       validation failure on the page the LP just advanced to. */
+    .lvp-status--note { color: var(--lvp-text-muted); }
 
     .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
     .lvp-hint-small { color: var(--lvp-text-muted); font-size: 12px; margin: 4px 0 12px; }
@@ -1849,8 +1853,8 @@
     }
     function savePage() {
       return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() })
-        .then(function (res) { return res; })
-        .catch(function () { setStatus(displayFor('לא ניתן היה לשמור את ההתקדמות. הפרטים נשמרים מקומית, ניתן להמשיך.', curLang), true); return null; });
+        .then(function (res) { setSaveNote(''); return res; })
+        .catch(function () { setSaveNote(displayFor('לא ניתן היה לשמור את ההתקדמות. הפרטים נשמרים מקומית, ניתן להמשיך.', curLang)); return null; });
     }
     var submitting = false;
     function doSubmit() {
@@ -1901,9 +1905,17 @@
       if (progWrap) progWrap.hidden = currentPageEl().getAttribute('data-page') === 'welcome';
     }
 
+    // Muted save-progress note (non-error). Cleared on the next good save + on
+    // page change (setStatus below drops the note class).
+    function setSaveNote(msg) {
+      statusEl.textContent = msg || '';
+      statusEl.classList.remove('lvp-status--error');
+      statusEl.classList.toggle('lvp-status--note', !!msg);
+    }
     function setStatus(msg, isError) {
       statusEl.textContent = msg || '';
       statusEl.classList.toggle('lvp-status--error', !!isError);
+      statusEl.classList.remove('lvp-status--note');
     }
 
     // ---- init ----
