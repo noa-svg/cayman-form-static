@@ -1443,6 +1443,35 @@
     });
     form.addEventListener('input', function () { clearError(currentPageEl()); });
 
+    // Input ergonomics (#11 #12). Date fields auto-insert the dd/mm/yyyy slashes as
+    // the LP types digits (the iOS numeric keypad has no '/'); SSN auto-inserts its
+    // dashes. Delegated so dynamically-added rows are covered. Numeric inputmode is
+    // applied to the ID + SSN fields that lacked it, so phones show a digit keypad.
+    function maskDate(el) {
+      var d = String(el.value).replace(/\D/g, '').slice(0, 8);
+      el.value = d.length > 4 ? d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4)
+               : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2)
+               : d;
+    }
+    function maskSsn(el) {
+      var d = String(el.value).replace(/\D/g, '').slice(0, 9);
+      el.value = d.length > 5 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5)
+               : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3)
+               : d;
+    }
+    form.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!el || !el.getAttribute) return;
+      var rule = el.getAttribute('data-validate');
+      if (rule === 'date-past' || rule === 'date-future') maskDate(el);
+      else if (rule === 'ssn') maskSsn(el);
+    });
+    function applyInputmodes(scope) {
+      (scope || form).querySelectorAll('input[data-validate="il-id"], input[data-validate="ssn"]').forEach(function (i) {
+        if (!i.getAttribute('inputmode')) i.setAttribute('inputmode', 'numeric');
+      });
+    }
+
     // ---- repeating rows ----
     function templateFor(name) {
       var t = form.querySelector('template[data-row-template="' + name + '"]');
@@ -1477,6 +1506,7 @@
       host.appendChild(node);
       populateCountries();
       renderHelpHints(node);
+      applyInputmodes(node);
       translateScope(node);
       applyConditionals(node);
     }
@@ -1945,6 +1975,7 @@
     ensureMinRows();
     hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
     renderHelpHints();      // surface the approved data-help strings under their fields
+    applyInputmodes();      // numeric keypad on ID + SSN fields
     applyConditionals();
     // Amount: whole-number, thousands separators on blur.
     (function () {
