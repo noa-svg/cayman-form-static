@@ -873,7 +873,7 @@
         <!-- PAGE: file uploads (collect-and-route) -->
         <section class="lvp-page" data-page="uploads">
           <h2 class="lvp-page__title">העלאת קבצים</h2>
-          <p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p>
+          <p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG, PNG או PDF.</p>
 
           <!-- INDIVIDUAL uploads (investor[0].fileUpload) -->
           <div data-applicant="individual">
@@ -1171,7 +1171,7 @@
       "מסמכי ההצטרפות יועברו למשקיעים הנוספים בשותפות למילוי וחתימה לאחר חתימתך. ניתן להזין עד שני משקיעים נוספים.":"The subscription documents will be forwarded to the additional partners for completion and signature after you sign. Up to two additional investors can be entered.",
       "משקיע/ה נוסף/ת":"Additional investor",
       "העלאת קבצים":"File upload",
-      "נא להעלות קובץ בפורמט JPG או PNG בלבד.":"Please upload a file in JPG or PNG format only.",
+      "נא להעלות קובץ בפורמט JPG, PNG או PDF.":"Please upload a file in JPG, PNG or PDF format.",
       "ברשותי תעודת זהות ביומטרית":"I hold a biometric ID card",
       "צילום תעודת הזהות":"Scan of the ID card",
       "תעודת זהות, צד קדמי":"ID card, front side",
@@ -1461,6 +1461,13 @@
 
     form.addEventListener('change', function (e) {
       if (e.target.getAttribute && (e.target.getAttribute('data-qual-group') === 'indQual' || e.target.getAttribute('data-qual-none') === 'indQual')) {
+        // Single-select across the 3 §15A threshold boxes (the page says 'choose
+        // ONE option'): checking one clears the others, so they behave like radios.
+        if (e.target.getAttribute('data-qual-group') === 'indQual' && e.target.checked) {
+          form.querySelectorAll('input[data-qual-group="indQual"]').forEach(function (c) {
+            if (c !== e.target) c.checked = false;
+          });
+        }
         enforceQualMutex();
       }
       applyConditionals();
