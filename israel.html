@@ -192,14 +192,24 @@
     }
     .lvp-lang__btn[aria-pressed="true"] { background: var(--lvp-navy); color: #fff; }
     .lvp-lang__btn:not([aria-pressed="true"]):hover { background: #f0f3f7; }
-    /* RTL default; inputs forced LTR for numbers/emails/dates/account fields,
-       EXCEPT the Hebrew-script fields which stay RTL. */
+    /* Bidi: every control defaults to the card's RTL/right (Hebrew is the source
+       language, so Hebrew text inputs, Hebrew-valued selects, and textareas all
+       read right). Only genuinely-LTR content flips to LTR below. Numeric fields
+       (IDs, amount, postal, branch, account) are LEFT RTL on purpose: a pure
+       digit/number run already renders left-to-right by Unicode bidi, and keeping
+       the field RTL stops the Hebrew amount placeholder ("לדוגמה: 500,000") from
+       tearing, which forcing LTR did. */
     .lvp-card[dir="rtl"] { text-align: right; }
     .lvp-card[dir="rtl"] .lvp-input,
     .lvp-card[dir="rtl"] .lvp-input--select,
-    .lvp-card[dir="rtl"] .lvp-input--textarea { direction: ltr; text-align: left; }
-    .lvp-card[dir="rtl"] .lvp-input[data-script="he"],
-    .lvp-card[dir="rtl"] .lvp-input--textarea[data-script="he"] { direction: rtl; text-align: right; }
+    .lvp-card[dir="rtl"] .lvp-input--textarea { direction: rtl; text-align: right; }
+    /* Genuinely-LTR content: English-mirror fields, email, phone, and dd/mm/yyyy
+       dates. LTR flow, left-aligned, so they read and type naturally. */
+    .lvp-card[dir="rtl"] .lvp-input[data-script="en"],
+    .lvp-card[dir="rtl"] .lvp-input[type="email"],
+    .lvp-card[dir="rtl"] .lvp-input[type="tel"],
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="date-past"],
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="date-future"] { direction: ltr; text-align: left; }
     /* RTL pager: forward (הבא/סיום) belongs on the LEFT, back (הקודם) on the RIGHT
        -- the mirror of LTR. The default `row` in an RTL flex container already
        places the first DOM child (prev) on the right and the last (next/submit)
