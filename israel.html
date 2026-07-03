@@ -264,7 +264,7 @@
         <!-- dir=ltr: keeps the "2 / 13" page counter in reading order; RTL bidi
              otherwise swaps the two numbers ("13 / 2"). Numbers only, no copy. -->
         <span class="lvp-progress__indicator" data-progress-indicator dir="ltr"></span>
-        <div class="lvp-progress__bar"><span data-progress-bar style="width: 0%"></span></div>
+        <div class="lvp-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-progress-bar style="width: 0%"></span></div>
       </div>
 
       <form id="lvp-form" autocomplete="on" novalidate>
@@ -926,7 +926,7 @@
           <button type="button" class="lvp-btn lvp-btn--primary" data-action="next">הבא</button>
           <button type="button" class="lvp-btn lvp-btn--primary" data-action="submit" hidden>סיום ושליחה</button>
         </div>
-        <div class="lvp-status" data-status aria-live="polite"></div>
+        <div class="lvp-status" data-status role="alert" aria-live="assertive"></div>
       </form>
     </main>
   </div>
@@ -1502,6 +1502,26 @@
         if (!i.getAttribute('inputmode')) i.setAttribute('inputmode', 'numeric');
       });
     }
+    // Autofill tokens on the PRIMARY subject's identity fields (#24), so the browser
+    // can offer the LP's own saved contact/name/DOB. Scoped to the primary investor
+    // and first authorized signatory only -- setting these on repeating co-holder
+    // rows would make the browser autofill the same person into every row.
+    function applyAutocomplete() {
+      var map = {
+        'investorsArray[0].englishDetails.firstName': 'given-name',
+        'investorsArray[0].englishDetails.lastName': 'family-name',
+        'investorsArray[0].email': 'email',
+        'investorsArray[0].phoneNumber': 'tel',
+        'investorsArray[0].birthDate': 'bday',
+        'firstAuthorized.englishDetails.firstName': 'given-name',
+        'firstAuthorized.englishDetails.lastName': 'family-name',
+        'firstAuthorized.email': 'email'
+      };
+      Object.keys(map).forEach(function (name) {
+        var el = form.querySelector('[name="' + name.replace(/(["\\\]\[])/g, '\\$1') + '"]');
+        if (el && !el.getAttribute('autocomplete')) el.setAttribute('autocomplete', map[name]);
+      });
+    }
 
     // ---- repeating rows ----
     function templateFor(name) {
@@ -1621,7 +1641,13 @@
         var pos = el.selectionStart;
         el.value = cleaned;
         try { el.setSelectionRange(pos - 1, pos - 1); } catch (_) {}
-        setStatus(displayFor(msg, curLang), true);
+        // Surface the wrong-script warning ADJACENT to the field (#24), not in the
+        // far bottom status line. Deferred a tick so the bubble-phase clearError
+        // (which wipes .lvp-error-msg on input) does not immediately remove it.
+        var holder = el.closest('.lvp-field, .lvp-fieldset');
+        var m2 = displayFor(msg, curLang);
+        if (holder) setTimeout(function () { setFieldError(holder, m2); }, 0);
+        else setStatus(m2, true);
       }
     }, true);
 
@@ -1812,6 +1838,21 @@
         var n = Number(v.replace(/[,\s]/g, ''));
         if (!isFinite(n) || n <= 50000) return 'סכום ההשקעה חייב להיות גדול מ-50,000.';
       }
+      // Audit #7 remainder + #8 range (Noa-approved copy 2026-07-03; #3 edited to ח.פ).
+      if (rule === 'cell-il') {
+        var digits = v.replace(/[^0-9]/g, '');
+        if (!(digits.length === 10 && digits.indexOf('05') === 0)) return 'מספר הטלפון הנייד אינו תקין.';
+      }
+      if (rule === 'ssn') {
+        if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר ה-SSN אינו תקין.';
+      }
+      if (rule === 'company-num') {
+        if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר הח.פ אינו תקין.';
+      }
+      if (rule === 'pct') {
+        var pn = Number(v.replace(/[,\s%]/g, ''));
+        if (!isFinite(pn) || pn <= 0 || pn > 100) return 'שיעור ההחזקה חייב להיות בין 0 ל-100.';
+      }
       return null;
     }
     function validatePage(pageEl) {
@@ -1949,7 +1990,10 @@
       if (progWrap) progWrap.hidden = onWelcome;
       if (!onWelcome) {
         progIndicator.textContent = (idx + 1) + ' / ' + pages.length;
-        progBar.style.width = Math.round(((idx + 1) / pages.length) * 100) + '%';
+        var pct = Math.round(((idx + 1) / pages.length) * 100);
+        progBar.style.width = pct + '%';
+        var track = progBar.parentElement;
+        if (track && track.setAttribute) track.setAttribute('aria-valuenow', String(pct));
       }
       if (page.getAttribute('data-page') === 'review') renderReview();
       setStatus('');
@@ -2139,6 +2183,7 @@
     hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
     renderHelpHints();      // surface the approved data-help strings under their fields
     applyInputmodes();      // numeric keypad on ID + SSN fields
+    applyAutocomplete();    // autofill tokens on the primary subject's identity fields
     applyConditionals();
     // Amount: whole-number, thousands separators on blur.
     (function () {
