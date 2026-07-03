@@ -158,6 +158,13 @@
     .lvp-fieldset--error .lvp-fieldset__legend { color: var(--lvp-error); }
     .lvp-fieldset--error .lvp-fieldset__legend::after, .lvp-field--error .lvp-field__label::after { content: " חובה"; font-weight: 400; opacity: 0.85; }
     [dir="ltr"] .lvp-fieldset--error .lvp-fieldset__legend::after, [dir="ltr"] .lvp-field--error .lvp-field__label::after { content: " required"; }
+    /* Per-field format-error message (invalid ID / date / amount / email). Rendered
+       right under the field so the LP fixes it in place instead of hunting the one
+       shared status line. When a specific message is shown the " חובה"/"required"
+       label suffix is suppressed (the field is filled but invalid, not empty). */
+    .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
+    .lvp-field--has-msg.lvp-field--error .lvp-field__label::after,
+    .lvp-fieldset--has-msg.lvp-fieldset--error .lvp-fieldset__legend::after { content: none; }
 
     /* Submit: full-card loading + branded confirmation states. */
     .lvp-result { text-align: center; padding: 24px 8px 12px; }
@@ -1662,11 +1669,16 @@
       if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
       return dt;
     }
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     function validateField(inp) {
       // returns null if ok, else an error message string (Hebrew source key)
       var v = (inp.value || '').trim();
       if (!v) return null; // emptiness handled by the required pass
       var rule = inp.getAttribute('data-validate');
+      // Email format: type=email fields never had a format check (the form is
+      // novalidate). Reuse the approved Israeli-lane string. A bad lawyer email is
+      // the signing channel, so this matters.
+      if (inp.type === 'email' && !EMAIL_RE.test(v)) return 'יש להזין כתובת מייל תקינה.';
       if (rule === 'il-id' && !isValidIlId(v)) return 'מספר תעודת הזהות אינו תקין.';
       if ((rule === 'date-past' || rule === 'date-future') && v) {
         var dt = parseDdMmYyyy(v);
@@ -1689,7 +1701,8 @@
     function validatePage(pageEl) {
       var ok = true;
       var firstError = null;
-      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); });
+      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); });
+      pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
       // Required-field pass: every label/legend carries its field; a required field
       // is one whose holder is visible and whose label has no opt-out. EasySend
       // model: every visible field in these pages is required unless flagged optional.
@@ -1713,14 +1726,23 @@
           if (!firstError) firstError = holder;
         }
       });
-      // Format-validation pass (IL ID checksum, dates, min-age, amount floor).
-      pageEl.querySelectorAll('input[data-validate]').forEach(function (i) {
+      // Format-validation pass (IL ID checksum, dates, min-age, amount floor, email).
+      // Email inputs carry no data-validate, so fold them in. Each failure renders its
+      // SPECIFIC approved message under the field (not the shared bottom line, which
+      // stays a summary set by the caller).
+      var fmtInputs = Array.prototype.slice.call(pageEl.querySelectorAll('input[data-validate]'));
+      Array.prototype.forEach.call(pageEl.querySelectorAll('input[type="email"]'), function (i) {
+        if (fmtInputs.indexOf(i) === -1) fmtInputs.push(i);
+      });
+      fmtInputs.forEach(function (i) {
         var holder = i.closest('.lvp-field, .lvp-fieldset');
         if (!holder || isHidden(holder)) return;
         var err = validateField(i);
         if (err) {
-          ok = false; holder.classList.add('lvp-field--error'); if (!firstError) firstError = holder;
-          setStatus(displayFor(err, curLang), true);
+          ok = false;
+          holder.classList.add('lvp-field--error');
+          setFieldError(holder, displayFor(err, curLang));
+          if (!firstError) firstError = holder;
         }
       });
       if (firstError) {
@@ -1735,7 +1757,20 @@
       while (el && el !== form) { if (el.hidden || el.style.display === 'none') return true; el = el.parentElement; }
       return false;
     }
-    function clearError(pageEl) { if (pageEl) pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error'); }); }
+    // Render a format-error message under a field holder, suppressing the generic
+    // " חובה"/"required" label suffix for that field (it is invalid, not empty).
+    function setFieldError(holder, msg) {
+      holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--has-msg' : 'lvp-field--has-msg');
+      var next = holder.nextElementSibling;
+      var e = (next && next.classList && next.classList.contains('lvp-error-msg')) ? next : null;
+      if (!e) { e = document.createElement('p'); e.className = 'lvp-error-msg'; holder.parentNode.insertBefore(e, holder.nextSibling); }
+      e.textContent = msg;
+    }
+    function clearError(pageEl) {
+      if (!pageEl) return;
+      pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); });
+      pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
+    }
 
     // ---- navigation ----
     function currentPageEl() { return visiblePages()[idx]; }
