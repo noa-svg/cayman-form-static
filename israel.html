@@ -1812,10 +1812,34 @@
           if (!firstError) firstError = holder;
         }
       });
+      // Page-level: the controlling persons' ownership percentages must total 100%
+      // (#8, sum part). Rendered as a page-level message (not the bottom line, which
+      // the caller overwrites) reusing the approved sentence already on this page.
+      // The per-row 0-100 range check is pending Noa copy (see the copy manifest).
+      if (pageEl.getAttribute('data-page') === 'ent.controlling') {
+        var pcts = pageEl.querySelectorAll('input[data-validate="pct"]');
+        var sum = 0, anyPct = false;
+        pcts.forEach(function (p) {
+          var h = p.closest('.lvp-field'); if (!h || isHidden(h)) return;
+          var n = parseFloat(String(p.value).replace(/[^\d.]/g, ''));
+          if (!isNaN(n)) { sum += n; anyPct = true; }
+        });
+        if (anyPct && Math.round(sum * 100) / 100 !== 100) {
+          ok = false;
+          var host = pageEl.querySelector('[data-repeating-typed-path="controllingShareholdersContainer.controllingShareholdersArray"]');
+          if (host) {
+            var se = document.createElement('p');
+            se.className = 'lvp-error-msg';
+            se.textContent = displayFor('שיעור ההחזקה של כלל בעלי השליטה צריך להסתכם ב-100 אחוז.', curLang);
+            host.parentNode.insertBefore(se, host.nextSibling);
+            if (!firstError) firstError = se;
+          }
+        }
+      }
       if (firstError) {
         try { firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
         catch (_) { firstError.scrollIntoView(); }
-        var focusable = firstError.querySelector('input, select, textarea');
+        var focusable = firstError.querySelector ? firstError.querySelector('input, select, textarea') : null;
         if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (_) {} }
       }
       return ok;
