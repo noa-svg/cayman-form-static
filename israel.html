@@ -91,6 +91,8 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 24px; gap: 12px;
     }
+    /* [hidden] must win over display:flex, else the empty track shows on welcome. */
+    .lvp-progress[hidden] { display: none !important; }
     .lvp-progress__indicator { color: var(--lvp-text-muted); font-size: 13px; font-weight: 500; letter-spacing: 0.04em; min-width: 92px; }
     .lvp-progress__bar { flex: 1; height: 4px; background: #EFEFEF; border-radius: 2px; overflow: hidden; }
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
@@ -134,6 +136,7 @@
 
     .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
     .lvp-hint-small { color: var(--lvp-text-muted); font-size: 12px; margin: 4px 0 12px; }
+    .lvp-hint--help { margin: 4px 0 0; }   /* field help sits snug under its input */
 
     .lvp-fieldset { border: none; padding: 0; margin: 0 0 20px; }
     .lvp-fieldset__legend { color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 8px; font-weight: 500; padding: 0; }
@@ -1247,6 +1250,24 @@
         b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
       });
     }
+    // Render the approved data-help strings as visible hints under their field.
+    // They were previously attached only as a data-help attribute (invisible; the
+    // only consumer was the translator). Class lvp-hint-small means applyLang picks
+    // them up for the EN toggle automatically. Idempotent (helpShown guard) so it is
+    // safe to call again for dynamically-added rows.
+    function renderHelpHints(scope) {
+      var root = scope || form;
+      root.querySelectorAll('[data-help]').forEach(function (el) {
+        if (el.dataset.helpShown) return;
+        var holder = el.closest('.lvp-field, .lvp-fieldset');
+        if (!holder) return;
+        var p = document.createElement('p');
+        p.className = 'lvp-hint-small lvp-hint--help';
+        p.textContent = el.getAttribute('data-help');
+        holder.appendChild(p);
+        el.dataset.helpShown = '1';
+      });
+    }
     // Re-translate a freshly cloned repeating row (template HTML is Hebrew).
     function translateScope(node) {
       if (node && curLang === 'en') swapScopeText(node, 'en');
@@ -1455,6 +1476,7 @@
       var node = wrap.firstElementChild;
       host.appendChild(node);
       populateCountries();
+      renderHelpHints(node);
       translateScope(node);
       applyConditionals(node);
     }
@@ -1922,6 +1944,7 @@
     populateCountries();
     ensureMinRows();
     hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
+    renderHelpHints();      // surface the approved data-help strings under their fields
     applyConditionals();
     // Amount: whole-number, thousands separators on blur.
     (function () {
