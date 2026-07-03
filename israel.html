@@ -753,6 +753,19 @@
             <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.legalOrAdministrativeProceedings" value="לא" data-show-when-trigger="moneyInvestedInFund.legalOrAdministrativeProceedings"> לא</label>
           </fieldset>
           <label class="lvp-field" data-show-when="moneyInvestedInFund.legalOrAdministrativeProceedings=כן"><span class="lvp-field__label">פירוט ההליכים</span><textarea class="lvp-input--textarea" data-script="he" name="moneyInvestedInFund.legalOrAdministrativeProceedingsDescription" rows="2"></textarea></label>
+
+          <!-- Tax-status declaration merged in from the former standalone tax page
+               (Ive reduction, #25). Same fields + approved copy, one fewer page. -->
+          <h3 class="lvp-subhead">הצהרה על מעמד מס</h3>
+          <p class="lvp-note">אני/ו מתחייב/ים להודיע לשותף הכללי של השותפות אודות כל שינוי במעמד המס שלי/נו ו/או שיעורו, אשר יחולו לאחר חתימתי/נו על הצהרה זו.</p>
+          <fieldset class="lvp-fieldset" data-applicant="individual">
+            <legend class="lvp-fieldset__legend">מעמד מס</legend>
+            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isNonBusinessIncome" value="true"> הכנסה שלא מעסק (תחויב במס רווח הון בהתאם לתנאי האישור המקדמי)</label>
+          </fieldset>
+          <fieldset class="lvp-fieldset" data-applicant="entity">
+            <legend class="lvp-fieldset__legend">מעמד מס</legend>
+            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isBusinessIncome" value="true"> הכנסה מעסק (תחויב במס בשיעור הקבוע בסעיף 121 או בסעיף 126(א) לפקודה בהתאם לתנאי האישור המקדמי)</label>
+          </fieldset>
         </section>
 
         <!-- PAGE: beneficiary declaration (beneficiaryStatement) -->
@@ -787,21 +800,6 @@
               </div>
             </div>
           </template>
-        </section>
-
-        <!-- PAGE: tax status declaration (taxDeclaration) -->
-        <section class="lvp-page" data-page="tax">
-          <h2 class="lvp-page__title">הצהרה על מעמד מס</h2>
-          <p class="lvp-note">אני/ו מתחייב/ים להודיע לשותף הכללי של השותפות אודות כל שינוי במעמד המס שלי/נו ו/או שיעורו, אשר יחולו לאחר חתימתי/נו על הצהרה זו.</p>
-
-          <fieldset class="lvp-fieldset" data-applicant="individual">
-            <legend class="lvp-fieldset__legend">מעמד מס</legend>
-            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isNonBusinessIncome" value="true"> הכנסה שלא מעסק (תחויב במס רווח הון בהתאם לתנאי האישור המקדמי)</label>
-          </fieldset>
-          <fieldset class="lvp-fieldset" data-applicant="entity">
-            <legend class="lvp-fieldset__legend">מעמד מס</legend>
-            <label class="lvp-checkbox"><input type="checkbox" name="taxDeclaration.isBusinessIncome" value="true"> הכנסה מעסק (תחויב במס בשיעור הקבוע בסעיף 121 או בסעיף 126(א) לפקודה בהתאם לתנאי האישור המקדמי)</label>
-          </fieldset>
         </section>
 
         <!-- PAGE: waiver of claims (investorsArray[0].isReadClaims) - individual only -->
@@ -910,9 +908,12 @@
           </div>
         </section>
 
-        <!-- PAGE: contact details (familyOfficeDetails / contactArray) -->
-        <section class="lvp-page" data-page="contact">
-          <h2 class="lvp-page__title">פרטי התקשרות</h2>
+        <!-- PAGE: review + submit. Contact details merged in from the former
+             standalone contact page (Ive reduction, #25): the comms-email list now
+             lives on the final page, above the summary. Same fields + approved copy. -->
+        <section class="lvp-page" data-page="review">
+          <h2 class="lvp-page__title">סיום ושליחה</h2>
+          <h3 class="lvp-subhead">פרטי התקשרות</h3>
           <p class="lvp-page__hint">כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.</p>
           <div data-repeating-typed-path="contactArray" data-repeating-min="1" data-repeating-template="email"></div>
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
@@ -922,11 +923,6 @@
               <button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button>
             </div>
           </template>
-        </section>
-
-        <!-- PAGE: review + submit -->
-        <section class="lvp-page" data-page="review">
-          <h2 class="lvp-page__title">סיום ושליחה</h2>
           <p class="lvp-page__hint">עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור חתימה בדואר האלקטרוני. כל חותם/ת (את/ה, עורך/ת הדין או רואה/ת החשבון במידת הצורך, כל בעל/ת שליטה והשותף הכללי) חותם/ת בתורו/ה.</p>
           <div data-review-summary></div>
         </section>
@@ -1950,10 +1946,11 @@
           }
         }
       }
-      // Contact page: at least one valid communication email is required (Noa
-      // 2026-07-03). The field is pre-seeded with the mint / investor email, so this
-      // only bites if the LP clears it. Reuses the approved 'at least one' message.
-      if (pageEl.getAttribute('data-page') === 'contact') {
+      // Contact details (merged onto the review page, #25): at least one valid
+      // communication email is required (Noa 2026-07-03). Pre-seeded with the mint /
+      // investor email, so this only bites if the LP clears it. Reuses the approved
+      // 'at least one' message.
+      if (pageEl.getAttribute('data-page') === 'review') {
         var cEmails = pageEl.querySelectorAll('input[name^="contactArray"]');
         var anyValid = Array.prototype.some.call(cEmails, function (i) { return i.value && EMAIL_RE.test(i.value.trim()); });
         if (!anyValid) {
@@ -2005,7 +2002,7 @@
       page.hidden = false;
       applyConditionals(page);
       enforceQualMutex();
-      if (page.getAttribute('data-page') === 'contact') seedContactDefault();
+      if (page.getAttribute('data-page') === 'review') seedContactDefault();
       prevBtn.hidden = idx === 0;
       var last = idx === pages.length - 1;
       nextBtn.hidden = last;
