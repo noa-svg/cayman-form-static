@@ -903,7 +903,7 @@
         <section class="lvp-page" data-page="contact">
           <h2 class="lvp-page__title">פרטי התקשרות</h2>
           <p class="lvp-page__hint">כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.</p>
-          <div data-repeating-typed-path="contactArray" data-repeating-min="0" data-repeating-template="email"></div>
+          <div data-repeating-typed-path="contactArray" data-repeating-min="1" data-repeating-template="email"></div>
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
           <template data-row-template="email">
             <div class="lvp-email-row" data-row-index="${i}">
@@ -1521,7 +1521,7 @@
           setStatus(displayFor('יש להזין לפחות רשומה אחת כאן.', curLang), true);
           return;
         }
-        row.remove(); reindex(host); return;
+        row.remove(); reindex(host); refreshAddButtons(); return;
       }
     });
     function repeatHost(path) { return form.querySelector('[data-repeating-typed-path="' + path + '"]'); }
@@ -1540,6 +1540,35 @@
       applyInputmodes(node);
       translateScope(node);
       applyConditionals(node);
+      refreshAddButtons();
+    }
+    // Disable an add-row button once its list is at data-repeating-max (the click
+    // silently no-opped before, so the LP got no feedback).
+    function refreshAddButtons() {
+      form.querySelectorAll('[data-action="add-row"]').forEach(function (btn) {
+        var host = repeatHost(btn.getAttribute('data-target'));
+        if (!host) return;
+        var max = parseInt(host.getAttribute('data-repeating-max'), 10);
+        if (isNaN(max)) return;
+        btn.disabled = host.querySelectorAll('[data-row-index]').length >= max;
+      });
+    }
+    // Contact page: default the first communication email to the address the invite
+    // was sent to (mint email from the gateway config), falling back to the primary
+    // investor / authorized email the LP already entered. Only fills an empty slot,
+    // so a resumed or typed value always wins. Noa 2026-07-03: require >= 1 email.
+    function seedContactDefault() {
+      var host = repeatHost('contactArray');
+      if (!host) return;
+      var first = host.querySelector('input[name^="contactArray"]');
+      if (!first) { addRow('contactArray'); first = host.querySelector('input[name^="contactArray"]'); }
+      if (first && !first.value) {
+        var inv = form.querySelector('[name="investorsArray[0].email"]');
+        var auth = form.querySelector('[name="firstAuthorized.email"]');
+        var def = (CFG && (CFG.mintEmail || CFG.inviteEmail || CFG.lpEmail || CFG.email)) ||
+                  (inv && inv.value) || (auth && auth.value) || '';
+        if (def) first.value = def;
+      }
     }
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
@@ -1856,6 +1885,24 @@
           }
         }
       }
+      // Contact page: at least one valid communication email is required (Noa
+      // 2026-07-03). The field is pre-seeded with the mint / investor email, so this
+      // only bites if the LP clears it. Reuses the approved 'at least one' message.
+      if (pageEl.getAttribute('data-page') === 'contact') {
+        var cEmails = pageEl.querySelectorAll('input[name^="contactArray"]');
+        var anyValid = Array.prototype.some.call(cEmails, function (i) { return i.value && EMAIL_RE.test(i.value.trim()); });
+        if (!anyValid) {
+          ok = false;
+          var chost = pageEl.querySelector('[data-repeating-typed-path="contactArray"]');
+          if (chost) {
+            var ce = document.createElement('p');
+            ce.className = 'lvp-error-msg';
+            ce.textContent = displayFor('יש להזין לפחות רשומה אחת כאן.', curLang);
+            chost.parentNode.insertBefore(ce, chost.nextSibling);
+            if (!firstError) firstError = ce;
+          }
+        }
+      }
       if (firstError) {
         try { firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
         catch (_) { firstError.scrollIntoView(); }
@@ -1893,6 +1940,7 @@
       page.hidden = false;
       applyConditionals(page);
       enforceQualMutex();
+      if (page.getAttribute('data-page') === 'contact') seedContactDefault();
       prevBtn.hidden = idx === 0;
       var last = idx === pages.length - 1;
       nextBtn.hidden = last;
