@@ -542,10 +542,11 @@ body.side-coll .side-foot .foot-gear { display: none; }
 #login-ink { z-index: 0; }
 #login-top { z-index: 3; }
 #login-screen .lc { position: relative; z-index: 2; }
-#login-ink text.cap, #login-top text.cap { font-family: 'Permanent Marker', cursive; fill: #1A1A1A; }
+#login-ink text.cap, #login-top text.cap { font-family: 'Permanent Marker', cursive; fill: #2E86C1; }
 #login-ink text.cur, #login-top text.cur { font-family: 'Caveat', cursive; fill: #1A1A1A; }
 #login-ink .ln { fill: none; stroke: #241F1A; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
 #login-ink .el { transform-box: fill-box; transform-origin: center; }
+.lvpop{position:fixed;z-index:6;width:230px;max-width:40vw;height:auto;border-radius:14px;border:5px solid #fff;box-shadow:0 16px 50px rgba(30,20,10,.32);pointer-events:none;will-change:transform,opacity}
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -3732,80 +3733,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
-<svg id="login-ink" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-  <!-- Chic line-and-summer-color scene: confident black line + flat Mediterranean color. Card keep-out = center. -->
-
-  <!-- SUN, top-right -->
-  <g class="el" transform="translate(1240,70) scale(1.5)">
-    <circle cx="42" cy="42" r="30" fill="#E7A93C"/><circle cx="42" cy="42" r="30" class="ln"/>
-    <path class="ln" d="M42 -2 L42 -14 M42 86 L42 98 M-2 42 L-14 42 M86 42 L98 42 M12 12 L4 4 M72 12 L80 4 M12 72 L4 80 M72 72 L80 80"/>
-  </g>
-
-  <!-- BACKPACK, top-left -->
-  <g class="el" transform="translate(120,70) scale(1.5)">
-    <path d="M16 40 Q16 14 42 14 Q68 14 68 40 L68 120 Q68 130 58 130 L26 130 Q16 130 16 120 Z" fill="#C8623B"/>
-    <path class="ln" d="M16 40 Q16 14 42 14 Q68 14 68 40 L68 120 Q68 130 58 130 L26 130 Q16 130 16 120 Z"/>
-    <path class="ln" d="M16 52 Q42 66 68 52"/>
-    <rect x="30" y="80" width="24" height="30" rx="5" fill="#E7A93C"/><rect x="30" y="80" width="24" height="30" rx="5" class="ln"/>
-    <path class="ln" d="M26 14 Q20 0 32 0 M58 14 Q64 0 52 0"/>
-  </g>
-
-  <!-- CHERRIES, top-center (above card) -->
-  <g class="el" transform="translate(670,44) scale(1.4)">
-    <circle cx="18" cy="46" r="16" fill="#C8352F"/><circle cx="18" cy="46" r="16" class="ln"/>
-    <circle cx="52" cy="52" r="16" fill="#C8352F"/><circle cx="52" cy="52" r="16" class="ln"/>
-    <path class="ln" d="M18 30 Q30 4 46 2 M52 36 Q48 6 46 2"/>
-  </g>
-
-  <!-- WINE BOTTLE, left-mid -->
-  <g class="el" transform="translate(120,360) scale(1.5)">
-    <path d="M24 6 L24 42 L10 60 L10 158 L54 158 L54 60 L40 42 L40 6 Z" fill="#5E6E36"/>
-    <path class="ln" d="M24 6 L24 42 L10 60 L10 158 L54 158 L54 60 L40 42 L40 6 Z"/>
-    <rect x="12" y="92" width="40" height="38" fill="#F1E6CE"/><rect x="12" y="92" width="40" height="38" class="ln"/>
-  </g>
-
-  <!-- WINE GLASS, bottom-left -->
-  <g class="el" transform="translate(250,640) scale(1.5)">
-    <path d="M8 6 L22 64 Q44 88 66 64 L80 6 Z" fill="#FBF6EA"/>
-    <path d="M17 40 L22 64 Q44 88 66 64 L71 40 Z" fill="#B23A48"/>
-    <path class="ln" d="M8 6 L22 64 Q44 88 66 64 L80 6 Z"/>
-    <path class="ln" d="M44 84 L44 122 M22 128 Q44 120 66 128"/>
-  </g>
-
-  <!-- FTAI TURBINE, bottom-center (below card) -->
-  <g class="el" transform="translate(560,700) scale(1.4)">
-    <path d="M70 16 L164 24 L164 76 L70 84 Z" fill="#8FA6BC"/>
-    <path class="ln" d="M70 16 L164 24 L164 76 L70 84 Z"/>
-    <path class="ln" d="M150 30 L150 70 M136 30 L136 70"/>
-    <ellipse cx="44" cy="50" rx="34" ry="40" fill="#3E7CB1"/><ellipse cx="44" cy="50" rx="34" ry="40" class="ln"/>
-    <path class="ln" d="M44 12 L44 34 M44 66 L44 88 M10 50 L30 50 M58 50 L78 50 M20 26 L36 40 M52 60 L68 74 M68 26 L52 40 M36 60 L20 74"/>
-    <ellipse cx="44" cy="50" rx="12" ry="15" fill="#F1E6CE"/><ellipse cx="44" cy="50" rx="12" ry="15" class="ln"/>
-  </g>
-
-  <!-- MICHAEL JACKSON, right-mid -->
-  <g class="el" transform="translate(1150,300) scale(1.4)">
-    <path d="M62 44 Q76 40 86 50 L96 132 L76 186 L46 186 L40 130 Q42 70 62 44 Z" fill="#2C2C3C"/>
-    <path d="M62 44 Q76 40 86 50 L96 132 L76 186 L46 186 L40 130 Q42 70 62 44 Z" class="ln" stroke-width="3"/>
-    <path class="ln" style="stroke-width:13" d="M50 186 L44 258"/>
-    <path class="ln" style="stroke-width:13" d="M78 186 L92 256"/>
-    <circle cx="68" cy="38" r="16" fill="#E8C39E"/><circle cx="68" cy="38" r="16" class="ln" stroke-width="2.6"/>
-    <path d="M40 26 Q68 8 100 26 Q68 38 40 26 Z" fill="#241F1A"/>
-    <path d="M50 24 Q58 2 70 2 Q88 4 88 24 Z" fill="#241F1A"/>
-    <path class="ln" style="stroke-width:12" d="M60 62 L34 68 L48 34"/>
-    <circle cx="40" cy="30" r="10" fill="#FBF6EA"/><circle cx="40" cy="30" r="10" class="ln" stroke-width="2.4"/>
-    <path class="ln" style="stroke-width:12" d="M88 62 L108 114"/>
-    <path d="M28 258 L56 250 L58 266 L26 270 Z" fill="#241F1A"/>
-    <path d="M84 256 L112 268 L106 282 L78 268 Z" fill="#241F1A"/>
-  </g>
-
-  <!-- OLIVE BRANCH, bottom-right -->
-  <g class="el" transform="translate(1130,720) scale(1.4)">
-    <path class="ln" d="M6 44 Q70 22 140 46"/>
-    <g fill="#5E6E36"><ellipse cx="34" cy="32" rx="7" ry="12" transform="rotate(-32 34 32)"/><ellipse cx="70" cy="24" rx="7" ry="12" transform="rotate(-18 70 24)"/><ellipse cx="106" cy="30" rx="7" ry="12" transform="rotate(-40 106 30)"/></g>
-    <g class="ln" style="stroke-width:2.4" fill="none"><ellipse cx="34" cy="32" rx="7" ry="12" transform="rotate(-32 34 32)"/><ellipse cx="70" cy="24" rx="7" ry="12" transform="rotate(-18 70 24)"/><ellipse cx="106" cy="30" rx="7" ry="12" transform="rotate(-40 106 30)"/></g>
-  </g>
-
-</svg>
+<svg id="login-ink" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"></svg>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
     <div class="lsub">Operator Console</div>
@@ -3845,15 +3773,7 @@ function letter(ch,x,y,h,sw){var g=GLYPH[ch];if(!g)return 0;
    p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');grp.appendChild(p);});
  ink.appendChild(grp);return w+h*0.12;}
 function word(str,x,y,h,sw){var cx=x;for(var i=0;i<str.length;i++){cx+=letter(str[i],cx,y,h,sw)+h*0.06;}return cx;}
-word('MAKE',70,26,74,3.4);
-word('THINGS',975,362,40,2.4);
-word('AS',880,152,40,2.4);
-word('SIMPLE',995,238,74,3.4);
-word('AS',600,224,40,2.4);
-word('POSSIBLE',286,470,32,2.4);
-word('BUT',300,690,40,2.4);
-word('NOT',620,660,40,2.4);
-word('SIMPLER',936,708,40,2.4);
+/* Einstein quote now rendered as hand-lettered <text class="cap"> inside #login-ink (behind card). */
 })();</script>
 </div>
 <script>initAuth();</script>
@@ -3866,5 +3786,39 @@ word('SIMPLER',936,708,40,2.4);
   Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
     t.onclick=function(){switchView(t.getAttribute("data-view"));};
   });
+</script>
+<script id="lvpop-init">
+(function(){
+  var NAMES=['jobs','buffett','mj','turbine','rocket','backpack','garlic','tomato'];
+  var POPS=NAMES.map(function(n){return '/console/pops/'+n+'.jpg';});
+  POPS.forEach(function(u){var i=new Image(); i.src=u;});          // preload so the first pop is instant
+  function ready(){
+    var ls=document.getElementById('login-screen');
+    if(!ls) return;
+    ls.addEventListener('click',function(e){
+      if(e.target.closest('.lc')) return;                          // never pop while using the sign-in card
+      var R=(Math.random()*30-15).toFixed(1);
+      var img=document.createElement('img');
+      img.className='lvpop';
+      img.src=POPS[Math.floor(Math.random()*POPS.length)];
+      img.style.left=e.clientX+'px'; img.style.top=e.clientY+'px';
+      img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(0.2)';
+      img.style.opacity='0';
+      ls.appendChild(img);
+      requestAnimationFrame(function(){
+        img.style.transition='transform .34s cubic-bezier(.2,1.6,.35,1), opacity .18s';
+        img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(1)';
+        img.style.opacity='1';
+      });
+      setTimeout(function(){
+        img.style.transition='transform .4s ease, opacity .4s ease';
+        img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(.7)';
+        img.style.opacity='0';
+        setTimeout(function(){img.remove();},430);
+      },2100);
+    });
+  }
+  if(document.readyState!=='loading') ready(); else document.addEventListener('DOMContentLoaded',ready);
+})();
 </script>
 </body></html>
