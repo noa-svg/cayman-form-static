@@ -72,7 +72,7 @@
       /* De-EasySend-ification (2026-07-03): the vendor CDN is decommissioned; serve
          the same brand background from this repo, as the Cayman form does. */
       background: url("brand-bg.png") no-repeat center center;
-      background-size: 100% 100%; opacity: 0.5;
+      background-size: cover; opacity: 0.5;   /* cover: don't distort the cityscape */
     }
     .lvp-app {
       position: relative; z-index: 1; min-height: 100vh;
@@ -100,6 +100,9 @@
     .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 14px; }
     .lvp-page__title::after { content: ""; display: block; height: 4px; width: 90px; margin-top: 8px;
       background: linear-gradient(to right, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    /* RTL: the title is right-aligned, so mirror the accent to start (yellow) from
+       the right edge under the first characters. */
+    .lvp-card[dir="rtl"] .lvp-page__title::after { background: linear-gradient(to left, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
     .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 24px; }
 
     .lvp-field { display: block; margin-bottom: 24px; }
@@ -124,7 +127,7 @@
     .lvp-btn--secondary { background: rgba(255,255,255,0.85); color: var(--lvp-navy); border: 1px solid var(--lvp-input-line); }
     .lvp-btn--secondary:hover { background: #fff; }
     .lvp-btn--small { padding: 6px 14px; font-size: 13px; margin: 8px 0 16px; }
-    .lvp-btn--link { background: none; border: none; color: var(--lvp-navy); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 2px 6px; }
+    .lvp-btn--link { background: none; border: none; color: var(--lvp-navy); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 12px 6px; min-height: 44px; }
     .lvp-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
     .lvp-status { margin-top: 12px; font-size: 13px; color: var(--lvp-text-muted); min-height: 18px; }
@@ -150,8 +153,8 @@
 
     .lvp-fieldset { border: none; padding: 0; margin: 0 0 20px; }
     .lvp-fieldset__legend { color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 8px; font-weight: 500; padding: 0; }
-    .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; cursor: pointer; font-size: 14px; line-height: 1.5; }
-    .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; }
+    .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; min-height: 44px; cursor: pointer; font-size: 14px; line-height: 1.5; }
+    .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; accent-color: var(--lvp-navy); width: 18px; height: 18px; }
 
     .lvp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 480px) { .lvp-grid-2 { grid-template-columns: 1fr; gap: 0; } }
