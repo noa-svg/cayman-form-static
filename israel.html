@@ -321,7 +321,11 @@
         </section>
 
         <!-- PAGE: lawyer details (investorsArray[0] route-to-lawyer; lawyerDetails) -->
-        <section class="lvp-page" data-page="ind.lawyer" data-applicant="individual" hidden>
+        <!-- Shown ONLY when the §15A lawyer/CPA leg fires: the investor is qualified
+             AND did not upload a pre-signed qualification (EasySend spec + the page
+             hint below). Otherwise this page is filtered out of the sequence so a
+             not-needed lawyer is never required. -->
+        <section class="lvp-page" data-page="ind.lawyer" data-applicant="individual" data-page-when="lawyerNeededInd" hidden>
           <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
           <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.</p>
           <div class="lvp-grid-2">
@@ -632,7 +636,10 @@
         </section>
 
         <!-- PAGE: entity lawyer (lawyerDetails + lawyerQualificationApprove) -->
-        <section class="lvp-page" data-page="ent.lawyer" data-applicant="entity" hidden>
+        <!-- Shown ONLY when the entity is qualified AND did not upload a pre-signed
+             qualification (mirror of the individual lawyer leg). Otherwise filtered
+             out of the sequence. -->
+        <section class="lvp-page" data-page="ent.lawyer" data-applicant="entity" data-page-when="lawyerNeededEnt" hidden>
           <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
           <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.</p>
           <div class="lvp-grid-2">
@@ -1268,9 +1275,26 @@
       var ap = applicant();
       return ALL_PAGES.filter(function (p) {
         var only = p.getAttribute('data-applicant');
-        if (!only) return true;        // shared page
-        return only === ap;
+        if (only && only !== ap) return false;      // wrong applicant type
+        var when = p.getAttribute('data-page-when'); // conditional page (e.g. lawyer leg)
+        if (when && !pageConditionMet(when)) return false;
+        return true;
       });
+    }
+    // Conditional-page predicates. A page tagged data-page-when only enters the
+    // sequence when its predicate is true, so a not-needed page is never shown or
+    // required. Evaluated live off the current answers, so toggling qualification
+    // adds/removes the lawyer page and showPage() re-clamps idx.
+    function pageConditionMet(cond) {
+      if (cond === 'lawyerNeededInd') {
+        return indQualified() &&
+          readRadio('investorsArray[0].qualification.isSignedQualification') === 'לא';
+      }
+      if (cond === 'lawyerNeededEnt') {
+        return entQualified() &&
+          readRadio('corporationDetails.isSignedQualification') === 'לא';
+      }
+      return true;
     }
 
     var idx = 0;
