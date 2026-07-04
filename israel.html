@@ -346,7 +346,7 @@
             </div>
             <div class="lvp-grid-2">
               <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
-              <label class="lvp-field" data-optional><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
             </div>
             <div class="lvp-grid-2">
               <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
@@ -442,7 +442,7 @@
             </div>
             <div class="lvp-grid-2">
               <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.houseNumber"></label>
-              <label class="lvp-field" data-optional><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.postalCode" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.postalCode" inputmode="numeric"></label>
             </div>
             <div class="lvp-grid-2">
               <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.englishAddress.city"></label>
@@ -813,14 +813,14 @@
           <label class="lvp-field" data-show-when="moneyInvestedInFund.moneySource=אחר"><span class="lvp-field__label">פירוט מקור הכספים</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.otherSource"></label>
 
           <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">האם יש לך או לבן/בת משפחתך קשר לפעילות ציבורית או פוליטית?</legend>
+            <legend class="lvp-fieldset__legend">האם יש לך או לבן/בת זוגך קשר לפעילות ציבורית או פוליטית?</legend>
             <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.publicOrPoliticalActivity" value="כן" data-show-when-trigger="moneyInvestedInFund.publicOrPoliticalActivity"> כן</label>
             <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.publicOrPoliticalActivity" value="לא" data-show-when-trigger="moneyInvestedInFund.publicOrPoliticalActivity"> לא</label>
           </fieldset>
           <label class="lvp-field" data-show-when="moneyInvestedInFund.publicOrPoliticalActivity=כן"><span class="lvp-field__label">פירוט הפעילות הציבורית או הפוליטית</span><textarea class="lvp-input--textarea" data-script="he" name="moneyInvestedInFund.publicOrPoliticalActivityDescription" rows="2"></textarea></label>
 
           <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">האם מתנהלים נגדך הליכים משפטיים או מנהליים?</legend>
+            <legend class="lvp-fieldset__legend">האם מתנהלים נגדך הליכים משפטיים או מנהליים (למעט בענייני תעבורה) שיש בהם להשפיע על הקרן?</legend>
             <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.legalOrAdministrativeProceedings" value="כן" data-show-when-trigger="moneyInvestedInFund.legalOrAdministrativeProceedings"> כן</label>
             <label class="lvp-radio"><input type="radio" name="moneyInvestedInFund.legalOrAdministrativeProceedings" value="לא" data-show-when-trigger="moneyInvestedInFund.legalOrAdministrativeProceedings"> לא</label>
           </fieldset>
@@ -1227,9 +1227,9 @@
       "הון עצמי":"Equity",
       "אחר":"Other",
       "פירוט מקור הכספים":"Source of funds details",
-      "האם יש לך או לבן/בת משפחתך קשר לפעילות ציבורית או פוליטית?":"Do you or a family member have a connection to public or political activity?",
+      "האם יש לך או לבן/בת זוגך קשר לפעילות ציבורית או פוליטית?":"Do you or your spouse have a connection to public or political activity?",
       "פירוט הפעילות הציבורית או הפוליטית":"Details of the public or political activity",
-      "האם מתנהלים נגדך הליכים משפטיים או מנהליים?":"Are there legal or administrative proceedings against you?",
+      "האם מתנהלים נגדך הליכים משפטיים או מנהליים (למעט בענייני תעבורה) שיש בהם להשפיע על הקרן?":"Are there legal or administrative proceedings against you (except traffic matters) that could affect the fund?",
       "פירוט ההליכים":"Details of the proceedings",
       "הצהרה על נהנים ובעלי שליטה":"Declaration of beneficiaries and controlling persons",
       "המשקיע/ה מצהיר/ה בזאת:":"The investor hereby declares:",
