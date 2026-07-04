@@ -185,7 +185,7 @@
   </style>
 </head>
 <body>
-  <div class="lvp-lang" role="group" aria-label="Language">
+  <div class="lvp-lang" role="group" aria-label="Language" data-he-aria>
     <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
     <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</button>
   </div>
@@ -266,7 +266,7 @@
         <!-- Inline doc preview -->
         <div class="doc-preview">
           <h2>Subscription documents</h2>
-          <nav id="doc-jumpnav" class="doc-jumpnav" aria-label="Jump to document" hidden></nav>
+          <nav id="doc-jumpnav" class="doc-jumpnav" aria-label="Jump to document" data-he-aria hidden></nav>
           <div id="doc-list"></div>
         </div>
 
@@ -285,7 +285,7 @@
           </div>
           <div class="sig-typed" id="sig-typed" hidden>
             <label class="sig-typed__label" for="sig-typed-input">Type your full name to sign</label>
-            <input class="sig-typed__input" id="sig-typed-input" type="text" autocomplete="name" placeholder="Your full name">
+            <input class="sig-typed__input" id="sig-typed-input" type="text" autocomplete="name" placeholder="Your full name" data-he-placeholder>
             <span class="sig-typed__hint">We will use your typed name as your signature on these documents.</span>
           </div>
           <div class="row">
@@ -336,9 +336,9 @@
       "Not yet": "עוד לא תורך",
       "It is not your turn to sign yet. You will receive an email when the prior signers have completed their signatures.": "עדיין לא הגיע תורך לחתום. תקבל/י מייל כשהחותמים הקודמים יסיימו.",
       "Complete and sign": "מילוי וחתימה",
-      "Please review the details below, complete your section, review the subscription documents, and sign.": "נא לעיין בפרטים להלן, למלא את החלק שלך, לעיין במסמכי ההצטרפות ולחתום.",
+      "Please review the details below, complete your section, review the subscription documents, and sign.": "נא לעיין בפרטים להלן, למלא את החלק שלך, לעיין במסמכי הצטרפות ולחתום.",
       "Your details": "הפרטים שלך",
-      "Subscription documents": "מסמכי ההצטרפות",
+      "Subscription documents": "מסמכי הצטרפות",
       "Your signature": "חתימה",
       "Clear": "נקה",
       "Sign and submit": "חתימה ושליחה",
@@ -413,11 +413,34 @@
     };
 
     var curLang = 'en';
+    // LANE gates the page language. Hebrew renders ONLY on the Israeli lane; the
+    // Cayman lane stays English/LTR. Server-driven: set from ctx.lane on the
+    // signerform response (setLaneFromCtx_). Unknown/empty lane -> English, so
+    // the pre-fetch loading state and any lane-less terminal screen stay English
+    // (safe for Cayman; the Israeli signer flips to Hebrew the moment ctx lands).
+    var LANE = '';
+    // Hebrew for the two screen-reader-only aria-labels (no HE_MAP entry; brand
+    // logo alt stays the brand name in every lane per Noa).
+    var HE_ARIA = {
+      'Language': 'שפה',
+      'Jump to document': 'מעבר למסמך'
+    };
+    function laneIsHebrew_() { return LANE === 'israeli'; }
+    function setLaneFromCtx_(ctx) {
+      // Accept only the known lane strings; anything else keeps English.
+      var l = ctx && ctx.lane ? String(ctx.lane) : '';
+      LANE = (l === 'israeli' || l === 'cayman') ? l : '';
+    }
     function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; }); }
 
     function applyLang(lang) {
-      lang = 'en'; // English-only to start (Noa 2026-06-28); HE_MAP retained for re-enable
+      // Lane gate: Hebrew only on the Israeli lane. Cayman (or an unresolved lane)
+      // is forced to English regardless of the requested lang, so every existing
+      // applyLang('he') callsite becomes Hebrew on Israeli and English on Cayman
+      // without per-callsite branching. (Noa 2026-07-04, re-enable Hebrew for
+      // lane=israeli only; Cayman stays English.)
+      if (lang === 'he' && !laneIsHebrew_()) lang = 'en';
       curLang = lang;
       document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
@@ -433,6 +456,23 @@
         var he = HE_MAP[el.dataset.en];
         if (he && lang === 'he') el.textContent = he;
         else if (el.dataset.en && lang === 'en') el.textContent = el.dataset.en;
+      });
+      // Placeholder attributes are not textContent, so the static-node loop above
+      // never touches them. Swap the Type-mode signature input placeholder via
+      // HE_MAP so it reads Hebrew in Hebrew mode and reverts cleanly to English.
+      document.querySelectorAll('[data-he-placeholder]').forEach(function (el) {
+        if (!el.dataset.enPlaceholder) el.dataset.enPlaceholder = el.getAttribute('placeholder') || '';
+        var hp = HE_MAP[el.dataset.enPlaceholder];
+        if (hp && lang === 'he') el.setAttribute('placeholder', hp);
+        else if (el.dataset.enPlaceholder && lang === 'en') el.setAttribute('placeholder', el.dataset.enPlaceholder);
+      });
+      // Screen-reader-only aria-labels (group + jumpnav). Brand logo alt is left
+      // as the brand name in every lane.
+      document.querySelectorAll('[data-he-aria]').forEach(function (el) {
+        if (!el.dataset.enAria) el.dataset.enAria = el.getAttribute('aria-label') || '';
+        var ha = HE_ARIA[el.dataset.enAria];
+        if (ha && lang === 'he') el.setAttribute('aria-label', ha);
+        else if (el.dataset.enAria && lang === 'en') el.setAttribute('aria-label', el.dataset.enAria);
       });
     }
     document.querySelectorAll('[data-lang-set]').forEach(function (b) {
@@ -484,6 +524,10 @@
         if (x.readyState !== 4) return;
         var ctx = {};
         try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
+        // Resolve the lane from the response (present on ok:true AND on the
+        // already_signed / not_current terminal reasons) so every screen below
+        // renders in the signer's own language. Cayman/unknown stays English.
+        setLaneFromCtx_(ctx);
         if (!ctx.ok) {
           if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
           if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
@@ -992,6 +1036,7 @@
     }
     function renderSignerForm(ctx) {
       CTX = ctx;
+      setLaneFromCtx_(ctx);
       applyLang('he');
       renderDynamic(ctx, true);
       renderIdUploads(ctx, true);
