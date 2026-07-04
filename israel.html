@@ -769,7 +769,7 @@
             <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.bankDetails.bankNameIsrael"></label>
             <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" inputmode="numeric"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" data-validate="il-account" inputmode="numeric"></label>
 
           <label class="lvp-field"><span class="lvp-field__label">מקור הכספים</span>
             <select class="lvp-input--select" name="moneyInvestedInFund.moneySource" data-show-when-trigger="moneyInvestedInFund.moneySource">
@@ -1954,6 +1954,12 @@
       }
       if (rule === 'company-num') {
         if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר הח.פ אינו תקין.';
+      }
+      // Bank account: the server rejects non-digits (digits_required, ISRAELI_DIGITS_RE_)
+      // with only the generic submit toast; gate it on the page (Noa-approved copy
+      // 2026-07-04, found by the prod go-live smoke).
+      if (rule === 'il-account') {
+        if (!/^\d+$/.test(v)) return 'מספר החשבון אינו תקין.';
       }
       if (rule === 'pct') {
         var pn = Number(v.replace(/[,\s%]/g, ''));
