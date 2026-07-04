@@ -2668,12 +2668,27 @@
       // strings) and defaults the empty case to the onboarding flow; the authoritative
       // lane + applicant type live on the operator's mint session, not the envelope.
       var body = { action: action, token: CFG.token, lane: 'israeli', payload: payload || {} };
+      // C2: bound the fetch with an AbortController so a dead/blocked network
+      // aborts instead of hanging the submit spinner forever (mirrors
+      // index.html's gateway). 'submit' assembles the full conditional pack
+      // server-side (~30pp) before responding, so it gets a generous budget; the
+      // rest stay snappy. On abort the error propagates to doSubmit's catch,
+      // which surfaces the approved Hebrew submit-error and re-enables the form
+      // (the server's replay idempotency bounds any retry).
+      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timeoutMs = (action === 'submit') ? 120000 : 30000;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
       return fetch(CFG.gatewayUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body)
-      }).then(function (r) { return r.json(); }).then(function (res) {
+        body: JSON.stringify(body),
+        signal: ctrl ? ctrl.signal : undefined
+      }).then(function (r) { if (timer) clearTimeout(timer); return r.json(); }).then(function (res) {
         if (!res || res.ok === false) throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
         return res;
+      }).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (err && err.name === 'AbortError') throw new Error('timeout');
+        throw err;
       });
     }
     function savePage() {
