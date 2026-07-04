@@ -1290,6 +1290,18 @@
             errs.push({ name: '__rows-' + kind, msg: 'יש לבחור ' + curLabel + ' שונה.', label: curLabel + ' (שורה ' + (i + 1) + ')', anchor: curSel });
             continue;
           }
+          // Mirror the server ILS partial-redemption floor (CaymanWithdrawal.js:201): shekel min
+          // 50,000, forex (דולר/יורו) has none. Client shekel code is 'שקל'. Message is the server's
+          // Noa-approved verbatim string (reused, not new copy). Shows on the field pre-submit
+          // instead of a silent server bounce.
+          if (kind === 'redemption' && c === 'שקל' && n > 0 && n < 50000) {
+            rows[i].classList.add('is-invalid');
+            var floorMsg = 'סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים';
+            if (errSpan) errSpan.textContent = floorMsg;
+            amtInp.setAttribute('aria-invalid', 'true');
+            errs.push({ name: '__rows-' + kind, msg: floorMsg, label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            continue;
+          }
           seen[c] = 1;
         }
         return errs;
