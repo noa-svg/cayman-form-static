@@ -1938,6 +1938,128 @@
       }
     }
 
+    // ---- Google Places: type the address once in Hebrew, derive the English
+    // mirror automatically (Noa 2026-07-04). The Maps SDK loads in Hebrew so
+    // the suggestions and filled components match the data-script=he address
+    // fields; the English mirror (englishDetails.englishAddress.street/city,
+    // the exact leaves israeliPartyIdentity_ in IsraeliDocGen.js consumes) is
+    // derived from the same place_id via the REST Geocoding API, language=en.
+    // Degrades silently: no key / SDK failure / geocode miss leaves every
+    // field as-is for manual entry. English values land through inferOffer, so
+    // an LP-typed English address is never overwritten. No new visible copy:
+    // the widget rides the existing inputs, no placeholder added. ----
+    var PLACES_KEY_FALLBACK = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw'; // same project key the Cayman form ships (index.html)
+    var PLACES_SETS = [
+      { street: 'investorsArray[0].israelAddress.street',
+        city: 'investorsArray[0].israelAddress.city',
+        house: 'investorsArray[0].israelAddress.houseNumber',
+        zip: 'investorsArray[0].israelAddress.postalCode',
+        enStreet: 'investorsArray[0].englishDetails.englishAddress.street',
+        enCity: 'investorsArray[0].englishDetails.englishAddress.city' },
+      { street: 'corporationDetails.israelAddress.street',
+        city: 'corporationDetails.israelAddress.city',
+        house: 'corporationDetails.israelAddress.houseNumber',
+        zip: 'corporationDetails.israelAddress.postalCode',
+        enStreet: 'corporationDetails.englishDetails.englishAddress.street',
+        enCity: 'corporationDetails.englishDetails.englishAddress.city' }
+    ];
+    function placesComp_(components, type) {
+      for (var i = 0; i < (components || []).length; i++) {
+        if (components[i].types.indexOf(type) !== -1) return components[i].long_name;
+      }
+      return '';
+    }
+    function placesCity_(components) {
+      return placesComp_(components, 'locality') || placesComp_(components, 'postal_town') || placesComp_(components, 'sublocality') || '';
+    }
+    // The LP explicitly picked this place, so the Hebrew fields are their
+    // answer: set directly and mark touched (the infer engine backs off).
+    function placesSetHe_(name, val) {
+      if (!val) return;
+      var el = form.querySelector('[name="' + cssEsc(name) + '"]');
+      if (!el) return;
+      el.value = val;
+      TOUCHED[name] = true;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function placesFillEnglish_(placeId, set) {
+      // English components for the SAME place_id, via the Maps JS API only:
+      // this key is referer-restricted and Google's REST Geocoding web service
+      // rejects referer-restricted keys categorically (verified 2026-07-04:
+      // REQUEST_DENIED 'API keys with referer restrictions cannot be used with
+      // this API'). Primary: the new places.Place class (per-instance
+      // requestedLanguage). Fallback: Geocoder.geocode with the request-level
+      // language option. Any miss leaves the English fields blank for manual
+      // entry (never guess).
+      function apply(components, getLong) {
+        if (!components) return;
+        var get = function (type) {
+          for (var i = 0; i < components.length; i++) {
+            if (components[i].types.indexOf(type) !== -1) return getLong(components[i]);
+          }
+          return '';
+        };
+        inferOffer(set.enStreet, get('route'));
+        inferOffer(set.enCity, get('locality') || get('postal_town') || get('sublocality'));
+      }
+      function viaGeocoder() {
+        try {
+          new google.maps.Geocoder().geocode({ placeId: placeId, language: 'en' }, function (results, status) {
+            if (status === 'OK' && results && results[0]) {
+              apply(results[0].address_components, function (c) { return c.long_name; });
+            }
+          });
+        } catch (e) {}
+      }
+      try {
+        if (google.maps.places.Place) {
+          var place = new google.maps.places.Place({ id: placeId, requestedLanguage: 'en' });
+          place.fetchFields({ fields: ['addressComponents'] }).then(function () {
+            if (place.addressComponents && place.addressComponents.length) {
+              apply(place.addressComponents, function (c) { return c.longText; });
+            } else { viaGeocoder(); }
+          }).catch(viaGeocoder);
+        } else { viaGeocoder(); }
+      } catch (e) { viaGeocoder(); }
+    }
+    function bindPlacesInputs() {
+      if (!(window.google && google.maps && google.maps.places)) return;
+      PLACES_SETS.forEach(function (set) {
+        [{ name: set.street, types: ['address'] }, { name: set.city, types: ['(cities)'] }].forEach(function (b) {
+          var input = form.querySelector('[name="' + cssEsc(b.name) + '"]');
+          if (!input || input.hasAttribute('data-places-bound')) return;
+          var ac = new google.maps.places.Autocomplete(input, { types: b.types, fields: ['address_components', 'place_id'] });
+          ac.addListener('place_changed', function () {
+            var place = ac.getPlace();
+            if (!place || !place.address_components) return;
+            var comps = place.address_components;
+            if (b.types[0] === 'address') {
+              placesSetHe_(set.street, placesComp_(comps, 'route'));
+              placesSetHe_(set.house, placesComp_(comps, 'street_number'));
+              placesSetHe_(set.city, placesCity_(comps));
+              inferOffer(set.zip, placesComp_(comps, 'postal_code')); // מיקוד is optional: offer only
+            } else {
+              placesSetHe_(set.city, placesCity_(comps));
+            }
+            if (place.place_id) placesFillEnglish_(place.place_id, set);
+          });
+          input.setAttribute('data-places-bound', '1');
+          input.__lvpAc = ac;   // exposed for the deploy-gate walk (trigger place_changed with a stubbed getPlace)
+        });
+      });
+    }
+    function initPlacesAutocomplete() {
+      var key = CFG.placesApiKey || PLACES_KEY_FALLBACK;
+      if (!key) return;
+      if (window.google && google.maps && google.maps.places) { bindPlacesInputs(); return; }
+      window.__lvpInitPlaces = function () { bindPlacesInputs(); };
+      var sc = document.createElement('script');
+      sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) +
+               '&libraries=places&language=iw&region=IL&callback=__lvpInitPlaces';
+      sc.async = true; sc.defer = true;
+      document.head.appendChild(sc);
+    }
+
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
         row.setAttribute('data-row-index', i);
@@ -2593,6 +2715,7 @@
     applyAutocomplete();    // autofill tokens on the primary subject's identity fields
     applyConditionals();
     applyInferredDefaults();   // safe defaults AFTER hydration: empty fields only, all editable
+    initPlacesAutocomplete();  // Hebrew address once -> English mirror derived
     // Amount: whole-number, thousands separators on blur.
     (function () {
       var a = form.querySelector('[data-amount]');
