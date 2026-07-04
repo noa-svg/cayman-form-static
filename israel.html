@@ -401,7 +401,7 @@
           </div>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
-          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
         </section>
 
         <!-- ============================================================== -->
@@ -768,7 +768,7 @@
           </div>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
-          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
         </section>
 
         <!-- ============================================================== -->
@@ -795,7 +795,7 @@
           <h3 class="lvp-subhead">המוסד ממנו יועברו הכספים</h3>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.bankDetails.bankNameIsrael"></label>
-            <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric"></label>
+            <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric" data-digits></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" data-validate="il-account" inputmode="numeric"></label>
 
@@ -861,7 +861,7 @@
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">נהנה/ית ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">שם מלא</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].fullName"></label>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">מספר תעודה מזהה/ח.פ</span><input class="lvp-input" type="text" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].idOrCompanyNumber"></label>
+                <label class="lvp-field"><span class="lvp-field__label">מספר תעודה מזהה/ח.פ</span><input class="lvp-input" type="text" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].idOrCompanyNumber" inputmode="numeric" data-digits></label>
                 <label class="lvp-field"><span class="lvp-field__label">תאריך לידה/תאריך התאגדות</span><input class="lvp-input" type="text" name="beneficiaryStatement.beneficiariesDetails.beneficiariesArray[${i}].birthOrIncorporationDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
               </div>
               <div class="lvp-grid-2">
@@ -1575,12 +1575,23 @@
                : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3)
                : d;
     }
+    // FL5 fix, copy-free: digits-only mask (same pattern as maskSsn/maskDate) for
+    // fields the server or reality restricts to digits but that had no client gate:
+    // branch number, lawyer license (server digits_required, IsraeliValidation.js),
+    // beneficiary ID/company number. Invalid characters cannot be typed, so no new
+    // error string is needed. TIN fields are NOT masked: the server imposes no
+    // digits rule on them and foreign TINs can be alphanumeric.
+    function maskDigits(el) {
+      var d = String(el.value).replace(/\D/g, '');
+      if (d !== el.value) el.value = d;
+    }
     form.addEventListener('input', function (e) {
       var el = e.target;
       if (!el || !el.getAttribute) return;
       var rule = el.getAttribute('data-validate');
       if (rule === 'date-past' || rule === 'date-future' || rule === 'first-business-day') maskDate(el);
       else if (rule === 'ssn') maskSsn(el);
+      else if (el.hasAttribute('data-digits')) maskDigits(el);
     });
     function applyInputmodes(scope) {
       (scope || form).querySelectorAll('input[data-validate="il-id"], input[data-validate="ssn"]').forEach(function (i) {
