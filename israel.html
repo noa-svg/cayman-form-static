@@ -196,6 +196,11 @@
        shared status line. When a specific message is shown the " חובה"/"required"
        label suffix is suppressed (the field is filled but invalid, not empty). */
     .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
+    .lvp-error-summary { border: 1px solid var(--lvp-error); background: #FFF5F5; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; }
+    .lvp-error-summary__title { color: var(--lvp-error); font-weight: 700; font-size: 15px; margin: 0 0 8px; }
+    .lvp-error-summary ul { margin: 0; padding-inline-start: 20px; }
+    .lvp-error-summary li { margin: 2px 0; }
+    .lvp-error-summary a { color: var(--lvp-error); text-decoration: underline; cursor: pointer; font-size: 14px; }
     /* Legend-less consent fieldsets (single required checkbox: waiver, isReadClaims,
        isSignForEntity). The required pass marks the fieldset holder; with no legend
        to carry the suffix, the label itself goes red and reuses the SAME suffix
@@ -2660,7 +2665,8 @@
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
-      if (!validatePage(page)) { setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      renderErrorSummary(page);
       // Advance INSTANTLY (optimistic); persist for resume in the background so
       // Continue never waits on the GAS round-trip. A failed save surfaces a note
       // but does not block navigation (state held client-side).
@@ -2669,7 +2675,8 @@
     });
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();
-      if (!validatePage(page)) { setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      renderErrorSummary(page);
       doSubmit();
     });
 
@@ -2746,6 +2753,40 @@
       host.innerHTML = html;
     }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
+    // Error summary (a11y, WCAG 3.3.1/2.4.3): render a titled list of the page's errored
+    // fields with jump-to-field links, from the holders validatePage() already marked.
+    // Additive - reads the DOM, never changes validation. Title reuses the approved status
+    // string (no new copy). Removes itself when the page has no errors.
+    function renderErrorSummary(pageEl) {
+      var existing = pageEl.querySelector('[data-error-summary]');
+      var bad = Array.prototype.slice.call(pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error'));
+      if (!bad.length) { if (existing) existing.parentNode.removeChild(existing); return; }
+      var box = existing;
+      if (!box) {
+        box = document.createElement('div');
+        box.className = 'lvp-error-summary';
+        box.setAttribute('data-error-summary', '');
+        box.setAttribute('role', 'alert');
+        box.setAttribute('aria-live', 'assertive');
+        var titleEl = pageEl.querySelector('.lvp-page__title');
+        if (titleEl && titleEl.nextSibling) pageEl.insertBefore(box, titleEl.nextSibling);
+        else pageEl.insertBefore(box, pageEl.firstChild);
+      }
+      var items = bad.map(function (h, idx) {
+        var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend');
+        var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim() || 'שדה';
+        h.setAttribute('data-err-idx', idx);
+        return '<li><a data-err-jump="' + idx + '">' + esc(txt) + '</a></li>';
+      }).join('');
+      box.innerHTML = '<p class="lvp-error-summary__title">' + esc(displayFor('נא להשלים את שדות החובה.', curLang)) + '</p><ul>' + items + '</ul>';
+      Array.prototype.forEach.call(box.querySelectorAll('[data-err-jump]'), function (a) {
+        a.onclick = function () {
+          var h = pageEl.querySelector('[data-err-idx="' + a.getAttribute('data-err-jump') + '"]');
+          var inp = h && h.querySelector('input, select, textarea');
+          if (inp) { try { inp.focus(); } catch (e) {} }
+        };
+      });
+    }
     // Jump from a review section to its page for editing.
     form.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-review-goto]');
