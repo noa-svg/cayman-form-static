@@ -2091,12 +2091,33 @@
       el.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
       el.querySelector('span').textContent = filename;
     }
+    // Accepted upload MIME types, mirroring the accept="" attribute on every
+    // file input. The accept attribute is advisory only (a .txt renamed .pdf, or
+    // a wrong file the OS picker lets through, still reaches change), so we
+    // validate the real File.type. Entity-stamp placement + the bank/BDO pack
+    // depend on real images/PDFs, never text or empty files.
+    var UPLOAD_ACCEPT_TYPES = { 'image/jpeg': 1, 'image/png': 1, 'application/pdf': 1 };
+    function uploadFieldError(inp, heMsg) {
+      var holder = inp.closest('.lvp-field');
+      if (holder) setFieldError(holder, displayFor(heMsg, curLang));
+      else setStatus(displayFor(heMsg, curLang), true);
+    }
     form.addEventListener('change', function (e) {
       var inp = e.target;
       if (!inp.hasAttribute('data-upload')) return;
       var slot = inp.getAttribute('data-upload');
       var f = inp.files && inp.files[0];
       if (!f) { delete pendingUploads[slot]; setFileSuccess(inp, null); return; }
+      // B4: reject an empty (0-byte) file. A blank doc must never reach the
+      // bank/BDO pack; the FileReader would otherwise base64 an empty body and
+      // the slot would read as "uploaded". A 0-byte file is not a usable
+      // JPG/PNG/PDF, so it reuses the approved accepted-formats hint (no new
+      // copy). A more precise empty-file sentence is queued for Noa.
+      if (f.size === 0) { delete pendingUploads[slot]; uploadFieldError(inp, 'נא להעלות קובץ בפורמט JPG, PNG או PDF.'); inp.value = ''; setFileSuccess(inp, null); return; }
+      // B6: reject a wrong-type file (the accept attribute is advisory). Some
+      // browsers report an empty type for unknown extensions; treat that as
+      // unsupported too. Reuse the approved accepted-formats hint.
+      if (!UPLOAD_ACCEPT_TYPES[f.type]) { delete pendingUploads[slot]; uploadFieldError(inp, 'נא להעלות קובץ בפורמט JPG, PNG או PDF.'); inp.value = ''; setFileSuccess(inp, null); return; }
       if (f.size > 10 * 1024 * 1024) { setStatus(displayFor('הקובץ גדול מ-10 מ"ב. יש להעלות קובץ קטן יותר.', curLang), true); inp.value = ''; setFileSuccess(inp, null); return; }
       var reader = new FileReader();
       reader.onload = function () {
