@@ -194,6 +194,16 @@
        shared status line. When a specific message is shown the " חובה"/"required"
        label suffix is suppressed (the field is filled but invalid, not empty). */
     .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
+    /* Legend-less consent fieldsets (single required checkbox: waiver, isReadClaims,
+       isSignForEntity). The required pass marks the fieldset holder; with no legend
+       to carry the suffix, the label itself goes red and reuses the SAME suffix
+       strings the legend mechanic emits (no new copy). */
+    .lvp-fieldset--bare.lvp-fieldset--error > .lvp-checkbox,
+    .lvp-fieldset--bare.lvp-fieldset--error > .lvp-radio { color: var(--lvp-error); }
+    .lvp-fieldset--bare.lvp-fieldset--error > .lvp-checkbox::after,
+    .lvp-fieldset--bare.lvp-fieldset--error > .lvp-radio::after { content: " חובה"; font-weight: 400; opacity: 0.85; }
+    [dir="ltr"] .lvp-fieldset--bare.lvp-fieldset--error > .lvp-checkbox::after,
+    [dir="ltr"] .lvp-fieldset--bare.lvp-fieldset--error > .lvp-radio::after { content: " required"; }
     .lvp-field--has-msg.lvp-field--error .lvp-field__label::after,
     .lvp-fieldset--has-msg.lvp-fieldset--error .lvp-fieldset__legend::after { content: none; }
 
@@ -351,11 +361,19 @@
         <!-- PAGE: qualification (investorsArray[0].qualification) -->
         <section class="lvp-page" data-page="ind.qualification" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">כשירות</h2>
-          <p class="lvp-page__hint">יש לבחור אפשרות אחת.</p>
+          <!-- FL1 fix: the 4 qualification boxes were standalone labels validatePage
+               never enforced (page advanced with nothing selected). Wrapped in the
+               standard .lvp-fieldset holder so the existing required pass enforces
+               at-least-one-of; the former page hint is now the legend (same approved
+               string), so the mechanic's " חובה" suffix lands on it. The JS mutex
+               (enforceQualMutex / single-select) is selector-based and unaffected. -->
+          <fieldset class="lvp-fieldset">
+          <legend class="lvp-fieldset__legend">יש לבחור אפשרות אחת.</legend>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isLiquidAssets" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isIncomeLevel" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isBoth" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isNotQualified" value="true" data-qual-none="indQual" data-show-when-trigger="__indQual"> אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.</label>
+          </fieldset>
 
           <div data-show-when="__indQualified=true">
             <h3 class="lvp-subhead">אישור כשירות</h3>
@@ -436,10 +454,16 @@
         <!-- PAGE: entity qualification (corporationDetails.qualification) -->
         <section class="lvp-page" data-page="ent.qualification" data-applicant="entity" hidden>
           <h2 class="lvp-page__title">כשירות התאגיד</h2>
-          <p class="lvp-page__hint">יש לבחור אפשרות אחת.</p>
+          <!-- FL1 fix: same as the individual qualification page. The 3 clauses were
+               standalone radios the required pass skipped; the standard fieldset
+               holder (legend = the former page hint, same approved string) makes
+               one-of-three mandatory via the existing mechanic. -->
+          <fieldset class="lvp-fieldset">
+          <legend class="lvp-fieldset__legend">יש לבחור אפשרות אחת.</legend>
           <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="equity50M" data-show-when-trigger="corporationDetails.qualification"> הננו תאגיד, למעט תאגיד שהתאגד למטרת רכישת ניירות ערך בהצעה נוכחית זו, שההון העצמי שלו עולה על 50 מיליון שקלים חדשים. בפסקה זו, "הון עצמי", לרבות לפי כללי חשבונאות זרים, תקני חשבונאות בין-לאומיים, וכללי חשבונאות מקובלים בארצות הברית כהגדרתם לפי סעיפים 17(ב)(1) ו-36 לחוק ניירות ערך;</label>
           <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="whollyOwned" data-show-when-trigger="corporationDetails.qualification"> הננו תאגיד הנמצא בבעלות מלאה של משקיעים המנויים בסעיף 15א(ב) לחוק ניירות ערך, תשכ"ח-1968*</label>
           <label class="lvp-radio"><input type="radio" name="corporationDetails.qualification" value="nonQualified" data-show-when-trigger="corporationDetails.qualification"> אנו מצטרפים כתאגיד לא כשיר בידיעת מנהל הקרן עומרי ולורט</label>
+          </fieldset>
 
           <div data-show-when="__entQualified=true">
             <h3 class="lvp-subhead">אישור כשירות</h3>
@@ -479,7 +503,9 @@
             </div>
           </fieldset>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email"></label>
-          <label class="lvp-checkbox"><input type="checkbox" name="firstAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
+          <!-- FL1 fix: consent was a standalone label the required pass skipped.
+               Bare fieldset holder = enforced by the existing mechanic. -->
+          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="firstAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label></fieldset>
 
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">האם לפי פרוטוקול מורשי החתימה יש נציג/ה נוסף/ת שמחויב/ת בחתימה?</legend>
@@ -512,7 +538,8 @@
               </div>
             </fieldset>
             <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
-            <label class="lvp-checkbox"><input type="checkbox" name="secondAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label>
+            <!-- FL1 fix: enforced via the bare fieldset holder (see first signatory). -->
+            <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="secondAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label></fieldset>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">האם הנציג/ה המורשה הנוסף/ת הוא/היא בעל/ת שליטה בתאגיד?</legend>
               <label class="lvp-radio"><input type="radio" name="secondAuthorized.isControlling" value="כן"> כן</label>
@@ -653,7 +680,8 @@
               <option value="opt10">Other</option>
             </select>
           </label>
-          <label class="lvp-checkbox"><input type="checkbox" name="entityW8.isSignForEntity" value="true"> אני מוסמך/ת לחתום בשם הישות.</label>
+          <!-- FL1 fix: enforced via the bare fieldset holder (see signatory consent). -->
+          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="entityW8.isSignForEntity" value="true"> אני מוסמך/ת לחתום בשם הישות.</label></fieldset>
         </section>
 
         <!-- PAGE: controlling persons gate + array (controllingShareholdersContainer) -->
@@ -853,7 +881,9 @@
 1. ביום נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
 2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
 3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
-          <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label>
+          <!-- FL1 fix: the waiver consent was skippable (standalone label). Bare
+               fieldset holder = the page can no longer advance unchecked. -->
+          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
         </section>
 
         <!-- PAGE: FATCA / CRS tax residency (investorsArray[0].taxResidency) - individual only -->
