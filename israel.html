@@ -98,11 +98,9 @@
     .lvp-progress__bar > span { display: block; height: 100%; background: var(--lvp-yellow); transition: width 200ms ease; }
 
     .lvp-page__title { color: var(--lvp-navy); font-size: 24px; font-weight: 700; margin: 0 0 14px; }
-    .lvp-page__title::after { content: ""; display: block; height: 4px; width: 90px; margin-top: 8px;
-      background: linear-gradient(to right, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
-    /* RTL: the title is right-aligned, so mirror the accent to start (yellow) from
-       the right edge under the first characters. */
-    .lvp-card[dir="rtl"] .lvp-page__title::after { background: linear-gradient(to left, var(--lvp-yellow) 0 45px, var(--lvp-navy) 45px 90px); }
+    /* One calm solid navy accent, matching signer.html (was a two-tone gold+navy split bar). */
+    .lvp-page__title::after { content: ""; display: block; height: 3px; width: 44px; margin-top: 8px;
+      border-radius: 2px; background: var(--lvp-navy); }
     .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 24px; }
 
     .lvp-field { display: block; margin-bottom: 24px; }
@@ -149,14 +147,16 @@
       border: none; border-radius: 999px; padding: 8px 18px; margin-inline-end: 12px; cursor: pointer;
     }
     .lvp-input[type="file"]::file-selector-button:hover { background: var(--lvp-navy-700); }
-    .lvp-file-success { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: #1f7a3d; font-size: 13px; font-weight: 600; }
+    /* File-success in navy, holding the two-color navy/gold system (was off-palette green). */
+    .lvp-file-success { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--lvp-navy); font-size: 13px; font-weight: 600; }
     .lvp-field--has-file .lvp-input[type="file"] { color: var(--lvp-text-muted); }
     /* Review summary: one section per page, a jump-to-edit header, label:value list. */
     .lvp-review__section { border-top: 1px solid #EDEDED; padding: 12px 0; }
     .lvp-review__section:first-child { border-top: none; }
     .lvp-review__edit { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none; padding: 0 0 8px; cursor: pointer; color: var(--lvp-navy); font: inherit; font-weight: 700; font-size: 15px; }
     .lvp-review__edit--static { cursor: default; }
-    .lvp-review__edit svg { color: var(--lvp-yellow-700); }
+    /* Chevron in the same navy as the header; gold stays reserved for the progress/accent role. */
+    .lvp-review__edit svg { color: var(--lvp-navy); }
     .lvp-review__dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
     .lvp-review__dl dt { color: var(--lvp-text-muted); font-size: 13px; }
     .lvp-review__dl dd { margin: 0; color: var(--lvp-text); font-size: 13px; font-weight: 600; }
@@ -211,6 +211,12 @@
     .lvp-result { text-align: center; padding: 24px 8px 12px; }
     .lvp-result__spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #EFEFEF; border-top-color: var(--lvp-navy); animation: lvp-spin 800ms linear infinite; margin: 8px auto 20px; }
     @keyframes lvp-spin { to { transform: rotate(360deg); } }
+    /* Honor the OS reduce-motion setting (mirrors signer.html): no spinner spin,
+       no progress-bar slide. Smooth scrolls are gated to 'auto' in JS. */
+    @media (prefers-reduced-motion: reduce) {
+      .lvp-result__spinner { animation: none; }
+      .lvp-progress__bar > span { transition: none; }
+    }
     .lvp-result__check { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--lvp-yellow); margin-bottom: 16px; }
     .lvp-result__check svg { width: 28px; height: 28px; }
     .lvp-result__divider { width: 64px; height: 3px; background: var(--lvp-yellow); margin: 0 auto 20px; border-radius: 2px; }
@@ -285,7 +291,7 @@
       <div class="lvp-progress" aria-label="התקדמות" data-progress hidden>
         <!-- dir=ltr: keeps the "2 / 13" page counter in reading order; RTL bidi
              otherwise swaps the two numbers ("13 / 2"). Numbers only, no copy. -->
-        <span class="lvp-progress__indicator" data-progress-indicator dir="ltr"></span>
+        <span class="lvp-progress__indicator" data-progress-indicator dir="ltr" aria-live="polite"></span>
         <div class="lvp-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-progress-bar style="width: 0%"></span></div>
       </div>
 
@@ -571,14 +577,14 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
           <template data-row-template="entres2">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
 
@@ -907,14 +913,14 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
           <template data-row-template="indres2">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="numeric"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
         </section>
@@ -1605,6 +1611,38 @@
       else if (rule === 'ssn') maskSsn(el);
       else if (el.hasAttribute('data-digits')) maskDigits(el);
     });
+    // Blur-validate (reward early) + clear-on-fix. Reuses the EXISTING validateField
+    // + setFieldError (no new messages, no validator changes). Only runs on
+    // format-validatable inputs; emptiness stays a required-pass concern (validateField
+    // returns null on empty), so blur never nags an untouched field.
+    function isFormatValidatable_(el) {
+      return el && el.tagName === 'INPUT' && (el.hasAttribute('data-validate') || el.type === 'email');
+    }
+    function clearFieldError_(holder) {
+      if (!holder) return;
+      holder.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg');
+      var next = holder.nextElementSibling;
+      if (next && next.classList && next.classList.contains('lvp-error-msg')) next.remove();
+      unbindFieldInvalid_(holder);
+    }
+    form.addEventListener('focusout', function (e) {
+      var el = e.target;
+      if (!isFormatValidatable_(el)) return;
+      var holder = el.closest('.lvp-field, .lvp-fieldset');
+      if (!holder || isHidden(holder)) return;
+      var err = validateField(el);
+      if (err) { holder.classList.add('lvp-field--error'); setFieldError(holder, displayFor(err, curLang)); }
+      else clearFieldError_(holder);
+    });
+    // Once a field is showing an error, re-validate on input so the red state clears
+    // the moment the LP fixes it (do not raise a NEW error mid-typing).
+    form.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!isFormatValidatable_(el)) return;
+      var holder = el.closest('.lvp-field, .lvp-fieldset');
+      if (!holder || !holder.classList.contains('lvp-field--error')) return;
+      if (!validateField(el)) clearFieldError_(holder);
+    });
     function applyInputmodes(scope) {
       (scope || form).querySelectorAll('input[data-validate="il-id"], input[data-validate="ssn"]').forEach(function (i) {
         if (!i.getAttribute('inputmode')) i.setAttribute('inputmode', 'numeric');
@@ -1616,11 +1654,19 @@
     // rows would make the browser autofill the same person into every row.
     function applyAutocomplete() {
       var map = {
+        'investorsArray[0].firstName': 'given-name',
+        'investorsArray[0].lastName': 'family-name',
         'investorsArray[0].englishDetails.firstName': 'given-name',
         'investorsArray[0].englishDetails.lastName': 'family-name',
         'investorsArray[0].email': 'email',
         'investorsArray[0].phoneNumber': 'tel',
         'investorsArray[0].birthDate': 'bday',
+        'investorsArray[0].israelAddress.city': 'address-level2',
+        'investorsArray[0].israelAddress.street': 'address-line1',
+        'investorsArray[0].israelAddress.postalCode': 'postal-code',
+        'corporationDetails.israelAddress.city': 'address-level2',
+        'corporationDetails.israelAddress.street': 'address-line1',
+        'corporationDetails.israelAddress.postalCode': 'postal-code',
         'firstAuthorized.englishDetails.firstName': 'given-name',
         'firstAuthorized.englishDetails.lastName': 'family-name',
         'firstAuthorized.email': 'email'
@@ -1698,6 +1744,9 @@
       if (!host) return;
       var first = host.querySelector('input[name^="contactArray"]');
       if (!first) { addRow('contactArray'); first = host.querySelector('input[name^="contactArray"]'); }
+      // Email autofill token on the first communication email only (browser offers
+      // the LP's saved address). Not on later rows, to avoid a same-value offer.
+      if (first && !first.getAttribute('autocomplete')) first.setAttribute('autocomplete', 'email');
       if (first && !first.value) {
         var inv = form.querySelector('[name="investorsArray[0].email"]');
         var auth = form.querySelector('[name="firstAuthorized.email"]');
@@ -2441,7 +2490,7 @@
     function validatePage(pageEl) {
       var ok = true;
       var firstError = null;
-      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); });
+      pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); unbindFieldInvalid_(f); });
       pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
       // Required-field pass: every label/legend carries its field; a required field
       // is one whose holder is visible and whose label has no opt-out. EasySend
@@ -2463,6 +2512,7 @@
         if (sawControl && !filled) {
           ok = false;
           holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--error' : 'lvp-field--error');
+          bindFieldInvalid_(holder, null);
           if (!firstError) firstError = holder;
         }
       });
@@ -2529,7 +2579,8 @@
         }
       }
       if (firstError) {
-        try { firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        var _rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try { firstError.scrollIntoView({ behavior: _rm ? 'auto' : 'smooth', block: 'center' }); }
         catch (_) { firstError.scrollIntoView(); }
         var focusable = firstError.querySelector ? firstError.querySelector('input, select, textarea') : null;
         if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (_) {} }
@@ -2542,16 +2593,36 @@
     }
     // Render a format-error message under a field holder, suppressing the generic
     // " חובה"/"required" label suffix for that field (it is invalid, not empty).
+    // Programmatic a11y binding: mark the holder's controls aria-invalid and point
+    // aria-describedby at the inline message id, so a screen reader announces which
+    // field failed and reads the existing (approved) message. Mirrors signer.html.
+    var _lvpErrSeq = 0;
+    function bindFieldInvalid_(holder, msgEl) {
+      if (msgEl && !msgEl.id) msgEl.id = 'lvp-err-' + (++_lvpErrSeq);
+      var inputs = holder.querySelectorAll('input, select, textarea');
+      Array.prototype.forEach.call(inputs, function (i) {
+        i.setAttribute('aria-invalid', 'true');
+        if (msgEl && msgEl.id) i.setAttribute('aria-describedby', msgEl.id);
+      });
+    }
+    function unbindFieldInvalid_(holder) {
+      var inputs = holder.querySelectorAll('input, select, textarea');
+      Array.prototype.forEach.call(inputs, function (i) {
+        i.removeAttribute('aria-invalid');
+        i.removeAttribute('aria-describedby');
+      });
+    }
     function setFieldError(holder, msg) {
       holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--has-msg' : 'lvp-field--has-msg');
       var next = holder.nextElementSibling;
       var e = (next && next.classList && next.classList.contains('lvp-error-msg')) ? next : null;
       if (!e) { e = document.createElement('p'); e.className = 'lvp-error-msg'; holder.parentNode.insertBefore(e, holder.nextSibling); }
       e.textContent = msg;
+      bindFieldInvalid_(holder, e);
     }
     function clearError(pageEl) {
       if (!pageEl) return;
-      pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); });
+      pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); unbindFieldInvalid_(f); });
       pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
     }
 
