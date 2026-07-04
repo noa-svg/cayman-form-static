@@ -2295,8 +2295,13 @@
 
     // ---- validation: required visible fields on the current page ----
     function isValidIlId(v) {
-      var s = String(v || '').replace(/\D/g, '');
-      if (s.length === 0 || s.length > 9) return false;
+      // Parity with the server (IsraeliValidation.js israeliValidId_): trim only,
+      // then require pure digits. The old .replace(/\D/g,'') stripped INTERNAL
+      // spaces too, so a spaced ID ("039 501 690") passed here then bounced the
+      // server's /^\d{1,9}$/ with a generic toast. Mirror the server so the
+      // client catches the same cases (spaced/hyphenated IDs fail on the page).
+      var s = String(v || '').trim();
+      if (!/^\d{1,9}$/.test(s)) return false;
       s = ('00000000' + s).slice(-9);
       var sum = 0;
       for (var i = 0; i < 9; i++) {
