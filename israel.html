@@ -1626,7 +1626,15 @@
           setStatus(displayFor('יש להזין לפחות רשומה אחת כאן.', curLang), true);
           return;
         }
-        row.remove(); reindex(host); refreshAddButtons(); return;
+        row.remove(); reindex(host); refreshAddButtons();
+        // Keep the מספר משקיעים נוספים radio consistent with the actual row count
+        // when a row is deleted via its own remove button (FL2).
+        if (host.getAttribute('data-repeating-typed-path') === '__additionalInvestorsArray') {
+          var left = host.querySelectorAll('[data-row-index]').length;
+          var rb = form.querySelector('input[name="additionalInvestorsNumber"][value="' + left + '"]');
+          if (rb) rb.checked = true;
+        }
+        return;
       }
     });
     function repeatHost(path) { return form.querySelector('[data-repeating-typed-path="' + path + '"]'); }
@@ -1688,6 +1696,29 @@
         var dst = row.querySelector('[name$=".israelAddress.' + k + '"]');
         if (src && dst) { dst.value = src.value; dst.dispatchEvent(new Event('input', { bubbles: true })); }
       });
+    });
+    // FL2 fix: the מספר משקיעים נוספים radio (1/2) was wired to nothing and the
+    // __additionalInvestorsArray host has no add-row button, so the second row was
+    // unreachable and answering "2" still collected one investor. The radio now
+    // drives the row count through the existing repeating-row machinery: 2 clones
+    // the second row from the addinv template (row 1 data preserved), 1 removes it
+    // (explicit downgrade clears row 2 by design).
+    function syncAdditionalInvestorRows(want) {
+      var host = repeatHost('__additionalInvestorsArray');
+      if (!host) return;
+      var max = parseInt(host.getAttribute('data-repeating-max'), 10);
+      if (!isNaN(max) && want > max) want = max;
+      var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+      if (want < min) want = min;
+      function rows() { return host.querySelectorAll('[data-row-index]'); }
+      while (rows().length < want) addRow('__additionalInvestorsArray');
+      while (rows().length > want) rows()[rows().length - 1].remove();
+      reindex(host); refreshAddButtons();
+    }
+    form.addEventListener('change', function (e) {
+      var el = e.target;
+      if (!el || el.name !== 'additionalInvestorsNumber' || !el.checked) return;
+      syncAdditionalInvestorRows(Number(el.value) || 1);
     });
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
