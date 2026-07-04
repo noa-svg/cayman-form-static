@@ -2034,7 +2034,9 @@
       // with only the generic submit toast; gate it on the page (Noa-approved copy
       // 2026-07-04, found by the prod go-live smoke).
       if (rule === 'il-account') {
-        if (!/^\d+$/.test(v)) return 'מספר החשבון אינו תקין.';
+        // digits only (server rule) + 4-13 length, the same bound the Israeli
+        // increase/withdrawal server lane enforces (F-2.1) and banking reality.
+        if (!/^\d{4,13}$/.test(v)) return 'מספר החשבון אינו תקין.';
       }
       if (rule === 'pct') {
         var pn = Number(v.replace(/[,\s%]/g, ''));
