@@ -2139,6 +2139,13 @@
       var data = {};
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
         if (inp.disabled) return;
+        // Payload cleanliness: never serialize a control whose show-when block is
+        // hidden. Without this, an LP who fills a block (e.g. a second authorized
+        // signatory, an "other source" note) then deselects it leaves the typed
+        // values in the DOM, and the gateway would receive a phantom party and
+        // could dispatch a real signing link to someone the LP removed. The infer
+        // engine only retracts fields with an explicit rule; this covers the rest.
+        if (isHidden(inp)) return;
         if (inp.type === 'radio' && !inp.checked) return;
         if (inp.type === 'checkbox') {
           setPath(data, inp.name, inp.checked ? (inp.value === 'true' ? true : inp.value) : false);
