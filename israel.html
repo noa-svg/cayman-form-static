@@ -50,7 +50,7 @@
       --lvp-yellow-700: #e09e1f;
       --lvp-text: #1d1d1d;
       --lvp-text-muted: #545454;
-      --lvp-input-line: #C2C2C2;
+      --lvp-input-line: #8E8E8E;
       --lvp-input-line-active: #0D3F6A;
       --lvp-card-bg: #FFFFFF;
       --lvp-error: #c0392b;
@@ -104,7 +104,7 @@
     .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 24px; }
 
     .lvp-field { display: block; margin-bottom: 24px; }
-    .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 6px; font-weight: 500; }
+    .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 14px; margin-bottom: 6px; font-weight: 500; }
     .lvp-input, .lvp-input--select {
       width: 100%; padding: 8px 0; border: none;
       border-bottom: 1px solid var(--lvp-input-line);
@@ -112,6 +112,8 @@
       outline: none; transition: border-color 150ms ease;
     }
     .lvp-input:focus, .lvp-input--select:focus { border-bottom-color: var(--lvp-input-line-active); border-bottom-width: 2px; padding-bottom: 7px; }
+    /* Visible keyboard focus for everyone (WCAG 2.4.7). Mouse focus stays clean via :focus-visible. */
+    .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
 
     .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
     .lvp-btn {
@@ -136,7 +138,7 @@
     .lvp-status--note { color: var(--lvp-text-muted); }
 
     .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
-    .lvp-hint-small { color: var(--lvp-text-muted); font-size: 12px; margin: 4px 0 12px; }
+    .lvp-hint-small { color: var(--lvp-text-muted); font-size: 13px; margin: 4px 0 12px; }
     .lvp-hint--help { margin: 4px 0 0; }   /* field help sits snug under its input */
     /* File inputs: brand the native picker button (was gray) + success line. The
        button's text stays browser-locale controlled; a Hebrew custom-trigger label
@@ -242,6 +244,7 @@
       font: inherit; font-size: 13px; font-weight: 700;
       border: none; background: transparent; color: var(--lvp-navy);
       padding: 7px 16px; cursor: pointer; line-height: 1.2;
+      min-height: 44px; display: inline-flex; align-items: center;  /* WCAG 2.5.8 touch target */
       transition: background 120ms ease, color 120ms ease;
     }
     .lvp-lang__btn[aria-pressed="true"] { background: var(--lvp-navy); color: #fff; }
