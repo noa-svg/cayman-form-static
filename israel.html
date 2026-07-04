@@ -1819,7 +1819,25 @@
       }
       return false;
     }
-    function inferMintEmail_() { return (CFG && (CFG.mintEmail || CFG.inviteEmail || CFG.lpEmail || CFG.email)) || null; }
+    function inferMintEmail_() {
+      if (!CFG) return null;
+      // The mint/invite email the operator entered lands on CFG.prefill in the
+      // Cayman gateway shape (caymanSeedMintPrefill_): prefill.individual.email
+      // for a person, prefill.entity.email for a corporation. The Israeli form's
+      // own field is investorsArray[0].email / corporationDetails.email, so
+      // without reading the Cayman shape the default never fires on this lane.
+      // markSnapFromPrefill only marks the shape it walks (individual.email),
+      // NOT investorsArray[0].email, so this rule stays eligible; the value is a
+      // convenience default the LP can always edit (snapshot/touched still win).
+      var pf = (CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
+      var fromPrefill = pf && (
+        (pf.individual && pf.individual.email) ||
+        (pf.entity && pf.entity.email) ||
+        (Array.isArray(pf.investorsArray) && pf.investorsArray[0] && pf.investorsArray[0].email) ||
+        (pf.corporationDetails && pf.corporationDetails.email)
+      );
+      return fromPrefill || CFG.mintEmail || CFG.inviteEmail || CFG.lpEmail || CFG.email || null;
+    }
     var INFER_RULES = [
       // Country-of-fact defaults: the Israeli lane onboards Israeli LPs and
       // Israeli corporations only (ju entities are Israeli, project memory), so
