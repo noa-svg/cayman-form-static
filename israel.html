@@ -2145,7 +2145,18 @@
         // values in the DOM, and the gateway would receive a phantom party and
         // could dispatch a real signing link to someone the LP removed. The infer
         // engine only retracts fields with an explicit rule; this covers the rest.
-        if (isHidden(inp)) return;
+        // CRITICAL: scope the skip to SHOW-WHEN hiding WITHIN the field's own page.
+        // A naive isHidden() also catches the wizard's page-level [hidden] (every
+        // non-current page), which drops every off-page field and submits an empty
+        // payload. Walk stops at the [data-page] ancestor, mirroring reviewHolderHidden.
+        var pg = inp.closest('[data-page]');
+        var anc = inp;
+        var condHidden = false;
+        while (anc && anc !== pg) {
+          if (anc.hidden || (anc.style && anc.style.display === 'none')) { condHidden = true; break; }
+          anc = anc.parentElement;
+        }
+        if (condHidden) return;
         if (inp.type === 'radio' && !inp.checked) return;
         if (inp.type === 'checkbox') {
           setPath(data, inp.name, inp.checked ? (inp.value === 'true' ? true : inp.value) : false);
