@@ -1406,6 +1406,14 @@
         }
       }
       if (cfg.language === 'en' && typeof applyLang === 'function') applyLang('en');
+      // Late-arriving session facts: seed the snapshot guard, hydrate the saved
+      // snapshot (skipping anything the LP already touched live in the seconds
+      // before the config landed), then re-run the inferred defaults so the
+      // mint email + lane defaults apply against the updated CFG. Snapshot
+      // values land AFTER the guard seeding, so they always beat auto defaults.
+      markSnapFromPrefill();
+      if (cfg.prefill) hydrateFromPrefill(true);
+      applyInferredDefaults();
     };
 
     function applicant() { return APPLICANT; }
@@ -1545,6 +1553,9 @@
     }
 
     form.addEventListener('change', function (e) {
+      // A trusted change = the LP answered this control themselves: the
+      // inferred-defaults engine must never override it again.
+      if (e.isTrusted && e.target && e.target.name) TOUCHED[e.target.name] = true;
       if (e.target.getAttribute && (e.target.getAttribute('data-qual-group') === 'indQual' || e.target.getAttribute('data-qual-none') === 'indQual')) {
         // Single-select across the 3 §15A threshold boxes (the page says 'choose
         // ONE option'): checking one clears the others, so they behave like radios.
@@ -1556,6 +1567,7 @@
         enforceQualMutex();
       }
       applyConditionals();
+      applyInferredDefaults();   // re-derive dependent defaults off the new answer
     });
     form.addEventListener('input', function () { clearError(currentPageEl()); });
 
@@ -1731,6 +1743,201 @@
       if (!el || el.name !== 'additionalInvestorsNumber' || !el.checked) return;
       syncAdditionalInvestorRows(Number(el.value) || 1);
     });
+    // ================================================================
+    // Inferred defaults (Noa 2026-07-04: "see if other things can be
+    // automatically inferred so our LP has a breeze" + "never pre-marking a
+    // legal declaration - u can if u have the info").
+    //
+    // Every rule fills its target ONLY while the target is empty or still
+    // holding the rule's own previous auto value, and NEVER after the LP
+    // touched the control (trusted change event, TOUCHED) or a saved snapshot
+    // carried the key (SNAP, so a resumed session's answers always win). A
+    // rule whose value() returns null RETRACTS its previous auto value: the
+    // derived mark flips when its source answer flips, but a manual edit
+    // sticks. Values are existing options/data only, so no new copy.
+    var TOUCHED = {};   // name -> true once the LP changed the control themselves
+    var SNAP = {};      // name -> true when the resume snapshot carried the key
+    function markSnapFromPrefill() {
+      var pf = (CFG && CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
+      if (!pf) return;
+      (function walk(o, prefix) {
+        Object.keys(o).forEach(function (k) {
+          var v = o[k];
+          var path = Array.isArray(o) ? prefix + '[' + k + ']' : (prefix ? prefix + '.' + k : k);
+          if (v && typeof v === 'object') walk(v, path);
+          else SNAP[path] = true;
+        });
+      })(pf, '');
+    }
+    var AUTO = {};      // name -> last auto-applied value
+    function inferCurrent(name) {
+      var el = form.querySelector('[name="' + cssEsc(name) + '"]');
+      if (!el) return null;
+      if (el.type === 'radio') return readRadio(name);
+      if (el.type === 'checkbox') return el.checked ? (el.value || 'true') : '';
+      return el.value || '';
+    }
+    function inferSet(name, val) {
+      var first = form.querySelector('[name="' + cssEsc(name) + '"]');
+      if (!first) return false;
+      if (first.type === 'radio') {
+        var target = form.querySelector('input[name="' + cssEsc(name) + '"][value="' + cssEsc(val) + '"]');
+        if (!target || target.checked) return false;
+        target.checked = true; return true;
+      }
+      if (first.type === 'checkbox') {
+        var want = (val === 'true' || val === true);
+        if (first.checked === want) return false;
+        first.checked = want; return true;
+      }
+      if (first.value === val) return false;
+      first.value = val; return true;
+    }
+    function inferClear(name) {
+      var first = form.querySelector('[name="' + cssEsc(name) + '"]');
+      if (!first) return false;
+      if (first.type === 'radio') {
+        var any = false;
+        form.querySelectorAll('input[name="' + cssEsc(name) + '"]').forEach(function (r) {
+          if (r.checked) { r.checked = false; any = true; }
+        });
+        return any;
+      }
+      if (first.type === 'checkbox') { if (!first.checked) return false; first.checked = false; return true; }
+      if (!first.value) return false;
+      first.value = ''; return true;
+    }
+    // Offer a derived value through the same guard (used by rules + Places).
+    function inferOffer(name, val) {
+      if (!val || TOUCHED[name] || SNAP[name]) return false;
+      var cur = inferCurrent(name);
+      if (cur === null) return false;
+      val = String(val);
+      if (cur === val) { AUTO[name] = val; return false; }
+      if (cur === '' || cur === AUTO[name]) {
+        if (inferSet(name, val)) { AUTO[name] = val; return true; }
+      }
+      return false;
+    }
+    function inferMintEmail_() { return (CFG && (CFG.mintEmail || CFG.inviteEmail || CFG.lpEmail || CFG.email)) || null; }
+    var INFER_RULES = [
+      // Country-of-fact defaults: the Israeli lane onboards Israeli LPs and
+      // Israeli corporations only (ju entities are Israeli, project memory), so
+      // ישראל is the factual default. All stay visible, editable selects.
+      { lane: 'individual', name: 'investorsArray[0].citizenship', value: function () { return 'ישראל'; } },
+      { lane: 'individual', name: 'investorsArray[0].residencyCountry', value: function () { return 'ישראל'; } },
+      { lane: 'entity', name: 'corporationDetails.stateOfIncorporation', value: function () { return 'ישראל'; } },
+      // EN mirror follows the Hebrew select for the Israel case only (the two
+      // country lists have different pinned orders, so no index mapping): a
+      // non-Israel Hebrew pick retracts the auto 'Israel' and the LP chooses.
+      { lane: 'entity', name: 'corporationDetails.englishDetails.stateOfIncorporation', value: function () {
+          return currentValueFor('corporationDetails.stateOfIncorporation') === 'ישראל' ? 'Israel' : null;
+        } },
+      { lane: 'entity', name: 'corporationDetails.residencyCountry', value: function () { return 'ישראל'; } },
+      { lane: 'entity', name: 'entityW8.residentCountry', value: function () { return 'ישראל'; } },
+      // Currency: שקל is the shipped-pack default; still a 3-option select.
+      { lane: 'both', name: 'moneyInvestedInFund.investedAmountArray[0].investedCurrency', value: function () { return 'שקל'; } },
+      // Contact email: the invite (mint) address the gateway already used.
+      { lane: 'individual', name: 'investorsArray[0].email', value: inferMintEmail_ },
+      { lane: 'entity', name: 'corporationDetails.email', value: inferMintEmail_ },
+      // Registrar convention: ח.פ prefix 51/52 = חברה (private/public company),
+      // 58 = עמותה. Partnership prefixes are NOT inferred (convention is less
+      // uniform there, wrong-data risk).
+      { lane: 'entity', name: 'corporationDetails.corporationType', value: function () {
+          var n = String(currentValueFor('corporationDetails.companyNumber') || '').replace(/\D/g, '');
+          if (n.length < 2) return null;
+          var p = n.slice(0, 2);
+          if (p === '51' || p === '52') return 'חברה';
+          if (p === '58') return 'עמותה';
+          return null;
+        } },
+      // W-8 Chapter 3 type from the declared legal form (חברה -> Corporation,
+      // שותפות -> Partnership). עמותה is NOT mapped: "Tax-exempt organization"
+      // under US rules is a judgment, not a registrar fact.
+      { lane: 'entity', name: 'entityW8.type', value: function () {
+          var t = currentValueFor('corporationDetails.corporationType');
+          if (t === 'חברה') return 'opt5';
+          if (t === 'שותפות') return 'opt11';
+          return null;
+        } },
+      // FATCA status mirrors the answer already given one fieldset above (an
+      // active non-financial entity IS Active NFFE, word for word). The
+      // financial-institution branch is NOT inferred (choosing the FFI
+      // category is a real decision).
+      { lane: 'entity', name: 'entityW8.fatcaStatus', value: function () {
+          return currentValueFor('entityW8.activeOrPassive') === 'יישות אקטיבית שאינה פיננסית' ? 'Active NFFE' : null;
+        } },
+      // Tax residency ישראל בלבד when every collected signal says Israel-only.
+      // Retracts automatically when the LP declares another citizenship or a
+      // non-Israel residency (unless they answered this control themselves).
+      { lane: 'individual', name: 'investorsArray[0].taxResidency.taxCountry', value: function () {
+          var extra = currentValueFor('investorsArray[0].isAdditionalCitizenship');
+          return (currentValueFor('investorsArray[0].citizenship') === 'ישראל' &&
+                  (extra === 'false' || extra === '') &&
+                  currentValueFor('investorsArray[0].residencyCountry') === 'ישראל') ? 'ישראל בלבד' : null;
+        } },
+      { lane: 'entity', name: 'taxResidency.taxCountry', value: function () {
+          return (currentValueFor('corporationDetails.stateOfIncorporation') === 'ישראל' &&
+                  currentValueFor('corporationDetails.residencyCountry') === 'ישראל') ? 'ישראל בלבד' : null;
+        } },
+      // CRS row 1 = ישראל + the ת.ז / ח.פ already typed. Grounded in the FIBI
+      // correction ('סעיף 2 בCRS ריק ממספר ת.ז'): the bank expects Israel + the
+      // Israeli TIN as the first residency row. Applied ONLY while the
+      // ישראל-ומדינה-אחרת branch is selected, and retracted when it is not, so
+      // the always-collected hidden row never leaks ישראל into the payload on
+      // the other branches (collectAll has no visibility filter).
+      { lane: 'individual', name: 'investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[0].country', value: function () {
+          return currentValueFor('investorsArray[0].taxResidency.taxCountry') === 'ישראל ומדינה אחרת' ? 'ישראל' : null;
+        } },
+      { lane: 'individual', name: 'investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[0].tin', value: function () {
+          if (currentValueFor('investorsArray[0].taxResidency.taxCountry') !== 'ישראל ומדינה אחרת') return null;
+          return String(currentValueFor('investorsArray[0].idNumber') || '').replace(/\D/g, '') || null;
+        } },
+      { lane: 'entity', name: 'taxResidency.israelAndOtherCountries.countriesArray[0].country', value: function () {
+          return currentValueFor('taxResidency.taxCountry') === 'ישראל ומדינה אחרת' ? 'ישראל' : null;
+        } },
+      { lane: 'entity', name: 'taxResidency.israelAndOtherCountries.countriesArray[0].tin', value: function () {
+          if (currentValueFor('taxResidency.taxCountry') !== 'ישראל ומדינה אחרת') return null;
+          return String(currentValueFor('corporationDetails.companyNumber') || '').replace(/\D/g, '') || null;
+        } },
+      // Signing-authority attestation (the approved exception, Noa 2026-07-04):
+      // the entity flow is filled by the authorized representative by
+      // construction (P7 collects that person). Still uncheckable; the required
+      // fieldset keeps an unchecked box from advancing.
+      { lane: 'entity', name: 'entityW8.isSignForEntity', value: function () { return 'true'; } }
+    ];
+    function applyInferredDefaults() {
+      var ap = applicant();
+      // Up to 3 passes so on-page chains settle (e.g. citizenship default ->
+      // Israel-only tax residency -> row-1 country/TIN after the reveal).
+      for (var pass = 0; pass < 3; pass++) {
+        var passChanged = false;
+        INFER_RULES.forEach(function (rule) {
+          var name = rule.name;
+          if (TOUCHED[name] || SNAP[name]) return;
+          var cur = inferCurrent(name);
+          if (cur === null) return;
+          var val = (rule.lane === 'both' || rule.lane === ap) ? rule.value() : null;
+          if (val == null) {
+            // Source answer no longer supports the inference: retract our own
+            // auto value only; anything else was the LP's and stays.
+            if (AUTO[name] != null && cur === String(AUTO[name])) {
+              if (inferClear(name)) passChanged = true;
+              delete AUTO[name];
+            }
+            return;
+          }
+          val = String(val);
+          if (cur === val) { AUTO[name] = val; return; }
+          if (cur === '' || cur === AUTO[name]) {
+            if (inferSet(name, val)) { AUTO[name] = val; passChanged = true; }
+          }
+        });
+        if (!passChanged) break;
+        applyConditionals();
+      }
+    }
+
     function reindex(host) {
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
         row.setAttribute('data-row-index', i);
@@ -1871,7 +2078,9 @@
     // (silent data loss). This walks the snapshot back into the form: rebuild the
     // repeating rows to the saved counts (inputs must exist before they can be set),
     // set every [name] control, then re-derive the conditionals + mutex.
-    function hydrateFromPrefill() {
+    function hydrateFromPrefill(skipTouched) {
+      // skipTouched=true on the async cfg-update path: a control the LP already
+      // changed live in this session is not overwritten by the older snapshot.
       var pf = (CFG && CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
       if (!pf || !Object.keys(pf).length) return;
 
@@ -1898,6 +2107,7 @@
       //    investorsArray[i+1]; everything else resolves by its own name path.
       form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (inp) {
         var name = inp.name, val;
+        if (skipTouched && TOUCHED[name]) return;
         var m = name.match(/^__addinv\[(\d+)\]\.(.+)$/);
         if (m) {
           var src = getPath(pf, 'investorsArray.' + (Number(m[1]) + 1));
@@ -2370,6 +2580,7 @@
     // ---- init ----
     populateCountries();
     ensureMinRows();
+    markSnapFromPrefill();  // snapshot keys guard the inferred defaults (saved answers always win)
     hydrateFromPrefill();   // restore the saved snapshot BEFORE resume-position + first save
     // investmentDate: only one value passes the server rule, so prefill it (still
     // editable; the first-business-day validator gates edits). Snapshot wins.
@@ -2381,6 +2592,7 @@
     applyInputmodes();      // numeric keypad on ID + SSN fields
     applyAutocomplete();    // autofill tokens on the primary subject's identity fields
     applyConditionals();
+    applyInferredDefaults();   // safe defaults AFTER hydration: empty fields only, all editable
     // Amount: whole-number, thousands separators on blur.
     (function () {
       var a = form.querySelector('[data-amount]');
