@@ -196,7 +196,13 @@
        shared status line. When a specific message is shown the " חובה"/"required"
        label suffix is suppressed (the field is filled but invalid, not empty). */
     .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
+    /* Submit/validation error summary: a titled list of the page's errored fields
+       with tap-to-jump links, rendered at the top of the current page (WCAG 3.3.1 /
+       2.4.3). On a 360px screen a failed field below the fold is invisible; the
+       summary is how the LP finds it. Mirrors signer.html's err-summary. */
     .lvp-error-summary { border: 1px solid var(--lvp-error); background: #FFF5F5; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; }
+    .lvp-error-summary:focus { outline: 2px solid var(--lvp-error); outline-offset: 2px; }
+    .lvp-error-summary:focus:not(:focus-visible) { outline: none; }
     .lvp-error-summary__title { color: var(--lvp-error); font-weight: 700; font-size: 15px; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 20px; }
     .lvp-error-summary li { margin: 2px 0; }
@@ -1296,6 +1302,8 @@
       "נא להזין אותיות באנגלית בלבד":"Please use English letters only.",
       "נא להזין אותיות בעברית בלבד":"Please use Hebrew letters only.",
       "נא להשלים את שדות החובה.":"Please complete the required fields.",
+      "נא להשלים את השדות הבאים:":"Please complete the following fields:",
+      "הגעת למספר הרשומות המרבי":"You have reached the maximum number of entries.",
       "הקובץ גדול מ-10 מ\"ב. יש להעלות קובץ קטן יותר.":"The file is larger than 10 MB. Please upload a smaller file.",
       "תאריך לא תקין. נא להזין dd/mm/yyyy.":"Invalid date. Please enter dd/mm/yyyy.",
       "מספר תעודת הזהות אינו תקין.":"The ID number is not valid.",
@@ -1743,17 +1751,25 @@
         var atMax = host.querySelectorAll('[data-row-index]').length >= max;
         btn.disabled = atMax;
         // Tell the LP WHY the add button stopped (approved copy, Noa 2026-07-05).
-        // role="status" so a screen reader announces it the moment the cap is hit.
+        // Reuses the existing lvp-hint-small styling; role="status" so a screen
+        // reader announces it the moment the cap is hit, and aria-describedby the
+        // button so the reason is tied to the disabled control (FIX #9).
         var note = btn.nextElementSibling;
         if (!note || !note.classList || !note.classList.contains('lvp-maxrows-note')) {
-          note = document.createElement('span');
-          note.className = 'lvp-maxrows-note';
+          note = document.createElement('p');
+          // lvp-hint-small keeps the visual style AND lets the EN-toggle
+          // (swapScopeText) translate it via its Hebrew-source caching, so the
+          // note flips to English with the rest of the page.
+          note.className = 'lvp-hint-small lvp-hint--help lvp-maxrows-note';
           note.setAttribute('role', 'status');
-          note.style.cssText = 'display:inline-block;margin-inline-start:8px;font-size:13px;color:#8a5a00;';
-          note.textContent = 'הגעת למספר השורות המירבי.';
+          note.textContent = 'הגעת למספר הרשומות המרבי';
+          if (!note.id) note.id = 'lvp-maxrows-' + (btn.getAttribute('data-target') || '').replace(/[^\w-]/g, '');
           btn.parentNode.insertBefore(note, btn.nextSibling);
+          if (curLang === 'en') swapScopeText(note, 'en'); // flip to EN if the page is in English
         }
         note.hidden = !atMax;
+        if (atMax) btn.setAttribute('aria-describedby', note.id);
+        else btn.removeAttribute('aria-describedby');
       });
     }
     // Contact page: default the first communication email to the address the invite
@@ -2601,7 +2617,10 @@
       }
       if (firstError) {
         var _rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        try { firstError.scrollIntoView({ behavior: _rm ? 'auto' : 'smooth', block: 'center' }); }
+        // block:'nearest' (not 'center') so on a 360px Android the focused errored
+        // field is not scrolled UNDER the on-screen keyboard; 'center' of the
+        // visual viewport can land behind the keyboard (FIX #11).
+        try { firstError.scrollIntoView({ behavior: _rm ? 'auto' : 'smooth', block: 'nearest' }); }
         catch (_) { firstError.scrollIntoView(); }
         var focusable = firstError.querySelector ? firstError.querySelector('input, select, textarea') : null;
         if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (_) {} }
@@ -2679,7 +2698,7 @@
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
       if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
-      renderErrorSummary(page);
+      renderErrorSummary(page); // clears the summary when the page validates clean
       // Advance INSTANTLY (optimistic); persist for resume in the background so
       // Continue never waits on the GAS round-trip. A failed save surfaces a note
       // but does not block navigation (state held client-side).
@@ -2689,7 +2708,7 @@
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();
       if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
-      renderErrorSummary(page);
+      renderErrorSummary(page); // clears the summary when the page validates clean
       doSubmit();
     });
 
@@ -2767,9 +2786,10 @@
     }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
     // Error summary (a11y, WCAG 3.3.1/2.4.3): render a titled list of the page's errored
-    // fields with jump-to-field links, from the holders validatePage() already marked.
-    // Additive - reads the DOM, never changes validation. Title reuses the approved status
-    // string (no new copy). Removes itself when the page has no errors.
+    // fields with tap-to-jump links, from the holders validatePage() already marked.
+    // Additive - reads the DOM, never changes validation. role=alert + tabindex so a
+    // screen reader announces it and focus moves to it. Removes itself when the page
+    // has no errors. Heading is the Noa-approved string (2026-07-05).
     function renderErrorSummary(pageEl) {
       var existing = pageEl.querySelector('[data-error-summary]');
       var bad = Array.prototype.slice.call(pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error'));
@@ -2781,24 +2801,40 @@
         box.setAttribute('data-error-summary', '');
         box.setAttribute('role', 'alert');
         box.setAttribute('aria-live', 'assertive');
+        // tabindex=-1 so we can programmatically move focus here after a failed
+        // submit: a screen reader announces the alert AND the summary itself is
+        // the landing spot, so the LP starts from the list of what to fix rather
+        // than hunting a red field that may be below the fold on a 360px screen.
+        box.setAttribute('tabindex', '-1');
         var titleEl = pageEl.querySelector('.lvp-page__title');
         if (titleEl && titleEl.nextSibling) pageEl.insertBefore(box, titleEl.nextSibling);
         else pageEl.insertBefore(box, pageEl.firstChild);
       }
-      var items = bad.map(function (h, idx) {
+      var items = bad.map(function (h, i) {
         var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend');
         var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim() || 'שדה';
-        h.setAttribute('data-err-idx', idx);
-        return '<li><button type="button" data-err-jump="' + idx + '">' + esc(txt) + '</button></li>';
+        h.setAttribute('data-err-idx', i);
+        return '<li><button type="button" data-err-jump="' + i + '">' + esc(txt) + '</button></li>';
       }).join('');
-      box.innerHTML = '<p class="lvp-error-summary__title">' + esc(displayFor('נא להשלים את שדות החובה.', curLang)) + '</p><ul>' + items + '</ul>';
+      box.innerHTML = '<p class="lvp-error-summary__title">' + esc(displayFor('נא להשלים את השדות הבאים:', curLang)) + '</p><ul>' + items + '</ul>';
       Array.prototype.forEach.call(box.querySelectorAll('[data-err-jump]'), function (a) {
         a.onclick = function () {
           var h = pageEl.querySelector('[data-err-idx="' + a.getAttribute('data-err-jump') + '"]');
           var inp = h && h.querySelector('input, select, textarea');
-          if (inp) { try { inp.focus(); } catch (e) {} }
+          if (inp) {
+            // Keyboard-safe scroll (FIX #11 rationale): block:nearest keeps the
+            // field visible above the on-screen keyboard on Android instead of
+            // centering it, where "center" of the visual viewport can be behind
+            // the keyboard. Then focus without a second scroll.
+            var _rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            try { h.scrollIntoView({ behavior: _rm ? 'auto' : 'smooth', block: 'nearest' }); } catch (e) {}
+            try { inp.focus({ preventScroll: true }); } catch (e) {}
+          }
         };
       });
+      // Move focus to the summary so the alert is announced and the keyboard user
+      // lands on the list of fields to fix (WCAG 3.3.1 / 2.4.3).
+      try { box.focus(); } catch (e) {}
     }
     // Jump from a review section to its page for editing.
     form.addEventListener('click', function (e) {
