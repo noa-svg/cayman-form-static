@@ -66,8 +66,9 @@
     }
     .lvp-error-summary__title { font-weight: 700; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 18px; }
-    .lvp-error-summary a {
+    .lvp-error-summary a, .lvp-error-summary button {
       color: var(--lvp-error); text-decoration: underline; cursor: pointer;
+      background: none; border: 0; padding: 0; font: inherit; text-align: inherit;
     }
     .lvp-sr-only {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -1352,7 +1353,7 @@
           var html = '<p class="lvp-error-summary__title">' + (verbose.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + verbose.length + ' שגיאות:') + '</p><ul>';
           verbose.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
-            html += '<li><a href="#" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</a></li>';
+            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</button></li>';
           });
           html += '</ul>';
           summary.innerHTML = html;
