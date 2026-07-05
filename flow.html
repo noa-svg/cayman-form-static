@@ -25,7 +25,7 @@
       --lvp-navy: #0D3F6A; --lvp-navy-700: #0a3257;
       --lvp-yellow: #FFB42C;
       --lvp-text: #1d1d1d; --lvp-text-muted: #545454;
-      --lvp-input-line: #C2C2C2; --lvp-input-line-active: #0D3F6A;
+      --lvp-input-line: #8E8E8E; --lvp-input-line-active: #0D3F6A;
       --lvp-card-bg: #FFFFFF; --lvp-error: #c0392b;
     }
     *, *::before, *::after { box-sizing: border-box; }
@@ -97,6 +97,7 @@
       background: #fff; color: var(--lvp-text);
       direction: rtl; text-align: right;
     }
+    button:focus-visible, [data-action]:focus-visible, .lvp-amount-add:focus-visible, .lvp-amount-rm:focus-visible { outline: 3px solid var(--lvp-input-line-active); outline-offset: 2px; }
     .lvp-input:focus, .lvp-select:focus {
       outline: none; border-color: var(--lvp-input-line-active);
       box-shadow: 0 0 0 3px rgba(13,63,106,0.10);
