@@ -200,7 +200,7 @@
     .lvp-error-summary__title { color: var(--lvp-error); font-weight: 700; font-size: 15px; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 20px; }
     .lvp-error-summary li { margin: 2px 0; }
-    .lvp-error-summary a { color: var(--lvp-error); text-decoration: underline; cursor: pointer; font-size: 14px; }
+    .lvp-error-summary a, .lvp-error-summary button { color: var(--lvp-error); text-decoration: underline; cursor: pointer; font-size: 14px; background: none; border: 0; padding: 0; font-family: inherit; text-align: inherit; }
     /* Legend-less consent fieldsets (single required checkbox: waiver, isReadClaims,
        isSignForEntity). The required pass marks the fieldset holder; with no legend
        to carry the suffix, the label itself goes red and reuses the SAME suffix
@@ -2776,7 +2776,7 @@
         var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend');
         var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim() || 'שדה';
         h.setAttribute('data-err-idx', idx);
-        return '<li><a data-err-jump="' + idx + '">' + esc(txt) + '</a></li>';
+        return '<li><button type="button" data-err-jump="' + idx + '">' + esc(txt) + '</button></li>';
       }).join('');
       box.innerHTML = '<p class="lvp-error-summary__title">' + esc(displayFor('נא להשלים את שדות החובה.', curLang)) + '</p><ul>' + items + '</ul>';
       Array.prototype.forEach.call(box.querySelectorAll('[data-err-jump]'), function (a) {

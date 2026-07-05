@@ -567,7 +567,7 @@
     .lvp-error-summary__title { color: var(--lvp-error); font-weight: 700; font-size: 15px; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 20px; }
     .lvp-error-summary li { margin: 2px 0; }
-    .lvp-error-summary a { color: var(--lvp-error); text-decoration: underline; cursor: pointer; font-size: 14px; }
+    .lvp-error-summary a, .lvp-error-summary button { color: var(--lvp-error); text-decoration: underline; cursor: pointer; font-size: 14px; background: none; border: 0; padding: 0; font-family: inherit; text-align: inherit; }
 
     /* Screen-reader-only error text tied to a field via aria-describedby. The
        visible red marker is the existing CSS ::after; this carries the same
@@ -2357,7 +2357,7 @@
       var html = '<p class="lvp-error-summary__title">' + esc(displayFor('Please fix the following:', curLang)) + '</p><ul>';
       errors.forEach(function (e, n) {
         if (!e.holder.id) e.holder.id = 'lvp-errfield-' + (++__errSeq);
-        html += '<li><a data-error-jump="' + esc(e.holder.id) + '">' + esc(e.label) + '</a></li>';
+        html += '<li><button type="button" data-error-jump="' + esc(e.holder.id) + '">' + esc(e.label) + '</button></li>';
       });
       html += '</ul>';
       box.innerHTML = html;
