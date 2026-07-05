@@ -1740,7 +1740,20 @@
         if (!host) return;
         var max = parseInt(host.getAttribute('data-repeating-max'), 10);
         if (isNaN(max)) return;
-        btn.disabled = host.querySelectorAll('[data-row-index]').length >= max;
+        var atMax = host.querySelectorAll('[data-row-index]').length >= max;
+        btn.disabled = atMax;
+        // Tell the LP WHY the add button stopped (approved copy, Noa 2026-07-05).
+        // role="status" so a screen reader announces it the moment the cap is hit.
+        var note = btn.nextElementSibling;
+        if (!note || !note.classList || !note.classList.contains('lvp-maxrows-note')) {
+          note = document.createElement('span');
+          note.className = 'lvp-maxrows-note';
+          note.setAttribute('role', 'status');
+          note.style.cssText = 'display:inline-block;margin-inline-start:8px;font-size:13px;color:#8a5a00;';
+          note.textContent = 'הגעת למספר השורות המירבי.';
+          btn.parentNode.insertBefore(note, btn.nextSibling);
+        }
+        note.hidden = !atMax;
       });
     }
     // Contact page: default the first communication email to the address the invite
