@@ -430,16 +430,13 @@
               <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
               <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
             </div>
-            <!-- English city/street: Google Places (placesFillEnglish_) PRE-FILLS these
-                 from the Hebrew address when the LP picks a suggestion, so a picker user
-                 does not retype. Kept VISIBLE + fillable so a manually-typed address still
-                 yields the English the W-8 requires. (Hiding them shipped a bug: a manual
-                 Hebrew entry left these empty and the submit failed english_address_required,
-                 which would also seal an address-less, invalid W-8.) -->
-            <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
-              <label class="lvp-field"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.street"></label>
-            </div>
+            <!-- English city/street: NOT asked (Noa 2026-07-06, do not show). Google Places
+                 (placesFillEnglish_) fills these hidden mirrors from the Hebrew address when
+                 the LP picks a suggestion, for the W-8 / English docs. Not required (the
+                 validator no longer hard-requires them), so a manual Hebrew entry submits
+                 fine; the address is never asked twice. -->
+            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
+            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
           </fieldset>
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
@@ -471,7 +468,7 @@
               <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="לא" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> לא</label>
             </fieldset>
             <p class="lvp-hint-small" data-show-when="investorsArray[0].qualification.isSignedQualification=כן">את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.</p>
-            <p class="lvp-hint-small" data-show-when="investorsArray[0].qualification.isSignedQualification=לא">עו"ד או רו"ח בלתי תלוי/ה יקבל/תקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו/ה.</p>
+            <p class="lvp-hint-small" data-show-when="investorsArray[0].qualification.isSignedQualification=לא">הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. מומלץ ליידע אותו.</p>
           </div>
         </section>
 
@@ -944,7 +941,7 @@
         <section class="lvp-page" data-page="beneficiary">
           <h2 class="lvp-page__title">הצהרה על נהנים ובעלי שליטה</h2>
           <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">המשקיע/ה מצהיר/ה בזאת:</legend>
+            <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
             <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="self" data-show-when-trigger="beneficiaryStatement.statement"> אני פועל/ת עבור עצמי בלבד</label>
             <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="unknown" data-show-when-trigger="beneficiaryStatement.statement"> יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים</label>
             <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> הנהנים בפעולה הם:</label>
@@ -2225,6 +2222,30 @@
         } else { viaGeocoder(); }
       } catch (e) { viaGeocoder(); }
     }
+    function deriveEnglishFromHebrew_(set) {
+      // Manual entry (the LP typed the Hebrew address instead of picking a suggestion):
+      // placesFillEnglish_ only fires on a pick, so the hidden English mirror the W-8
+      // needs stays empty. Geocode the typed Hebrew address in English and fill it.
+      // No-op if English is already present (a pick filled it) or the Hebrew is partial.
+      var enS = form.querySelector('[name="' + cssEsc(set.enStreet) + '"]');
+      var enC = form.querySelector('[name="' + cssEsc(set.enCity) + '"]');
+      if (enS && String(enS.value || '').trim() && enC && String(enC.value || '').trim()) return;
+      var sEl = form.querySelector('[name="' + cssEsc(set.street) + '"]');
+      var cEl = form.querySelector('[name="' + cssEsc(set.city) + '"]');
+      var hEl = form.querySelector('[name="' + cssEsc(set.house) + '"]');
+      var street = sEl ? String(sEl.value || '').trim() : '';
+      var city = cEl ? String(cEl.value || '').trim() : '';
+      if (!street || !city) return;
+      var addr = street + ' ' + (hEl ? String(hEl.value || '').trim() : '') + ', ' + city + ', ישראל';
+      try {
+        new google.maps.Geocoder().geocode({ address: addr, language: 'en' }, function (results, status) {
+          if (status === 'OK' && results && results[0]) {
+            inferOffer(set.enStreet, placesComp_(results[0].address_components, 'route'));
+            inferOffer(set.enCity, placesCity_(results[0].address_components));
+          }
+        });
+      } catch (e) {}
+    }
     function bindPlacesInputs() {
       if (!(window.google && google.maps && google.maps.places)) return;
       PLACES_SETS.forEach(function (set) {
@@ -2248,6 +2269,7 @@
           });
           input.setAttribute('data-places-bound', '1');
           input.__lvpAc = ac;   // exposed for the deploy-gate walk (trigger place_changed with a stubbed getPlace)
+          input.addEventListener('blur', function () { deriveEnglishFromHebrew_(set); });
         });
       });
     }
