@@ -140,18 +140,47 @@
     .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
     .lvp-hint-small { color: var(--lvp-text-muted); font-size: 13px; margin: 4px 0 12px; }
     .lvp-hint--help { margin: 4px 0 0; }   /* field help sits snug under its input */
-    /* File inputs: brand the native picker button (was gray) + success line. The
-       button's text stays browser-locale controlled; a Hebrew custom-trigger label
-       is net-new copy, queued for Noa in the copy manifest. */
-    .lvp-input[type="file"] { padding: 8px 0; }
-    .lvp-input[type="file"]::file-selector-button {
-      font: inherit; font-weight: 700; color: #fff; background: var(--lvp-navy);
-      border: none; border-radius: 999px; padding: 8px 18px; margin-inline-end: 12px; cursor: pointer;
+    /* File inputs: the native control renders the browser's own locale text
+       ("Choose File" / "No file chosen"), which is English and off-brand on a
+       Hebrew-only form. We keep the real <input type="file"> in the DOM (the
+       base64 submit path keys on it) but visually hide it, and drive a Hebrew,
+       keyboard-accessible styled trigger in its place. The whole .lvp-field is a
+       <label>, so a click anywhere on the trigger opens the native dialog; the
+       hidden input still takes focus + Enter/Space (it is not display:none). */
+    .lvp-file-input {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
     }
-    .lvp-input[type="file"]::file-selector-button:hover { background: var(--lvp-navy-700); }
+    .lvp-file { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
+    /* Styled trigger mirrors .lvp-btn--secondary so it reads as part of the form. */
+    .lvp-file__trigger {
+      font: inherit; font-weight: 700; font-size: 14px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.85); color: var(--lvp-navy);
+      border: 1px solid var(--lvp-input-line); border-radius: 999px;
+      padding: 10px 22px; cursor: pointer; transition: background 120ms ease;
+    }
+    .lvp-file__trigger:hover { background: #fff; }
+    /* Show a strong keyboard-focus ring on the trigger when the hidden input is focused. */
+    .lvp-file-input:focus-visible + .lvp-file .lvp-file__trigger { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
+    /* Remove control: a Hebrew text button, lives inside the label so it must stop
+       the click from bubbling up and re-opening the dialog (handled in JS). */
+    .lvp-file__remove {
+      font: inherit; font-weight: 600; font-size: 13px;
+      background: none; border: none; color: var(--lvp-navy);
+      text-decoration: underline; cursor: pointer; padding: 8px 6px; min-height: 44px;
+    }
     /* File-success in navy, holding the two-color navy/gold system (was off-palette green). */
-    .lvp-file-success { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--lvp-navy); font-size: 13px; font-weight: 600; }
-    .lvp-field--has-file .lvp-input[type="file"] { color: var(--lvp-text-muted); }
+    .lvp-file-success { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--lvp-navy); font-size: 13px; font-weight: 600; }
+    /* Before a file is chosen the trigger says "העלאת קובץ"; after, it says "החלף
+       קובץ" (a re-pick replaces). The has-file class flips which label shows. */
+    .lvp-file__trigger .lvp-file__label--replace,
+    .lvp-field--has-file .lvp-file__trigger .lvp-file__label--upload { display: none; }
+    .lvp-field--has-file .lvp-file__trigger .lvp-file__label--replace { display: inline; }
+    /* Success line + remove button only appear once a file is present. */
+    .lvp-file-success, .lvp-file__remove { display: none; }
+    .lvp-field--has-file .lvp-file-success { display: flex; }
+    .lvp-field--has-file .lvp-file__remove { display: inline-block; }
     /* Review summary: one section per page, a jump-to-edit header, label:value list. */
     .lvp-review__section { border-top: 1px solid #EDEDED; padding: 12px 0; }
     .lvp-review__section:first-child { border-top: none; }
@@ -173,6 +202,26 @@
     @media (max-width: 480px) { .lvp-grid-2 { grid-template-columns: 1fr; gap: 0; } }
     .lvp-input--textarea { padding: 8px; border: 1px solid var(--lvp-input-line); border-radius: 4px; resize: vertical; width: 100%; font: inherit; }
     .lvp-or-separator { text-align: center; margin: 16px 0; color: var(--lvp-text-muted); font-size: 13px; }
+
+    /* Type-to-search combobox (bank + branch), ported from flow.html. The text input
+       is unchanged; the suggestion list floats under it and matches the field tokens. */
+    .lvp-combo { position: relative; }
+    .lvp-combo__list {
+      position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 4px);
+      margin: 0; padding: 4px; list-style: none; max-height: 248px; overflow-y: auto;
+      background: #fff; border: 1px solid var(--lvp-input-line); border-radius: 10px;
+      box-shadow: 0 10px 28px rgba(13,63,106,0.14);
+    }
+    .lvp-combo__list[hidden] { display: none; }
+    .lvp-combo__opt {
+      display: flex; gap: 8px; align-items: baseline;
+      padding: 8px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--lvp-text);
+    }
+    .lvp-combo__opt:hover, .lvp-combo__opt.is-active { background: #EEF3F8; }
+    .lvp-combo__opt-code { direction: ltr; font-size: 13px; color: var(--lvp-text-muted); min-width: 40px; }
+    .lvp-combo__opt-city { margin-inline-start: auto; font-size: 13px; color: var(--lvp-text-muted); }
+    .lvp-combo__empty { padding: 8px 12px; font-size: 15px; color: var(--lvp-text-muted); }
+    .lvp-input--ltr { direction: ltr; text-align: left; }
 
     .lvp-repeating-row { background: #F8F9FB; border: 1px solid #E4E8EE; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
     .lvp-repeating-row__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -243,6 +292,7 @@
     }
 
     /* Language toggle: fixed top corner, simple עברית | EN segmented control. */
+    .lvp-lang[hidden] { display: none; }
     .lvp-lang {
       position: fixed; top: 14px; left: 16px; z-index: 50;
       display: inline-flex; align-items: stretch;
@@ -289,12 +339,25 @@
       .lvp-lang__btn { padding: 6px 12px; font-size: 12px; }
     }
       [data-row-index="0"] .lvp-same-addr { display: none; }
+    /* Inline signature pad (ported from index.html sig-pad, 2026-07-06): the
+       primary Israeli LP draws their signature IN the form so the submit carries
+       signaturePng and the gateway records it inline instead of mailing a second
+       signing link. */
+    .lvp-pad-shell { border: 1px solid #d0d4d8; border-radius: 8px; padding: 14px; background: #fff; }
+    .lvp-pad-shell canvas {
+      width: 100%; height: 200px; border: 1px dashed #b9c2cb; border-radius: 8px;
+      touch-action: none; background: #fff; display: block;
+    }
+    .lvp-sig-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .lvp-sig-err { color: var(--lvp-error); font-size: 13px; margin-top: 8px; min-height: 18px; }
 </style>
 </head>
 <body>
-  <div class="lvp-lang" role="group" aria-label="שפה">
+  <!-- Israeli fund = Hebrew only: the EN option is removed and the toggle hidden.
+       The he button stays in the DOM (aria-pressed) so the default-language init is
+       unchanged. -->
+  <div class="lvp-lang" role="group" aria-label="שפה" hidden>
     <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
-    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">EN</button>
   </div>
   <div class="lvp-app">
     <header class="lvp-header">
@@ -367,14 +430,16 @@
               <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
               <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
             </div>
-            <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
-              <label class="lvp-field"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.street"></label>
-            </div>
+            <!-- English city/street are auto-derived from the Hebrew address by Google
+                 Places (placesFillEnglish_), so the LP is never asked to type the address
+                 twice. Kept as hidden fields so the English mirror still rides the submit
+                 for the W-8 / English docs. -->
+            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
+            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
           </fieldset>
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
-          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="05x-xxxxxxx"></label>
+          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
         </section>
 
         <!-- PAGE: qualification (investorsArray[0].qualification) -->
@@ -813,8 +878,20 @@
 
           <h3 class="lvp-subhead">המוסד ממנו יועברו הכספים</h3>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span><input class="lvp-input" type="text" data-script="he" name="moneyInvestedInFund.bankDetails.bankNameIsrael"></label>
-            <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric" data-digits></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span>
+              <div class="lvp-combo">
+                <input class="lvp-input" type="text" id="bank-name" data-script="he" name="moneyInvestedInFund.bankDetails.bankNameIsrael" autocomplete="off"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-name-list">
+                <ul class="lvp-combo__list" id="bank-name-list" role="listbox" hidden></ul>
+              </div>
+            </label>
+            <label class="lvp-field"><span class="lvp-field__label">מספר סניף</span>
+              <div class="lvp-combo">
+                <input class="lvp-input lvp-input--ltr" type="text" id="bank-branch" name="moneyInvestedInFund.bankDetails.branchNumberIsrael" inputmode="numeric" autocomplete="off" maxlength="4"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="bank-branch-list">
+                <ul class="lvp-combo__list" id="bank-branch-list" role="listbox" hidden></ul>
+              </div>
+            </label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" data-validate="il-account" inputmode="numeric"></label>
 
@@ -980,28 +1057,45 @@
           <!-- INDIVIDUAL uploads (investor[0].fileUpload) -->
           <div data-applicant="individual">
             <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isBiometric" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isBiometric"> ברשותי תעודת זהות ביומטרית</label>
-            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=false"><span class="lvp-field__label">צילום תעודת הזהות</span><input class="lvp-input" type="file" data-upload="investors.0.idPhoto" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד קדמי</span><input class="lvp-input" type="file" data-upload="investors.0.idFront" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד אחורי</span><input class="lvp-input" type="file" data-upload="investors.0.idBack" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=false"><span class="lvp-field__label">צילום תעודת הזהות</span><input class="lvp-file-input" type="file" data-upload="investors.0.idPhoto" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד קדמי</span><input class="lvp-file-input" type="file" data-upload="investors.0.idFront" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד אחורי</span><input class="lvp-file-input" type="file" data-upload="investors.0.idBack" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
             <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isSeparateAppendix" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isSeparateAppendix"> ברצוני להעלות ספח תעודת זהות כצרופה נפרדת</label>
-            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isSeparateAppendix=true"><span class="lvp-field__label">ספח תעודת הזהות</span><input class="lvp-input" type="file" data-upload="investors.0.idAppendix" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isSeparateAppendix=true"><span class="lvp-field__label">ספח תעודת הזהות</span><input class="lvp-file-input" type="file" data-upload="investors.0.idAppendix" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
             <!-- Passport for EVERYONE (Noa 2026-07-04): every shipped accepted pack carries
      passport + ת"ז for Israelis too, and the bank checklist says both. Was gated
      __nonIsrael (pack-parity finding M7). -->
-            <label class="lvp-field"><span class="lvp-field__label">צילום דרכון</span><input class="lvp-input" type="file" data-upload="investors.0.passport" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-input" type="file" data-upload="investors.0.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field" data-show-when="investorsArray[0].qualification.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-input" type="file" data-upload="investors.0.qualification" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">צילום דרכון</span><input class="lvp-file-input" type="file" data-upload="investors.0.passport" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-file-input" type="file" data-upload="investors.0.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field" data-show-when="investorsArray[0].qualification.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="investors.0.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
           </div>
 
           <!-- ENTITY uploads (fileUpload + corporationDetails.corporateSeal) -->
           <div data-applicant="entity">
-            <label class="lvp-field"><span class="lvp-field__label">תעודת התאגדות</span><input class="lvp-input" type="file" data-upload="entity.certificateOfIncorporation" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field"><span class="lvp-field__label">תקנון התאגיד</span><input class="lvp-input" type="file" data-upload="entity.corporateBylaws" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field"><span class="lvp-field__label">פרוטוקול מורשי החתימה</span><input class="lvp-input" type="file" data-upload="entity.protocol" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-input" type="file" data-upload="entity.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"></label>
-            <label class="lvp-field"><span class="lvp-field__label">חותמת התאגיד</span><input class="lvp-input" type="file" data-upload="entity.stamp" accept="image/jpeg,image/png"><p class="lvp-hint-small">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא רקע כדי לוודא שהיא תופיע כראוי במסמכים.</p></label>
-            <label class="lvp-field" data-show-when="corporationDetails.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-input" type="file" data-upload="entity.qualification" accept="image/jpeg,image/png,application/pdf"></label>
+            <label class="lvp-field"><span class="lvp-field__label">תעודת התאגדות</span><input class="lvp-file-input" type="file" data-upload="entity.certificateOfIncorporation" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field"><span class="lvp-field__label">תקנון התאגיד</span><input class="lvp-file-input" type="file" data-upload="entity.corporateBylaws" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field"><span class="lvp-field__label">פרוטוקול מורשי החתימה</span><input class="lvp-file-input" type="file" data-upload="entity.protocol" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field"><span class="lvp-field__label">אישור ניהול חשבון</span><input class="lvp-file-input" type="file" data-upload="entity.accountManagementApproval" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field"><span class="lvp-field__label">חותמת התאגיד</span><input class="lvp-file-input" type="file" data-upload="entity.stamp" accept="image/jpeg,image/png"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span><p class="lvp-hint-small">נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא רקע כדי לוודא שהיא תופיע כראוי במסמכים.</p></label>
+            <label class="lvp-field" data-show-when="corporationDetails.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="entity.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
           </div>
+        </section>
+
+        <!-- PAGE: inline signature. No data-applicant, so visiblePages() shows it
+             for BOTH the individual and the entity primary submitter, sitting just
+             before review (matching the EasySend sign-then-send order). The drawn
+             PNG rides the submit as signaturePng; the gateway records it inline
+             (IsraeliDocGen recordCaymanSignature_) instead of mailing a second link. -->
+        <section class="lvp-page" data-page="ind.sign">
+          <h2 class="lvp-page__title">חתימה</h2>
+          <p class="lvp-page__hint">יש לחתום עם האצבע או העכבר.</p>
+          <div class="lvp-pad-shell">
+            <canvas id="sig-pad" width="600" height="200"></canvas>
+          </div>
+          <div class="lvp-sig-actions">
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-sig-clear>נקה</button>
+          </div>
+          <div class="lvp-sig-err" data-sig-err role="alert"></div>
         </section>
 
         <!-- PAGE: review + submit. Contact details merged in from the former
@@ -1019,7 +1113,7 @@
               <button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button>
             </div>
           </template>
-          <p class="lvp-page__hint">עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור חתימה בדואר האלקטרוני. כל חותם/ת (את/ה, עורך/ת הדין או רואה/ת החשבון במידת הצורך, כל בעל/ת שליטה והשותף הכללי) חותם/ת בתורו/ה.</p>
+          <p class="lvp-page__hint">בסיום התהליך יתקבל עותק חתום במייל</p>
           <div data-review-summary></div>
         </section>
 
@@ -1294,7 +1388,11 @@
       "כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.":"The email addresses to be used for regular communication with the fund and its service providers, including monthly yield notices.",
       "ברצוני להוסיף מייל +":"Add an email +",
       "סיום ושליחה":"Finish and send",
-      "עם השליחה, נרכיב את חבילת מסמכי ההצטרפות שלך ונשלח אליך קישור חתימה בדואר האלקטרוני. כל חותם/ת (את/ה, עורך/ת הדין או רואה/ת החשבון במידת הצורך, כל בעל/ת שליטה והשותף הכללי) חותם/ת בתורו/ה.":"Upon submission, we assemble your subscription pack and send you a signing link by email. Each signer (you, your lawyer or CPA if needed, each controlling person, and the General Partner) signs in turn.",
+      "חתימה":"Signature",
+      "יש לחתום עם האצבע או העכבר.":"Sign with your finger or mouse.",
+      "נקה":"Clear",
+      "יש לשרטט חתימה לפני השליחה.":"Please add your signature before submitting.",
+      "בסיום התהליך יתקבל עותק חתום במייל":"A signed copy will be sent to you by email at the end of the process.",
       "הקודם":"Back",
       "הבא":"Continue",
       "יש להזין לפחות רשומה אחת כאן.":"At least one entry is required here.",
@@ -1565,12 +1663,9 @@
     // the 3 threshold boxes disable while "not qualified" is checked, and "not
     // qualified" disables while any threshold box is checked (EasySend enableCondition).
     function enforceQualMutex() {
-      var thresholds = form.querySelectorAll('input[data-qual-group="indQual"]');
-      var none = form.querySelector('input[data-qual-none="indQual"]');
-      if (!none) return;
-      var anyThreshold = Array.prototype.some.call(thresholds, function (c) { return c.checked; });
-      none.disabled = anyThreshold;
-      thresholds.forEach(function (c) { c.disabled = none.checked; });
+      // Mutual exclusivity is handled by the radio-like clear in the change handler.
+      // No option is ever disabled: disabling a regretted pick made it unclickable
+      // ("stuck"). Kept as a no-op hook for the existing call sites.
     }
 
     form.addEventListener('change', function (e) {
@@ -1578,10 +1673,11 @@
       // inferred-defaults engine must never override it again.
       if (e.isTrusted && e.target && e.target.name) TOUCHED[e.target.name] = true;
       if (e.target.getAttribute && (e.target.getAttribute('data-qual-group') === 'indQual' || e.target.getAttribute('data-qual-none') === 'indQual')) {
-        // Single-select across the 3 §15A threshold boxes (the page says 'choose
-        // ONE option'): checking one clears the others, so they behave like radios.
-        if (e.target.getAttribute('data-qual-group') === 'indQual' && e.target.checked) {
-          form.querySelectorAll('input[data-qual-group="indQual"]').forEach(function (c) {
+        // The 4 qualification options are mutually exclusive (choose ONE). Checking
+        // any one clears the other three, so they behave like radios and the LP can
+        // freely switch a regretted pick. No disabling (that made it feel stuck).
+        if (e.target.checked) {
+          form.querySelectorAll('input[data-qual-group="indQual"], input[data-qual-none="indQual"]').forEach(function (c) {
             if (c !== e.target) c.checked = false;
           });
         }
@@ -2187,12 +2283,13 @@
     // Filename is data + a checkmark icon, so no new copy. Cleared when removed.
     function setFileSuccess(inp, filename) {
       var holder = inp.closest('.lvp-field'); if (!holder) return;
-      var el = holder.querySelector('.lvp-file-success');
-      if (!filename) { if (el) el.remove(); holder.classList.remove('lvp-field--has-file'); return; }
-      if (!el) { el = document.createElement('p'); el.className = 'lvp-file-success'; holder.appendChild(el); }
+      // The filename slot + checkmark are static markup inside .lvp-file; we only
+      // write the name and flip the has-file class (CSS shows/hides the success
+      // line, remove button, and swaps the trigger label upload->replace).
+      var nameEl = holder.querySelector('.lvp-file__name');
+      if (!filename) { holder.classList.remove('lvp-field--has-file'); if (nameEl) nameEl.textContent = ''; return; }
       holder.classList.add('lvp-field--has-file');
-      el.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
-      el.querySelector('span').textContent = filename;
+      if (nameEl) nameEl.textContent = filename;
     }
     // Accepted upload MIME types, mirroring the accept="" attribute on every
     // file input. The accept attribute is advisory only (a .txt renamed .pdf, or
@@ -2228,6 +2325,24 @@
         setFileSuccess(inp, f.name);
       };
       reader.readAsDataURL(f);
+    });
+
+    // Remove/replace control. The button lives inside the <label>, so its click
+    // would bubble up and re-open the native dialog; stop that, then clear the
+    // real input + the pending base64 so the slot reads as empty again. Uses the
+    // same clear path as an empty-selection change (setFileSuccess(inp, null)).
+    form.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('[data-file-remove]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var holder = btn.closest('.lvp-field'); if (!holder) return;
+      var inp = holder.querySelector('input[data-upload]'); if (!inp) return;
+      delete pendingUploads[inp.getAttribute('data-upload')];
+      inp.value = '';
+      setFileSuccess(inp, null);
+      clearFieldError_(holder);   // drop any prior wrong-type/size error on this field
+      inp.focus();
     });
 
     // ---- script guard: Hebrew-script fields reject Latin; English-mirror fields
@@ -2501,7 +2616,13 @@
       // Audit #7 remainder + #8 range (Noa-approved copy 2026-07-03; #3 edited to ח.פ).
       if (rule === 'cell-il') {
         var digits = v.replace(/[^0-9]/g, '');
-        if (!(digits.length === 10 && digits.indexOf('05') === 0)) return 'מספר הטלפון הנייד אינו תקין.';
+        if (/^\s*\+/.test(v)) {
+          // International: a leading + then a country code + number (E.164, 8-15 digits).
+          if (!(digits.length >= 8 && digits.length <= 15)) return 'מספר הטלפון הנייד אינו תקין.';
+        } else if (!(digits.length === 10 && digits.indexOf('05') === 0)) {
+          // Israeli mobile: 05xxxxxxxx.
+          return 'מספר הטלפון הנייד אינו תקין.';
+        }
       }
       if (rule === 'ssn') {
         if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר ה-SSN אינו תקין.';
@@ -2675,6 +2796,7 @@
       page.hidden = false;
       applyConditionals(page);
       enforceQualMutex();
+      if (page.getAttribute('data-page') === 'ind.sign' && !sigPadReady) initSigPad();
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
       prevBtn.hidden = idx === 0;
       var last = idx === pages.length - 1;
@@ -2708,6 +2830,21 @@
       var page = currentPageEl();
       if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
       renderErrorSummary(page); // clears the summary when the page validates clean
+      // Signature gate: the drawn PNG is the consent (matching EasySend's sign-then-
+      // send). The button is never disabled; if the pad is empty we send the LP back
+      // to the sign page and mark the error rather than submitting without a signature.
+      if (!sigPadPng) {
+        setStatus(displayFor('יש לשרטט חתימה לפני השליחה.', curLang), true);
+        var pages = visiblePages();
+        for (var si = 0; si < pages.length; si++) {
+          if (pages[si].getAttribute('data-page') === 'ind.sign') { showPage(si); break; }
+        }
+        var errEl = form.querySelector('[data-sig-err]');
+        if (errEl) errEl.textContent = displayFor('יש לשרטט חתימה לפני השליחה.', curLang);
+        var pad = document.getElementById('sig-pad');
+        if (pad) { try { pad.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { pad.scrollIntoView(); } }
+        return;
+      }
       doSubmit();
     });
 
@@ -2784,6 +2921,80 @@
       host.innerHTML = html;
     }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
+
+    // ---- inline signature pad (ported from index.html, draw-only) ----
+    // The drawn PNG is read into sigPadPng and rides the submit as signaturePng, so
+    // the gateway records the primary's signature inline instead of mailing a link.
+    var sigPadReady = false;
+    var sigPadPng = null;
+    function initSigPad() {
+      var canvas = document.getElementById('sig-pad');
+      if (!canvas) return;
+      var clearBtn = form.querySelector('[data-sig-clear]');
+      var errEl = form.querySelector('[data-sig-err]');
+      sigPadReady = true;
+      var ctx2 = canvas.getContext('2d');
+      function size() {
+        // Read the live devicePixelRatio each time (rotate / display move). Reset to
+        // identity before scaling so re-running size() never compounds the scale.
+        var ratio = window.devicePixelRatio || 1;
+        var r = canvas.getBoundingClientRect();
+        canvas.width = r.width * ratio; canvas.height = r.height * ratio;
+        ctx2.setTransform(1, 0, 0, 1, 0, 0);
+        ctx2.scale(ratio, ratio); ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
+      }
+      size();
+      var drawing = false, dirty = false, last = { x: 0, y: 0 }, points = 0;
+      var MIN_POINTS = 8;
+      function pos(e) {
+        var r = canvas.getBoundingClientRect();
+        var t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      }
+      function start(e) { drawing = true; last = pos(e); e.preventDefault(); }
+      function move(e) {
+        if (!drawing) return;
+        var p = pos(e);
+        ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
+        last = p; dirty = true; points++;
+        updateSigState();
+        e.preventDefault();
+      }
+      function endDraw() { drawing = false; }
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('touchstart', start, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', endDraw);
+      // Re-size the backing store on rotate / viewport change so the pointer-to-canvas
+      // mapping stays correct. Resizing clears the canvas, so reset the stroke state
+      // and the captured PNG. Debounced to skip mid-gesture churn.
+      var resizeTimer = null;
+      function onResize() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          drawing = false; size();
+          dirty = false; points = 0; sigPadPng = null;
+          updateSigState();
+        }, 200);
+      }
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      if (clearBtn) clearBtn.addEventListener('click', function () {
+        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+        dirty = false; points = 0; sigPadPng = null;
+        if (errEl) errEl.textContent = '';
+        updateSigState();
+      });
+      function updateSigState() {
+        // Never disable the submit control; only keep sigPadPng in sync so the submit
+        // handler can read it and guide the LP to the pad if it is empty.
+        var hasSig = dirty && points >= MIN_POINTS;
+        sigPadPng = hasSig ? canvas.toDataURL('image/png') : null;
+      }
+    }
+
     // Error summary (a11y, WCAG 3.3.1/2.4.3): render a titled list of the page's errored
     // fields with tap-to-jump links, from the holders validatePage() already marked.
     // Additive - reads the DOM, never changes validation. role=alert + tabindex so a
@@ -2887,7 +3098,7 @@
         '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
         '<h2>' + esc(displayFor('מכינים את המסמכים שלך', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('אנו מרכיבים את חבילת ההצטרפות שלך. זה עשוי לקחת רגע. נא להשאיר חלון זה פתוח.', curLang)) + '</p>');
-      gateway('submit', { submission: submission, files: files }).then(function (res) {
+      gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' }).then(function (res) {
         if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
         showSubmittedCard();
       }).catch(function (err) {
@@ -2904,7 +3115,7 @@
         '</div>' +
         '<div class="lvp-result__divider"></div>' +
         '<h2>' + esc(displayFor('המסמכים נשלחו בהצלחה!', curLang)) + '</h2>' +
-        '<p>' + esc(displayFor('קיבלנו את פרטי ההצטרפות שלך. אנו מכינים את המסמכים ונשלח אליך קישור לחתימה בדואר האלקטרוני בהקדם.', curLang)) + '</p>',
+        '<p>' + esc(displayFor('תודה על שיתוף הפעולה', curLang)) + '</p>',
         true);
     }
     var resultEl = null;
@@ -2939,6 +3150,179 @@
       statusEl.classList.remove('lvp-status--note');
     }
 
+    // ---- bank + branch type-to-search combobox (ported from flow.html) ----------
+    // The bank + branch stay the SAME plain-text inputs (names preserved), so
+    // save/resume/submit are unchanged. This only layers a filtered suggestion list on
+    // top: the pick writes the bank name / branch code straight into the input value.
+    var BANK_REG = null, BANK_BY_CODE = {};
+    function escHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+    // Normalize a Hebrew bank/branch string for matching: drop בע"מ, gershayim and
+    // quotes, collapse whitespace. Keeps the match forgiving of how the LP types it.
+    function normHe(s){ return String(s || '').replace(/בע"?מ/g, '').replace(/[״׳"'`]/g, '').replace(/\s+/g, ' ').trim(); }
+    // Clear a red error on the bank/branch field, adapted to israel.html's holder-based
+    // error model (clearFieldError_ takes the .lvp-field holder, not a field id).
+    function clearComboErr_(inputEl){
+      if (!inputEl) return;
+      var holder = inputEl.closest('.lvp-field, .lvp-fieldset');
+      if (holder && holder.classList.contains('lvp-field--error')) clearFieldError_(holder);
+    }
+    function loadBankRegistry(){
+      if (BANK_REG) return;
+      BANK_REG = [];  // guard against a double fetch while the first is in flight
+      var x = new XMLHttpRequest();
+      x.open('GET', 'bank-registry.json', true);
+      x.onreadystatechange = function(){
+        if (x.readyState !== 4) return;
+        try {
+          var d = JSON.parse(x.responseText);
+          BANK_REG = (d && d.banks) || [];
+          BANK_BY_CODE = {};
+          BANK_REG.forEach(function(b){ BANK_BY_CODE[b.c] = b; });
+        } catch(e){ BANK_REG = []; }
+        refreshBankFromInputs();
+      };
+      try { x.send(); } catch(e){ BANK_REG = []; }
+    }
+    function bankByCode(c){ return BANK_BY_CODE[c] || null; }
+    function bankByName(name){
+      var q = normHe(name); if (!q || !BANK_REG) return null;
+      for (var i = 0; i < BANK_REG.length; i++){ if (normHe(BANK_REG[i].n) === q) return BANK_REG[i]; }
+      return null;
+    }
+    function selectedBank(){
+      var inp = document.getElementById('bank-name'); if (!inp) return null;
+      var code = inp.getAttribute('data-bank-code');
+      if (code && bankByCode(+code)) return bankByCode(+code);
+      return bankByName(inp.value);
+    }
+    function branchByCode(bank, code){
+      if (!bank) return null;
+      for (var i = 0; i < bank.br.length; i++){ if (bank.br[i][0] === code) return bank.br[i]; }
+      return null;
+    }
+    function comboClose(listEl, inputEl){ if (!listEl) return; listEl.hidden = true; listEl.innerHTML = ''; if (inputEl) inputEl.setAttribute('aria-expanded', 'false'); }
+    function comboRender(listEl, inputEl, items, render, onPick){
+      if (!items.length){ comboClose(listEl, inputEl); return; }
+      listEl.innerHTML = '';
+      var capped = items.slice(0, 40);
+      var baseId = (listEl.id || 'combo') + '-opt-';
+      capped.forEach(function(it, i){
+        var li = document.createElement('li');
+        li.className = 'lvp-combo__opt'; li.setAttribute('role', 'option'); li.id = baseId + i;
+        li.innerHTML = render(it);
+        // pointerdown covers mouse + touch + pen and fires before the input blur
+        // closes the list, so a tap or a click commits the option.
+        li.addEventListener('pointerdown', function(ev){ ev.preventDefault(); onPick(it); });
+        listEl.appendChild(li);
+      });
+      listEl.hidden = false; inputEl.setAttribute('aria-expanded', 'true');
+      // Keyboard-nav state read by comboKeydown.
+      listEl._items = capped; listEl._onPick = onPick; listEl._active = -1;
+      inputEl.removeAttribute('aria-activedescendant');
+    }
+    // Arrow/Enter/Escape so a keyboard or screen-reader LP can commit a bank/branch
+    // they typed (the list was mouse-only). Highlights via .is-active +
+    // aria-activedescendant; Enter picks the highlighted option; Escape closes.
+    function comboKeydown(e, listEl, inputEl){
+      if (!listEl || listEl.hidden) return;
+      var opts = listEl.querySelectorAll('.lvp-combo__opt');
+      if (!opts.length) return;
+      var act = (listEl._active == null) ? -1 : listEl._active;
+      if (e.key === 'ArrowDown'){ e.preventDefault(); act = Math.min(opts.length - 1, act + 1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); act = Math.max(0, act - 1); }
+      else if (e.key === 'Enter'){ if (act >= 0 && listEl._onPick){ e.preventDefault(); listEl._onPick(listEl._items[act]); } return; }
+      else if (e.key === 'Escape'){ comboClose(listEl, inputEl); return; }
+      else return;
+      for (var i = 0; i < opts.length; i++){ opts[i].classList.toggle('is-active', i === act); opts[i].setAttribute('aria-selected', i === act ? 'true' : 'false'); }
+      listEl._active = act;
+      if (opts[act]){ opts[act].scrollIntoView({ block: 'nearest' }); inputEl.setAttribute('aria-activedescendant', opts[act].id); }
+    }
+    function refreshBankFromInputs(){
+      // Re-resolve after a resume or registry load: restore the bank code data attr
+      // from the restored bank name.
+      var binp = document.getElementById('bank-name');
+      if (!binp || !BANK_REG) return;
+      var b = bankByName(binp.value);
+      if (b) binp.setAttribute('data-bank-code', b.c);
+    }
+    function initBankCombo(){
+      var bankInput = document.getElementById('bank-name');
+      var bankList = document.getElementById('bank-name-list');
+      var brInput = document.getElementById('bank-branch');
+      var brList = document.getElementById('bank-branch-list');
+      if (!bankInput || !brInput) return;
+      function brShow(bank, query){
+        var q = String(query || '').trim();
+        var qn = q.replace(/\D/g, ''), qt = normHe(q);
+        var items = bank.br.filter(function(br){
+          if (!q) return true;
+          if (qn && String(br[0]).indexOf(qn) === 0) return true;
+          if (qt && normHe(br[1]).indexOf(qt) !== -1) return true;
+          if (qt && br[2] && normHe(br[2]).indexOf(qt) !== -1) return true;
+          return false;
+        });
+        comboRender(brList, brInput, items, function(br){
+          return '<span class="lvp-combo__opt-code">' + br[0] + '</span><span>' + escHtml(br[1]) +
+                 '</span><span class="lvp-combo__opt-city">' + escHtml(br[2] || '') + '</span>';
+        }, function(br){
+          brInput.value = br[0]; comboClose(brList, brInput);
+          clearComboErr_(brInput);
+          var acct = form.querySelector('[name="moneyInvestedInFund.bankDetails.accountNumber"]'); if (acct) acct.focus();
+        });
+      }
+      bankInput.addEventListener('focus', loadBankRegistry);
+      bankInput.addEventListener('input', function(){
+        // Typing a new bank invalidates the prior pick + any branch chosen under it.
+        bankInput.removeAttribute('data-bank-code');
+        brInput.value = '';
+        var q = normHe(bankInput.value);
+        var items = (BANK_REG || []).filter(function(b){ return !q || normHe(b.n).indexOf(q) !== -1; });
+        comboRender(bankList, bankInput, items, function(b){
+          return '<span>' + escHtml(b.n) + '</span>';
+        }, function(b){
+          bankInput.value = b.n; bankInput.setAttribute('data-bank-code', b.c);
+          comboClose(bankList, bankInput); clearComboErr_(bankInput);
+          brInput.focus();
+        });
+      });
+      brInput.addEventListener('focus', function(){
+        loadBankRegistry();
+        var bank = selectedBank(); if (bank) brShow(bank, brInput.value);
+      });
+      brInput.addEventListener('input', function(){
+        var bank = selectedBank();
+        if (bank) brShow(bank, brInput.value);
+      });
+      bankInput.addEventListener('keydown', function(e){ comboKeydown(e, bankList, bankInput); });
+      brInput.addEventListener('keydown', function(e){ comboKeydown(e, brList, brInput); });
+      // Exact / single-match resolution on blur: a keyboard or tab-away LP who typed a
+      // bank or branch that uniquely identifies one entry gets it auto-committed, so a
+      // correct typed value is not rejected just because they never tapped the list.
+      bankInput.addEventListener('blur', function(){
+        if (bankInput.getAttribute('data-bank-code') || !BANK_REG) return;
+        var q = normHe(bankInput.value); if (!q) return;
+        var exact = bankByName(bankInput.value);
+        var matches = BANK_REG.filter(function(b){ return normHe(b.n).indexOf(q) !== -1; });
+        var pick = exact || (matches.length === 1 ? matches[0] : null);
+        if (pick){ bankInput.value = pick.n; bankInput.setAttribute('data-bank-code', pick.c); clearComboErr_(bankInput); }
+      });
+      brInput.addEventListener('blur', function(){
+        var bank = selectedBank(); if (!bank) return;
+        var v = String(brInput.value || ''), vn = v.replace(/\D/g, ''), qt = normHe(v);
+        if (vn && branchByCode(bank, +vn)) return;  // already a valid code
+        var matches = bank.br.filter(function(br){
+          if (vn && String(br[0]).indexOf(vn) === 0) return true;
+          if (qt && normHe(br[1]).indexOf(qt) !== -1) return true;
+          return false;
+        });
+        if (matches.length === 1){ brInput.value = matches[0][0]; clearComboErr_(brInput); }
+      });
+      document.addEventListener('click', function(e){
+        if (!e.target.closest('#bank-name, #bank-name-list')) comboClose(bankList, bankInput);
+        if (!e.target.closest('#bank-branch, #bank-branch-list')) comboClose(brList, brInput);
+      });
+    }
+
     // ---- init ----
     populateCountries();
     ensureMinRows();
@@ -2956,6 +3340,8 @@
     applyConditionals();
     applyInferredDefaults();   // safe defaults AFTER hydration: empty fields only, all editable
     initPlacesAutocomplete();  // Hebrew address once -> English mirror derived
+    initBankCombo();           // bank + branch type-to-search combobox (Bank of Israel)
+    try { loadBankRegistry(); } catch (e) {}  // warm the registry + restore bank code after resume
     // Amount: whole-number, thousands separators on blur.
     (function () {
       var a = form.querySelector('[data-amount]');

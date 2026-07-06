@@ -216,12 +216,10 @@
         </div>
       </div>
 
-      <!-- Already signed state -->
+      <!-- Already signed state: emoji-only, no text (checkmark + signature) -->
       <div data-state="signed" hidden>
         <div class="state">
-          <div class="check">&#x2713;</div>
-          <h1>Already signed</h1>
-          <p>Your signature has already been recorded. No further action is needed.</p>
+          <div class="check check--emoji" role="img" aria-label="&#x05E0;&#x05D7;&#x05EA;&#x05DD;">&#x2705;&#x270D;&#xFE0F;</div>
         </div>
       </div>
 
@@ -304,8 +302,8 @@
       <!-- Done state -->
       <div data-state="done" hidden>
         <div class="state">
-          <h1>Thank you</h1>
-          <p id="done-msg">Your signature has been recorded.</p>
+          <h1>Documents sent successfully</h1>
+          <p id="done-msg">Thank you for your cooperation</p>
         </div>
       </div>
 
@@ -331,10 +329,10 @@
       "Loading...": "טוען...",
       "Please keep this window open.": "נא לא לסגור את החלון.",
       "Link unavailable": "קישור לא זמין",
-      "This signing link is invalid or has expired. Please contact Legacy Value Partners.": "קישור החתימה אינו תקין או פג תוקפו. נא לפנות ל-Legacy Value Partners.",
-      "This signing link has expired. Please contact Legacy Value Partners for a new link.": "תוקף קישור החתימה פג. נא לפנות ל-Legacy Value Partners לקבלת קישור חדש.",
-      "This subscription has been cancelled. Please contact Legacy Value Partners.": "ההצטרפות בוטלה. נא לפנות ל-Legacy Value Partners.",
-      "This signing link has been revoked. Please contact Legacy Value Partners.": "קישור החתימה בוטל. נא לפנות ל-Legacy Value Partners.",
+      "This signing link is invalid or has expired. Please contact Legacy Value Partners.": "קישור החתימה אינו תקין או פג תוקפו. נא לפנות לקרן לגאסי.",
+      "This signing link has expired. Please contact Legacy Value Partners for a new link.": "תוקף קישור החתימה פג. נא לפנות לקרן לגאסי לקבלת קישור חדש.",
+      "This subscription has been cancelled. Please contact Legacy Value Partners.": "ההצטרפות בוטלה. נא לפנות לקרן לגאסי.",
+      "This signing link has been revoked. Please contact Legacy Value Partners.": "קישור החתימה בוטל. נא לפנות לקרן לגאסי.",
       "Already signed": "כבר נחתם",
       "Your signature has already been recorded. No further action is needed.": "החתימה שלך כבר תועדה. אין צורך בפעולה נוספת.",
       "Not yet": "עוד לא תורך",
@@ -349,8 +347,8 @@
       "Recording...": "מתעד....",
       "Thank you": "תודה",
       "Your signature has been recorded.": "החתימה שלך תועדה.",
-      "All signatures are in. We will assemble the documents and email a confirmation.": "המסמכים החתומים יישלחו במייל.",
-      "Your signature has been recorded. We will notify the next signer.": "החתימה שלך תועדה. נודיע לחותם/ת הבא/ה.",
+      "Documents sent successfully": "המסמכים נשלחו בהצלחה!",
+      "Thank you for your cooperation": "תודה על שיתוף הפעולה",
       "We could not record your signature. Please try again.": "לא ניתן לתעד את החתימה. נא לנסות שוב.",
       "Please draw your signature before submitting.": "יש לשרטט חתימה לפני השליחה.",
       "Identification": "המסמכים המזהים שלך",
@@ -399,7 +397,7 @@
       "SWIFT": "קוד SWIFT",
       "Beneficiaries (if any)": "נהנים (אם קיימים)",
       "I independently confirm the accredited-investor qualification *": "הריני לאשר באופן בלתי תלוי את כשירות המשקיע/ה",
-      "This detail needs to be completed with Legacy Value Partners.": "יש להשלים פרט זה מול Legacy Value Partners.",
+      "This detail needs to be completed with Legacy Value Partners.": "יש להשלים פרט זה מול קרן לגאסי.",
       "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
       "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
       "Please enter a valid email address.": "יש להזין כתובת מייל תקינה.",
@@ -1497,14 +1495,10 @@
           var res = {};
           try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
           if (res && res.ok) {
-            // The source=lp gateway envelope is { ok, stage, nextUrl, detail };
-            // it never carries `completed`. The FINAL signer's response is
-            // stage 'all_signed' (incl. the deferred-seal path); a mid-roster
-            // signer gets stage 'signing'. Key the done message off the stage
-            // so the last signer sees the completion wording, not "next signer".
-            document.getElementById('done-msg').textContent = (res.stage === 'all_signed')
-              ? tHe('All signatures are in. We will assemble the documents and email a confirmation.')
-              : tHe('Your signature has been recorded. We will notify the next signer.');
+            // EasySend shows the SAME post-sign splash after every signer (the
+            // email/signed-copy promise lives on the welcome splash, not here), so
+            // the message does not branch on stage.
+            document.getElementById('done-msg').textContent = tHe('Thank you for your cooperation');
             show('done');
           } else {
             onPostFail();
