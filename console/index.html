@@ -1803,6 +1803,26 @@ input:focus {
 }
 .dact .dvoid:hover { color: var(--color-red); text-decoration: underline; }
 
+/* Nudge: the gentle, non-destructive "remind the current signer" action. Primary-
+   but-quiet, a soft filled tint that fills solid on hover; placed first. No confirm
+   strip (it only re-sends the already-approved reminder). A short cooldown after a
+   send keeps an accidental double-tap from double-mailing the signer. */
+.dact .nudge {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-atrium);
+  background: var(--color-atrium-tint);
+  color: var(--color-atrium);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast), opacity var(--dur-fast);
+}
+.dact .nudge:hover { background: var(--color-atrium); color: #fff; }
+.dact .nudge:disabled { opacity: 0.5; cursor: default; background: var(--color-atrium-tint); color: var(--color-atrium); }
+.dact-status.ok { color: var(--color-green); }
+
 /* Inline confirm strip (replaces native confirm/alert for void + reseal) */
 .dact-confirm {
   display: flex;
@@ -1813,6 +1833,9 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-bg-hover);
 }
+/* The author display:flex above beats the UA [hidden]{display:none}, so without
+   this the confirm strip renders (empty) on every drawer open. Restore hiding. */
+.dact-confirm[hidden] { display: none; }
 .dact-confirm .dac-msg {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2981,7 +3004,20 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var isTerminal=isComplete||isVoided;
     // Docs exist once signing has produced a sealed pack.
     var docsExist=(dstage==='all_signed'||dstage==='docs_assembled'||dstage==='dispatched'||dstage==='complete');
+    // A signer is still awaited during the pre-seal signing window. The current signer
+    // is the first roster entry not yet done; used to word the "Reminder sent" line.
+    var awaitingSigner=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress'||dstage==='signing'||dstage==='submitted');
+    var curSigner=null;
+    if(d.signers&&d.signers.length){for(var _si=0;_si<d.signers.length;_si++){if(d.signers[_si].state!=='done'){curSigner=d.signers[_si];break;}}}
+    var curSignerName=curSigner?String(curSigner.name||'').trim().split(/\s+/)[0]:'';
     var dactBtns='';
+    // Nudge first: the common, gentle action while waiting on a signer. Re-added
+    // 2026-07-06 (Noa) as an ON-DEMAND control, distinct from the scheduled
+    // caymanReminderScan; the 2026-06-11 removal was for the manual/auto duplication,
+    // which the post-send cooldown below addresses.
+    if(awaitingSigner&&!isTerminal){
+      dactBtns+='<button class="nudge" data-act="nudge">Remind signer</button>';
+    }
     if(docsExist&&!isVoided){
       dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
     }
@@ -3048,6 +3084,21 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     Array.prototype.forEach.call(document.querySelectorAll(".dact-btns button"),function(b){
       var act=b.getAttribute("data-act");
       b.onclick=function(){
+        // Nudge is non-destructive: no confirm strip, fire straight away, then a short
+        // cooldown so a double-tap can't double-mail the signer.
+        if(act==='nudge'){
+          b.disabled=true;dStatus('Sending the reminder...','');
+          apiFetch('?admin=nudge&processId='+encodeURIComponent(currentPid)).then(function(r){
+            if(r&&r.ok){
+              dStatus('Reminder sent'+(curSignerName?(' to '+curSignerName):'')+'.','ok');
+              setTimeout(function(){if(b&&b.isConnected)b.disabled=false;},6000);
+            }else{
+              b.disabled=false;
+              dStatus('Could not send the reminder'+((r&&r.error)?(': '+r.error):'. Try again in a moment.'),'error');
+            }
+          }).catch(function(){b.disabled=false;dStatus('Could not send the reminder. Check the connection and try again.','error');});
+          return;
+        }
         var c=ACT_CONFIRM[act];if(!c||!confEl)return;
         pendingAct=act;dStatus('',null);
         msgEl.textContent=c.msg;
