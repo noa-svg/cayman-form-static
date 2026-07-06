@@ -430,12 +430,16 @@
               <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
               <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
             </div>
-            <!-- English city/street are auto-derived from the Hebrew address by Google
-                 Places (placesFillEnglish_), so the LP is never asked to type the address
-                 twice. Kept as hidden fields so the English mirror still rides the submit
-                 for the W-8 / English docs. -->
-            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
-            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
+            <!-- English city/street: Google Places (placesFillEnglish_) PRE-FILLS these
+                 from the Hebrew address when the LP picks a suggestion, so a picker user
+                 does not retype. Kept VISIBLE + fillable so a manually-typed address still
+                 yields the English the W-8 requires. (Hiding them shipped a bug: a manual
+                 Hebrew entry left these empty and the submit failed english_address_required,
+                 which would also seal an address-less, invalid W-8.) -->
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
+              <label class="lvp-field"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.englishAddress.street"></label>
+            </div>
           </fieldset>
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
