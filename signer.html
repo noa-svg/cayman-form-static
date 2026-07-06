@@ -265,6 +265,10 @@
              renderIdUploads(ctx). Empty + hidden for every other signer role. -->
         <div id="id-uploads" hidden></div>
 
+        <!-- Lawyer stamp upload: rendered ONLY for the 'lawyer' role by
+             renderLawyerStamp(ctx). Empty + hidden for every other signer role. -->
+        <div id="lawyer-stamp-upload" hidden></div>
+
         <!-- Inline doc preview -->
         <div class="doc-preview">
           <h2>Subscription documents</h2>
@@ -360,6 +364,9 @@
       "Separate appendix page.": "עמוד הספח הנפרד.",
       "Biometric cards only.": "לכרטיסים ביומטריים בלבד.",
       "Please upload your passport or national ID before submitting.": "נא להעלות דרכון או תעודת זהות לפני השליחה.",
+      "Lawyer / accountant stamp": "חותמת עו״ד / רו״ח",
+      "Please upload a JPG or PNG file only.": "נא להעלות קובץ בפורמט JPG או PNG בלבד",
+      "Please upload the stamp before submitting.": "נא להעלות את החותמת לפני השליחה",
       "A file is larger than 10 MB. Please upload a smaller file.": "קובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.",
       "We could not read that file. Please try again.": "לא ניתן לקרוא את הקובץ. נא לנסות שוב.",
       "Company details": "פרטי החברה",
@@ -483,7 +490,7 @@
         // Re-translate the dynamically built sections (locked context, field
         // labels, doc titles) that applyLang's static selector does not cover,
         // so a foreign signer can toggle EN<->HE cleanly. F5.
-        if (CTX) { renderDynamic(CTX, false); renderIdUploads(CTX, false); }
+        if (CTX) { renderDynamic(CTX, false); renderIdUploads(CTX, false); renderLawyerStamp(CTX, false); }
       });
     });
 
@@ -580,6 +587,11 @@
     // non-cp signer never renders the section and posts no uploads.
     var pendingIdUploads = {};
 
+    // Lawyer-only stamp upload. Mirrors pendingIdUploads: a non-lawyer signer never
+    // renders the section and posts no stamp. Keyed by the single 'lawyer_stamp' slot
+    // and merged into the SAME payload.uploads object the CP path uses.
+    var pendingLawyerStamp = {};
+
     // The ID slots a controlling person uploads on their signing page, mirroring
     // the individual ID block on index.html (labels / hints / accept / order).
     // Passport OR national-ID front is required (enforced at submit); appendix and
@@ -655,6 +667,68 @@
           (s.hint ? '<span class="signer-note">' + esc(tHe(s.hint)) + '</span>' : '') +
           '</div>';
       });
+      host.innerHTML = html;
+      host.hidden = false;
+    }
+
+    // Read the chosen stamp file into pendingLawyerStamp as base64 (post-comma),
+    // mirroring handleIdUpload. Rejects anything that is not JPG/PNG and any file
+    // over 10MB visibly (reuses the shared error element). A cleared input removes
+    // the slot so the required-gate is honest.
+    function handleLawyerStamp(slot, input, errEl) {
+      var f = input.files && input.files[0];
+      if (!f) { delete pendingLawyerStamp[slot]; return; }
+      if (f.type !== 'image/jpeg' && f.type !== 'image/png') {
+        if (errEl) errEl.textContent = tHe('Please upload a JPG or PNG file only.');
+        input.value = '';
+        delete pendingLawyerStamp[slot];
+        return;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        if (errEl) errEl.textContent = tHe('A file is larger than 10 MB. Please upload a smaller file.');
+        input.value = '';
+        delete pendingLawyerStamp[slot];
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var b64 = String(reader.result).split(',')[1];
+        pendingLawyerStamp[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+      };
+      reader.onerror = function () {
+        if (errEl) errEl.textContent = tHe('We could not read that file. Please try again.');
+        input.value = '';
+        delete pendingLawyerStamp[slot];
+      };
+      reader.readAsDataURL(f);
+    }
+
+    // Render the lawyer-only stamp upload into #lawyer-stamp-upload. No-op (and
+    // cleared) for any non-lawyer role, so the section can never appear for a
+    // subscriber / co-holder / CP and no stamp is ever sent for them. Mirrors
+    // renderIdUploads: `isInitial=false` re-translates the label in place on a
+    // language toggle WITHOUT rebuilding the <input>, so a picked file (and its
+    // captured base64) survives an EN<->HE flip. accept is JPG/PNG only (no PDF).
+    function renderLawyerStamp(ctx, isInitial) {
+      var host = document.getElementById('lawyer-stamp-upload');
+      if (!host) return;
+      if (!(ctx && ctx.role === 'lawyer')) {
+        pendingLawyerStamp = {};
+        host.hidden = true; host.innerHTML = '';
+        return;
+      }
+      if (isInitial === false && host.innerHTML) {
+        // Re-translate in place; preserve the input + pendingLawyerStamp.
+        var lbl = host.querySelector('[data-stamp-slot="lawyer_stamp"] label'); if (lbl) lbl.textContent = tHe('Lawyer / accountant stamp');
+        var hintEl = host.querySelector('[data-stamp-slot="lawyer_stamp"] span.signer-note'); if (hintEl) hintEl.textContent = tHe('Please upload a JPG or PNG file only.');
+        return;
+      }
+      pendingLawyerStamp = {};
+      var html = '<div class="field" data-stamp-slot="lawyer_stamp">' +
+        '<label for="stamp-lawyer_stamp">' + esc(tHe('Lawyer / accountant stamp')) + '</label>' +
+        '<input type="file" id="stamp-lawyer_stamp" data-stamp-upload="lawyer_stamp" accept="image/jpeg,image/png">' +
+        '<span class="signer-note">' + esc(tHe('Please upload a JPG or PNG file only.')) + '</span>' +
+        '</div>';
       host.innerHTML = html;
       host.hidden = false;
     }
@@ -1042,6 +1116,7 @@
       applyLang('he');
       renderDynamic(ctx, true);
       renderIdUploads(ctx, true);
+      renderLawyerStamp(ctx, true);
       applyLeanReview_(ctx);
       prefillSavedData(ctx.savedData);
       show('form');
@@ -1081,6 +1156,17 @@
           var inp = e.target;
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-id-upload')) return;
           handleIdUpload(inp.getAttribute('data-id-upload'), inp, errEl);
+        });
+      }
+      // Wire the lawyer stamp input (present only for the 'lawyer' role;
+      // renderLawyerStamp leaves #lawyer-stamp-upload empty otherwise). Reads the
+      // file to base64 into pendingLawyerStamp; clearing the field drops it.
+      var stampHost = document.getElementById('lawyer-stamp-upload');
+      if (stampHost) {
+        stampHost.addEventListener('change', function (e) {
+          var inp = e.target;
+          if (!inp || !inp.getAttribute || !inp.getAttribute('data-stamp-upload')) return;
+          handleLawyerStamp(inp.getAttribute('data-stamp-upload'), inp, errEl);
         });
       }
       function size() {
@@ -1453,6 +1539,20 @@
           return;
         }
 
+        // Stamp gate (lawyer only): a lawyer must attach the required stamp before
+        // submitting. Non-lawyer roles skip this entirely (pendingLawyerStamp is
+        // empty and the section never renders for them).
+        var isLawyer = CTX && CTX.role === 'lawyer';
+        if (isLawyer && !pendingLawyerStamp.lawyer_stamp) {
+          errEl.textContent = tHe('Please upload the stamp before submitting.');
+          doneBtn.textContent = tHe('Sign and submit');
+          doneBtn.disabled = false; clearBtn.disabled = false;
+          submitting = false;
+          var stampHostEl = document.getElementById('lawyer-stamp-upload');
+          if (stampHostEl && stampHostEl.scrollIntoView) stampHostEl.scrollIntoView({ block: 'center' });
+          return;
+        }
+
         // Collect editable field values (inputs, selects, textareas, checkboxes)
         var formData = {};
         var inputs = document.querySelectorAll('#signer-form input, #signer-form select, #signer-form textarea');
@@ -1469,8 +1569,20 @@
           pngBase64: png,
           signerFormData: formData
         };
-        if (isCp && Object.keys(pendingIdUploads).length) {
-          payloadObj.uploads = pendingIdUploads;
+        // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so
+        // the server sees payload.uploads.lawyer_stamp with the same shape as a CP
+        // slot. Merge (not overwrite) so if both ever apply neither clobbers the
+        // other. Only cp* roles carry pendingIdUploads; only 'lawyer' carries the
+        // stamp, so in practice exactly one branch contributes.
+        var mergedUploads = {};
+        if (isCp) {
+          Object.keys(pendingIdUploads).forEach(function (k) { mergedUploads[k] = pendingIdUploads[k]; });
+        }
+        if (isLawyer && pendingLawyerStamp.lawyer_stamp) {
+          mergedUploads.lawyer_stamp = pendingLawyerStamp.lawyer_stamp;
+        }
+        if (Object.keys(mergedUploads).length) {
+          payloadObj.uploads = mergedUploads;
         }
 
         var body = JSON.stringify({

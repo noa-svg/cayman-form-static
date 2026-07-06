@@ -655,14 +655,14 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
           <template data-row-template="entres2">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
 
@@ -970,21 +970,9 @@
           </template>
         </section>
 
-        <!-- PAGE: waiver of claims (investorsArray[0].isReadClaims) - individual only -->
-        <section class="lvp-page" data-page="ind.waiver" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">כתב ויתור טענות</h2>
-          <p class="lvp-note">אני הח"מ, ת.ז. שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
-1. ביום נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
-2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
-3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
-          <!-- FL1 fix: the waiver consent was skippable (standalone label). Bare
-               fieldset holder = the page can no longer advance unchecked. -->
-          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
-        </section>
-
         <!-- PAGE: FATCA / CRS tax residency (investorsArray[0].taxResidency) - individual only -->
         <section class="lvp-page" data-page="ind.taxres" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">הצהרה על מעמד מס</h2>
+          <h2 class="lvp-page__title">הצהרה על תושבות מס</h2>
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
             <label class="lvp-radio"><input type="radio" name="investorsArray[0].taxResidency.taxCountry" value="ישראל בלבד" data-show-when-trigger="investorsArray[0].taxResidency.taxCountry"> תושב/ת מס בישראל בלבד</label>
@@ -1003,16 +991,28 @@
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.israelAndOtherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
           <template data-row-template="indres2">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">מדינה ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
               <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].country" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינה מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="investorsArray[0].taxResidency.otherCountries.countriesArray[${i}].tin" inputmode="text"></label>
             </div>
           </template>
+        </section>
+
+        <!-- PAGE: waiver of claims (investorsArray[0].isReadClaims) - individual only -->
+        <section class="lvp-page" data-page="ind.waiver" data-applicant="individual" hidden>
+          <h2 class="lvp-page__title">כתב ויתור טענות</h2>
+          <p class="lvp-note">אני הח"מ, ת.ז. <span data-waiver-id></span> שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
+1. ביום <span data-waiver-date></span> נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
+2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
+3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
+          <!-- FL1 fix: the waiver consent was skippable (standalone label). Bare
+               fieldset holder = the page can no longer advance unchecked. -->
+          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
         </section>
 
         <!-- PAGE: additional investors gate (additionalInvestors) - individual only -->
@@ -2798,6 +2798,7 @@
       enforceQualMutex();
       if (page.getAttribute('data-page') === 'ind.sign' && !sigPadReady) initSigPad();
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
+      if (page.getAttribute('data-page') === 'ind.waiver') fillWaiver();
       prevBtn.hidden = idx === 0;
       var last = idx === pages.length - 1;
       nextBtn.hidden = last;
@@ -2927,6 +2928,19 @@
     // the gateway records the primary's signature inline instead of mailing a link.
     var sigPadReady = false;
     var sigPadPng = null;
+    // Fill the waiver's ת.ז. from what the LP entered on the personal page and the
+    // date (today, the signing day) so the read-and-approve text shows no blanks.
+    function fillWaiver() {
+      var idEl = form.querySelector('[name="investorsArray[0].idNumber"]');
+      var idSpan = document.querySelector('[data-waiver-id]');
+      if (idSpan) idSpan.textContent = idEl ? String(idEl.value || '').trim() : '';
+      var dateSpan = document.querySelector('[data-waiver-date]');
+      if (dateSpan) {
+        var d = new Date();
+        var dd = ('0' + d.getDate()).slice(-2), mm = ('0' + (d.getMonth() + 1)).slice(-2);
+        dateSpan.textContent = dd + '/' + mm + '/' + d.getFullYear();
+      }
+    }
     function initSigPad() {
       var canvas = document.getElementById('sig-pad');
       if (!canvas) return;
