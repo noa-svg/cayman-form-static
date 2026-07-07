@@ -102,6 +102,10 @@
     .lvp-page__title::after { content: ""; display: block; height: 3px; width: 44px; margin-top: 8px;
       border-radius: 2px; background: var(--lvp-navy); }
     .lvp-page__hint  { color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 24px; }
+    /* English-details subgroup: bind the "enter in English as on your ID" hint to the
+       English name fields it governs, and separate it from the Hebrew pair above. */
+    .lvp-en-group { margin-top: 20px; }
+    .lvp-en-group .lvp-hint--en { margin: 0 0 8px; }
 
     .lvp-field { display: block; margin-bottom: 24px; }
     .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 14px; margin-bottom: 6px; font-weight: 500; }
@@ -126,7 +130,7 @@
     .lvp-btn--primary:hover { background: var(--lvp-navy-700); }
     .lvp-btn--secondary { background: rgba(255,255,255,0.85); color: var(--lvp-navy); border: 1px solid var(--lvp-input-line); }
     .lvp-btn--secondary:hover { background: #fff; }
-    .lvp-btn--small { padding: 6px 14px; font-size: 13px; margin: 8px 0 16px; }
+    .lvp-btn--small { padding: 6px 14px; font-size: 13px; margin: 8px 0 16px; min-height: 44px; }
     .lvp-btn--link { background: none; border: none; color: var(--lvp-navy); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 12px 6px; min-height: 44px; }
     .lvp-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
@@ -153,13 +157,17 @@
     }
     .lvp-file { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; }
     /* Styled trigger mirrors .lvp-btn--secondary so it reads as part of the form. */
+    /* Distinct from the solid nav pills (הקודם/הבא): a dashed rounded-rect upload zone
+       so the LP never confuses "החלף קובץ" with the "back" button. 44px min tap target. */
     .lvp-file__trigger {
       font: inherit; font-weight: 700; font-size: 14px;
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.85); color: var(--lvp-navy);
-      border: 1px solid var(--lvp-input-line); border-radius: 999px;
-      padding: 10px 22px; cursor: pointer; transition: background 120ms ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 44px;
+      background: rgba(13,63,106,0.04); color: var(--lvp-navy);
+      border: 1px dashed var(--lvp-input-line); border-radius: 8px;
+      padding: 10px 20px; cursor: pointer; transition: background 120ms ease;
     }
+    .lvp-file__trigger::before { content: "\2191"; font-weight: 700; }
     .lvp-file__trigger:hover { background: #fff; }
     /* Show a strong keyboard-focus ring on the trigger when the hidden input is focused. */
     .lvp-file-input:focus-visible + .lvp-file .lvp-file__trigger { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
@@ -214,7 +222,7 @@
     }
     .lvp-combo__list[hidden] { display: none; }
     .lvp-combo__opt {
-      display: flex; gap: 8px; align-items: baseline;
+      display: flex; gap: 8px; align-items: center; min-height: 44px;
       padding: 8px 12px; border-radius: 7px; cursor: pointer; font-size: 15px; color: var(--lvp-text);
     }
     .lvp-combo__opt:hover, .lvp-combo__opt.is-active { background: #EEF3F8; }
@@ -245,6 +253,11 @@
        shared status line. When a specific message is shown the " חובה"/"required"
        label suffix is suppressed (the field is filled but invalid, not empty). */
     .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
+    /* When the errored field sits in a 2-col grid, the error <p> is inserted as the
+       next sibling and would otherwise take the neighbouring grid cell (landing beside
+       the label and shoving the pair sideways). Force it to span the whole row so it
+       renders full-width directly under its field. */
+    .lvp-grid-2 > .lvp-error-msg { grid-column: 1 / -1; margin-top: 0; margin-bottom: 16px; }
     /* Submit/validation error summary: a titled list of the page's errored fields
        with tap-to-jump links, rendered at the top of the current page (WCAG 3.3.1 /
        2.4.3). On a 360px screen a failed field below the fold is invisible; the
@@ -327,7 +340,8 @@
     .lvp-card[dir="rtl"] .lvp-input[type="email"],
     .lvp-card[dir="rtl"] .lvp-input[type="tel"],
     .lvp-card[dir="rtl"] .lvp-input[data-validate="date-past"],
-    .lvp-card[dir="rtl"] .lvp-input[data-validate="date-future"] { direction: ltr; text-align: left; }
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="date-future"],
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="first-business-day"] { direction: ltr; text-align: left; }
     /* RTL pager: forward (הבא/סיום) belongs on the LEFT, back (הקודם) on the RIGHT
        -- the mirror of LTR. The default `row` in an RTL flex container already
        places the first DOM child (prev) on the right and the last (next/submit)
@@ -392,10 +406,12 @@
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].firstName" data-help="כפי שמופיע בתעודת הזהות"></label>
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].lastName" data-help="כפי שמופיע בתעודת הזהות"></label>
           </div>
-          <p class="lvp-page__hint">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
-          <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.firstName"></label>
-            <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.lastName"></label>
+          <div class="lvp-en-group">
+            <p class="lvp-page__hint lvp-hint--en">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
+            <div class="lvp-grid-2">
+              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.firstName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.lastName"></label>
+            </div>
           </div>
 
           <fieldset class="lvp-fieldset">
@@ -3008,15 +3024,25 @@
       canvas.addEventListener('touchmove', move, { passive: false });
       canvas.addEventListener('touchend', endDraw);
       // Re-size the backing store on rotate / viewport change so the pointer-to-canvas
-      // mapping stays correct. Resizing clears the canvas, so reset the stroke state
-      // and the captured PNG. Debounced to skip mid-gesture churn.
+      // mapping stays correct. Resizing clears the canvas. If a signature was already
+      // captured, PRESERVE it: keep the captured PNG and redraw it onto the resized
+      // canvas, so rotating the phone after signing never silently wipes the signature.
+      // Debounced to skip mid-gesture churn.
       var resizeTimer = null;
       function onResize() {
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
+          var prevPng = sigPadPng;
           drawing = false; size();
-          dirty = false; points = 0; sigPadPng = null;
-          updateSigState();
+          if (prevPng) {
+            var img = new Image();
+            img.onload = function () { try { ctx2.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (e) {} };
+            img.src = prevPng;
+            sigPadPng = prevPng;   // keep the signature valid for submit even if redraw is async
+          } else {
+            dirty = false; points = 0; sigPadPng = null;
+            updateSigState();
+          }
         }, 200);
       }
       window.addEventListener('resize', onResize);
