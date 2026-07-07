@@ -355,6 +355,17 @@
        primary Israeli LP draws their signature IN the form so the submit carries
        signaturePng and the gateway records it inline instead of mailing a second
        signing link. */
+    /* Sign-step doc preview: a fixed-height scrollable card above the signature pad,
+       so the LP can read the full rendered pack while the pad stays in reach. */
+    .lvp-docprev { margin: 0 0 18px; }
+    .lvp-docprev__title { color: var(--lvp-navy); font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+    .lvp-docprev__body {
+      border: 1px solid #d0d4d8; border-radius: 8px; background: #fff;
+      max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 14px 16px;
+    }
+    .lvp-docprev__loading { display: flex; align-items: center; gap: 10px; color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 18px; }
+    .lvp-docprev__spinner { width: 20px; height: 20px; border-width: 2px; margin: 0; }
     .lvp-pad-shell { border: 1px solid #d0d4d8; border-radius: 8px; padding: 14px; background: #fff; }
     .lvp-pad-shell canvas {
       width: 100%; height: 200px; border: 1px dashed #b9c2cb; border-radius: 8px;
@@ -1102,6 +1113,20 @@
              (IsraeliDocGen recordCaymanSignature_) instead of mailing a second link. -->
         <section class="lvp-page" data-page="ind.sign">
           <h2 class="lvp-page__title">חתימה</h2>
+          <!-- Sign-step doc preview (2026-07-07): the LP's ACTUAL rendered subscription
+               doc, served by the Israeli render_preview branch (IsraeliPreviewHtml.js:
+               same md sources + scope + resolver as the seal). The title text arrives
+               from the server (the approved 'מסמכי הצטרפות' card label); the loading
+               line reuses the approved submit-card phrase verbatim. FAIL OPEN: any
+               error hides the whole block and signing proceeds unchanged. -->
+          <div class="lvp-docprev" data-doc-preview hidden>
+            <h3 class="lvp-docprev__title" data-doc-preview-title></h3>
+            <div class="lvp-docprev__body" data-doc-preview-body tabindex="0"></div>
+          </div>
+          <div class="lvp-docprev__loading" data-doc-preview-loading role="status" hidden>
+            <div class="lvp-result__spinner lvp-docprev__spinner" aria-hidden="true"></div>
+            <span>מכינים את המסמכים שלך</span>
+          </div>
           <p class="lvp-page__hint">יש לחתום עם האצבע או העכבר.</p>
           <div class="lvp-pad-shell">
             <canvas id="sig-pad" width="600" height="200"></canvas>
@@ -2933,6 +2958,7 @@
       if (page.getAttribute('data-page') === 'ind.sign') {
         if (!sigPadReady) initSigPad();
         else if (sigPadRefit) sigPadRefit();   // re-entry: re-fit so a hidden-resize can't leave a dead pad
+        loadSignPreview();
       }
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
       if (page.getAttribute('data-page') === 'ind.waiver') fillWaiver();
@@ -3056,6 +3082,41 @@
         var dd = ('0' + d.getDate()).slice(-2), mm = ('0' + (d.getMonth() + 1)).slice(-2);
         dateSpan.textContent = dd + '/' + mm + '/' + d.getFullYear();
       }
+    }
+    // ---- sign-step doc preview (2026-07-07) ----
+    // Fetches the LP's rendered subscription doc via the Israeli render_preview
+    // branch and shows it above the pad. Sub-second server render (same md sources
+    // + scope + token resolver as the seal, emitted as HTML). Keyed by the current
+    // form data so back-navigation edits re-render and an unchanged re-entry is a
+    // no-op. FAIL OPEN: on any error the block stays hidden and signing proceeds;
+    // the server emits needs_attention so a broken preview is visible operator-side.
+    var signPreviewKey = null;
+    function loadSignPreview() {
+      var box = form.querySelector('[data-doc-preview]');
+      var bodyEl = form.querySelector('[data-doc-preview-body]');
+      var titleEl = form.querySelector('[data-doc-preview-title]');
+      var loading = form.querySelector('[data-doc-preview-loading]');
+      if (!box || !bodyEl || !loading) return;
+      var key = '';
+      try { key = JSON.stringify(collectAll()); } catch (e) { return; }
+      if (key === signPreviewKey) return;   // same data already shown / in flight
+      signPreviewKey = key;
+      box.hidden = true;
+      loading.hidden = false;
+      gateway('render_preview', { submission: collectAll() }).then(function (res) {
+        if (key !== signPreviewKey) return;   // superseded by a newer fetch
+        loading.hidden = true;
+        var doc = res && res.docs && res.docs[0];
+        if (!doc || !doc.html) { signPreviewKey = 'failed:' + key; return; }   // fail open, retry on re-entry
+        if (titleEl) titleEl.textContent = doc.title || '';
+        bodyEl.innerHTML = doc.html;
+        bodyEl.scrollTop = 0;
+        box.hidden = false;
+      }).catch(function () {
+        if (key !== signPreviewKey) return;
+        loading.hidden = true;
+        signPreviewKey = 'failed:' + key;   // fail open; a re-entry retries
+      });
     }
     function initSigPad() {
       var canvas = document.getElementById('sig-pad');
