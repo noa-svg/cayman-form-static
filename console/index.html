@@ -609,34 +609,45 @@ body.side-coll .side-foot .foot-gear { display: none; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-panel);
   z-index: 100;
-  min-width: 216px;
-  padding: 4px;
+  min-width: 268px;
+  padding: 6px;
   display: none;
   animation: ddIn 120ms var(--ease-out) both;
 }
 @keyframes ddIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
 .new-dd.on { display: block; }
-.new-dd-sep { height: 1px; background: var(--color-border); margin: 4px 8px; }
-.new-dd-item {
+.new-dd-sep { height: 1px; background: var(--color-border); margin: 6px 8px; }
+/* Two-decision create menu presented as an aligned matrix: the process is named
+   once on the left, the applicant type (Individual / Entity) sits as two aligned
+   pills on the right. One click still fires quickPick with proc+type+kind. */
+.new-dd-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
+  gap: 20px;
+  padding: 5px 6px 5px 12px;
+}
+.new-dd-row .ndl {
   font-family: var(--font-body);
   font-size: 14px;
+  font-weight: var(--weight-semi);
   color: var(--color-ink);
-  cursor: pointer;
-  text-align: left;
-  gap: 12px;
-  transition: background var(--dur-base);
+  white-space: nowrap;
 }
-.new-dd-item:hover { background: var(--color-bg-hover); color: var(--color-atrium); }
-.new-dd-item .ndt { font-size: 11px; color: var(--color-ink-muted); white-space: nowrap; flex-shrink: 0; }
-.new-dd-item:hover .ndt { color: var(--color-atrium-deep); }
+.new-dd-row .ndg { display: flex; gap: 6px; flex-shrink: 0; }
+.new-dd-item {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-atrium-deep);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+}
+.new-dd-item:hover { background: var(--color-atrium-tint); border-color: var(--color-atrium); color: var(--color-atrium-deep); }
 /* Keep .top h1 and .top .sub for non-board views */
 .top h1 {
   font-family: var(--font-display);
@@ -2233,16 +2244,31 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
                  in the panel (#segLang), defaulted by fund; no he/en here. The sep
                  lives inside .dd-onboarding so hiding that group on Israel hides the
                  divider too, leaving the existing-LP items clean. -->
-            <div class="new-dd" id="newDd">
+            <div class="new-dd" id="newDd" role="menu">
               <div class="dd-onboarding">
-                <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new">Onboarding <span class="ndt">individual</span></button>
-                <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new">Onboarding <span class="ndt">entity</span></button>
+                <div class="new-dd-row">
+                  <span class="ndl">Onboarding</span>
+                  <div class="ndg">
+                    <button class="new-dd-item" data-proc="subscription" data-type="individual" data-kind="new" role="menuitem">Individual</button>
+                    <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new" role="menuitem">Entity</button>
+                  </div>
+                </div>
                 <div class="new-dd-sep"></div>
               </div>
-              <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing">Increase <span class="ndt">individual</span></button>
-              <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing">Increase <span class="ndt">entity</span></button>
-              <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing">Withdrawal <span class="ndt">individual</span></button>
-              <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing">Withdrawal <span class="ndt">entity</span></button>
+              <div class="new-dd-row">
+                <span class="ndl">Increase</span>
+                <div class="ndg">
+                  <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing" role="menuitem">Individual</button>
+                  <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing" role="menuitem">Entity</button>
+                </div>
+              </div>
+              <div class="new-dd-row">
+                <span class="ndl">Withdrawal</span>
+                <div class="ndg">
+                  <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing" role="menuitem">Individual</button>
+                  <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing" role="menuitem">Entity</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
