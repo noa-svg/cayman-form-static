@@ -2224,7 +2224,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <button class="nav" data-view="w8"><i class="ti ti-id nav-ic"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
     </nav>
     <div class="side-foot">
-      <div class="ver" id="ver-side">Synced</div>
       <div class="foot-id">
         <div class="auth-email" id="auth-status">not signed in</div>
         <button class="foot-gear" id="foot-gear" title="Settings" aria-label="Settings"><i class="ti ti-settings"></i></button>
@@ -2236,7 +2235,7 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     <div class="view" id="v-board">
       <div class="top">
         <div id="mob-fund"><button class="mob-fb" data-v="cayman">CY</button><button class="mob-fb on" data-v="israel">IL</button></div>
-        <div><h1>Board</h1></div><span id="prompt-path" hidden></span>
+        <div><h1>Board</h1></div>
         <div class="top-right">
           <div class="new-wrap" id="newWrap">
             <button class="cmd-btn" id="newBtn" aria-haspopup="menu" aria-expanded="false">New <span class="cmd-caret" aria-hidden="true">&#9662;</span></button>
@@ -2334,10 +2333,12 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <div id="lpPicked" class="lp-picked" hidden></div>
       <div class="hint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
     </div>
-    <div class="g2" id="typeKindRow">
-      <div><label>Investor type</label><div class="seg" id="segType"><button class="on" data-v="individual">Individual</button><button data-v="entity">Entity</button></div></div>
-      <div id="kindCell"><label>Investor status</label><div class="seg" id="segKind"><button class="on" data-v="new">New LP</button><button data-v="existing">Existing</button></div></div>
-    </div>
+    <!-- Investor type (Individual/Entity) and status (New/Existing) are both fixed by the
+         New menu's Onboarding/Increase/Withdrawal x Individual/Entity matrix. The panel
+         does not re-ask them: type is shown in the heading ("Onboarding · Entity") and
+         status is implicit in the flow. quickPick sets state.type/state.lpKind directly.
+         The old #typeKindRow/#segType/#segKind toggles were removed (Noa 2026-07-07): the
+         segType toggle re-asked what the menu just captured, and segKind was never visible. -->
     <!-- Israeli entity onboarding only: the OPERATOR sets active-vs-passive at mint
          (Omri/Noa's call = ground truth; the LP never sees a chooser). Drives the
          entity-active vs entity-passive pack. -->
@@ -2904,26 +2905,24 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isExisting?"block":"none";
     if(isExisting){
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
-      ["typeKindRow","classRow","manualLpFields","foRow","langRow","revShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
+      ["classRow","manualLpFields","foRow","langRow","revShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
       el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
       return;
     }
-    el=document.getElementById("typeKindRow");if(el)el.style.display="";
-    // Onboarding is necessarily a NEW LP, so the New/Existing chooser can only confirm the
-    // obvious. Set the status from the process and keep the chooser hidden.
+    // Onboarding is necessarily a NEW LP (the menu row that opened this panel already fixed
+    // both type and status), so set the status from the flow. No visible New/Existing chooser.
     state.lpKind="new";
-    el=document.getElementById("kindCell");if(el)el.style.display="none";
     // Entity classification: Israeli entity onboarding only (operator call at mint).
     el=document.getElementById("classRow");if(el)el.style.display=(state.lane==="israel"&&state.type==="entity")?"":"none";
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
     // Rev share is a NEW-subscription field (the FO/family revenue split is set at onboarding,
-    // never for an existing LP). Gate on lpKind so the Investor New/Existing toggle updates it
-    // live, and reset it when hidden so no stale value lingers in the draft (submit also re-gates).
+    // never for an existing LP). Onboarding is always a new LP, so this shows here and is hidden
+    // for increase/withdrawal; reset it when hidden so no stale value lingers (submit re-gates).
     var rsOn=(state.lpKind==="new");
     el=document.getElementById("revShareSection");if(el)el.style.display=rsOn?"":"none";
     if(!rsOn){var _rs=document.getElementById("revShareSel");if(_rs)_rs.value="";var _rw=document.getElementById("revShareCustomWrap");if(_rw)_rw.style.display="none";}
@@ -2977,8 +2976,10 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   function quickPick(btn){
     state.process=btn.getAttribute("data-proc")||"subscription";
     if(window.__lpClearPick)window.__lpClearPick();
-    setToggleSilent("segType","type",btn.getAttribute("data-type"));
-    setToggleSilent("segKind","lpKind",btn.getAttribute("data-kind"));
+    // Type + status come from the menu row and are held on state directly (no in-panel
+    // toggle to sync). syncPanelFields re-derives lpKind from the flow, so only type needs
+    // to be carried here. The panel heading shows the type back to the operator.
+    state.type=btn.getAttribute("data-type")||"individual";
     // Language is chosen once, in the panel. Default it by fund (Israel -> Hebrew,
     // Cayman -> English); the operator can still flip #segLang before sending.
     setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
@@ -3211,9 +3212,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       document.body.setAttribute("data-lane",v);
       Array.prototype.forEach.call(fs.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
       if(mf)Array.prototype.forEach.call(mf.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
-      var fnEl=document.getElementById("fundName");if(fnEl)fnEl.textContent=(v==="israel")?"Israel":"Cayman";
-      var sfEl=document.getElementById("sb-fund");if(sfEl)sfEl.textContent=(v==="israel")?"israel":"cayman";
-      var pp=document.getElementById("prompt-path");if(pp)pp.textContent=':~/'+(v==="israel"?"israel":"cayman")+'$';
       // F3: a lane switch resets every per-lane view state and cache so nothing
       // from the prior lane bleeds across (toggle, search, w8, messages).
       showDone=false; showCanceled=false;
@@ -3234,11 +3232,11 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     var savedLane=''; try{savedLane=localStorage.getItem('lvp_console_lane')||'';}catch(e){}
     syncFund(savedLane==='cayman'||savedLane==='israel'?savedLane:state.lane);
   })();
-  // Every seg click sets its state key AND re-syncs the panel, so dependent fields
-  // (rev-share on Investor New/Existing, etc.) update live and consistently. Previously
-  // only segProc had a re-sync listener, so toggling Investor did nothing.
+  // Every seg click sets its state key AND re-syncs the panel, so dependent fields stay
+  // consistent. Only the in-panel toggles are wired now (language, entity classification);
+  // type + status are fixed by the New menu and never re-asked here.
   function wire(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on")});b.classList.add("on");state[key]=b.getAttribute("data-v");syncPanelFields();};}
-  wire("segType","type");wire("segKind","lpKind");wire("segLang","language");wire("segClass","classification");
+  wire("segLang","language");wire("segClass","classification");
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
