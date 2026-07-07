@@ -3191,6 +3191,7 @@
       savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
     });
     var LOCAL_SNAP_KEY = 'lvp_il_snap_' + (CFG.token || '');
+    var lastLocalSaveOk = false;   // did the most recent local snapshot persist?
     function saveLocalSnap_() {
       try {
         localStorage.setItem(LOCAL_SNAP_KEY, JSON.stringify({
@@ -3198,7 +3199,8 @@
           page: currentPageEl() ? currentPageEl().getAttribute('data-page') : '',
           data: collectAll()
         }));
-      } catch (e) {}
+        lastLocalSaveOk = true;
+      } catch (e) { lastLocalSaveOk = false; }
     }
     // Restore from the local snapshot ONLY when the server gave us no prefill (cfg
     // fetch failed/retrying, or the session snapshot is empty). Server data always
@@ -3573,7 +3575,17 @@
     function savePage() {
       return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() })
         .then(function (res) { setSaveNote(''); return res; })
-        .catch(function () { setSaveNote(displayFor('לא ניתן היה לשמור את ההתקדמות. הפרטים נשמרים מקומית, ניתן להמשיך.', curLang)); return null; });
+        .catch(function () {
+          // A server-save miss (transient gateway timeout / lock contention) is a
+          // NON-EVENT for the LP when this device's local snapshot is intact - that
+          // is the actual resume backing on the same device, and it covered the
+          // joint walk where this banner used to sit persistently (2026-07-08). Only
+          // surface the note when the local save ALSO failed (data genuinely at
+          // risk). The server save still retried + logged server-side regardless.
+          if (lastLocalSaveOk) { setSaveNote(''); return null; }
+          setSaveNote(displayFor('לא ניתן היה לשמור את ההתקדמות. הפרטים נשמרים מקומית, ניתן להמשיך.', curLang));
+          return null;
+        });
     }
     var submitting = false;
     function doSubmit() {
