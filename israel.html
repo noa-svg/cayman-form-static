@@ -2404,7 +2404,12 @@
           }
           return '';
         };
-        inferOffer(set.enStreet, get('route'));
+        // EN street includes the house number (Noa 2026-07-07: W-8 line 3 printed
+        // the street name only): geocode street_number first, else the LP's own
+        // Hebrew-side house number (digits are script-neutral).
+        var enNum = get('street_number') || (function () { var e = form.querySelector('[name="' + cssEsc(set.house) + '"]'); return e ? String(e.value || '').trim() : ''; })();
+        var enRoute = get('route');
+        inferOffer(set.enStreet, enRoute ? (enRoute + (enNum ? ' ' + enNum : '')) : '');
         inferOffer(set.enCity, get('locality') || get('postal_town') || get('sublocality'));
       }
       function viaGeocoder() {
@@ -2445,7 +2450,10 @@
       try {
         new google.maps.Geocoder().geocode({ address: addr, language: 'en' }, function (results, status) {
           if (status === 'OK' && results && results[0]) {
-            inferOffer(set.enStreet, placesComp_(results[0].address_components, 'route'));
+            var dComps = results[0].address_components;
+            var dNum = placesComp_(dComps, 'street_number') || (hEl ? String(hEl.value || '').trim() : '');
+            var dRoute = placesComp_(dComps, 'route');
+            inferOffer(set.enStreet, dRoute ? (dRoute + (dNum ? ' ' + dNum : '')) : '');
             inferOffer(set.enCity, placesCity_(results[0].address_components));
           }
         });
