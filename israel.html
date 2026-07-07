@@ -1128,7 +1128,6 @@
             </div>
           </template>
           <p class="lvp-page__hint">בסיום התהליך יתקבל עותק חתום במייל</p>
-          <div data-review-summary></div>
         </section>
 
         <div class="lvp-actions">
@@ -2934,7 +2933,6 @@
         var track = progBar.parentElement;
         if (track && track.setAttribute) track.setAttribute('aria-valuenow', String(pct));
       }
-      if (page.getAttribute('data-page') === 'review') renderReview();
       setStatus('');
       window.scrollTo(0, 0);
     }
@@ -2971,78 +2969,11 @@
       doSubmit();
     });
 
-    // The readable value of a filled holder for the review summary: checked radio
-    // label, checked-checkbox labels, selected option text, or the input value.
-    function reviewLabelText(el) {
-      var lbl = el.querySelector('.lvp-field__label, .lvp-fieldset__legend');
-      return lbl ? lbl.textContent.trim() : '';
-    }
-    function radioOrCheckLabel(input) {
-      var lab = input.closest('label');
-      return lab ? lab.textContent.trim() : (input.value || '');
-    }
-    function reviewValue(holder) {
-      var radios = holder.querySelectorAll('input[type="radio"]');
-      if (radios.length) { var c = holder.querySelector('input[type="radio"]:checked'); return c ? radioOrCheckLabel(c) : null; }
-      var checks = holder.querySelectorAll('input[type="checkbox"]');
-      if (checks.length) { var on = []; Array.prototype.forEach.call(checks, function (ch) { if (ch.checked) on.push(radioOrCheckLabel(ch)); }); return on.length ? on.join(', ') : null; }
-      var sel = holder.querySelector('select');
-      if (sel) return sel.value ? sel.options[sel.selectedIndex].text : null;
-      var inp = holder.querySelector('input, textarea');
-      if (inp && inp.type !== 'file') return (inp.value && inp.value.trim()) ? inp.value.trim() : null;
-      return null;
-    }
-    // Build a per-page label:value summary with a jump-to-edit header, so the review
-    // page is an actual review (was 3 concatenated rows). Amount uses the field's
-    // comma-formatted display; uploaded filenames are listed.
-    // Holder visibility for the review walk: respects inner conditional hiding
-    // (data-show-when / data-applicant) but IGNORES the page's own hidden attribute
-    // -- at review time every other page is hidden, so isHidden() would drop
-    // everything. Walk stops just below the page element.
-    function reviewHolderHidden(el, pageEl) {
-      var cur = el;
-      while (cur && cur !== pageEl) {
-        if (cur.hidden || (cur.style && cur.style.display === 'none')) return true;
-        cur = cur.parentElement;
-      }
-      return false;
-    }
-    function renderReview() {
-      var host = form.querySelector('[data-review-summary]');
-      var pages = visiblePages();
-      var html = '';
-      pages.forEach(function (page, i) {
-        var name = page.getAttribute('data-page');
-        if (name === 'welcome' || name === 'review' || name === 'uploads') return;
-        var titleEl = page.querySelector('.lvp-page__title');
-        var title = titleEl ? titleEl.textContent.trim() : '';
-        var pairs = [];
-        page.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (holder) {
-          if (reviewHolderHidden(holder, page)) return;
-          var v = reviewValue(holder);
-          if (v == null) return;
-          var lbl = reviewLabelText(holder);
-          if (!lbl) return;
-          pairs.push([lbl, v]);
-        });
-        if (!pairs.length) return;
-        html += '<div class="lvp-review__section">' +
-          '<button type="button" class="lvp-review__edit" data-review-goto="' + i + '">' +
-            '<span>' + esc(title) + '</span>' +
-            '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-          '</button>' +
-          '<dl class="lvp-review__dl">' +
-            pairs.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') +
-          '</dl></div>';
-      });
-      // Uploaded files (filenames), collected across pages.
-      var files = Object.keys(pendingUploads).map(function (k) { return pendingUploads[k].filename; }).filter(Boolean);
-      if (files.length) {
-        html += '<div class="lvp-review__section"><div class="lvp-review__edit lvp-review__edit--static"><span>' + esc(displayFor('קבצים שהועלו', curLang)) + '</span></div>' +
-          '<ul class="lvp-review__files">' + files.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>';
-      }
-      host.innerHTML = html;
-    }
+    // Review page echo REMOVED 2026-07-07 (Noa: EasySend never showed a field-by-field
+    // read-back on the final page; the LP fills, signs, and submits). The final page is
+    // now just comms emails + the send button. renderReview + its holder-walk helpers
+    // (reviewValue / reviewLabelText / reviewHolderHidden / radioOrCheckLabel) and the
+    // data-review-goto jump handler were deleted with it.
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
 
     // ---- inline signature pad (ported from index.html, draw-only) ----
@@ -3192,11 +3123,6 @@
       // lands on the list of fields to fix (WCAG 3.3.1 / 2.4.3).
       try { box.focus(); } catch (e) {}
     }
-    // Jump from a review section to its page for editing.
-    form.addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('[data-review-goto]');
-      if (b) { showPage(parseInt(b.getAttribute('data-review-goto'), 10)); }
-    });
 
     // ---- gateway calls (Foundation source=lp envelope) ----
     function gateway(action, payload) {
