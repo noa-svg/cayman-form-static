@@ -363,7 +363,13 @@
       border: 1px solid #d0d4d8; border-radius: 8px; background: #fff;
       max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
       padding: 14px 16px;
+      /* Scroll anchoring inside the fresh scroller jumped the card ~19% into the
+         doc on render (pixel pass); pin the reading position to the top. */
+      overflow-anchor: none;
     }
+    /* display:flex below would beat the hidden attribute's UA display:none (the
+       pixel pass caught the spinner never hiding); restate the hidden contract. */
+    .lvp-docprev__loading[hidden] { display: none; }
     .lvp-docprev__loading { display: flex; align-items: center; gap: 10px; color: var(--lvp-text-muted); font-size: 14px; margin: 0 0 18px; }
     .lvp-docprev__spinner { width: 20px; height: 20px; border-width: 2px; margin: 0; }
     .lvp-pad-shell { border: 1px solid #d0d4d8; border-radius: 8px; padding: 14px; background: #fff; }
@@ -3114,8 +3120,12 @@
         if (!doc || !doc.html) { signPreviewKey = 'failed:' + key; return; }   // fail open, retry on re-entry
         if (titleEl) titleEl.textContent = doc.title || '';
         bodyEl.innerHTML = doc.html;
-        bodyEl.scrollTop = 0;
         box.hidden = false;
+        // Reset AFTER unhiding (scrollTop on a display:none element is a no-op)
+        // and once more next frame: the pixel pass caught scroll anchoring landing
+        // the card ~19% into the doc after fonts/labels reflow.
+        bodyEl.scrollTop = 0;
+        try { requestAnimationFrame(function () { bodyEl.scrollTop = 0; }); } catch (e) {}
       }).catch(function () {
         if (key !== signPreviewKey) return;
         loading.hidden = true;
