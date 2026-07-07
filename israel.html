@@ -907,7 +907,9 @@
           </div>
           <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-business-day" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב"></label>
 
-          <h3 class="lvp-subhead">המוסד ממנו יועברו הכספים</h3>
+          <!-- Bank section header = פרטי חשבון (Noa's standing house standard,
+               feedback_bank_section_header_pratei_cheshbon; was המוסד ממנו יועברו הכספים). -->
+          <h3 class="lvp-subhead">פרטי חשבון</h3>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם הבנק</span>
               <div class="lvp-combo">
@@ -1490,6 +1492,11 @@
       node.nodeValue = lead + displayFor(el.dataset.heText.trim(), lang);
     }
     function swapTextContent(el, lang) {
+      // Never flatten a block with ELEMENT children: setting textContent destroys
+      // them. This wiped the waiver's <span data-waiver-id>/<span data-waiver-date>
+      // at boot, so fillWaiver had nothing to fill and the LP confirmed a waiver
+      // with a blank ת.ז. and date (Noa + the mobile pixel pass, 2026-07-07).
+      if (el.children && el.children.length) return;
       if (el.dataset.he == null) el.dataset.he = el.textContent;
       el.textContent = displayFor(el.dataset.he, lang);
     }
@@ -2841,6 +2848,28 @@
           if (!firstError) firstError = holder;
         }
       });
+      // Name-format parity (2026-07-07 contract audit #6): the server accepts ONLY
+      // letters/space/'"-, len 2-120, per script (israeliNameOk_). The input-time
+      // scrubber strips the OTHER script but lets digits, periods and 1-char names
+      // through to a guaranteed server bounce. Enforce the same class here, reusing
+      // the approved letters-only messages verbatim.
+      Array.prototype.forEach.call(pageEl.querySelectorAll('input[data-script]'), function (i) {
+        var holder = i.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder)) return;
+        // NAME fields only - the server's letters-only class applies to first/last
+        // names (israeliNameOk_ call sites), not to occupation/address-type fields.
+        if (!/(^|\.)(firstName|lastName)$/.test(i.name || '')) return;
+        var v = String(i.value || '').trim();
+        if (!v) return;   // emptiness is the required pass's job
+        var script = i.getAttribute('data-script');
+        var reOk = (script === 'he') ? /^[א-ת׳״\s'"\-]+$/ : /^[A-Za-z\s'"\-]+$/;
+        if (v.length < 2 || v.length > 120 || !reOk.test(v)) {
+          ok = false;
+          holder.classList.add('lvp-field--error');
+          setFieldError(holder, displayFor(script === 'he' ? 'נא להזין אותיות בעברית בלבד' : 'נא להזין אותיות באנגלית בלבד', curLang));
+          if (!firstError) firstError = holder;
+        }
+      });
       // Page-level: the single address search field is only "answered" once its
       // hidden component fields are filled (a Places pick fills them synchronously;
       // manual typing fills via the parse+geocode fallback). If the search box is
@@ -3049,6 +3078,27 @@
       var page = currentPageEl();
       if (!validatePage(page)) { if (!renderErrorSummary(page)) setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
       renderErrorSummary(page); // clears the summary when the page validates clean
+      // Full-walk re-validation (2026-07-07 contract audit #5): data accepted pages
+      // ago can go STALE (investmentDate is first-business-day relative to NOW, so a
+      // resumed session can carry yesterday's valid date) or be edited via Back
+      // without re-gating. Re-validate every visible page and jump to the first
+      // failure. Pages are un-hidden only inside this synchronous block (no paint),
+      // so the holder-visibility checks see real layout.
+      var walkPages = visiblePages();
+      for (var wi = 0; wi < walkPages.length; wi++) {
+        var wp = walkPages[wi];
+        var wName = wp.getAttribute('data-page');
+        if (wName === 'welcome' || wName === 'review') continue;
+        var wasHidden = wp.hidden;
+        wp.hidden = false;
+        var wOk = validatePage(wp);
+        wp.hidden = wasHidden;
+        if (!wOk) {
+          showPage(wi);
+          if (!renderErrorSummary(wp)) setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
+          return;
+        }
+      }
       // Signature gate: the drawn PNG is the consent (matching EasySend's sign-then-
       // send). The button is never disabled; if the pad is empty we send the LP back
       // to the sign page and mark the error rather than submitting without a signature.
