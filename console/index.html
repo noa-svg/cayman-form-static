@@ -42,7 +42,7 @@
   --color-border:         #141414;
   --color-border-subtle:  #B6AE99;
   --color-border-strong:  #141414;
-  --color-border-focus:   #C0202E;
+  --color-border-focus:   #143F7F;
   --color-gold:           #D4A227;
   --color-gold-tint:      #F6E8C6;
   --color-coral:          #D85E4C;
@@ -325,14 +325,6 @@ nav {
   flex-direction: column;
   gap: var(--space-2);
   overflow: hidden;
-}
-
-.side-foot .ver {
-  font-family: var(--font-body);
-  font-size: var(--text-2xs);
-  color: var(--color-sidebar-ink-dim);
-  letter-spacing: 0;
-  line-height: var(--leading-tight);
 }
 
 .side-foot .auth-email {
@@ -1431,19 +1423,6 @@ input:focus {
 }
 
 /* recipient chips - solid tint = direct To, outline = cc */
-.rchip {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-body);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-medium);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-sm);
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.rchip.to  { background: var(--color-atrium-tint); color: var(--color-atrium-deep); border: 1px solid transparent; }
-.rchip.cc  { background: transparent; color: var(--color-ink-sub); border: 1px solid var(--color-border-strong); }
 
 /* he/en coverage ticks - solid=custom, outline=default, dotted=no-copy */
 .cov { display: inline-flex; gap: 4px; margin-left: auto; }
@@ -2024,7 +2003,6 @@ body.side-coll .nav { padding: var(--space-2) 0; justify-content: center; font-s
 body.side-coll .nav::before { display: none !important; }
 body.side-coll .nav .nav-ic { font-size: 18px; }
 body.side-coll .nav .badge { display: none; }
-body.side-coll .side-foot .ver,
 body.side-coll .side-foot .auth-email,
 body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
@@ -2120,7 +2098,6 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 
   /* Topbar: tighter */
   .top { padding: 12px var(--grid-gutter); gap: 8px; }
-  .prompt-path { display: none; }
 
   /* Persistent create affordance on mobile (tiles scroll out of view here) */
   .new-wrap { display: inline-flex; }
@@ -2305,7 +2282,9 @@ input,textarea,select{border-radius:0!important}
 
 /* ---- labels + tags ---- */
 label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:11px;color:var(--color-ink)}
-.tag{background:var(--color-coral);color:#fff;border:2px solid var(--color-ink);border-radius:0;text-transform:uppercase;letter-spacing:0.04em;font-weight:800;font-size:9px;padding:1px 6px}
+/* required marker: neutral bordered chip (ink on white), NOT red - red is reserved
+   for stop/fail per the semantics block below. High contrast at this small size. */
+.tag{background:#fff;color:var(--color-ink);border:2px solid var(--color-ink);border-radius:0;text-transform:uppercase;letter-spacing:0.04em;font-weight:800;font-size:9px;padding:1px 6px}
 .opt{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:9px;color:var(--color-ink-muted)}
 
 /* ---- segmented controls (language / classification) ---- */
@@ -2320,7 +2299,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .cta:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- create panel + drawer shells ---- */
-#panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-panel)}
+#panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-drawer)}
 #drawer,.drawer{border-left:var(--bw-heavy) solid var(--color-ink)}
 #panelTitle,#panel h2,.panel h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
 .lead,#panelLead{text-transform:none;color:var(--color-ink-sub);font-weight:600}
@@ -2328,7 +2307,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 /* ---- LP picker ---- */
 .lp-results{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:8px 8px 0 0 var(--color-ink)}
 .lp-picked{border:var(--bw) solid var(--color-ink);border-radius:0;background:var(--color-gold-tint)}
-.lp-av{border-radius:0;border:2px solid var(--color-ink);background:var(--color-atrium);color:#fff}
 
 /* ---- settings card ---- */
 .set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:0;box-shadow:var(--shadow-panel);background:#fff}
@@ -2374,6 +2352,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
    Go / confirm / proceed actions and success states are green; stop /
    destructive / failed states are red. Neutral in-progress stays navy/gold. */
 .cta,.cmd-btn,.dact .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
+/* disabled go-actions must not read as live green */
+.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:2px 2px 0 0 var(--color-ink)!important;cursor:not-allowed;transform:none!important}
 .cta:hover,.cmd-btn:hover,.dact .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
 .cmd-btn.open{background:var(--color-atrium)!important}          /* menu open = neutral, not "go" */
 .dact .dvoid{background:var(--color-red)!important;color:#fff!important}
@@ -4044,7 +4024,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var ls=document.getElementById('login-screen'), field=document.getElementById('login-field');
     if(!ls||!field) return;
     var shapes=Array.prototype.slice.call(field.querySelectorAll('.lsh'));
-    var baseRot=shapes.map(function(s){var m=(getComputedStyle(s).transform||'');return s.classList.contains('sq')?-8:s.classList.contains('ci')?0:s.classList.contains('tr')?16:-5;});
+    var baseRot=shapes.map(function(s){return s.classList.contains('sq')?-8:s.classList.contains('ci')?0:s.classList.contains('tr')?16:-5;});
     ls.addEventListener('mousemove',function(e){
       var r=ls.getBoundingClientRect(), mx=e.clientX-r.left-r.width/2, my=e.clientY-r.top-r.height/2;
       shapes.forEach(function(s,i){
