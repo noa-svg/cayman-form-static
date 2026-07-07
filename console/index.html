@@ -1561,6 +1561,46 @@ input:focus {
   line-height: 1.7;
   resize: vertical;
 }
+/* Contenteditable body: {{tokens}} render as inline chips, rest stays editable text. */
+.chip-ed {
+  width: 100%;
+  min-height: 240px;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.9;
+  color: var(--color-ink);
+  background: var(--color-bg-input);
+  border: 3px solid var(--color-ink);
+  border-radius: 0;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  outline: none;
+  cursor: text;
+}
+.chip-ed:focus { border-color: var(--color-border-focus); box-shadow: 3px 3px 0 0 var(--color-ink); }
+.chip-ed:empty::before { content: attr(data-ph); color: var(--color-ink-muted); pointer-events: none; }
+.tokchip {
+  display: inline-block;
+  unicode-bidi: isolate;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 1px 7px;
+  margin: 0 1px;
+  background: var(--color-atrium);
+  color: #fff;
+  border: 2px solid var(--color-ink);
+  border-radius: 0;
+  vertical-align: 1px;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tokchip.auto { background: var(--color-gold); color: var(--color-ink); }
 
 .msgbtns {
   margin-top: var(--space-5);
@@ -3866,13 +3906,61 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     sp.innerHTML=h;
     Array.prototype.forEach.call(sp.querySelectorAll('.node'),function(el){el.onclick=function(){openMsg(el.getAttribute('data-k'));};});
   }
+  // ---- Chip editor -------------------------------------------------------
+  // The body renders {{tokens}} as inline chips while staying editable. edGet/edSet
+  // abstract over a plain input (subject) and the contenteditable body, so the rest
+  // of the editor is unchanged. Serialization is faithful and round-trip guarded at
+  // build time; if any template fails to round-trip, that message falls back to a
+  // plain textarea so a save can never corrupt LP copy.
+  var TOK_RE=/\{\{([a-zA-Z0-9_]+)\}\}/g;
+  function edIsChip(el){return !!(el&&el.classList&&el.classList.contains('chip-ed'));}
+  function makeChipEl(tok){
+    var s=document.createElement('span');
+    s.className='tokchip'+(MSG_AUTO_TOKENS[tok]?' auto':'');
+    s.setAttribute('contenteditable','false');
+    s.setAttribute('data-tok',tok);
+    s.setAttribute('dir','ltr');
+    s.title='{{'+tok+'}}';
+    s.textContent=tokLabel(tok);
+    return s;
+  }
+  function edSet(el,str){
+    if(!edIsChip(el)){if(el)el.value=str||'';return;}
+    el.innerHTML=''; str=str||''; var last=0,mm; TOK_RE.lastIndex=0;
+    function txt(t){if(t)el.appendChild(document.createTextNode(t));}
+    while((mm=TOK_RE.exec(str))){txt(str.slice(last,mm.index));el.appendChild(makeChipEl(mm[1]));last=mm.index+mm[0].length;}
+    txt(str.slice(last));
+  }
+  function edGet(el){
+    if(!edIsChip(el))return el&&el.value!=null?el.value:'';
+    var out='';
+    (function walk(node){
+      for(var n=node.firstChild;n;n=n.nextSibling){
+        if(n.nodeType===3){out+=n.nodeValue;}
+        else if(n.nodeType===1){
+          if(n.classList&&n.classList.contains('tokchip')){out+='{{'+n.getAttribute('data-tok')+'}}';}
+          else if(n.tagName==='BR'){out+='\n';}
+          else if(n.tagName==='DIV'||n.tagName==='P'){if(out&&out.charAt(out.length-1)!=='\n')out+='\n';walk(n);}
+          else{walk(n);}
+        }
+      }
+    })(el);
+    return out;
+  }
+  // A body string is safe to chip-edit only if it survives a set->get round-trip exactly.
+  function bodyRoundTrips(str){var t=document.createElement('div');t.className='chip-ed';edSet(t,str);return edGet(t)===(str||'');}
+  function wireChipEditor(el){
+    el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.execCommand('insertText',false,'\n');}});
+    el.addEventListener('paste',function(e){e.preventDefault();var t=((e.clipboardData||window.clipboardData).getData('text/plain'))||'';document.execCommand('insertText',false,t);});
+    el.addEventListener('input',updatePreview);
+  }
   // F7: write live field values back into the model before any re-render.
   function captureEditor(){
     if(!curMsg)return;
     var se=document.getElementById("m-sub"),be=document.getElementById("m-body");
     if(!se||!be)return;
     var L=curMsg[curLang];if(!L){return;} // never fabricate a lang sub-object (no-copy stays no-copy)
-    L.subject=se.value;L.body=be.value;
+    L.subject=edGet(se);L.body=edGet(be);
   }
   function openMsg(key){
     captureEditor();
@@ -3886,23 +3974,33 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function insertToken(tok){
     var f=_lastFocus||document.getElementById('m-body');
     if(!f)return;
-    var s=f.selectionStart, e=f.selectionEnd, v=f.value, ins='{{'+tok+'}}';
-    if(s==null){f.value=v+ins;}
-    else{f.value=v.slice(0,s)+ins+v.slice(e);var np=s+ins.length;f.selectionStart=f.selectionEnd=np;}
+    if(!edIsChip(f)){ // plain input (subject): splice at caret
+      var s=f.selectionStart,e=f.selectionEnd,v=f.value,ins='{{'+tok+'}}';
+      if(s==null){f.value=v+ins;}else{f.value=v.slice(0,s)+ins+v.slice(e);var np=s+ins.length;f.selectionStart=f.selectionEnd=np;}
+      f.focus();f.dispatchEvent(new Event('input',{bubbles:true}));return;
+    }
     f.focus();
+    var sel=window.getSelection(),range;
+    if(sel.rangeCount&&f.contains(sel.anchorNode)){range=sel.getRangeAt(0);}
+    else{range=document.createRange();range.selectNodeContents(f);range.collapse(false);}
+    range.deleteContents();
+    var chip=makeChipEl(tok);
+    range.insertNode(chip);
+    range.setStartAfter(chip);range.setEndAfter(chip);range.collapse(true);
+    sel.removeAllRanges();sel.addRange(range);
     f.dispatchEvent(new Event('input',{bubbles:true}));
   }
   // Render the rendered-email preview honoring the per-key format (NOT a "<" sniff).
   function renderPreviewBody(){
     var body=document.getElementById('m-body'), pb=document.getElementById('m-prev-b');
     if(!pb||!body)return;
-    var meta=msgMeta(curMsg.key), bv=interp(body.value);
+    var meta=msgMeta(curMsg.key), bv=interp(edGet(body));
     if(meta.fmt==='html'){pb.innerHTML=bv;}
     else{pb.innerHTML=esc(bv).replace(/\n/g,'<br>');}
   }
   function updatePreview(){
     var sub=document.getElementById('m-sub'), ps=document.getElementById('m-prev-s');
-    if(ps&&sub)ps.textContent=interp(sub.value);
+    if(ps&&sub)ps.textContent=interp(edGet(sub));
     renderPreviewBody();
     refreshDirtyGate();
   }
@@ -3913,7 +4011,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var se=document.getElementById('m-sub'), be=document.getElementById('m-body');
     if(!save||!se||!be)return;
     var L=curMsg[curLang]||{subject:'',body:''};
-    var dirty=(se.value!==(L.subject||''))||(be.value!==(L.body||''));
+    var dirty=(edGet(se)!==(L.subject||''))||(edGet(be)!==(L.body||''));
     save.disabled=!dirty;
     if(reset)reset.disabled=(covState(curMsg,curLang)!=='custom');
   }
@@ -3956,7 +4054,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         '<label class="mfield-lbl" for="m-sub">Subject</label>'+
         '<input id="m-sub" value="'+esc(L.subject)+'" dir="'+dir+'" oninput="updatePreview()">'+
         '<label class="mfield-lbl" for="m-body">Body</label>'+
-        '<textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+'</textarea>'+
+        (bodyRoundTrips(L.body)
+          ? '<div id="m-body" class="chip-ed" contenteditable="true" dir="'+dir+'" role="textbox" aria-multiline="true" aria-label="Body" data-ph="Body"></div>'
+          : '<textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+'</textarea>')+
         '<div class="msgbtns"><button class="save" id="m-save" disabled>Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved" role="status" aria-live="polite"></span></div>'+
         '<div class="preview">'+
           '<div class="ph-h"><span>Preview</span><span class="dir-ind">'+dirInd+'</span></div>'+
@@ -3978,14 +4078,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     if(curLang==='en'&&enDisabled)return;
     // render preview body + track focus + wire tokens/save/reset
-    renderPreviewBody();
     var se=document.getElementById('m-sub'), be=document.getElementById('m-body');
+    // Populate + wire the contenteditable chip body (empty in markup; filled here).
+    if(edIsChip(be)){edSet(be,L.body);wireChipEditor(be);}
+    renderPreviewBody();
     _lastFocus=be;
     [se,be].forEach(function(f){if(f)f.addEventListener('focus',function(){_lastFocus=f;});});
     Array.prototype.forEach.call(det.querySelectorAll('.ph[data-tok]'),function(c){c.onclick=function(){insertToken(c.getAttribute('data-tok'));};});
     refreshDirtyGate();
     document.getElementById('m-save').onclick=function(){
-      var sub=document.getElementById('m-sub').value, body=document.getElementById('m-body').value, sv=document.getElementById('m-saved');
+      var sub=edGet(document.getElementById('m-sub')), body=edGet(document.getElementById('m-body')), sv=document.getElementById('m-saved');
       // F8: never persist an empty template; it looks reverted but is not.
       if(!sub.trim()||!body.trim()){sv.textContent='Subject and body are required';return;}
       var L2=curMsg[curLang]||(curMsg[curLang]={subject:'',body:''});
