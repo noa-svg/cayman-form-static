@@ -1493,24 +1493,35 @@ input:focus {
 }
 
 /* token rail - mono code chips, click to insert */
+/* Field-insert chips: click drops the {{token}} at the cursor. Bauhaus bordered
+   chips with a + affordance; friendly label instead of the raw token. */
+.md-vars { margin-bottom: var(--space-4); }
+.md-vars-lbl { font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; color: var(--color-ink); margin-bottom: var(--space-3); }
+.md-vars-hint { font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--color-ink-muted); margin-left: 6px; }
+.md-vars-row { display: flex; flex-wrap: wrap; }
 .ph {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono);
+  gap: 5px;
+  font-family: var(--font-body);
   font-size: var(--text-xs);
-  background: var(--color-atrium-tint);
-  color: var(--color-atrium);
-  padding: 3px var(--space-2);
-  border-radius: var(--radius-sm);
+  font-weight: 700;
+  background: #fff;
+  color: var(--color-ink);
+  padding: 5px 10px;
+  border: 2px solid var(--color-ink);
+  border-radius: 0;
   margin: 0 var(--space-2) var(--space-2) 0;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: border-color var(--dur-fast), background var(--dur-fast);
+  box-shadow: 2px 2px 0 0 var(--color-ink);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast);
 }
-.ph:hover { border-color: var(--color-atrium); }
-.ph.auto { background: var(--color-neutral-bg); color: var(--color-ink-sub); }
-.ph .auto-tag { font-family: var(--font-body); font-size: 8px; font-weight: var(--weight-semi); color: var(--color-ink-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.ph:hover { background: var(--color-gold-tint); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 0 var(--color-ink); }
+.ph:active { transform: translate(1px,1px); box-shadow: none; }
+.ph .ph-plus { font-weight: 800; color: var(--color-atrium); font-size: 15px; line-height: 1; }
+.ph.auto { background: var(--color-neutral-bg); }
+.ph.auto .ph-plus { color: var(--color-ink-muted); }
+.ph .auto-tag { font-family: var(--font-body); font-size: 8px; font-weight: 800; color: var(--color-ink-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 2px; }
 
 /* sentence-case field labels (retire tracked caps) */
 .mfield-lbl {
@@ -1543,8 +1554,11 @@ input:focus {
   box-shadow: 0 0 0 2px var(--color-atrium-muted);
 }
 .mdetail textarea {
-  min-height: 150px;
-  line-height: var(--leading-normal);
+  /* Roomier body for comfortable editing. Kept in the body font (not mono) so
+     Hebrew renders correctly; the {{tokens}} still read clearly. */
+  min-height: 240px;
+  font-size: var(--text-base);
+  line-height: 1.7;
   resize: vertical;
 }
 
@@ -3903,6 +3917,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     save.disabled=!dirty;
     if(reset)reset.disabled=(covState(curMsg,curLang)!=='custom');
   }
+  // Friendly chip label = the token name, spaced + capitalised (safe formatting only,
+  // no invented meanings). A couple of acronym overrides so they read right.
+  var MSG_TOKEN_LABEL={lpName:'LP name',fo:'FO',foEmail:'FO email'};
+  function tokLabel(t){return MSG_TOKEN_LABEL[t]||t.replace(/([A-Z])/g,' $1').replace(/^./,function(c){return c.toUpperCase();});}
   function renderDetail(){
     var m=curMsg; if(!m)return;
     var det=document.getElementById('msgdetail');
@@ -3919,7 +3937,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var toks=msgTokens(m);
     var phs=toks.map(function(p){
       var auto=MSG_AUTO_TOKENS[p];
-      return '<span class="ph'+(auto?' auto':'')+'" data-tok="'+esc(p)+'">{{'+esc(p)+'}}'+(auto?'<span class="auto-tag">auto</span>':'')+'</span>';
+      return '<button type="button" class="ph'+(auto?' auto':'')+'" data-tok="'+esc(p)+'" title="Insert {{'+esc(p)+'}}">'
+        +'<span class="ph-plus" aria-hidden="true">+</span>'+esc(tokLabel(p))
+        +(auto?'<span class="auto-tag">auto</span>':'')+'</button>';
     }).join('');
     function langTab(lang,s){
       var cls='langtab'+(curLang===lang?' on':'')+((lang==='en'&&enDisabled)?' dis':'');
@@ -3931,7 +3951,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       editorBlock='<div class="md-nocopy">No English copy for this email. This email sends in Hebrew only.</div>';
     } else {
       editorBlock=
-        '<div style="margin-bottom: 4px">'+phs+'</div>'+
+        '<div class="md-vars"><div class="md-vars-lbl">Fields <span class="md-vars-hint">click to drop one into the subject or body</span></div>'
+          +'<div class="md-vars-row">'+phs+'</div></div>'+
         '<label class="mfield-lbl" for="m-sub">Subject</label>'+
         '<input id="m-sub" value="'+esc(L.subject)+'" dir="'+dir+'" oninput="updatePreview()">'+
         '<label class="mfield-lbl" for="m-body">Body</label>'+
