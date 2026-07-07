@@ -1997,7 +1997,11 @@
           var v = o[k];
           var path = Array.isArray(o) ? prefix + '[' + k + ']' : (prefix ? prefix + '.' + k : k);
           if (v && typeof v === 'object') walk(v, path);
-          else SNAP[path] = true;
+          // Only a NON-EMPTY snapshot value is "the LP's answer". Marking empties
+          // SNAP-locked the hidden English-address mirrors after a restore, which
+          // blocked inferOffer/geocode from ever filling them and guaranteed the
+          // server's english_address_required rejection (Noa's live submit, 2026-07-07).
+          else if (v !== '' && v !== null && v !== undefined) SNAP[path] = true;
         });
       })(pf, '');
     }
@@ -3304,6 +3308,15 @@
     function doSubmit() {
       if (submitting) return;
       submitting = true;
+      // Belt (2026-07-07 english_address rejection): if the hidden EN mirrors are
+      // still empty (async fill lost the race), fire the geocode derive once more
+      // before collecting. The server-side derive (@510) is the guarantee; this
+      // just raises the odds the payload is already complete. Never blocks.
+      try {
+        var _set = PLACES_SETS[0];
+        var _v = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+        if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveEnglishFromHebrew_(_set);
+      } catch (e) {}
       var submission = collectAll();
       var files = collectFiles();
       showResultCard(
