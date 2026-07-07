@@ -1063,21 +1063,99 @@
           </fieldset>
           <p class="lvp-hint-small" data-show-when="additionalInvestors=כן">מסמכי ההצטרפות יועברו למשקיעים הנוספים בשותפות למילוי וחתימה לאחר חתימתך. ניתן להזין עד שני משקיעים נוספים.</p>
           <div data-show-when="additionalInvestors=כן">
-            <div data-repeating-typed-path="__additionalInvestorsArray" data-repeating-min="1" data-repeating-max="2" data-repeating-template="addinv"></div>
+            <div data-repeating-typed-path="__additionalInvestorsArray" data-repeating-min="1" data-repeating-max="2" data-repeating-keep-names data-repeating-template="addinv"></div>
           </div>
+          <!-- FULL per-investor card (2026-07-07, joint go-live blocker): every
+               additional investor renders a W-8BEN + FIBI FT10 and SIGNS
+               (roster subscriber2/3), so the server requires the same field set
+               as the primary. Row names carry the REAL investor subshape under
+               the __addinv[i] namespace (collectAll folds each row verbatim into
+               investorsArray[1..] in DOM order); every label/hint/option is the
+               primary page's approved string VERBATIM - zero new copy. -->
           <template data-row-template="addinv">
             <div class="lvp-repeating-row" data-row-index="${i}">
               <div class="lvp-repeating-row__header"><strong class="lvp-repeating-row__title">משקיע/ה נוסף/ת ${i1}</strong><button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button></div>
+
+              <h3 class="lvp-subhead">פרטים אישיים</h3>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].firstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].lastName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].firstName" data-help="כפי שמופיע בתעודת הזהות"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].lastName" data-help="כפי שמופיע בתעודת הזהות"></label>
               </div>
+              <div class="lvp-en-group">
+                <p class="lvp-page__hint lvp-hint--en">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
+                <div class="lvp-grid-2">
+                  <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishDetails.firstName"></label>
+                  <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishDetails.lastName"></label>
+                </div>
+              </div>
+              <fieldset class="lvp-fieldset">
+                <legend class="lvp-fieldset__legend">מין</legend>
+                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].gender" value="זכר"> זכר</label>
+                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].gender" value="נקבה"> נקבה</label>
+              </fieldset>
+              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="__addinv[${i}].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת"></label>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishFirstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishLastName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="__addinv[${i}].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+                <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="__addinv[${i}].birthCountry" data-country data-show-when-trigger="__addinv[${i}].birthCountry"></select></label>
               </div>
-              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="__addinv[${i}].idNumber" data-validate="il-id"></label>
+              <label class="lvp-field" data-show-when="__addinv[${i}].birthCountry!=ישראל"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="__addinv[${i}].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="__addinv[${i}].citizenship" data-country data-show-when-trigger="__addinv[${i}].citizenship"></select></label>
+              <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].isAdditionalCitizenship" value="true" data-show-when-trigger="__addinv[${i}].isAdditionalCitizenship"> אזרחות נוספת</label>
+              <label class="lvp-field" data-show-when="__addinv[${i}].isAdditionalCitizenship=true"><span class="lvp-field__label">אזרחות נוספת</span><select class="lvp-input--select" name="__addinv[${i}].additionalCitizenship" data-country data-show-when-trigger="__addinv[${i}].additionalCitizenship"></select></label>
+              <label class="lvp-field" data-show-when="__usPerson.__addinv[${i}]=true"><span class="lvp-field__label">מספר SSN</span><input class="lvp-input" type="text" name="__addinv[${i}].ssn" data-validate="ssn"></label>
+              <label class="lvp-field"><span class="lvp-field__label">תחום עיסוק</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].occupation"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="__addinv[${i}].residencyCountry" data-country></select></label>
+              <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].israelAddressSearch" autocomplete="off"></label>
+              <input type="hidden" name="__addinv[${i}].israelAddress.city">
+              <input type="hidden" name="__addinv[${i}].israelAddress.street">
+              <input type="hidden" name="__addinv[${i}].israelAddress.houseNumber">
+              <input type="hidden" name="__addinv[${i}].israelAddress.postalCode">
+              <input type="hidden" name="__addinv[${i}].englishDetails.englishAddress.city">
+              <input type="hidden" name="__addinv[${i}].englishDetails.englishAddress.street">
               <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="__addinv[${i}].email"></label>
+              <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="__addinv[${i}].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
+
+              <h3 class="lvp-subhead">הצהרה על תושבות מס</h3>
+              <fieldset class="lvp-fieldset">
+                <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
+                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="ישראל בלבד" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס בישראל בלבד</label>
+                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="ישראל ומדינה אחרת" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס בישראל ומדינה/ות אחרת/ות</label>
+                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="מדינה אחרת" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס במדינה/ות אחרת/ות</label>
+              </fieldset>
+              <div data-show-when="__addinv[${i}].taxResidency.taxCountry=ישראל ומדינה אחרת">
+                <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="__addinv[${i}].taxResidency.israelAndOtherCountries.countriesArray[0].country" data-country></select></label>
+                <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="__addinv[${i}].taxResidency.israelAndOtherCountries.countriesArray[0].tin" inputmode="text"></label>
+              </div>
+              <div data-show-when="__addinv[${i}].taxResidency.taxCountry=מדינה אחרת">
+                <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="__addinv[${i}].taxResidency.otherCountries.countriesArray[0].country" data-country></select></label>
+                <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="__addinv[${i}].taxResidency.otherCountries.countriesArray[0].tin" inputmode="text"></label>
+              </div>
+
+              <h3 class="lvp-subhead">כשירות</h3>
+              <fieldset class="lvp-fieldset">
+                <legend class="lvp-fieldset__legend">יש לבחור אפשרות אחת.</legend>
+                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isLiquidAssets" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
+                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isIncomeLevel" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
+                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isBoth" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
+                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isNotQualified" value="true" data-qual-none="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.</label>
+              </fieldset>
+              <div data-show-when="__anyQual.__addinv[${i}].qualification=true">
+                <h3 class="lvp-subhead">אישור כשירות</h3>
+                <fieldset class="lvp-fieldset">
+                  <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
+                  <label class="lvp-radio"><input type="radio" name="__addinv[${i}].qualification.isSignedQualification" value="כן" data-show-when-trigger="__addinv[${i}].qualification.isSignedQualification"> כן</label>
+                  <label class="lvp-radio"><input type="radio" name="__addinv[${i}].qualification.isSignedQualification" value="לא" data-show-when-trigger="__addinv[${i}].qualification.isSignedQualification"> לא</label>
+                </fieldset>
+                <p class="lvp-hint-small" data-show-when="__addinv[${i}].qualification.isSignedQualification=כן">את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.</p>
+                <p class="lvp-hint-small" data-show-when="__addinv[${i}].qualification.isSignedQualification=לא">הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. מומלץ ליידע אותו.</p>
+              </div>
+
+              <h3 class="lvp-subhead">כתב ויתור טענות</h3>
+              <p class="lvp-note">אני הח"מ, ת.ז. <span data-addinv-waiver-id></span> שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
+1. ביום <span data-addinv-waiver-date></span> נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
+2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
+3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
+              <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
             </div>
           </template>
         </section>
@@ -1712,6 +1790,16 @@
       if (path === '__entQualified') return entQualified() ? 'true' : 'false';
       if (path.indexOf('__usPerson.') === 0) return isUsPerson(path.slice('__usPerson.'.length)) ? 'true' : 'false';
       if (path.indexOf('__nonIsrael.') === 0) return isNonIsraelResidency(path.slice('__nonIsrael.'.length)) ? 'true' : 'false';
+      // __anyQual.<prefix>: any of the 3 threshold boxes under <prefix> checked
+      // (the per-row twin of __indQualified, for the additional-investor cards).
+      if (path.indexOf('__anyQual.') === 0) {
+        var qp = path.slice('__anyQual.'.length);
+        var anyQ = ['isLiquidAssets', 'isIncomeLevel', 'isBoth'].some(function (k) {
+          var el = form.querySelector('input[name="' + cssEsc(qp + '.' + k) + '"]');
+          return el && el.checked;
+        });
+        return anyQ ? 'true' : 'false';
+      }
       if (path === '__indQual') return ''; // marker only (mutex handler), no show role
       return currentValueFor(path);
     }
@@ -1736,12 +1824,13 @@
       // A trusted change = the LP answered this control themselves: the
       // inferred-defaults engine must never override it again.
       if (e.isTrusted && e.target && e.target.name) TOUCHED[e.target.name] = true;
-      if (e.target.getAttribute && (e.target.getAttribute('data-qual-group') === 'indQual' || e.target.getAttribute('data-qual-none') === 'indQual')) {
+      var qualGroup = e.target.getAttribute && (e.target.getAttribute('data-qual-group') || e.target.getAttribute('data-qual-none'));
+      if (qualGroup) {
         // The 4 qualification options are mutually exclusive (choose ONE). Checking
         // any one clears the other three, so they behave like radios and the LP can
         // freely switch a regretted pick. No disabling (that made it feel stuck).
         if (e.target.checked) {
-          form.querySelectorAll('input[data-qual-group="indQual"], input[data-qual-none="indQual"]').forEach(function (c) {
+          form.querySelectorAll('input[data-qual-group="' + qualGroup + '"], input[data-qual-none="' + qualGroup + '"]').forEach(function (c) {
             if (c !== e.target) c.checked = false;
           });
         }
@@ -1750,7 +1839,12 @@
       applyConditionals();
       applyInferredDefaults();   // re-derive dependent defaults off the new answer
     });
-    form.addEventListener('input', function () { clearError(currentPageEl()); });
+    form.addEventListener('input', function (e) {
+      // Per-row waiver ת.ז. mirrors the row's own ID as it is typed (the primary's
+      // twin is fillWaiver on page entry).
+      if (e && e.target && /^__addinv\[\d+\]\.idNumber$/.test(e.target.name || '')) fillAddinvWaivers();
+      clearError(currentPageEl());
+    });
 
     // Input ergonomics (#11 #12). Date fields auto-insert the dd/mm/yyyy slashes as
     // the LP types digits (the iOS numeric keypad has no '/'); SSN auto-inserts its
@@ -1888,6 +1982,16 @@
       var i = host.querySelectorAll('[data-row-index]').length;
       if (!isNaN(max) && i >= max) { return; }
       var tmplName = host.getAttribute('data-repeating-template');
+      // keep-names host: pick the smallest FREE namespace index (a removed row's
+      // index may be lower than the current count; names are never renamed).
+      if (host.hasAttribute('data-repeating-keep-names')) {
+        var used = {};
+        host.querySelectorAll('[name^="__addinv["]').forEach(function (inp) {
+          var km = inp.name.match(/^__addinv\[(\d+)\]/); if (km) used[km[1]] = true;
+        });
+        var free = 0; while (used[String(free)]) free++;
+        i = free;
+      }
       var html = templateFor(tmplName).replace(/\$\{i1\}/g, i + 1).replace(/\$\{i\}/g, i);
       var wrap = document.createElement('div'); wrap.innerHTML = html;
       var node = wrap.firstElementChild;
@@ -1898,6 +2002,22 @@
       translateScope(node);
       applyConditionals(node);
       refreshAddButtons();
+      try { bindPlacesInputs(); } catch (e) {}   // new row's address search (idempotent)
+      fillAddinvWaivers();
+    }
+    // Per-row waiver fill (mirror of fillWaiver): the row's own ת.ז. + today.
+    function fillAddinvWaivers() {
+      var host = repeatHost('__additionalInvestorsArray');
+      if (!host) return;
+      var d = new Date();
+      var today = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+      host.querySelectorAll('[data-row-index]').forEach(function (row) {
+        var idEl = row.querySelector('[name$=".idNumber"]');
+        var idSpan = row.querySelector('[data-addinv-waiver-id]');
+        if (idSpan) idSpan.textContent = idEl ? String(idEl.value || '').trim() : '';
+        var dateSpan = row.querySelector('[data-addinv-waiver-date]');
+        if (dateSpan) dateSpan.textContent = today;
+      });
     }
     // Disable an add-row button once its list is at data-repeating-max (the click
     // silently no-opped before, so the LP got no feedback).
@@ -2227,6 +2347,20 @@
         zip: 'investorsArray[0].israelAddress.postalCode',
         enStreet: 'investorsArray[0].englishDetails.englishAddress.street',
         enCity: 'investorsArray[0].englishDetails.englishAddress.city' },
+      { search: '__addinv[0].israelAddressSearch',
+        street: '__addinv[0].israelAddress.street',
+        city: '__addinv[0].israelAddress.city',
+        house: '__addinv[0].israelAddress.houseNumber',
+        zip: '__addinv[0].israelAddress.postalCode',
+        enStreet: '__addinv[0].englishDetails.englishAddress.street',
+        enCity: '__addinv[0].englishDetails.englishAddress.city' },
+      { search: '__addinv[1].israelAddressSearch',
+        street: '__addinv[1].israelAddress.street',
+        city: '__addinv[1].israelAddress.city',
+        house: '__addinv[1].israelAddress.houseNumber',
+        zip: '__addinv[1].israelAddress.postalCode',
+        enStreet: '__addinv[1].englishDetails.englishAddress.street',
+        enCity: '__addinv[1].englishDetails.englishAddress.city' },
       { street: 'corporationDetails.israelAddress.street',
         city: 'corporationDetails.israelAddress.city',
         house: 'corporationDetails.israelAddress.houseNumber',
@@ -2416,9 +2550,15 @@
     }
 
     function reindex(host) {
+      // keep-names host (the full-parity addinv rows): each row's __addinv[k]
+      // namespace is stable for its lifetime. Renaming on reindex would rewrite
+      // the FIRST bracket of every nested name AND desync the data-show-when /
+      // data-qual-group attributes baked at add time. collectAll folds by DOM
+      // order, so names never need to be positional.
+      var keepNames = host.hasAttribute('data-repeating-keep-names');
       Array.prototype.forEach.call(host.querySelectorAll('[data-row-index]'), function (row, i) {
         row.setAttribute('data-row-index', i);
-        row.querySelectorAll('[name]').forEach(function (inp) {
+        if (!keepNames) row.querySelectorAll('[name]').forEach(function (inp) {
           inp.name = inp.name.replace(/\[\d+\]/, '[' + i + ']');
         });
         var title = row.querySelector('.lvp-repeating-row__title');
@@ -2560,18 +2700,23 @@
         if (inp.value === '' || inp.value == null) return;
         setPath(data, inp.name, coerce(inp.value));
       });
-      // additional-investors UI rows (__addinv) -> investorsArray[1..N], the
-      // gateway model holds all investors in one investorsArray.
-      var addinv = data.__addinv;
-      if (Array.isArray(addinv) && String(data.additionalInvestors) === 'כן') {
+      // additional-investors UI rows (__addinv) -> investorsArray[1..N]. Each row
+      // carries the REAL investor subshape under its stable __addinv[k] namespace
+      // (full-parity card, 2026-07-07), so the fold is a verbatim object move.
+      // Rows fold in DOM ORDER (the host is data-repeating-keep-names: a removed
+      // row's index is never reused by renaming, so array order can differ from
+      // visual order after a remove+add).
+      if (String(data.additionalInvestors) === 'כן' && Array.isArray(data.__addinv)) {
         if (!Array.isArray(data.investorsArray)) data.investorsArray = [];
-        addinv.forEach(function (a, n) {
+        var addinvHost = form.querySelector('[data-repeating-typed-path="__additionalInvestorsArray"]');
+        var n = 0;
+        Array.prototype.forEach.call(addinvHost ? addinvHost.querySelectorAll('[data-row-index]') : [], function (row) {
+          var anyName = row.querySelector('[name^="__addinv["]');
+          var km = anyName && anyName.name.match(/^__addinv\[(\d+)\]/);
+          var a = km ? data.__addinv[Number(km[1])] : null;
           if (!a) return;
-          data.investorsArray[n + 1] = {
-            firstName: a.firstName || '', lastName: a.lastName || '',
-            idNumber: a.idNumber || '', email: a.email || '',
-            englishDetails: { firstName: a.englishFirstName || '', lastName: a.englishLastName || '' }
-          };
+          delete a.israelAddressSearch;   // UI-only search box; components are the contract
+          data.investorsArray[++n] = a;
         });
       }
       delete data.__addinv;
@@ -2647,10 +2792,13 @@
         if (m) {
           var src = getPath(pf, 'investorsArray.' + (Number(m[1]) + 1));
           if (!src) return;
-          var f = m[2];
-          val = (f === 'englishFirstName') ? getPath(src, 'englishDetails.firstName')
-              : (f === 'englishLastName')  ? getPath(src, 'englishDetails.lastName')
-              : src[f];
+          // Full-parity rows mirror the investor subshape verbatim, so the row
+          // field's own subpath resolves directly against the saved investor.
+          val = (m[2] === 'israelAddressSearch') ? undefined : getPath(src, m[2]);
+          if (val === undefined && m[2] === 'israelAddressSearch') {
+            var st = getPath(src, 'israelAddress.street'), ho = getPath(src, 'israelAddress.houseNumber'), ci = getPath(src, 'israelAddress.city');
+            if (st && ci) val = st + (ho ? ' ' + ho : '') + ', ' + ci;
+          }
         } else {
           val = getPath(pf, name);
         }
@@ -2875,22 +3023,20 @@
       // manual typing fills via the parse+geocode fallback). If the search box is
       // filled but the components are not, flag the search field itself with the
       // standard required treatment (no new copy) so the LP re-picks from the list.
-      if (pageEl.getAttribute('data-page') === 'ind.personal') {
-        var srch = pageEl.querySelector('[name="investorsArray[0].israelAddressSearch"]');
-        if (srch) {
-          var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-          var componentsOk = gv('investorsArray[0].israelAddress.street') &&
-                             gv('investorsArray[0].israelAddress.city') &&
-                             gv('investorsArray[0].israelAddress.houseNumber');
-          if (String(srch.value || '').trim() && !componentsOk) {
-            ok = false;
-            var sh = srch.closest('.lvp-field');
-            if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
-            // Kick the fallback again so a manual typer converges by the next click.
-            try { placesManualFallback_(PLACES_SETS[0], srch); } catch (e) {}
-          }
+      PLACES_SETS.forEach(function (pset) {
+        if (!pset.search) return;
+        var srch = pageEl.querySelector('[name="' + cssEsc(pset.search) + '"]');
+        if (!srch || isHidden(srch.closest('.lvp-field') || srch)) return;
+        var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+        var componentsOk = gv(pset.street) && gv(pset.city) && gv(pset.house);
+        if (String(srch.value || '').trim() && !componentsOk) {
+          ok = false;
+          var sh = srch.closest('.lvp-field');
+          if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
+          // Kick the fallback again so a manual typer converges by the next click.
+          try { placesManualFallback_(pset, srch); } catch (e) {}
         }
-      }
+      });
       // Page-level: the controlling persons' ownership percentages must total 100%
       // (#8, sum part). Rendered as a page-level message (not the bottom line, which
       // the caller overwrites) reusing the approved sentence already on this page.
@@ -3392,9 +3538,11 @@
       // before collecting. The server-side derive (@510) is the guarantee; this
       // just raises the odds the payload is already complete. Never blocks.
       try {
-        var _set = PLACES_SETS[0];
         var _v = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-        if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveEnglishFromHebrew_(_set);
+        PLACES_SETS.forEach(function (_set) {
+          if (!_set.search) return;
+          if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveEnglishFromHebrew_(_set);
+        });
       } catch (e) {}
       var submission = collectAll();
       var files = collectFiles();
