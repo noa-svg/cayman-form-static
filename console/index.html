@@ -15,53 +15,58 @@
 
 :root {
   /* LIGHT EDITORIAL PALETTE - warm cream ground, factsheet blue + gold signature */
-  --color-bg-page:        #FBF7EF;
-  --color-bg-sidebar:     #3A6485;
+  /* Bauhaus x LVP Atrium (Noa 2026-07-07): Bauhaus construction on the real
+     brand palette. Navy #143F7F, gold #D4A227, coral/red on paper #F2EDE0,
+     ink #141414. Borders are near-black rules; radii go binary; shadows go
+     hard-offset (see below). Token NAMES are unchanged so all component CSS
+     inherits the new look. */
+  --color-bg-page:        #F2EDE0;
+  --color-bg-sidebar:     #143F7F;
   --color-bg-card:        #FFFFFF;
   --color-bg-panel:       #FFFFFF;
   --color-bg-input:       #FFFFFF;
-  --color-bg-hover:       #F4EEE2;
-  --color-bg-strip:       #FBF7EF;
+  --color-bg-hover:       #E9E0CC;
+  --color-bg-strip:       #FFFFFF;
   --color-bg-drawer:      #FFFFFF;
-  --color-bg-overlay:     rgba(20,30,40,0.40);
-  --color-atrium:         #3F729A;
-  --color-atrium-deep:    #355E80;
-  --color-atrium-tint:    #EAF1F8;
-  --color-atrium-tint-md: #D9E6F2;
-  --color-atrium-muted:   rgba(35,100,158,0.12);
-  --color-ink:            #2A231C;
-  --color-ink-sub:        #6E6252;
-  --color-ink-muted:      #8C887A;
-  --color-ink-disabled:   #C2BBA8;
+  --color-bg-overlay:     rgba(20,20,20,0.45);
+  --color-atrium:         #143F7F;
+  --color-atrium-deep:    #0E2E5C;
+  --color-atrium-tint:    #E4EAF3;
+  --color-atrium-tint-md: #C9D6E8;
+  --color-atrium-muted:   rgba(20,63,127,0.12);
+  --color-ink:            #141414;
+  --color-ink-sub:        #4A4438;
+  --color-ink-muted:      #6D6657;
+  --color-ink-disabled:   #A8A08C;
   --color-ink-inverse:    #FFFFFF;
-  --color-border:         #EAE1CF;
-  --color-border-subtle:  #F0E9DA;
-  --color-border-strong:  #D7CDB6;
-  --color-border-focus:   #23649E;
-  --color-gold:           #D9A93A;
-  --color-gold-tint:      #FBF1D9;
-  --color-coral:          #C0563E;
-  --color-coral-tint:     #F6E4DA;
-  --color-green:          #4E8C6A;
-  --color-green-tint:     #E4F0E9;
-  --color-amber:          #C99A2E;
-  --color-amber-tint:     #FBF1D9;
-  --color-red:            #C2483C;
-  --color-red-tint:       #F8E5E1;
-  --color-dim:            #B8B2A4;
-  --color-slate:          #5C6B74;
-  --color-plum:           #6B5DD3;
-  --color-plum-tint:      #ECEAFB;
-  --color-success:        #4E8C6A;
-  --color-success-bg:     #E4F0E9;
-  --color-warning:        #C99A2E;
-  --color-warning-bg:     #FBF1D9;
-  --color-danger:         #C2483C;
-  --color-danger-bg:      #F8E5E1;
-  --color-info:           #23649E;
-  --color-info-bg:        #EAF1F8;
-  --color-neutral:        #8C887A;
-  --color-neutral-bg:     #F0ECE2;
+  --color-border:         #141414;
+  --color-border-subtle:  #B6AE99;
+  --color-border-strong:  #141414;
+  --color-border-focus:   #C0202E;
+  --color-gold:           #D4A227;
+  --color-gold-tint:      #F6E8C6;
+  --color-coral:          #D85E4C;
+  --color-coral-tint:     #F7E0DA;
+  --color-green:          #2E8540;
+  --color-green-tint:     #DCEBDF;
+  --color-amber:          #D4A227;
+  --color-amber-tint:     #F6E8C6;
+  --color-red:            #C0202E;
+  --color-red-tint:       #F5D9DC;
+  --color-dim:            #B6AE99;
+  --color-slate:          #5C7585;
+  --color-plum:           #5C2C82;
+  --color-plum-tint:      #E7DDF0;
+  --color-success:        #2E8540;
+  --color-success-bg:     #DCEBDF;
+  --color-warning:        #D4A227;
+  --color-warning-bg:     #F6E8C6;
+  --color-danger:         #C0202E;
+  --color-danger-bg:      #F5D9DC;
+  --color-info:           #143F7F;
+  --color-info-bg:        #E4EAF3;
+  --color-neutral:        #6D6657;
+  --color-neutral-bg:     #E9E0CC;
   --font-display:         'Fraunces', 'Assistant', Georgia, serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
@@ -78,22 +83,28 @@
   --sidebar-w: 210px; --sidebar-w-coll: 52px; --header-h: 48px;
   --strip-h: 40px; --drawer-w: 420px; --panel-w: 480px;
   --grid-gutter: 24px; --grid-max: 1440px;
-  --radius-sm: 4px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px; --radius-pill: 100px;
+  /* Binary radius: squares or full pills, nothing in between. */
+  --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px; --radius-pill: 100px;
+  /* Bauhaus construction primitives */
+  --bw: 3px;            /* standard thick border */
+  --bw-heavy: 4px;      /* major divisions / cards / panels */
   --color-sidebar-ink:      #FFFFFF;
   --color-sidebar-ink-sub:  rgba(255,255,255,0.66);
   --color-sidebar-ink-dim:  rgba(255,255,255,0.42);
   --color-sidebar-hover:    rgba(255,255,255,0.10);
   --color-sidebar-active:   rgba(255,255,255,0.16);
   --color-sidebar-line:     rgba(255,255,255,0.14);
-  --shadow-card:   0 2px 8px rgba(74,54,32,0.08);
-  --shadow-hover:  0 6px 20px rgba(74,54,32,0.12), 0 0 0 1px var(--color-border);
-  --shadow-panel:  0 10px 34px rgba(74,54,32,0.16);
-  --shadow-drawer: -4px 0 30px rgba(74,54,32,0.14);
-  --shadow-modal:  0 14px 50px rgba(74,54,32,0.20);
-  --ease-out: cubic-bezier(0.16,1,0.3,1);
+  /* Hard offset shadows only, never blurred. */
+  --shadow-card:   4px 4px 0 0 var(--color-ink);
+  --shadow-hover:  6px 6px 0 0 var(--color-ink);
+  --shadow-panel:  8px 8px 0 0 var(--color-ink);
+  --shadow-drawer: -8px 8px 0 0 var(--color-ink);
+  --shadow-modal:  8px 8px 0 0 var(--color-ink);
+  /* Mechanical, snappy motion. */
+  --ease-out: cubic-bezier(0.2,0.9,0.3,1);
   --ease-in: cubic-bezier(0.4,0,1,1);
   --ease-inout: cubic-bezier(0.65,0,0.35,1);
-  --dur-fast: 180ms; --dur-base: 180ms; --dur-slow: 280ms; --dur-drawer: 220ms;
+  --dur-fast: 140ms; --dur-base: 180ms; --dur-slow: 240ms; --dur-drawer: 200ms;
 }
 
 /* ============================================================
@@ -119,7 +130,11 @@ body {
   font-weight: var(--weight-normal);
   line-height: var(--leading-normal);
   color: var(--color-ink);
-  background: var(--color-bg-page);
+  background-color: var(--color-bg-page);
+  /* Bauhaus dot-grid ground */
+  background-image: radial-gradient(rgba(20,20,20,0.10) 1.1px, transparent 1.1px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
   min-height: 100vh;
   display: flex;
 }
@@ -457,95 +472,90 @@ body.side-coll .side-foot .foot-gear { display: none; }
 /* LOGIN SCREEN
    ============================================================ */
 
+/* ===== BAUHAUS LOGIN (Noa 2026-07-07) =====
+   Geometric poster composition (navy square, gold circle, coral triangle, red
+   bar) on the dot-grid ground, with the LVP mark parked on a bordered card.
+   Interactive layer: the shapes drift toward the cursor and a click stamps a
+   spinning primitive. Replaces the ink-sketchbook login. Auth wiring unchanged. */
 #login-screen {
   position: fixed;
   inset: 0;
   z-index: 1000;
   min-height: 100vh;
-  background: var(--color-bg-page);
+  background-color: var(--color-bg-page);
+  background-image: radial-gradient(rgba(20,20,20,0.10) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-8);
+  overflow: hidden;
 }
+#login-screen.off { display: none; }
 
-#login-screen.off {
-  display: none;
-}
+#login-field { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.lsh { position: absolute; border: var(--bw-heavy) solid var(--color-ink); will-change: transform; }
+.lsh.sq  { width: 190px; height: 190px; background: var(--color-atrium); left: calc(50% - 330px); top: calc(50% - 160px); transform: rotate(-8deg); }
+.lsh.ci  { width: 210px; height: 210px; border-radius: 50%; background: var(--color-gold); left: calc(50% - 250px); top: calc(50% + 6px); mix-blend-mode: multiply; }
+.lsh.tr  { border: none; width: 0; height: 0; filter: drop-shadow(4px 4px 0 var(--color-ink)); border-left: 110px solid transparent; border-right: 110px solid transparent; border-bottom: 185px solid var(--color-coral); left: calc(50% + 140px); top: calc(50% - 150px); transform: rotate(16deg); }
+.lsh.bar { width: 260px; height: 30px; background: var(--color-red); left: calc(50% + 60px); top: calc(50% + 150px); transform: rotate(-5deg); }
 
 .lc {
+  position: relative;
+  z-index: 2;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-panel);
+  border: var(--bw-heavy) solid var(--color-ink);
+  border-radius: 0;
+  box-shadow: 10px 10px 0 0 var(--color-ink);
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   padding: var(--space-10) var(--space-8) var(--space-8);
   text-align: center;
 }
-
-.llogo {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 20px;
-  display: block;
-}
-
+.llogo { width: 54px; height: 54px; margin: 0 auto 14px; display: block; }
 .lc .lmark {
-  font-family: var(--font-mono);
-  font-style: normal;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-atrium);
-  letter-spacing: 0.10em;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 0.86;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
-  line-height: var(--leading-tight);
-  margin-bottom: var(--space-1);
+  color: var(--color-ink);
 }
-
 .lc .lsub {
   font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-ink-muted);
-  margin-bottom: var(--space-8);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-atrium);
+  margin: 6px 0 26px;
 }
-
 .google-signin-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   background: #fff;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  padding: 12px 24px;
-  font-family: Roboto, Arial, sans-serif;
-  font-size: 15px;
-  font-weight: 500;
-  color: #3c4043;
+  border: var(--bw) solid var(--color-ink);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+  padding: 13px 22px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink);
   cursor: pointer;
-  width: 240px;
+  width: 260px;
   direction: rtl;
-  transition: background 120ms, box-shadow 120ms;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
-.google-signin-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
-.google-signin-btn:active { background: #f1f3f4; }
-
-/* ----- login sketchbook: one contained inline-SVG page (liori-style ink), the
-   sign-in card parked on top. Clears (.off) on auth. ----- */
-#login-screen { background: #FFFFFF; }
-#login-ink, #login-top { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-#login-ink { z-index: 0; }
-#login-top { z-index: 3; }
-#login-screen .lc { position: relative; z-index: 2; }
-#login-ink text.cap, #login-top text.cap { font-family: 'Permanent Marker', cursive; fill: #2E86C1; }
-#login-ink text.cur, #login-top text.cur { font-family: 'Caveat', cursive; fill: #1A1A1A; }
-#login-ink .ln { fill: none; stroke: #241F1A; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
-#login-ink .el { transform-box: fill-box; transform-origin: center; }
-.lvpop{position:fixed;z-index:6;width:230px;max-width:40vw;height:auto;border-radius:14px;border:5px solid #fff;box-shadow:0 16px 50px rgba(30,20,10,.32);pointer-events:none;will-change:transform,opacity}
+.google-signin-btn:hover { background: var(--color-gold); transform: translate(-1px,-1px); box-shadow: 6px 6px 0 0 var(--color-ink); }
+.google-signin-btn:active { transform: translate(2px,2px); box-shadow: none; }
+.lhint { position: absolute; left: 22px; bottom: 18px; z-index: 3; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink); opacity: 0.5; pointer-events: none; }
+.lstamp { position: absolute; z-index: 1; pointer-events: none; will-change: transform, opacity; }
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -2209,6 +2219,155 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 .lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
 .lp-picked .lp-x:hover{color:var(--color-coral)}
+/* ============================================================
+   BAUHAUS LAYER (Noa 2026-07-07)
+   Bauhaus construction folded onto the LVP Atrium palette. This block is
+   appended last on purpose: the structural CSS above stays the base, and
+   these rules reshape the visible surfaces (thick black rules, hard offset
+   shadows, square geometry, heavy uppercase labels, primary-colour chrome).
+   The data board stays quiet: colour + geometry carry the chrome, not the rows.
+   ============================================================ */
+
+/* ---- geometric corner-mark utility (circle / square / triangle, cycling primaries) ---- */
+.gmk{display:inline-block;width:12px;height:12px;border:2px solid var(--color-ink);vertical-align:middle}
+.gmk.c{border-radius:50%;background:var(--color-coral)}
+.gmk.s{background:var(--color-atrium)}
+.gmk.t{width:0;height:0;border:none;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid var(--color-gold)}
+
+/* ---- focus: red construction ring, no soft glow ---- */
+input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-color:var(--color-border-focus)!important;box-shadow:3px 3px 0 0 var(--color-ink)!important}
+
+/* ---- SIDEBAR ---- */
+.side{border-right:var(--bw-heavy) solid var(--color-ink)}
+.brand{border-bottom:var(--bw) solid rgba(255,255,255,0.22)}
+.brand-chip{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);padding:7px 9px}
+.brand .mark{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
+.brand .sub{text-transform:uppercase;letter-spacing:0.18em;font-weight:800;font-size:10px}
+.fundsw{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;padding:0;box-shadow:4px 4px 0 0 var(--color-ink);gap:0;overflow:hidden}
+.fundsw button{color:var(--color-ink);border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;font-size:12px;padding:9px 0}
+.fundsw button + button{border-left:var(--bw) solid var(--color-ink)}
+.fundsw button.on{background:var(--color-gold);color:var(--color-ink)}
+.nav{border-radius:0;padding:11px 12px;margin:0 0 2px;text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:13px;border:var(--bw) solid transparent;background:transparent;color:#fff}
+.nav:hover{background:rgba(255,255,255,0.12)}
+.nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);border:var(--bw) solid var(--color-ink);box-shadow:4px 4px 0 0 rgba(0,0,0,0.35)}
+.nav .nav-ic{font-size:16px}
+.nav .badge{background:var(--color-coral);color:#fff;border:2px solid var(--color-ink);border-radius:0;font-weight:800}
+.nav.on .badge{background:var(--color-coral);color:#fff}
+.side-foot .foot-gear{border-radius:0}
+.side-foot{border-top:var(--bw) solid rgba(255,255,255,0.22)}
+
+/* ---- VIEW HEADERS (Fraunces, editorial-black, uppercase) ---- */
+.top h1{font-family:var(--font-display);font-weight:900;font-size:46px;line-height:0.86;text-transform:uppercase;letter-spacing:-0.03em}
+.top .sub{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:12px;color:var(--color-ink-sub)}
+
+/* ---- NEW button (primary action = coral block) ---- */
+.cmd-btn{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:5px 5px 0 0 var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cmd-btn:hover{background:var(--color-coral);box-shadow:6px 6px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.cmd-btn:active{transform:translate(2px,2px);box-shadow:none}
+.cmd-btn.open{background:var(--color-atrium);border-color:var(--color-ink)}
+
+/* ---- NEW menu ---- */
+.new-dd{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:8px 8px 0 0 var(--color-ink);background:#fff;padding:10px}
+.new-dd-sep{background:var(--color-ink);height:var(--bw);margin:8px 4px}
+.new-dd-row .ndl{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
+.new-dd-item{border:var(--bw) solid var(--color-ink);border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;font-size:12px;color:var(--color-ink);padding:7px 12px;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff}
+.new-dd-item:hover{background:var(--color-atrium);border-color:var(--color-ink);color:#fff}
+
+/* ---- board search ---- */
+.board-search{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);background:#fff;font-weight:600;padding:11px 14px}
+.board-search::placeholder{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:13px;color:var(--color-ink-muted)}
+
+/* ---- BOARD ROWS (quiet: thin black rule, square, snappy left-accent on hover) ---- */
+.row{border-bottom:2px solid var(--color-ink);padding:15px 6px}
+.row:hover{background:var(--color-bg-hover);margin:0;padding-left:12px;padding-right:6px;border-radius:0;border-bottom-color:var(--color-ink);box-shadow:inset 5px 0 0 0 var(--color-coral)}
+.row:active{transform:none}
+.rn-name{font-weight:800;font-size:16px}
+.rhe{font-weight:600}
+/* rail segments: square, bordered, constructed */
+.rail{gap:4px}
+.rail .seg{height:9px;border-radius:0;border:1.5px solid var(--color-ink);background:#fff}
+.rail .seg.done{background:var(--color-atrium)}
+.rail .seg.current{background:var(--color-gold);box-shadow:none}
+.rail.frozen .seg.done{background:#fff}
+.rail.frozen .seg.current{background:var(--color-gold)}
+.rail.dead .seg{background:#fff}
+.rail-lbl{text-transform:uppercase;letter-spacing:0.08em;font-weight:800;font-size:10px;color:var(--color-ink)}
+.rail-lbl.muted{color:var(--color-ink-muted)}
+
+/* ---- generic buttons ---- */
+.btn{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.btn:hover{background:var(--color-gold);box-shadow:4px 4px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.btn:active{transform:translate(2px,2px);box-shadow:none}
+
+/* ---- inputs ---- */
+input,textarea,select{border-radius:0!important}
+#panel input,#panel textarea,#panel select,#drawer input,#drawer textarea,#allowlist-input{border:var(--bw) solid var(--color-ink)!important;border-radius:0!important}
+
+/* ---- labels + tags ---- */
+label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:11px;color:var(--color-ink)}
+.tag{background:var(--color-coral);color:#fff;border:2px solid var(--color-ink);border-radius:0;text-transform:uppercase;letter-spacing:0.04em;font-weight:800;font-size:9px;padding:1px 6px}
+.opt{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:9px;color:var(--color-ink-muted)}
+
+/* ---- segmented controls (language / classification) ---- */
+.seg{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);overflow:hidden;background:#fff}
+.seg button{border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;color:var(--color-ink)}
+.seg button + button{border-left:var(--bw) solid var(--color-ink)}
+.seg button.on{background:var(--color-atrium);color:#fff}
+
+/* ---- primary CTA (coral block) ---- */
+.cta{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:5px 5px 0 0 var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cta:hover{background:var(--color-coral);box-shadow:6px 6px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.cta:active{transform:translate(2px,2px);box-shadow:none}
+
+/* ---- create panel + drawer shells ---- */
+#panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-panel)}
+#drawer,.drawer{border-left:var(--bw-heavy) solid var(--color-ink)}
+#panelTitle,#panel h2,.panel h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
+.lead,#panelLead{text-transform:none;color:var(--color-ink-sub);font-weight:600}
+
+/* ---- LP picker ---- */
+.lp-results{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:8px 8px 0 0 var(--color-ink)}
+.lp-picked{border:var(--bw) solid var(--color-ink);border-radius:0;background:var(--color-gold-tint)}
+.lp-av{border-radius:0;border:2px solid var(--color-ink);background:var(--color-atrium);color:#fff}
+
+/* ---- settings card ---- */
+.set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:0;box-shadow:var(--shadow-panel);background:#fff}
+.set-h{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
+
+/* ---- sidebar collapse ---- */
+#side-collapse{border-radius:0;border:2px solid rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.1em;font-weight:800;font-size:10px}
+#side-collapse:hover{border-color:#fff;background:rgba(255,255,255,0.10)}
+
+/* ---- DRAWER internals ---- */
+.dh h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
+.dh .st{border-radius:0;border:2px solid var(--color-ink);text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:10px}
+.dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
+.dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
+.dlink .cp:hover{background:var(--color-gold)}
+.dact .reseal,.dact .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.dact .nudge{background:var(--color-coral);color:#fff}
+.dact .reseal,.dact .dvoid{background:#fff;color:var(--color-ink)}
+.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 0 var(--color-ink)}
+.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active{transform:translate(2px,2px);box-shadow:none}
+.dact .dvoid:hover{background:var(--color-red-tint);border-color:var(--color-ink);color:var(--color-red)}
+
+/* ---- W-8 chips ---- */
+.w8tag{border-radius:0;border:2px solid var(--color-ink);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;font-size:10px}
+.w8tag.w8-expired{background:var(--color-red);color:#fff}
+.w8tag.w8-expiring{background:var(--color-gold);color:var(--color-ink);border:2px solid var(--color-ink)}
+
+/* ---- MESSAGES editor ---- */
+.md-hd h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.92}
+.langtabs{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);overflow:hidden;display:inline-flex}
+.langtab{border-radius:0;text-transform:uppercase;letter-spacing:0.05em;font-weight:800;color:var(--color-ink)}
+.langtab + .langtab{border-left:var(--bw) solid var(--color-ink)}
+.langtab.on{background:var(--color-atrium);color:#fff}
+.mdetail input,.mdetail textarea{border:var(--bw) solid var(--color-ink)!important;border-radius:0!important}
+.msgbtns .save{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);background:var(--color-coral);color:#fff;text-transform:uppercase;letter-spacing:0.06em;font-weight:800}
+.msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:5px 5px 0 0 var(--color-ink)}
+.msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
+.preview{border:var(--bw) solid var(--color-ink);border-radius:0}
+
 </style></head>
 <body>
   <aside class="side">
@@ -2219,9 +2378,9 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
       <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
-      <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic"></i><span class="nav-lbl">Board</span></button>
-      <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic"></i><span class="nav-lbl">Messages</span></button>
-      <button class="nav" data-view="w8"><i class="ti ti-id nav-ic"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
+      <button class="nav on" data-view="board" aria-current="page"><span class="nav-ic" aria-hidden="true">🗂️</span><span class="nav-lbl">Board</span></button>
+      <button class="nav" data-view="messages"><span class="nav-ic" aria-hidden="true">✉️</span><span class="nav-lbl">Messages</span></button>
+      <button class="nav" data-view="w8"><span class="nav-ic" aria-hidden="true">🕒</span><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
     </nav>
     <div class="side-foot">
       <div class="foot-id">
@@ -3822,10 +3981,16 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
   }
 </script>
 <div id="login-screen">
-<svg id="login-ink" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="login-field" aria-hidden="true">
+    <div class="lsh sq" data-p="0.5"></div>
+    <div class="lsh ci" data-p="0.9"></div>
+    <div class="lsh tr" data-p="1.4"></div>
+    <div class="lsh bar" data-p="0.7"></div>
+  </div>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
-    <div class="lsub">Operator Console</div>
+    <div class="lmark">Operator</div>
+    <div class="lsub">Legacy Value Partners</div>
     <button class="google-signin-btn" onclick="startGoogleSignIn()">
       <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -3837,74 +4002,58 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
-<svg id="login-top" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice"><g></g></svg>
-<script>(function(){
-var GLYPH={
- M:['M10 130 L14 12','M12 14 L50 84','M50 84 L88 14','M86 12 L90 130'],A:['M10 130 L50 12','M50 12 L90 130','M27 92 L73 90'],
- K:['M15 12 L15 130','M15 74 L84 12','M17 72 L86 130'],E:['M82 12 L15 10','M15 12 L16 130','M15 130 L82 128','M15 68 L64 66'],
- T:['M10 14 L90 12','M50 14 L49 130'],H:['M15 12 L16 130','M85 10 L84 130','M15 70 L85 68'],I:['M50 12 L49 130'],
- N:['M15 130 L14 12','M16 12 L85 130','M84 130 L86 12'],G:['M86 30 Q50 2 24 30 Q0 66 26 102 Q52 132 86 106 L86 72 L57 72'],
- S:['M86 26 Q50 0 22 26 Q9 46 41 60 Q76 74 62 102 Q40 132 11 108'],P:['M15 130 L15 12','M15 12 L70 12 Q94 32 70 62 L15 60'],
- L:['M18 12 L17 130','M17 130 L83 128'],O:['M50 12 Q11 12 11 71 Q11 130 50 130 Q89 130 89 71 Q89 12 50 12 Z'],
- B:['M15 130 L15 12','M15 12 L64 12 Q88 30 66 56 L15 58','M15 58 L70 58 Q96 90 68 122 L15 130'],
- U:['M15 12 L15 96 Q15 130 50 130 Q85 130 85 96 L85 12'],R:['M15 130 L15 12','M15 12 L68 12 Q90 32 68 60 L15 60','M43 60 L86 130']};
-var svgns='http://www.w3.org/2000/svg', ink=document.getElementById('scene');
-var seed=7; function rr(){seed=(seed*16807)%2147483647;return seed/2147483647;}
-function letter(ch,x,y,h,sw){var g=GLYPH[ch];if(!g)return 0;
- var hv=0.84+rr()*0.30; var w=h*0.72*hv;
- var tilt=(rr()-0.5)*3.5, sx=w/100*(0.94+rr()*0.10), sy=h/130*hv*(0.97+rr()*0.08), oy=(rr()-0.5)*h*0.05;
- var wv=sw*(0.85+rr()*0.4);
- var grp=document.createElementNS(svgns,'g');
- grp.setAttribute('transform','translate('+x+' '+(y+oy)+') rotate('+tilt+') scale('+sx+' '+sy+')');
- g.forEach(function(d,i){var jd=d.replace(/-?\d+\.?\d*/g,function(m){return (parseFloat(m)+(rr()-0.5)*5).toFixed(1);});
-   var p=document.createElementNS(svgns,'path');p.setAttribute('d',jd);p.setAttribute('fill','none');
-   p.setAttribute('stroke','#1A1A1A');p.setAttribute('stroke-width',(wv/((sx+sy)/2)).toFixed(2));
-   p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');grp.appendChild(p);});
- ink.appendChild(grp);return w+h*0.12;}
-function word(str,x,y,h,sw){var cx=x;for(var i=0;i<str.length;i++){cx+=letter(str[i],cx,y,h,sw)+h*0.06;}return cx;}
-/* Einstein quote now rendered as hand-lettered <text class="cap"> inside #login-ink (behind card). */
-})();</script>
+  <div class="lhint">Click anywhere to stamp a shape . the shapes follow your cursor</div>
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
-  <button class="tab on" data-view="board"><span class="tab-icon"><i class="ti ti-layout-board"></i></span><span class="tab-lbl">Board</span></button>
-  <button class="tab" data-view="messages"><span class="tab-icon"><i class="ti ti-mail"></i></span><span class="tab-lbl">Msgs</span></button>
-  <button class="tab" data-view="w8"><span class="tab-icon"><i class="ti ti-id"></i></span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
+  <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true">🗂️</span><span class="tab-lbl">Board</span></button>
+  <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true">✉️</span><span class="tab-lbl">Msgs</span></button>
+  <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true">🕒</span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
 </nav>
 <script>
   Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
     t.onclick=function(){switchView(t.getAttribute("data-view"));};
   });
 </script>
-<script id="lvpop-init">
+<script id="login-bauhaus-init">
+/* Bauhaus login interaction: (1) the four composition shapes drift toward the
+   cursor (magnetic parallax); (2) clicking the field stamps a spinning primitive
+   (square / circle / triangle) in a primary colour that springs in and fades. */
 (function(){
-  var NAMES=['jobs','buffett','mj','turbine','rocket','backpack','garlic','tomato'];
-  var POPS=NAMES.map(function(n){return '/console/pops/'+n+'.jpg';});
-  POPS.forEach(function(u){var i=new Image(); i.src=u;});          // preload so the first pop is instant
   function ready(){
-    var ls=document.getElementById('login-screen');
-    if(!ls) return;
+    var ls=document.getElementById('login-screen'), field=document.getElementById('login-field');
+    if(!ls||!field) return;
+    var shapes=Array.prototype.slice.call(field.querySelectorAll('.lsh'));
+    var baseRot=shapes.map(function(s){var m=(getComputedStyle(s).transform||'');return s.classList.contains('sq')?-8:s.classList.contains('ci')?0:s.classList.contains('tr')?16:-5;});
+    ls.addEventListener('mousemove',function(e){
+      var r=ls.getBoundingClientRect(), mx=e.clientX-r.left-r.width/2, my=e.clientY-r.top-r.height/2;
+      shapes.forEach(function(s,i){
+        var p=parseFloat(s.getAttribute('data-p')||1);
+        s.style.transition='transform .5s cubic-bezier(.2,.9,.3,1)';
+        s.style.transform='translate('+(mx*0.03*p).toFixed(1)+'px,'+(my*0.03*p).toFixed(1)+'px) rotate('+baseRot[i]+'deg)';
+      });
+    });
+    var COL=['#143F7F','#D4A227','#D85E4C','#C0202E'];
     ls.addEventListener('click',function(e){
-      if(e.target.closest('.lc')) return;                          // never pop while using the sign-in card
-      var R=(Math.random()*30-15).toFixed(1);
-      var img=document.createElement('img');
-      img.className='lvpop';
-      img.src=POPS[Math.floor(Math.random()*POPS.length)];
-      img.style.left=e.clientX+'px'; img.style.top=e.clientY+'px';
-      img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(0.2)';
-      img.style.opacity='0';
-      ls.appendChild(img);
+      if(e.target.closest('.lc')) return;                          // never stamp while using the sign-in card
+      var kind=Math.floor(Math.random()*3), c=COL[Math.floor(Math.random()*COL.length)];
+      var r=ls.getBoundingClientRect(), R=(Math.random()*40-20).toFixed(0);
+      var d=document.createElement('div'); d.className='lstamp';
+      d.style.left=(e.clientX-r.left)+'px'; d.style.top=(e.clientY-r.top)+'px';
+      if(kind===0){ d.style.width=d.style.height='34px'; d.style.background=c; d.style.border='3px solid #141414'; }
+      else if(kind===1){ d.style.width=d.style.height='34px'; d.style.borderRadius='50%'; d.style.background=c; d.style.border='3px solid #141414'; }
+      else { d.style.width='0'; d.style.height='0'; d.style.borderLeft='19px solid transparent'; d.style.borderRight='19px solid transparent'; d.style.borderBottom='34px solid '+c; d.style.filter='drop-shadow(2px 2px 0 #141414)'; }
+      d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(0.2)'; d.style.opacity='0';
+      ls.appendChild(d);
       requestAnimationFrame(function(){
-        img.style.transition='transform .34s cubic-bezier(.2,1.6,.35,1), opacity .18s';
-        img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(1)';
-        img.style.opacity='1';
+        d.style.transition='transform .34s cubic-bezier(.2,1.6,.35,1), opacity .18s';
+        d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(1)'; d.style.opacity='1';
       });
       setTimeout(function(){
-        img.style.transition='transform .4s ease, opacity .4s ease';
-        img.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(.7)';
-        img.style.opacity='0';
-        setTimeout(function(){img.remove();},430);
-      },2100);
+        d.style.transition='transform .5s ease, opacity .5s ease';
+        d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(.6)'; d.style.opacity='0';
+        setTimeout(function(){d.remove();},520);
+      },1900);
     });
   }
   if(document.readyState!=='loading') ready(); else document.addEventListener('DOMContentLoaded',ready);
