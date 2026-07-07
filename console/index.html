@@ -2319,6 +2319,9 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .rail .seg{height:9px;border-radius:0;border:1.5px solid var(--color-ink);background:#fff}
 .rail .seg.done{background:var(--color-atrium)}
 .rail .seg.current{background:var(--color-gold);box-shadow:none}
+/* Sealing: the last beat fills as motion (transient seconds-long arrive-at-Done). */
+@keyframes rail-seal{0%,100%{opacity:1}50%{opacity:.4}}
+.rail .seg.sealing{background:var(--color-gold);animation:rail-seal 1.1s var(--ease-inout) infinite}
 .rail.frozen .seg.done{background:#fff}
 .rail.frozen .seg.current{background:var(--color-gold)}
 .rail.dead .seg{background:#fff}
@@ -2938,15 +2941,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     w8_renewal:'W-8 renewal'
   };
   // THE STAGE RAIL. Five milestones the eye reads as a position on a journey.
-  var RAIL_MILESTONES=['Invited','In progress','Signing','Sealing','Done'];
-  // Map each canonical stage to a milestone index 0..4. Laterals (needs_attention,
-  // voided, expired) are handled separately so the rail can freeze or go ghost.
+  // Four honest beats. Sealing is NOT a milestone: it is the sub-second fill from
+  // Signing to Done, shown as motion on the last segment (Ive: a transient state is
+  // expressed by motion, not a static notch that sits empty 99.9% of the time). It only
+  // reads as a stuck exception if it hangs, which the age + attention path already catch.
+  var RAIL_MILESTONES=['Invited','In progress','Signing','Done'];
+  var SEALING_STAGES={all_signed:1, docs_assembled:1, dispatched:1};
+  // Map each canonical stage to a beat index 0..3. Laterals (needs_attention, voided,
+  // expired) and the sealing states are handled separately in railHtml.
   var STAGE_TO_MILESTONE={
     link_sent:0, opened:0,
     in_progress:1, submitted:1,
     signing:2,
     all_signed:3, docs_assembled:3, dispatched:3,
-    complete:4, sealed:4
+    complete:3, sealed:3
   };
   function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired';}
   function isCompletedStage(st){return st==='complete'||st==='sealed';}
@@ -2959,6 +2967,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(st==='voided'||st==='void')return 'Canceled';
     if(st==='expired')return 'Expired';
     if(st==='needs_attention')return 'Needs a look';
+    if(SEALING_STAGES[st])return 'Sealing';
     var mi=STAGE_TO_MILESTONE[st];
     return (mi!=null)?RAIL_MILESTONES[mi]:(st?humanKey(st):'');
   }
@@ -2983,21 +2992,26 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function railHtml(r){
     var st=String(r.stage||'');
     var segs, railCls='', lbl='', lblCls='';
-    if(st==='voided'||st==='void'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Canceled'; lblCls='muted'; }
-    else if(st==='expired'){ railCls='dead'; segs=[0,0,0,0,0]; lbl='Expired'; lblCls='muted'; }
+    if(st==='voided'||st==='void'){ railCls='dead'; segs=['up','up','up','up']; lbl='Canceled'; lblCls='muted'; }
+    else if(st==='expired'){ railCls='dead'; segs=['up','up','up','up']; lbl='Expired'; lblCls='muted'; }
     else if(st==='needs_attention'){
-      // Freeze at the last real milestone we can infer; default to In progress.
-      var fm=(STAGE_TO_MILESTONE[r.lastStage]!=null)?STAGE_TO_MILESTONE[r.lastStage]:1;
-      railCls='frozen'; segs=[]; for(var i=0;i<5;i++)segs.push(i<fm?'done':(i===fm?'current':'up'));
+      // Freeze at the last real beat we can infer; default to In progress.
+      var fm=(STAGE_TO_MILESTONE[r.lastStage]!=null)?STAGE_TO_MILESTONE[r.lastStage]:1; if(fm>3)fm=3;
+      railCls='frozen'; segs=[]; for(var i=0;i<4;i++)segs.push(i<fm?'done':(i===fm?'current':'up'));
       lbl='Needs a look'; lblCls='muted';
+    } else if(isCompletedStage(st)){
+      segs=['done','done','done','done']; lbl='Done';
+    } else if(SEALING_STAGES[st]){
+      // Sealing = arriving at Done: the last segment fills as motion, not a static beat.
+      railCls='sealing'; segs=['done','done','done','sealing']; lbl='Sealing'; lblCls='muted';
     } else {
       var mi=(STAGE_TO_MILESTONE[st]!=null)?STAGE_TO_MILESTONE[st]:0;
-      segs=[]; for(var j=0;j<5;j++)segs.push(j<mi?'done':(j===mi?'current':'up'));
+      segs=[]; for(var j=0;j<4;j++)segs.push(j<mi?'done':(j===mi?'current':'up'));
       lbl=RAIL_MILESTONES[mi];
       if(st==='signing'){ var fr=signerFraction(r); if(fr)lbl='Signing <span class="frac">- '+esc2(fr)+'</span>'; }
     }
     var segHtml=segs.map(function(s){
-      var c=(s==='done')?'seg done':(s==='current')?'seg current':'seg';
+      var c=(s==='done')?'seg done':(s==='current')?'seg current':(s==='sealing')?'seg sealing':'seg';
       return '<span class="'+c+'"></span>';
     }).join('');
     var ageSuffix=r.age?' <span class="frac">&middot; '+esc2(r.age)+'</span>':'';
