@@ -3304,7 +3304,15 @@
     // form data so back-navigation edits re-render and an unchanged re-entry is a
     // no-op. FAIL OPEN: on any error the block stays hidden and signing proceeds;
     // the server emits needs_attention so a broken preview is visible operator-side.
-    var signPreviewKey = null;
+    // Cycle identity via a GENERATION counter (not a mutable key string): only a
+    // load for genuinely NEWER data (the LP edited a page) supersedes an in-flight
+    // one. This is what fixes the first-visit cold-render loss (CTO 2026-07-08): a
+    // watchdog that hid the spinner must NEVER cause a late-but-current successful
+    // render to be discarded. shownKey = the data currently displayed (re-entry
+    // no-op); activeKey = the data of the in-flight/last cycle.
+    var signPreviewGen = 0;
+    var signPreviewShownKey = null;
+    var signPreviewActiveKey = null;
     function loadSignPreview() {
       var box = form.querySelector('[data-doc-preview]');
       var bodyEl = form.querySelector('[data-doc-preview-body]');
@@ -3313,33 +3321,18 @@
       if (!box || !bodyEl || !loading) return;
       var key = '';
       try { key = JSON.stringify(collectAll()); } catch (e) { return; }
-      if (key === signPreviewKey) return;   // same data already shown / in flight
-      signPreviewKey = key;
+      // Already showing this exact data, or a cycle for it is in flight -> no-op.
+      if (key === signPreviewShownKey || key === signPreviewActiveKey) return;
+      signPreviewActiveKey = key;
+      var gen = ++signPreviewGen;                 // this cycle's identity
+      function current() { return gen === signPreviewGen; }   // false once newer data starts
       box.hidden = true;
       loading.hidden = false;
-      // Watchdog (pixel pass: a tokenless/misconfigured boot could strand the
-      // spinner forever): whatever happens to the fetch, the loading row dies
-      // after 20s and the page fails open. A settled fetch clears it first.
-      var watchdog = setTimeout(function () {
-        if (key !== signPreviewKey) return;
+
+      function show(doc) {
+        if (!current()) return;
         loading.hidden = true;
-        signPreviewKey = 'failed:' + key;   // a re-entry retries
-      }, 20000);
-      var req;
-      try {
-        req = gateway('render_preview', { submission: collectAll() });
-      } catch (e) {
-        clearTimeout(watchdog);
-        loading.hidden = true;
-        signPreviewKey = 'failed:' + key;
-        return;
-      }
-      req.then(function (res) {
-        clearTimeout(watchdog);
-        if (key !== signPreviewKey) return;   // superseded by a newer fetch
-        loading.hidden = true;
-        var doc = res && res.docs && res.docs[0];
-        if (!doc || !doc.html) { signPreviewKey = 'failed:' + key; return; }   // fail open, retry on re-entry
+        signPreviewShownKey = key;
         if (titleEl) titleEl.textContent = doc.title || '';
         bodyEl.innerHTML = doc.html;
         box.hidden = false;
@@ -3348,12 +3341,55 @@
         // the card ~19% into the doc after fonts/labels reflow.
         bodyEl.scrollTop = 0;
         try { requestAnimationFrame(function () { bodyEl.scrollTop = 0; }); } catch (e) {}
-      }).catch(function () {
-        clearTimeout(watchdog);
-        if (key !== signPreviewKey) return;
+      }
+      // Fail open: hide the spinner, release the key so a later re-entry re-attempts.
+      function failOpen() {
+        if (!current()) return;
         loading.hidden = true;
-        signPreviewKey = 'failed:' + key;   // fail open; a re-entry retries
-      });
+        if (signPreviewActiveKey === key) signPreviewActiveKey = null;
+      }
+      // One silent auto-retry, then fail open. Called only after a fetch SETTLES
+      // (empty/error/throw), never from the watchdog, so two fetches never overlap.
+      function retryOrFail(attemptNo) {
+        if (!current()) return;
+        if (attemptNo === 0) {
+          loading.hidden = false;              // spinner back for the retry
+          setTimeout(function () { if (current()) fire(1); }, 5000);
+        } else {
+          failOpen();
+        }
+      }
+      function fire(attemptNo) {
+        var settled = false;
+        // Watchdog: the spinner must never look frozen. Hide it at 30s, but leave
+        // the fetch running (its own 45s budget) - a cold render that lands after
+        // this still calls show(), because current() is generation-based, not a
+        // 'failed:' string the late response could no longer match.
+        var watchdog = setTimeout(function () {
+          if (settled || !current()) return;
+          loading.hidden = true;
+        }, 30000);
+        var req;
+        try {
+          req = gateway('render_preview', { submission: collectAll() }, 45000);
+        } catch (e) {
+          clearTimeout(watchdog);
+          retryOrFail(attemptNo);
+          return;
+        }
+        req.then(function (res) {
+          settled = true; clearTimeout(watchdog);
+          if (!current()) return;              // LP edited data -> newer gen -> discard
+          var doc = res && res.docs && res.docs[0];
+          if (!doc || !doc.html) { retryOrFail(attemptNo); return; }
+          show(doc);
+        }).catch(function () {
+          settled = true; clearTimeout(watchdog);
+          if (!current()) return;
+          retryOrFail(attemptNo);
+        });
+      }
+      fire(0);
     }
     function initSigPad() {
       var canvas = document.getElementById('sig-pad');
@@ -3502,7 +3538,7 @@
     }
 
     // ---- gateway calls (Foundation source=lp envelope) ----
-    function gateway(action, payload) {
+    function gateway(action, payload, timeoutOverrideMs) {
       // Static adaptation: flowType is OMITTED from the envelope. The unified
       // ju-cayman gateway's caymanResolveFlowType_ accepts only its four cayman_*
       // flow names (it throws on the legacy onboarding_individual/onboarding_entity
@@ -3515,9 +3551,11 @@
       // server-side (~30pp) before responding, so it gets a generous budget; the
       // rest stay snappy. On abort the error propagates to doSubmit's catch,
       // which surfaces the approved Hebrew submit-error and re-enables the form
-      // (the server's replay idempotency bounds any retry).
+      // (the server's replay idempotency bounds any retry). A caller may pass an
+      // explicit budget (render_preview: a COLD full-pack render measured just
+      // over 20s, so its budget must exceed the sign-preview watchdog).
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timeoutMs = (action === 'submit') ? 120000 : 30000;
+      var timeoutMs = timeoutOverrideMs || ((action === 'submit') ? 120000 : 30000);
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
       return fetch(CFG.gatewayUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
