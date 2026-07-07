@@ -434,24 +434,20 @@
           <label class="lvp-field"><span class="lvp-field__label">תחום עיסוק</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].occupation"></label>
           <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="investorsArray[0].residencyCountry" data-country></select></label>
 
-          <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
-            <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">עיר</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddress.city"></label>
-              <label class="lvp-field"><span class="lvp-field__label">רחוב</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddress.street"></label>
-            </div>
-            <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.houseNumber"></label>
-              <label class="lvp-field"><span class="lvp-field__label">מיקוד</span><input class="lvp-input" type="text" name="investorsArray[0].israelAddress.postalCode" inputmode="numeric"></label>
-            </div>
-            <!-- English city/street: NOT asked (Noa 2026-07-06, do not show). Google Places
-                 (placesFillEnglish_) fills these hidden mirrors from the Hebrew address when
-                 the LP picks a suggestion, for the W-8 / English docs. Not required (the
-                 validator no longer hard-requires them), so a manual Hebrew entry submits
-                 fine; the address is never asked twice. -->
-            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
-            <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
-          </fieldset>
+          <!-- ONE address field (Noa 2026-07-07: "why not one google maps api field").
+               The LP types/picks the whole residence address in a single Places-bound
+               input; the pick (or the blur parse+geocode fallback for manual typing)
+               fans out into the HIDDEN component fields below, which remain the payload
+               contract (city/street/houseNumber/postalCode + the English mirrors the
+               W-8 needs). If the components are incomplete on Next, the search field
+               itself gets the standard required treatment. -->
+          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddressSearch" autocomplete="off"></label>
+          <input type="hidden" name="investorsArray[0].israelAddress.city">
+          <input type="hidden" name="investorsArray[0].israelAddress.street">
+          <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
+          <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
+          <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
+          <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
@@ -500,7 +496,10 @@
           </div>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
-          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
+          <!-- מספר רישיון removed from the INDIVIDUAL lawyer page (Noa 2026-07-07):
+               no individual doc prints it (CaymanDocGen.js:1143), so it was dead
+               collection friction. The ENTITY page keeps its field: the entity
+               lawyer certificate prints מ.ר. {{licenseNumber}}. -->
         </section>
 
         <!-- ============================================================== -->
@@ -2164,7 +2163,11 @@
     // the widget rides the existing inputs, no placeholder added. ----
     var PLACES_KEY_FALLBACK = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw'; // same project key the Cayman form ships (index.html)
     var PLACES_SETS = [
-      { street: 'investorsArray[0].israelAddress.street',
+      // search: the ONE visible address input (Noa 2026-07-07); the rest are hidden
+      // component fields it fans out into. Sets without `search` keep the legacy
+      // two-box binding (the entity address pages, unchanged for now).
+      { search: 'investorsArray[0].israelAddressSearch',
+        street: 'investorsArray[0].israelAddress.street',
         city: 'investorsArray[0].israelAddress.city',
         house: 'investorsArray[0].israelAddress.houseNumber',
         zip: 'investorsArray[0].israelAddress.postalCode',
@@ -2260,9 +2263,68 @@
         });
       } catch (e) {}
     }
+    // Fan a picked/geocoded place's components into the Hebrew fields. Places often
+    // lacks the street number in IL, so recover it from the typed text as a fallback.
+    function placesFanOutHe_(set, comps, searchText) {
+      placesSetHe_(set.street, placesComp_(comps, 'route'));
+      var num = placesComp_(comps, 'street_number');
+      if (!num && searchText) { var m = String(searchText).match(/(\d+\S*)/); if (m) num = m[1]; }
+      placesSetHe_(set.house, num);
+      placesSetHe_(set.city, placesCity_(comps));
+      inferOffer(set.zip, placesComp_(comps, 'postal_code')); // מיקוד optional: offer only
+    }
+    // Manual entry on the single search field (the LP typed instead of picking):
+    // instant heuristic parse ("רחוב מספר, עיר") so the components are never empty
+    // behind a filled search box, then a Hebrew geocode to correct them + the
+    // same-place English fill the W-8 needs. Never blocks; validation re-checks.
+    function placesManualFallback_(set, input) {
+      var text = String(input.value || '').trim();
+      if (!text) return;
+      var m = text.match(/^(.+?)\s+(\d+\S*)\s*,?\s*(.*)$/);
+      if (m) {
+        placesSetHe_(set.street, m[1]);
+        placesSetHe_(set.house, m[2]);
+        if (m[3]) placesSetHe_(set.city, m[3]);
+      }
+      try {
+        new google.maps.Geocoder().geocode({ address: text + ', ישראל', language: 'iw' }, function (results, status) {
+          if (status === 'OK' && results && results[0]) {
+            placesFanOutHe_(set, results[0].address_components, text);
+            if (results[0].place_id) placesFillEnglish_(results[0].place_id, set);
+          }
+          deriveEnglishFromHebrew_(set);
+        });
+      } catch (e) { deriveEnglishFromHebrew_(set); }
+    }
     function bindPlacesInputs() {
       if (!(window.google && google.maps && google.maps.places)) return;
       PLACES_SETS.forEach(function (set) {
+        // Single-field mode: one visible search input fans out into hidden components.
+        if (set.search) {
+          var sInput = form.querySelector('[name="' + cssEsc(set.search) + '"]');
+          if (sInput && !sInput.hasAttribute('data-places-bound')) {
+            var vs = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+            // Resume: an older session carries components but no search text; compose it.
+            if (!sInput.value) {
+              var st0 = vs(set.street), ho0 = vs(set.house), ci0 = vs(set.city);
+              if (st0 && ci0) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
+            }
+            var acS = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id'] });
+            acS.addListener('place_changed', function () {
+              var place = acS.getPlace();
+              if (!place || !place.address_components) return;
+              placesFanOutHe_(set, place.address_components, sInput.value);
+              if (place.place_id) placesFillEnglish_(place.place_id, set);
+            });
+            sInput.setAttribute('data-places-bound', '1');
+            sInput.__lvpAc = acS;   // exposed for the deploy-gate walk
+            sInput.addEventListener('blur', function () {
+              if (!vs(set.street) || !vs(set.city)) placesManualFallback_(set, sInput);
+              else deriveEnglishFromHebrew_(set);
+            });
+          }
+          return;   // hidden components need no bindings of their own
+        }
         [{ name: set.street, types: ['address'] }, { name: set.city, types: ['(cities)'] }].forEach(function (b) {
           var input = form.querySelector('[name="' + cssEsc(b.name) + '"]');
           if (!input || input.hasAttribute('data-places-bound')) return;
@@ -2732,6 +2794,27 @@
           if (!firstError) firstError = holder;
         }
       });
+      // Page-level: the single address search field is only "answered" once its
+      // hidden component fields are filled (a Places pick fills them synchronously;
+      // manual typing fills via the parse+geocode fallback). If the search box is
+      // filled but the components are not, flag the search field itself with the
+      // standard required treatment (no new copy) so the LP re-picks from the list.
+      if (pageEl.getAttribute('data-page') === 'ind.personal') {
+        var srch = pageEl.querySelector('[name="investorsArray[0].israelAddressSearch"]');
+        if (srch) {
+          var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+          var componentsOk = gv('investorsArray[0].israelAddress.street') &&
+                             gv('investorsArray[0].israelAddress.city') &&
+                             gv('investorsArray[0].israelAddress.houseNumber');
+          if (String(srch.value || '').trim() && !componentsOk) {
+            ok = false;
+            var sh = srch.closest('.lvp-field');
+            if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
+            // Kick the fallback again so a manual typer converges by the next click.
+            try { placesManualFallback_(PLACES_SETS[0], srch); } catch (e) {}
+          }
+        }
+      }
       // Page-level: the controlling persons' ownership percentages must total 100%
       // (#8, sum part). Rendered as a page-level message (not the bottom line, which
       // the caller overwrites) reusing the approved sentence already on this page.
@@ -3161,15 +3244,31 @@
         '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
         '<h2>' + esc(displayFor('מכינים את המסמכים שלך', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('אנו מרכיבים את חבילת ההצטרפות שלך. זה עשוי לקחת רגע. נא להשאיר חלון זה פתוח.', curLang)) + '</p>');
-      gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' }).then(function (res) {
-        if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
-        showSubmittedCard();
-      }).catch(function (err) {
-        submitting = false;
-        hideResultCard();
-        if (window.console) console.log('submit error:', err && err.message || err);
-        setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
-      });
+      // Timeout resilience (2026-07-07, the false-failure Noa hit): the server can
+      // finish the heavy pack render AFTER the client's 120s abort, in which case
+      // the old code showed the failure copy for a submit that actually SUCCEEDED.
+      // Since prod @506 (H-834) a re-submit on the same token is safe + idempotent:
+      // it replays fast if the signing run exists, or properly re-runs if the
+      // server died mid-submit. So on 'timeout' we quietly retry (spinner stays
+      // up, same approved copy); only a real server error or exhausted retries
+      // shows the failure copy.
+      var attempt = function (retriesLeft) {
+        return gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' }).then(function (res) {
+          if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
+          showSubmittedCard();
+        }).catch(function (err) {
+          var isTimeout = err && err.message === 'timeout';
+          if (isTimeout && retriesLeft > 0) {
+            if (window.console) console.log('submit timeout; retrying (' + retriesLeft + ' left)');
+            return new Promise(function (r) { setTimeout(r, 5000); }).then(function () { return attempt(retriesLeft - 1); });
+          }
+          submitting = false;
+          hideResultCard();
+          if (window.console) console.log('submit error:', err && err.message || err);
+          setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
+        });
+      };
+      attempt(2);
     }
     function showSubmittedCard() {
       showResultCard(
