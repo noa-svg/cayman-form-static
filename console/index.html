@@ -2367,6 +2367,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:5px 5px 0 0 var(--color-ink)}
 .msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .preview{border:var(--bw) solid var(--color-ink);border-radius:0}
+.mrcpt-line{font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--color-ink-sub)}
+.md-rcpts .mrcpt-line{font-size:13px}
+
+/* ---- RED = stop/fail, GREEN = success/go (Noa 2026-07-07) ----
+   Go / confirm / proceed actions and success states are green; stop /
+   destructive / failed states are red. Neutral in-progress stays navy/gold. */
+.cta,.cmd-btn,.dact .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
+.cta:hover,.cmd-btn:hover,.dact .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
+.cmd-btn.open{background:var(--color-atrium)!important}          /* menu open = neutral, not "go" */
+.dact .dvoid{background:var(--color-red)!important;color:#fff!important}
+.dact .dvoid:hover{background:var(--color-red)!important;color:#fff!important;border-color:var(--color-ink)!important}
+/* status: completed steps green (success), attention/void red (stop) */
+.rail .seg.done{background:var(--color-green)!important}
+.rail.frozen .seg.current{background:var(--color-red)!important}
+.rail.dead .seg{background:var(--color-red-tint)!important}
+.w8tag.w8-expired{background:var(--color-red)!important;color:#fff!important}   /* expired = fail */
+/* row hover accent stays neutral (navy), never red = "stop" */
+.row:hover{box-shadow:inset 5px 0 0 0 var(--color-atrium)!important}
 
 </style></head>
 <body>
@@ -3544,7 +3562,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var rsel=document.getElementById('revShareSel');if(rsel)rsel.addEventListener('change',save);
   })();
   // create
-  function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"#2A0808":"#071B22";m.style.color=isErr?"#F87171":"#22D3EE";m.style.border=isErr?"1px solid #3D0F0F":"1px solid #0C2A35";m.setAttribute('role',isErr?'alert':'status');m.setAttribute('aria-live',isErr?'assertive':'polite');}
+  function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"var(--color-red-tint)":"var(--color-green-tint)";m.style.color=isErr?"var(--color-red)":"var(--color-green)";m.style.border=isErr?"2px solid var(--color-red)":"2px solid var(--color-green)";m.setAttribute('role',isErr?'alert':'status');m.setAttribute('aria-live',isErr?'assertive':'polite');}
   document.getElementById("createBtn").onclick=function(){
     var btn=this;
     var msg=document.getElementById("msg");
@@ -3814,10 +3832,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<div class="spine-rail">'+node+node+node+node+'</div>';
   }
   function recipientChips(rcpt){
-    var h='';
-    (rcpt.to||[]).forEach(function(r){h+='<span class="rchip to">'+esc(r)+'</span>';});
-    (rcpt.cc||[]).forEach(function(r){h+='<span class="rchip cc">cc '+esc(r)+'</span>';});
-    return h;
+    // Plain readable recipient line, not initial-chips (Noa 2026-07-07: "hate the
+    // initials"). Recipients read as words; the spine node already states "to X".
+    var to=(rcpt.to||[]).join(', ');
+    var cc=(rcpt.cc||[]).map(function(r){return 'cc '+r;}).join(', ');
+    var parts=[]; if(to)parts.push('To '+to); if(cc)parts.push(cc);
+    return parts.length?'<span class="mrcpt-line">'+esc(parts.join('   ·   '))+'</span>':'';
   }
   function covTicks(m){
     var hs=covState(m,'he'), es=covState(m,'en');
@@ -3844,7 +3864,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           +'<span class="node-dot '+meta.cls+'"></span>'
           +'<span class="node-t">'+esc(label)+'</span>'
           +'<span class="node-meta">'+esc(meta.trigger)+(toName?' - to '+esc(toName):'')+'</span>'
-          +'<span class="node-foot">'+recipientChips(meta.rcpt)+covTicks(m)+'</span>'
+          +'<span class="node-foot">'+covTicks(m)+'</span>'
           +'</button>';
       });
     });
