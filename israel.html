@@ -206,7 +206,7 @@
     .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; min-height: 44px; cursor: pointer; font-size: 14px; line-height: 1.5; }
     .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; accent-color: var(--lvp-navy); width: 18px; height: 18px; }
 
-    .lvp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .lvp-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
     @media (max-width: 480px) { .lvp-grid-2 { grid-template-columns: 1fr; gap: 0; } }
     .lvp-input--textarea { padding: 8px; border: 1px solid var(--lvp-input-line); border-radius: 4px; resize: vertical; width: 100%; font: inherit; }
     .lvp-or-separator { text-align: center; margin: 16px 0; color: var(--lvp-text-muted); font-size: 13px; }
@@ -252,12 +252,10 @@
        right under the field so the LP fixes it in place instead of hunting the one
        shared status line. When a specific message is shown the " חובה"/"required"
        label suffix is suppressed (the field is filled but invalid, not empty). */
-    .lvp-error-msg { color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
-    /* When the errored field sits in a 2-col grid, the error <p> is inserted as the
-       next sibling and would otherwise take the neighbouring grid cell (landing beside
-       the label and shoving the pair sideways). Force it to span the whole row so it
-       renders full-width directly under its field. */
-    .lvp-grid-2 > .lvp-error-msg { grid-column: 1 / -1; margin-top: 0; margin-bottom: 16px; }
+    /* The per-field error renders INSIDE its own field (appended in setFieldError), so
+       it sits directly under the field it belongs to and never disturbs the 2-col grid
+       layout: the field pair stays side by side, the error just grows its own cell. */
+    .lvp-error-msg { display: block; color: var(--lvp-error); font-size: 13px; line-height: 1.4; margin: 4px 0 0; }
     /* Submit/validation error summary: a titled list of the page's errored fields
        with tap-to-jump links, rendered at the top of the current page (WCAG 3.3.1 /
        2.4.3). On a 360px screen a failed field below the fold is invisible; the
@@ -1749,8 +1747,8 @@
     function clearFieldError_(holder) {
       if (!holder) return;
       holder.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg');
-      var next = holder.nextElementSibling;
-      if (next && next.classList && next.classList.contains('lvp-error-msg')) next.remove();
+      var e = holder.querySelector('.lvp-error-msg');
+      if (e) e.remove();
       unbindFieldInvalid_(holder);
     }
     form.addEventListener('focusout', function (e) {
@@ -2816,9 +2814,8 @@
     }
     function setFieldError(holder, msg) {
       holder.classList.add(holder.classList.contains('lvp-fieldset') ? 'lvp-fieldset--has-msg' : 'lvp-field--has-msg');
-      var next = holder.nextElementSibling;
-      var e = (next && next.classList && next.classList.contains('lvp-error-msg')) ? next : null;
-      if (!e) { e = document.createElement('p'); e.className = 'lvp-error-msg'; holder.parentNode.insertBefore(e, holder.nextSibling); }
+      var e = holder.querySelector('.lvp-error-msg');
+      if (!e) { e = document.createElement('span'); e.className = 'lvp-error-msg'; holder.appendChild(e); }
       e.textContent = msg;
       bindFieldInvalid_(holder, e);
     }
