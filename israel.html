@@ -1177,17 +1177,26 @@
         + '&t='    + encodeURIComponent(p.get('t')    || '')
         + '&type=' + encodeURIComponent(p.get('type') || '')
         + '&lang=' + encodeURIComponent(p.get('lang') || '');
-      try {
-        fetch(url)
-          .then(function (r) { return r.json(); })
-          .then(function (cfg) {
-            applyCfg(cfg);
-            try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch (e) {}
-          })
-          .catch(function () {});
-      } catch (err) {
-        if (window.console) console.warn('[IsraelForm] CFG load failed:', err);
+      // Retry with backoff (2026-07-07): a single silent attempt against a cold GAS
+      // start left a refreshed LP on a blank page-one form (Noa hit this live). Three
+      // tries cover a cold start; each success re-caches for the next refresh.
+      function fetchCfg(attempt) {
+        try {
+          fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (cfg) {
+              applyCfg(cfg);
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch (e) {}
+            })
+            .catch(function () {
+              if (attempt < 3) setTimeout(function () { fetchCfg(attempt + 1); }, attempt * 2500);
+              else if (window.console) console.warn('[IsraelForm] CFG load failed after retries');
+            });
+        } catch (err) {
+          if (window.console) console.warn('[IsraelForm] CFG load failed:', err);
+        }
       }
+      fetchCfg(1);
     })();
   </script>
   <script>
@@ -1546,6 +1555,10 @@
       markSnapFromPrefill();
       if (cfg.prefill) hydrateFromPrefill(true);
       applyInferredDefaults();
+      // Config landed but carried no snapshot (fresh session on the server, or the
+      // save never reached it): restore this device's own local snapshot instead.
+      if (!(cfg.prefill && typeof cfg.prefill === 'object' && Object.keys(cfg.prefill).length) &&
+          typeof applyLocalSnap_ === 'function') applyLocalSnap_();
     };
 
     function applicant() { return APPLICANT; }
@@ -2917,7 +2930,10 @@
       page.hidden = false;
       applyConditionals(page);
       enforceQualMutex();
-      if (page.getAttribute('data-page') === 'ind.sign' && !sigPadReady) initSigPad();
+      if (page.getAttribute('data-page') === 'ind.sign') {
+        if (!sigPadReady) initSigPad();
+        else if (sigPadRefit) sigPadRefit();   // re-entry: re-fit so a hidden-resize can't leave a dead pad
+      }
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
       if (page.getAttribute('data-page') === 'ind.waiver') fillWaiver();
       prevBtn.hidden = idx === 0;
@@ -2939,17 +2955,63 @@
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
-      if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      // ONE error surface (Noa 2026-07-07: the summary + the bottom line read as
+      // duplicates): the summary box is the message; the bottom line fires only
+      // when no summary rendered (a page-level failure with no marked holder).
+      if (!validatePage(page)) { if (!renderErrorSummary(page)) setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
       renderErrorSummary(page); // clears the summary when the page validates clean
       // Advance INSTANTLY (optimistic); persist for resume in the background so
       // Continue never waits on the GAS round-trip. A failed save surfaces a note
       // but does not block navigation (state held client-side).
       showPage(idx + 1);
+      // REAL local persistence (2026-07-07, Noa's refresh wipe): every advance also
+      // snapshots the full form + position to localStorage, so the approved save-
+      // failure copy («הפרטים נשמרים מקומית») is actually TRUE, and a refresh with
+      // an unreachable gateway restores from here (server prefill wins when present).
+      saveLocalSnap_();
       savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
     });
+    var LOCAL_SNAP_KEY = 'lvp_il_snap_' + (CFG.token || '');
+    function saveLocalSnap_() {
+      try {
+        localStorage.setItem(LOCAL_SNAP_KEY, JSON.stringify({
+          ts: Date.now(),
+          page: currentPageEl() ? currentPageEl().getAttribute('data-page') : '',
+          data: collectAll()
+        }));
+      } catch (e) {}
+    }
+    // Restore from the local snapshot ONLY when the server gave us no prefill (cfg
+    // fetch failed/retrying, or the session snapshot is empty). Server data always
+    // wins when present, so a stale device copy can never clobber newer server state.
+    var localSnapApplied = false;
+    function applyLocalSnap_() {
+      if (localSnapApplied) return;
+      if (CFG.prefill && typeof CFG.prefill === 'object' && Object.keys(CFG.prefill).length) return;
+      var raw = null;
+      try { raw = localStorage.getItem(LOCAL_SNAP_KEY); } catch (e) {}
+      if (!raw) return;
+      var snap = null;
+      try { snap = JSON.parse(raw); } catch (e) { return; }
+      if (!snap || !snap.data || typeof snap.data !== 'object') return;
+      localSnapApplied = true;
+      CFG.prefill = snap.data;
+      markSnapFromPrefill();
+      hydrateFromPrefill(true);
+      if (snap.page && idx === 0) {
+        var pages = visiblePages();
+        for (var i = 0; i < pages.length; i++) {
+          if (pages[i].getAttribute('data-page') === snap.page) { idx = i; showPage(idx); break; }
+        }
+      }
+      applyInferredDefaults();
+    }
+    // Fire the local restore when the async config lands without a prefill, or on a
+    // timer if the config never lands at all (gateway unreachable on a refresh).
+    setTimeout(applyLocalSnap_, 7000);
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();
-      if (!validatePage(page)) { renderErrorSummary(page); setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
+      if (!validatePage(page)) { if (!renderErrorSummary(page)) setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true); return; }
       renderErrorSummary(page); // clears the summary when the page validates clean
       // Signature gate: the drawn PNG is the consent (matching EasySend's sign-then-
       // send). The button is never disabled; if the pad is empty we send the LP back
@@ -2981,6 +3043,7 @@
     // the gateway records the primary's signature inline instead of mailing a link.
     var sigPadReady = false;
     var sigPadPng = null;
+    var sigPadRefit = null;   // set by initSigPad; re-fits the canvas on re-entry to ind.sign
     // Fill the waiver's ת.ז. from what the LP entered on the personal page and the
     // date (today, the signing day) so the read-and-approve text shows no blanks.
     function fillWaiver() {
@@ -3006,6 +3069,11 @@
         // identity before scaling so re-running size() never compounds the scale.
         var ratio = window.devicePixelRatio || 1;
         var r = canvas.getBoundingClientRect();
+        // GUARD: if the sign page is hidden (LP navigated away), the rect is 0. Sizing
+        // the canvas to 0 wipes the backing store, and initSigPad won't re-run on
+        // return, so the pad would be permanently dead. Bail while hidden and keep the
+        // good backing store (Noa 2026-07-07: "clicked back then next, can't sign").
+        if (!r.width || !r.height) return;
         canvas.width = r.width * ratio; canvas.height = r.height * ratio;
         ctx2.setTransform(1, 0, 0, 1, 0, 0);
         ctx2.scale(ratio, ratio); ctx2.lineWidth = 2; ctx2.lineCap = 'round'; ctx2.strokeStyle = '#0D3F6A';
@@ -3039,25 +3107,31 @@
       // captured, PRESERVE it: keep the captured PNG and redraw it onto the resized
       // canvas, so rotating the phone after signing never silently wipes the signature.
       // Debounced to skip mid-gesture churn.
+      // Re-fit the backing store and restore any captured signature. Runs on rotate /
+      // viewport change AND on every re-entry to the sign page (see showPage), so a
+      // resize that fired while the page was hidden can't leave a dead pad.
+      function refit() {
+        if (!canvas.getBoundingClientRect().width) return;  // still hidden: nothing to fit
+        var prevPng = sigPadPng;
+        drawing = false; size();
+        if (prevPng) {
+          var img = new Image();
+          img.onload = function () { try { ctx2.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (e) {} };
+          img.src = prevPng;
+          sigPadPng = prevPng;   // keep the signature valid for submit even if redraw is async
+        } else {
+          dirty = false; points = 0; sigPadPng = null;
+          updateSigState();
+        }
+      }
       var resizeTimer = null;
       function onResize() {
         if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function () {
-          var prevPng = sigPadPng;
-          drawing = false; size();
-          if (prevPng) {
-            var img = new Image();
-            img.onload = function () { try { ctx2.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (e) {} };
-            img.src = prevPng;
-            sigPadPng = prevPng;   // keep the signature valid for submit even if redraw is async
-          } else {
-            dirty = false; points = 0; sigPadPng = null;
-            updateSigState();
-          }
-        }, 200);
+        resizeTimer = setTimeout(refit, 200);
       }
       window.addEventListener('resize', onResize);
       window.addEventListener('orientationchange', onResize);
+      sigPadRefit = refit;   // exposed so showPage can re-fit on re-entry to ind.sign
       if (clearBtn) clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
         dirty = false; points = 0; sigPadPng = null;
@@ -3080,7 +3154,7 @@
     function renderErrorSummary(pageEl) {
       var existing = pageEl.querySelector('[data-error-summary]');
       var bad = Array.prototype.slice.call(pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error'));
-      if (!bad.length) { if (existing) existing.parentNode.removeChild(existing); return; }
+      if (!bad.length) { if (existing) existing.parentNode.removeChild(existing); return false; }
       var box = existing;
       if (!box) {
         box = document.createElement('div');
@@ -3098,7 +3172,11 @@
         else pageEl.insertBefore(box, pageEl.firstChild);
       }
       var items = bad.map(function (h, i) {
-        var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend');
+        // Label for the jump item: field label / fieldset legend, then a consent
+        // checkbox's own label text (the waiver's bare fieldset has no legend and
+        // was rendering as the meaningless generic «שדה» - Noa 2026-07-07).
+        var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend') ||
+                  h.querySelector('.lvp-checkbox');
         var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim() || 'שדה';
         h.setAttribute('data-err-idx', i);
         return '<li><button type="button" data-err-jump="' + i + '">' + esc(txt) + '</button></li>';
@@ -3122,6 +3200,7 @@
       // Move focus to the summary so the alert is announced and the keyboard user
       // lands on the list of fields to fix (WCAG 3.3.1 / 2.4.3).
       try { box.focus(); } catch (e) {}
+      return true;
     }
 
     // ---- gateway calls (Foundation source=lp envelope) ----
