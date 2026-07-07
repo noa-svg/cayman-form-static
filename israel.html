@@ -3163,7 +3163,25 @@
       signPreviewKey = key;
       box.hidden = true;
       loading.hidden = false;
-      gateway('render_preview', { submission: collectAll() }).then(function (res) {
+      // Watchdog (pixel pass: a tokenless/misconfigured boot could strand the
+      // spinner forever): whatever happens to the fetch, the loading row dies
+      // after 20s and the page fails open. A settled fetch clears it first.
+      var watchdog = setTimeout(function () {
+        if (key !== signPreviewKey) return;
+        loading.hidden = true;
+        signPreviewKey = 'failed:' + key;   // a re-entry retries
+      }, 20000);
+      var req;
+      try {
+        req = gateway('render_preview', { submission: collectAll() });
+      } catch (e) {
+        clearTimeout(watchdog);
+        loading.hidden = true;
+        signPreviewKey = 'failed:' + key;
+        return;
+      }
+      req.then(function (res) {
+        clearTimeout(watchdog);
         if (key !== signPreviewKey) return;   // superseded by a newer fetch
         loading.hidden = true;
         var doc = res && res.docs && res.docs[0];
@@ -3177,6 +3195,7 @@
         bodyEl.scrollTop = 0;
         try { requestAnimationFrame(function () { bodyEl.scrollTop = 0; }); } catch (e) {}
       }).catch(function () {
+        clearTimeout(watchdog);
         if (key !== signPreviewKey) return;
         loading.hidden = true;
         signPreviewKey = 'failed:' + key;   // fail open; a re-entry retries
