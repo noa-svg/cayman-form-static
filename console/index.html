@@ -2399,6 +2399,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:5px 5px 0 0 var(--color-ink)}
 .msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .preview{border:var(--bw) solid var(--color-ink);border-radius:0}
+.ph-note{font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;color:var(--color-ink-muted);margin-left:6px}
 .mrcpt-line{font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--color-ink-sub)}
 .md-rcpts .mrcpt-line{font-size:13px}
 
@@ -4057,12 +4058,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         (bodyRoundTrips(L.body)
           ? '<div id="m-body" class="chip-ed" contenteditable="true" dir="'+dir+'" role="textbox" aria-multiline="true" aria-label="Body" data-ph="Body"></div>'
           : '<textarea id="m-body" dir="'+dir+'" oninput="updatePreview()">'+esc(L.body)+'</textarea>')+
-        '<div class="msgbtns"><button class="save" id="m-save" disabled>Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved" role="status" aria-live="polite"></span></div>'+
         '<div class="preview">'+
-          '<div class="ph-h"><span>Preview</span><span class="dir-ind">'+dirInd+'</span></div>'+
+          '<div class="ph-h"><span>Preview <span class="ph-note">sample data filled in</span></span><span class="dir-ind">'+dirInd+'</span></div>'+
           '<div class="ph-s" dir="'+dir+'" id="m-prev-s">'+esc(interp(L.subject))+'</div>'+
           '<div class="ph-b" dir="'+dir+'" id="m-prev-b"></div>'+
-        '</div>';
+        '</div>'+
+        '<div class="msgbtns"><button class="save" id="m-save" disabled>Save</button><button class="reset" id="m-reset">Revert to default</button><span class="saved" id="m-saved" role="status" aria-live="polite"></span></div>';
     }
     det.innerHTML=
       '<div class="md-hd"><h2>'+esc(label)+'</h2>'+
