@@ -2568,7 +2568,7 @@
     function placesFanOutHe_(set, comps, searchText) {
       placesSetHe_(set.street, placesComp_(comps, 'route'));
       var num = placesComp_(comps, 'street_number');
-      if (!num && searchText) { var m = String(searchText).match(/(\d+\S*)/); if (m) num = m[1]; }
+      if (!num && searchText) { var m = String(searchText).match(/(\d+[א-ת]?(?:\/\d+)?)/); if (m) num = m[1]; }
       placesSetHe_(set.house, num);
       placesSetHe_(set.city, placesCity_(comps));
       inferOffer(set.zip, placesComp_(comps, 'postal_code')); // מיקוד optional: offer only
@@ -2580,7 +2580,7 @@
     function placesManualFallback_(set, input) {
       var text = String(input.value || '').trim();
       if (!text) return;
-      var m = text.match(/^(.+?)\s+(\d+\S*)\s*,?\s*(.*)$/);
+      var m = text.match(/^(.+?)\s+(\d+[א-ת]?(?:\/\d+)?)\s*,?\s*(.*)$/);
       if (m) {
         placesSetHe_(set.street, m[1]);
         placesSetHe_(set.house, m[2]);
