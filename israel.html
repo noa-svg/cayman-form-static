@@ -2609,11 +2609,22 @@
               var st0 = vs(set.street), ho0 = vs(set.house), ci0 = vs(set.city);
               if (st0 && ci0) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
             }
-            var acS = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id'] });
+            var acS = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id', 'formatted_address'] });
             acS.addListener('place_changed', function () {
               var place = acS.getPlace();
               if (!place || !place.address_components) return;
-              placesFanOutHe_(set, place.address_components, sInput.value);
+              // Number source: place.formatted_address always carries the house number
+              // ("טיומקין 3, תל אביב-יפו") even when IL Places drops the street_number
+              // component; sInput.value can lag the event. Feed the reliable text so the
+              // house field is captured (placesFanOutHe_ parses the number from it).
+              placesFanOutHe_(set, place.address_components, place.formatted_address || sInput.value);
+              // Keep the house number IN the main address line: IL Places often omits
+              // street_number from the picked description, leaving a filled address line
+              // above an empty מספר בית. Recompose the visible line as "street number,
+              // city" from the fanned-out components so the number the LP sees always
+              // matches the captured house field.
+              var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
+              if (_st && _ci) sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
               if (place.place_id) placesFillEnglish_(place.place_id, set);
             });
             sInput.setAttribute('data-places-bound', '1');
