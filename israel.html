@@ -1590,7 +1590,40 @@
     // the bootstrap merges the fetched config into the same CFG object this IIFE
     // holds, then calls this so late-arriving session facts (applicant type,
     // resume page, language) take effect on the already-booted form.
+    // Bad/expired co-holder link screen: reuses signer.html's approved string (a
+    // co-holder link IS a signing link). Hides the form so a co-holder with a malformed
+    // or expired token gets told up front, not after filling the whole form.
+    function showCoHolderBrokenLink_() {
+      var f = document.getElementById('lvp-form');
+      if (f) f.style.display = 'none';
+      if (progWrap) progWrap.hidden = true;
+      var card = document.querySelector('.lvp-card');
+      if (card && !document.getElementById('lvp-coholder-broken')) {
+        var d = document.createElement('div');
+        d.id = 'lvp-coholder-broken';
+        d.setAttribute('dir', 'rtl');
+        d.setAttribute('role', 'status');
+        d.style.cssText = 'text-align:center;padding:48px 20px;color:#0D3F6A;font-size:18px;line-height:1.7';
+        d.textContent = 'קישור החתימה אינו תקין או פג תוקפו. נא לפנות לקרן לגאסי.';
+        card.appendChild(d);
+      }
+    }
+
     window.__israelOnCfgUpdate = function (cfg) {
+      // Bad/expired co-holder token guard: the URL declared a co-holder role but the
+      // server did NOT confirm the Israeli lane (a valid co-holder config always sets
+      // lane:'israeli' + coHolderIndex; a malformed / expired / revoked sign token leaves
+      // them empty). Key on cfg.lane, NOT cfg.role - role persists from the URL seed even
+      // when the server rejects the token. __israelOnCfgUpdate only fires AFTER a real cfg
+      // is applied (server or cache), so this never pre-empts a still-loading config.
+      // Dead-end to the broken-link screen instead of booting a fully fillable form that
+      // would only fail silently on autosave and at final submit.
+      var urlRoleNow = new URLSearchParams(location.search).get('role') || '';
+      if ((urlRoleNow === 'subscriber2' || urlRoleNow === 'subscriber3')
+          && cfg && String(cfg.lane || '') !== 'israeli') {
+        showCoHolderBrokenLink_();
+        return;
+      }
       // Co-holder scoping: the async config carries cfg.role for a joint co-holder.
       // Re-derive the mode (the URL seed already set it at boot; this covers a
       // config that lands after a cold start) and force the individual applicant so
