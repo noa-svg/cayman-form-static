@@ -530,12 +530,10 @@
 
           <label class="lvp-field"><span class="lvp-field__label">שם התאגיד</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.corporationName"></label>
           <label class="lvp-field"><span class="lvp-field__label">שם התאגיד באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.corporationName"></label>
-          <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">סוג התאגיד</legend>
-            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="חברה"> חברה</label>
-            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="עמותה"> עמותה</label>
-            <label class="lvp-radio"><input type="radio" name="corporationDetails.corporationType" value="שותפות"> שותפות</label>
-          </fieldset>
+          <!-- Entity is ALWAYS a חברה (Noa 2026-07-08: the operator only mints a link
+               for a company entity). No user choice, so no fiscally-transparent
+               partnership/עמותה wrong-form path can seal a regarded-entity W-8BEN-E. -->
+          <input type="hidden" name="corporationDetails.corporationType" value="חברה">
           <label class="lvp-field"><span class="lvp-field__label">מספר תאגיד/ח.פ</span><input class="lvp-input" type="text" name="corporationDetails.companyNumber" data-validate="company-num" inputmode="numeric"></label>
           <label class="lvp-field"><span class="lvp-field__label">פעילות התאגיד</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.corporateActivity"></label>
           <div class="lvp-grid-2">
