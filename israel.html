@@ -3624,6 +3624,12 @@
           // there is NO nextUrl for the LP. Show the lawyer-emailed completion card;
           // never navigate the LP's window to the lawyer's pane.
           if (res.detail && res.detail.lawyerEmailed) { showLawyerEmailedCard(); return; }
+          // §joint per-investor webflow (go-live fix 2026-07-08): the server emailed the
+          // additional investor(s) their own signing link, so there is NO nextUrl for the
+          // primary investor. Never navigate the primary's window to the co-holder's pane.
+          // Routed to the existing Noa-approved success card until the dedicated
+          // co-holder line is approved (copy gate).
+          if (res.detail && res.detail.coHolderEmailed) { showSubmittedCard(); return; }
           showSubmittedCard();
         }).catch(function (err) {
           var isTimeout = err && err.message === 'timeout';
