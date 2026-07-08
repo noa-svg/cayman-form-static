@@ -3723,7 +3723,12 @@
       // explicit budget (render_preview: a COLD full-pack render measured just
       // over 20s, so its budget must exceed the sign-preview watchdog).
       var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timeoutMs = timeoutOverrideMs || ((action === 'submit') ? 120000 : 30000);
+      // record_signature (co-holder / lawyer final submit) shares submit's 120s budget:
+      // it runs inside the global caymanWithLock_ (up to a 20s waitLock) plus a stamp/ID
+      // Drive upload, which can exceed the 30s default and falsely time out -> the LP
+      // retried and it "worked the 3rd time" (Noa 2026-07-08). 120s covers the lock wait.
+      var timeoutMs = timeoutOverrideMs
+        || ((action === 'submit' || action === 'record_signature') ? 120000 : 30000);
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
       return fetch(CFG.gatewayUrl + '?source=lp', {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
