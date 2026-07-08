@@ -441,7 +441,7 @@
             <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="investorsArray[0].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
             <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="investorsArray[0].birthCountry" data-country data-show-when-trigger="investorsArray[0].birthCountry"></select></label>
           </div>
-          <label class="lvp-field" data-show-when="investorsArray[0].birthCountry!=ישראל"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="investorsArray[0].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+          <label class="lvp-field" data-show-when="__bornAbroad.investorsArray[0]=true"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="investorsArray[0].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
 
           <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="investorsArray[0].citizenship" data-country data-show-when-trigger="investorsArray[0].citizenship"></select></label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isAdditionalCitizenship" value="true" data-show-when-trigger="investorsArray[0].isAdditionalCitizenship"> אזרחות נוספת</label>
@@ -1851,6 +1851,13 @@
       var r = currentValueFor(prefix + '.residencyCountry');
       return !!r && r !== 'ישראל';
     }
+    // Born abroad = a CHOSEN birth country that is not Israel. Requires non-empty so
+    // aliyaDate does not show (and become required) before the LP picks their birth
+    // country. The bare birthCountry!=ישראל predicate was true while still blank.
+    function isBornAbroad(prefix) {
+      var b = currentValueFor(prefix + '.birthCountry');
+      return !!b && b !== 'ישראל';
+    }
     // Individual qualification: any of the 3 threshold boxes checked.
     function indQualified() {
       return ['isLiquidAssets', 'isIncomeLevel', 'isBoth'].some(function (k) {
@@ -1902,6 +1909,7 @@
       if (path === '__entQualified') return entQualified() ? 'true' : 'false';
       if (path.indexOf('__usPerson.') === 0) return isUsPerson(path.slice('__usPerson.'.length)) ? 'true' : 'false';
       if (path.indexOf('__nonIsrael.') === 0) return isNonIsraelResidency(path.slice('__nonIsrael.'.length)) ? 'true' : 'false';
+      if (path.indexOf('__bornAbroad.') === 0) return isBornAbroad(path.slice('__bornAbroad.'.length)) ? 'true' : 'false';
       // __anyQual.<prefix>: any of the 3 threshold boxes under <prefix> checked
       // (the per-row twin of __indQualified, for the additional-investor cards).
       if (path.indexOf('__anyQual.') === 0) {
