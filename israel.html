@@ -458,10 +458,10 @@
                contract (city/street/houseNumber/postalCode + the English mirrors the
                W-8 needs). If the components are incomplete on Next, the search field
                itself gets the standard required treatment. -->
-          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].israelAddressSearch" autocomplete="off"></label>
+          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="investorsArray[0].israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
           <input type="hidden" name="investorsArray[0].israelAddress.city">
           <input type="hidden" name="investorsArray[0].israelAddress.street">
-          <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
+          <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" inputmode="numeric" name="investorsArray[0].israelAddress.houseNumber"></label>
           <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
@@ -1160,7 +1160,7 @@
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
           <template data-row-template="email">
             <div class="lvp-email-row" data-row-index="${i}">
-              <input class="lvp-input" type="email" name="contactArray[${i}].finalEmail" placeholder="name@example.com">
+              <div class="lvp-field" style="flex:1;margin:0"><input class="lvp-input" type="email" name="contactArray[${i}].finalEmail" placeholder="name@example.com"></div>
               <button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button>
             </div>
           </template>
@@ -1774,6 +1774,17 @@
         cur = resolveTrigger(path);
         var match = String(cur) === String(want);
         el.hidden = neg ? match : !match;
+      });
+      // Address language by residency (Noa 2026-07-08): the residence-address search is
+      // Hebrew-validated ONLY when the LP resides in Israel; a foreign resident types their
+      // address in English/Latin (no Hebrew-only rule, which otherwise blocks a valid
+      // foreign address with «נא להזין אותיות בעברית בלבד»). Toggle data-script on each
+      // data-script-il-only search from its matching residencyCountry select.
+      root.querySelectorAll('[data-script-il-only]').forEach(function (el) {
+        var nm = el.getAttribute('name') || '';
+        var resEl = form.querySelector('[name="' + nm.replace(/israelAddressSearch$/, 'residencyCountry') + '"]');
+        if (resEl && String(resEl.value || '') === 'ישראל') el.setAttribute('data-script', 'he');
+        else el.removeAttribute('data-script');
       });
       // applicant-type inline sub-blocks (tax declaration variant, upload variant)
       var ap = applicant();
