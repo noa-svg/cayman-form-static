@@ -1118,10 +1118,58 @@
           </div>
         </section>
 
+        <!-- ============================================================== -->
+        <!-- =============  QUALIFYING LAWYER / CPA ATTESTATION  ========== -->
+        <!-- ============================================================== -->
+        <!-- §15A lawyer leg. These pages are shown ONLY in LAWYER mode: the
+             attester opens their OWN scoped link israel.html?role=lawyer&t=<signToken>,
+             which (like the co-holder real-form mode) hides every KYC / money /
+             beneficiary / additional-investor page and shows only this leg. Mirrors
+             the EasySend lawyer webflow (onboarding-individual.hebrew.txt 491-575):
+             intro + עו"ד/רו"ח details + stamp, then the evidence page, then the
+             shared signature page. All copy is EasySend-verbatim. The attester's
+             answers ride submission.lawyerDetails.* and post via record_signature on
+             the sign token (see doSubmit). data-lawyer-only marks a lawyer page so
+             visiblePages() includes it ONLY in LAWYER mode and drops it otherwise. -->
+        <section class="lvp-page" data-page="lawyer.details" data-lawyer-only hidden>
+          <h2 class="lvp-page__title">טופס כשירות</h2>
+          <p class="lvp-page__hint"><span data-lawyer-investors></span> מבקש/ת את חתימתך על טופס הכשירות במסגרת ההצטרפות לקרן לגאסי.</p>
+          <h3 class="lvp-subhead">פרטי עו"ד / רו"ח</h3>
+          <div class="lvp-grid-2">
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
+          </div>
+          <!-- email OR phone (EasySend emailOrPhone): both flagged data-optional so the
+               required pass never bites either one alone; the lawyer.details page-level
+               check in validatePage requires at least ONE of the two. Phone is NOT
+               independently required (Noa 2026-07-08). -->
+          <label class="lvp-field" data-optional><span class="lvp-field__label">כתובת דוא"ל</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="כתובת זו תשמש אותנו לתקשורת"></label>
+          <label class="lvp-field" data-optional><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="lawyerDetails.phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
+          <label class="lvp-field"><span class="lvp-field__label">חותמת</span><input class="lvp-file-input" type="file" data-upload="lawyer.stamp" accept="image/jpeg,image/png"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span><p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p></label>
+        </section>
+
+        <!-- PAGE: lawyer evidence (כשירות המשקיע/ה). The attester marks WHICH evidence
+             they examined (all three render, each independently selectable). At least
+             one must be marked (the bare fieldset is required). The liquid-assets and
+             the other-evidence rows each reveal their date/detail field, required only
+             while shown. All checkbox + hint text is EasySend-verbatim. -->
+        <section class="lvp-page" data-page="lawyer.evidence" data-lawyer-only hidden>
+          <h2 class="lvp-page__title">כשירות המשקיע/ה</h2>
+          <fieldset class="lvp-fieldset lvp-fieldset--bare">
+            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkLiquid" value="true" data-show-when-trigger="lawyerDetails.checkLiquid"> בחינת שווי נכסים נזילים (כמשמעותם בחוק) באמצעות אסמכתאות בחשבונות בנק של המשקיע/ה, מעודכן לתאריך</label>
+            <label class="lvp-field" data-show-when="lawyerDetails.checkLiquid=true"><span class="lvp-field__label">תאריך אסמכתאות</span><input class="lvp-input" type="text" name="lawyerDetails.evidenceDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="יש לפרט כולל תאריך מ-3 החודשים האחרונים"></label>
+            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkIncome" value="true"> בחינת תלושי שכר או דוחות מס שנתיים של המשקיע/ה המעידים על הכנסתו/ה במידה וסומן שעומד/ת בכשירות לפי מבחן הכנסות.</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkOther" value="true" data-show-when-trigger="lawyerDetails.checkOther"> בחינת אסמכתאות ו/או אמצעים אחרים</label>
+            <label class="lvp-field" data-show-when="lawyerDetails.checkOther=true"><span class="lvp-field__label">בחינת אסמכתאות ו/או אמצעים אחרים</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.otherEvidence"></label>
+          </fieldset>
+        </section>
+
         <!-- PAGE: inline signature. No data-applicant, so visiblePages() shows it
              for BOTH the individual and the entity primary submitter, sitting just
-             before review (matching the EasySend sign-then-send order). The drawn
-             PNG rides the submit as signaturePng; the gateway records it inline
+             before review (matching the EasySend sign-then-send order). Also the last
+             page of the LAWYER leg (visiblePages appends ind.sign in LAWYER mode). The
+             drawn PNG rides the submit as signaturePng; the gateway records it inline
              (IsraeliDocGen recordCaymanSignature_) instead of mailing a second link. -->
         <section class="lvp-page" data-page="ind.sign">
           <h2 class="lvp-page__title">חתימה</h2>
@@ -1582,7 +1630,14 @@
     var URL_ROLE = CFG.role || new URLSearchParams(location.search).get('role') || '';
     var CO_HOLDER = (URL_ROLE === 'subscriber2' || URL_ROLE === 'subscriber3');
     var CO_HOLDER_IDX = (URL_ROLE === 'subscriber3') ? 1 : 0;
-    var APPLICANT = CO_HOLDER ? 'individual'
+    // §15A lawyer scoping (2026-07-08): the qualifying lawyer/CPA opens their OWN
+    // scoped link israel.html?role=lawyer&t=<signToken> and fills the real form
+    // scoped to their attestation (details + evidence + stamp + sign), mirroring the
+    // co-holder real-form mode. They do NOT fill KYC. A lawyer is never an entity, so
+    // force individual + onboarding_individual (the applicant is irrelevant since
+    // visiblePages returns only the lawyer-only pages + sign in this mode).
+    var LAWYER = (URL_ROLE === 'lawyer');
+    var APPLICANT = (CO_HOLDER || LAWYER) ? 'individual'
       : ((URL_TYPE === 'entity' || CFG.applicantType === 'entity') ? 'entity' : 'individual');
     var FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
 
@@ -1619,10 +1674,23 @@
       // Dead-end to the broken-link screen instead of booting a fully fillable form that
       // would only fail silently on autosave and at final submit.
       var urlRoleNow = new URLSearchParams(location.search).get('role') || '';
-      if ((urlRoleNow === 'subscriber2' || urlRoleNow === 'subscriber3')
+      if ((urlRoleNow === 'subscriber2' || urlRoleNow === 'subscriber3' || urlRoleNow === 'lawyer')
           && cfg && String(cfg.lane || '') !== 'israeli') {
         showCoHolderBrokenLink_();
         return;
+      }
+      // §15A lawyer scoping: the async config carries cfg.role === 'lawyer'. Re-derive
+      // the mode (the URL seed already set it at boot; this covers a config that lands
+      // after a cold start), force the individual applicant so entity pages can never
+      // enter visiblePages(), re-clamp to page 0, and (re)fill the intro investor name.
+      if (cfg.role === 'lawyer') {
+        LAWYER = true;
+        APPLICANT = 'individual';
+        FLOW_TYPE = 'onboarding_individual';
+        idx = 0;
+        applyConditionals();
+        populateLawyerIntro_();
+        showPage(idx);
       }
       // Co-holder scoping: the async config carries cfg.role for a joint co-holder.
       // Re-derive the mode (the URL seed already set it at boot; this covers a
@@ -1639,7 +1707,7 @@
       }
       // A co-holder is always an individual; never let the primary session's
       // applicantType flip a co-holder form to the entity sequence.
-      var ap = CO_HOLDER ? 'individual'
+      var ap = (CO_HOLDER || LAWYER) ? 'individual'
         : ((cfg.applicantType === 'entity') ? 'entity' : (cfg.applicantType === 'individual' ? 'individual' : ''));
       if (ap && ap !== APPLICANT) {
         APPLICANT = ap;
@@ -1669,11 +1737,39 @@
           typeof applyLocalSnap_ === 'function') applyLocalSnap_();
     };
 
+    // §15A lawyer intro name: the EasySend header reads
+    // «{{qualifiedInvestorsNames}} מבקש/ת את חתימתך...». The scoped lawyer config
+    // carries the qualified investor's name(s); fall back to the prefill's primary
+    // investor (or corporation) name so the sentence is never left with a blank slot.
+    function populateLawyerIntro_() {
+      var span = form.querySelector('[data-lawyer-investors]');
+      if (!span) return;
+      var names = CFG.qualifiedInvestorsNames || '';
+      if (!names) {
+        var pf = (CFG && CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
+        var inv0 = pf && pf.investorsArray && pf.investorsArray[0];
+        if (inv0) names = [inv0.firstName, inv0.lastName].filter(Boolean).join(' ').trim();
+        if (!names && pf && pf.corporationDetails) names = String(pf.corporationDetails.corporationName || '').trim();
+      }
+      if (names) span.textContent = names;
+    }
+
     function applicant() { return APPLICANT; }
 
     function visiblePages() {
       var ap = applicant();
+      // §15A lawyer scoping: the attester's scoped link shows ONLY the lawyer leg -
+      // the two data-lawyer-only pages (details + evidence) then the shared signature
+      // page - and nothing else (no KYC / money / beneficiary / welcome / review).
+      if (LAWYER) {
+        return ALL_PAGES.filter(function (p) {
+          if (p.getAttribute('data-lawyer-only') != null) return true;
+          return p.getAttribute('data-page') === 'ind.sign';
+        });
+      }
       return ALL_PAGES.filter(function (p) {
+        // Lawyer-only pages never appear in the primary (non-lawyer) sequence.
+        if (p.getAttribute('data-lawyer-only') != null) return false;
         var only = p.getAttribute('data-applicant');
         if (only && only !== ap) return false;      // wrong applicant type
         // Co-holder scoping: the money, beneficiary, and additional-investors pages
@@ -3116,6 +3212,25 @@
           }
         }
       }
+      // §15A lawyer details: email OR phone (EasySend emailOrPhone). Both fields are
+      // data-optional so neither is independently required; at least ONE must be
+      // filled. A filled-but-invalid value is caught by the format pass above; this
+      // only fires when both are empty. Reuses the approved 'at least one' string.
+      if (pageEl.getAttribute('data-page') === 'lawyer.details') {
+        var lEmail = pageEl.querySelector('input[name="lawyerDetails.email"]');
+        var lPhone = pageEl.querySelector('input[name="lawyerDetails.phoneNumber"]');
+        var hasEmail = lEmail && lEmail.value && EMAIL_RE.test(lEmail.value.trim());
+        var hasPhone = lPhone && lPhone.value && lPhone.value.trim();
+        if (!hasEmail && !hasPhone) {
+          ok = false;
+          var eh = lEmail && lEmail.closest('.lvp-field');
+          if (eh) {
+            eh.classList.add('lvp-field--error');
+            setFieldError(eh, displayFor('יש להזין לפחות רשומה אחת כאן.', curLang));
+            if (!firstError) firstError = eh;
+          }
+        }
+      }
       if (firstError) {
         var _rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         // block:'nearest' (not 'center') so on a 360px Android the focused errored
@@ -3179,7 +3294,9 @@
       if (page.getAttribute('data-page') === 'ind.sign') {
         if (!sigPadReady) initSigPad();
         else if (sigPadRefit) sigPadRefit();   // re-entry: re-fit so a hidden-resize can't leave a dead pad
-        loadSignPreview();
+        // The doc preview renders the LP's subscription pack; the lawyer signs their
+        // own qualification form, not that pack, so skip the preview in LAWYER mode.
+        if (!LAWYER) loadSignPreview();
       }
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
       if (page.getAttribute('data-page') === 'ind.waiver') fillWaiver();
@@ -3604,7 +3721,7 @@
       // Co-holder scoping: a co-holder holds a SIGN token, not a resume token, so
       // save_page (a resume-token action) would be rejected. Their autosave rides
       // the whitelisted save_signer_progress action keyed by the sign token.
-      var saveCall = CO_HOLDER
+      var saveCall = (CO_HOLDER || LAWYER)
         ? gateway('save_signer_progress', { signToken: CFG.token, submission: collectAll() })
         : gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() });
       return saveCall
@@ -3657,7 +3774,20 @@
         // single raw investor object for the server to sanitize + merge wholesale
         // onto additionalInvestors[coHolderIndex], plus their signature + ID uploads.
         // Their leg is the last action, so there is no nextUrl on success.
-        var submitCall = CO_HOLDER
+        // §15A lawyer leg: the qualifying lawyer/CPA is NOT the primary submitter.
+        // Their leg posts the whitelisted record_signature action on their SIGN token,
+        // carrying their own details + evidence selections (submission.lawyerDetails,
+        // sanitized + merged server-side onto the qualification attestation) plus their
+        // signature + stamp upload. Their leg is the last action, so no nextUrl.
+        var submitCall = LAWYER
+          ? gateway('record_signature', {
+              signToken: CFG.token,
+              role: 'lawyer',
+              lawyer: submission.lawyerDetails || {},
+              signaturePng: sigPadPng || '',
+              uploads: files
+            })
+          : CO_HOLDER
           ? gateway('record_signature', {
               signToken: CFG.token,
               investor: (submission.investorsArray || [])[0],
@@ -3666,13 +3796,14 @@
             })
           : gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' });
         return submitCall.then(function (res) {
+          if (LAWYER) { showSubmittedCard(); return; }
           if (CO_HOLDER) { showSubmittedCard(); return; }
           if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
           // §15A independent attestation (go-live fix 2026-07-08): the server emailed
           // the lawyer/CPA their own signing link (independent qualification form), so
           // there is NO nextUrl for the LP. Show the lawyer-emailed completion card;
           // never navigate the LP's window to the lawyer's pane.
-          if (res.detail && res.detail.lawyerEmailed) { showLawyerEmailedCard(); return; }
+          if (res.detail && res.detail.lawyerEmailed) { showLawyerEmailedCard(res.detail); return; }
           // §joint per-investor webflow (go-live fix 2026-07-08): the server emailed the
           // additional investor(s) their own signing link, so there is NO nextUrl for the
           // primary investor. Never navigate the primary's window to the co-holder's pane.
@@ -3704,16 +3835,31 @@
         '<p>' + esc(displayFor('תודה על שיתוף הפעולה', curLang)) + '</p>',
         true);
     }
-    // §15A independent attestation (go-live fix 2026-07-08): the LP has finished and
-    // the lawyer/CPA was emailed their own qualification-form link. Noa-approved
-    // completion line, VERBATIM; invent no other LP-facing copy here.
-    function showLawyerEmailedCard() {
+    // §15A independent attestation: the primary LP has finished and the lawyer/CPA
+    // was emailed their own qualification-form link. The confirmation HEADER is the
+    // standard success line; the lawyer notice is BODY text (not a shouted header,
+    // Noa 2026-07-08), using the EasySend-VERBATIM completion string
+    // «טופס כשירות נשלח לחתימת עו"ד/רו"ח {name} שנוספו על ידי {primary}». This card is
+    // reached ONLY when the server confirmed the lawyer leg fired (res.detail.
+    // lawyerEmailed), so the line never shows when no lawyer leg is relevant. The two
+    // names are read from what the primary already filled (lawyerDetails + their own
+    // name), with the server detail as fallback; invent no other LP-facing copy here.
+    function showLawyerEmailedCard(detail) {
+      detail = detail || {};
+      var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+      var lawyerName = [gv('lawyerDetails.firstName'), gv('lawyerDetails.lastName')].filter(Boolean).join(' ').trim()
+        || String(detail.lawyerFullName || detail.lawyerName || '').trim();
+      var primaryName = [gv('investorsArray[0].firstName'), gv('investorsArray[0].lastName')].filter(Boolean).join(' ').trim()
+        || gv('corporationDetails.corporationName')
+        || String(detail.investorFullName || detail.primaryName || detail.investorName || '').trim();
+      var line = 'טופס כשירות נשלח לחתימת עו"ד/רו"ח ' + lawyerName + ' שנוספו על ידי ' + primaryName;
       showResultCard(
         '<div class="lvp-result__check" aria-hidden="true">' +
         '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
         '</div>' +
         '<div class="lvp-result__divider"></div>' +
-        '<h2>' + esc('המסמכים נשלחו בהצלחה. הגורם המאשר קיבל קישור לחתימה על טופס הכשירות.') + '</h2>',
+        '<h2>' + esc(displayFor('המסמכים נשלחו בהצלחה!', curLang)) + '</h2>' +
+        '<p>' + esc(line) + '</p>',
         true);
     }
     var resultEl = null;
@@ -3956,6 +4102,7 @@
     // Language: default Hebrew. Start English only when server config carries
     // language === 'en'. Run AFTER countries + min-rows so their text is translated.
     applyLang(CFG.language === 'en' ? 'en' : 'he');
+    populateLawyerIntro_();   // §15A lawyer intro name (no-op unless the intro span is present + filled)
     showPage(idx);
   })();
   </script>
