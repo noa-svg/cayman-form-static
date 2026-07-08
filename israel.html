@@ -891,7 +891,7 @@
         <!-- ============================================================== -->
 
         <!-- PAGE: money invested + bank (moneyInvestedInFund) -->
-        <section class="lvp-page" data-page="money">
+        <section class="lvp-page" data-page="money" data-primary-only>
           <h2 class="lvp-page__title">כספים המושקעים בקרן</h2>
 
           <div class="lvp-grid-2">
@@ -970,7 +970,7 @@
         </section>
 
         <!-- PAGE: beneficiary declaration (beneficiaryStatement) -->
-        <section class="lvp-page" data-page="beneficiary">
+        <section class="lvp-page" data-page="beneficiary" data-primary-only>
           <h2 class="lvp-page__title">הצהרה על נהנים ובעלי שליטה</h2>
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
@@ -1049,7 +1049,7 @@
         </section>
 
         <!-- PAGE: additional investors gate (additionalInvestors) - individual only -->
-        <section class="lvp-page" data-page="ind.additional" data-applicant="individual" hidden>
+        <section class="lvp-page" data-page="ind.additional" data-applicant="individual" data-primary-only hidden>
           <h2 class="lvp-page__title">משקיעים נוספים</h2>
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">האם יהיו שותפים להשקעתך בקרן (כולל בן/בת זוג)?</legend>
@@ -1081,81 +1081,7 @@
                 <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].firstName" data-help="כפי שמופיע בתעודת הזהות"></label>
                 <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].lastName" data-help="כפי שמופיע בתעודת הזהות"></label>
               </div>
-              <div class="lvp-en-group">
-                <p class="lvp-page__hint lvp-hint--en">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
-                <div class="lvp-grid-2">
-                  <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishDetails.firstName"></label>
-                  <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="__addinv[${i}].englishDetails.lastName"></label>
-                </div>
-              </div>
-              <fieldset class="lvp-fieldset">
-                <legend class="lvp-fieldset__legend">מין</legend>
-                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].gender" value="זכר"> זכר</label>
-                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].gender" value="נקבה"> נקבה</label>
-              </fieldset>
-              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="__addinv[${i}].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת"></label>
-              <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="__addinv[${i}].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
-                <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="__addinv[${i}].birthCountry" data-country data-show-when-trigger="__addinv[${i}].birthCountry"></select></label>
-              </div>
-              <label class="lvp-field" data-show-when="__addinv[${i}].birthCountry!=ישראל"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="__addinv[${i}].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="__addinv[${i}].citizenship" data-country data-show-when-trigger="__addinv[${i}].citizenship"></select></label>
-              <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].isAdditionalCitizenship" value="true" data-show-when-trigger="__addinv[${i}].isAdditionalCitizenship"> אזרחות נוספת</label>
-              <label class="lvp-field" data-show-when="__addinv[${i}].isAdditionalCitizenship=true"><span class="lvp-field__label">אזרחות נוספת</span><select class="lvp-input--select" name="__addinv[${i}].additionalCitizenship" data-country data-show-when-trigger="__addinv[${i}].additionalCitizenship"></select></label>
-              <label class="lvp-field" data-show-when="__usPerson.__addinv[${i}]=true"><span class="lvp-field__label">מספר SSN</span><input class="lvp-input" type="text" name="__addinv[${i}].ssn" data-validate="ssn"></label>
-              <label class="lvp-field"><span class="lvp-field__label">תחום עיסוק</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].occupation"></label>
-              <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="__addinv[${i}].residencyCountry" data-country></select></label>
-              <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" name="__addinv[${i}].israelAddressSearch" autocomplete="off"></label>
-              <input type="hidden" name="__addinv[${i}].israelAddress.city">
-              <input type="hidden" name="__addinv[${i}].israelAddress.street">
-              <input type="hidden" name="__addinv[${i}].israelAddress.houseNumber">
-              <input type="hidden" name="__addinv[${i}].israelAddress.postalCode">
-              <input type="hidden" name="__addinv[${i}].englishDetails.englishAddress.city">
-              <input type="hidden" name="__addinv[${i}].englishDetails.englishAddress.street">
               <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="__addinv[${i}].email"></label>
-              <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="__addinv[${i}].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
-
-              <h3 class="lvp-subhead">הצהרה על תושבות מס</h3>
-              <fieldset class="lvp-fieldset">
-                <legend class="lvp-fieldset__legend">סמן/י את האפשרות המתאימה</legend>
-                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="ישראל בלבד" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס בישראל בלבד</label>
-                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="ישראל ומדינה אחרת" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס בישראל ומדינה/ות אחרת/ות</label>
-                <label class="lvp-radio"><input type="radio" name="__addinv[${i}].taxResidency.taxCountry" value="מדינה אחרת" data-show-when-trigger="__addinv[${i}].taxResidency.taxCountry"> תושב/ת מס במדינה/ות אחרת/ות</label>
-              </fieldset>
-              <div data-show-when="__addinv[${i}].taxResidency.taxCountry=ישראל ומדינה אחרת">
-                <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="__addinv[${i}].taxResidency.israelAndOtherCountries.countriesArray[0].country" data-country></select></label>
-                <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="__addinv[${i}].taxResidency.israelAndOtherCountries.countriesArray[0].tin" inputmode="text"></label>
-              </div>
-              <div data-show-when="__addinv[${i}].taxResidency.taxCountry=מדינה אחרת">
-                <label class="lvp-field"><span class="lvp-field__label">מדינה</span><select class="lvp-input--select" name="__addinv[${i}].taxResidency.otherCountries.countriesArray[0].country" data-country></select></label>
-                <label class="lvp-field"><span class="lvp-field__label">מספר משלם מס מקומי (TIN)</span><input class="lvp-input" type="text" name="__addinv[${i}].taxResidency.otherCountries.countriesArray[0].tin" inputmode="text"></label>
-              </div>
-
-              <h3 class="lvp-subhead">כשירות</h3>
-              <fieldset class="lvp-fieldset">
-                <legend class="lvp-fieldset__legend">יש לבחור אפשרות אחת.</legend>
-                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isLiquidAssets" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
-                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isIncomeLevel" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
-                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isBoth" value="true" data-qual-group="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
-                <label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].qualification.isNotQualified" value="true" data-qual-none="addinvQual${i}" data-show-when-trigger="__anyQual.__addinv[${i}].qualification"> אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.</label>
-              </fieldset>
-              <div data-show-when="__anyQual.__addinv[${i}].qualification=true">
-                <h3 class="lvp-subhead">אישור כשירות</h3>
-                <fieldset class="lvp-fieldset">
-                  <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
-                  <label class="lvp-radio"><input type="radio" name="__addinv[${i}].qualification.isSignedQualification" value="כן" data-show-when-trigger="__addinv[${i}].qualification.isSignedQualification"> כן</label>
-                  <label class="lvp-radio"><input type="radio" name="__addinv[${i}].qualification.isSignedQualification" value="לא" data-show-when-trigger="__addinv[${i}].qualification.isSignedQualification"> לא</label>
-                </fieldset>
-                <p class="lvp-hint-small" data-show-when="__addinv[${i}].qualification.isSignedQualification=כן">את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.</p>
-                <p class="lvp-hint-small" data-show-when="__addinv[${i}].qualification.isSignedQualification=לא">הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. מומלץ ליידע אותו.</p>
-              </div>
-
-              <h3 class="lvp-subhead">כתב ויתור טענות</h3>
-              <p class="lvp-note">אני הח"מ, ת.ז. <span data-addinv-waiver-id></span> שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
-1. ביום <span data-addinv-waiver-date></span> נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
-2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
-3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
-              <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="__addinv[${i}].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
             </div>
           </template>
         </section>
@@ -1267,7 +1193,13 @@
       // Dev override: only honored when the page itself is served from localhost.
       var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
       if (isLocal && p.get('gas')) gasUrl = p.get('gas');
-      window.ISRAEL_CFG = { gatewayUrl: gasUrl, token: p.get('t') || '' };
+      // Co-holder scoping (2026-07-08): a joint co-holder's emailed link carries
+      // &role=<subscriber2|subscriber3>. Seed it onto CFG immediately (belt, like
+      // URL_TYPE below) so co-holder mode is known before the async config lands,
+      // and forward it on the ?api=config fetch so the gateway returns the scoped
+      // config (role + coHolderIndex + the name+email prefill for this holder).
+      var urlRole = p.get('role') || '';
+      window.ISRAEL_CFG = { gatewayUrl: gasUrl, token: p.get('t') || '', role: urlRole };
       var cacheKey = 'lvp_il_cfg_v1_' + (p.get('t') || '');
       function applyCfg(cfg) {
         if (!cfg) return;
@@ -1287,6 +1219,7 @@
       var url = gasUrl + '?api=config'
         + '&t='    + encodeURIComponent(p.get('t')    || '')
         + '&type=' + encodeURIComponent(p.get('type') || '')
+        + '&role=' + encodeURIComponent(urlRole)
         + '&lang=' + encodeURIComponent(p.get('lang') || '');
       // Retry with backoff (2026-07-07): a single silent attempt against a cold GAS
       // start left a refreshed LP on a blank page-one form (Noa hit this live). Three
@@ -1640,7 +1573,17 @@
     // param first (the operator mint link carries it) and let the config update
     // hook below re-derive if the session says otherwise.
     var URL_TYPE = new URLSearchParams(location.search).get('type') || '';
-    var APPLICANT = (URL_TYPE === 'entity' || CFG.applicantType === 'entity') ? 'entity' : 'individual';
+    // Co-holder scoping (2026-07-08): a joint co-holder fills their OWN full KYC in
+    // this real form, scoped to them, then signs (replacing the thin signer.html
+    // pane). Their emailed link carries &role=<subscriber2|subscriber3>; the config
+    // echoes cfg.role. subscriber2 -> additionalInvestors[0], subscriber3 -> [1].
+    // A co-holder is always an individual (entity co-holders do not exist), so
+    // force individual + onboarding_individual whenever co-holder mode is set.
+    var URL_ROLE = CFG.role || new URLSearchParams(location.search).get('role') || '';
+    var CO_HOLDER = (URL_ROLE === 'subscriber2' || URL_ROLE === 'subscriber3');
+    var CO_HOLDER_IDX = (URL_ROLE === 'subscriber3') ? 1 : 0;
+    var APPLICANT = CO_HOLDER ? 'individual'
+      : ((URL_TYPE === 'entity' || CFG.applicantType === 'entity') ? 'entity' : 'individual');
     var FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
 
     // Async-config re-apply hook (mirrors the Cayman form's __caymanOnCfgUpdate):
@@ -1648,7 +1591,23 @@
     // holds, then calls this so late-arriving session facts (applicant type,
     // resume page, language) take effect on the already-booted form.
     window.__israelOnCfgUpdate = function (cfg) {
-      var ap = (cfg.applicantType === 'entity') ? 'entity' : (cfg.applicantType === 'individual' ? 'individual' : '');
+      // Co-holder scoping: the async config carries cfg.role for a joint co-holder.
+      // Re-derive the mode (the URL seed already set it at boot; this covers a
+      // config that lands after a cold start) and force the individual applicant so
+      // the entity pages can never enter visiblePages(). Re-clamp to page 0.
+      if (cfg.role === 'subscriber2' || cfg.role === 'subscriber3') {
+        CO_HOLDER = true;
+        CO_HOLDER_IDX = (cfg.role === 'subscriber3') ? 1 : 0;
+        APPLICANT = 'individual';
+        FLOW_TYPE = 'onboarding_individual';
+        idx = 0;
+        applyConditionals();
+        showPage(idx);
+      }
+      // A co-holder is always an individual; never let the primary session's
+      // applicantType flip a co-holder form to the entity sequence.
+      var ap = CO_HOLDER ? 'individual'
+        : ((cfg.applicantType === 'entity') ? 'entity' : (cfg.applicantType === 'individual' ? 'individual' : ''));
       if (ap && ap !== APPLICANT) {
         APPLICANT = ap;
         FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
@@ -1684,6 +1643,11 @@
       return ALL_PAGES.filter(function (p) {
         var only = p.getAttribute('data-applicant');
         if (only && only !== ap) return false;      // wrong applicant type
+        // Co-holder scoping: the money, beneficiary, and additional-investors pages
+        // are collected ONCE on the primary; the joint co-holder fills only their
+        // own KYC + qualification + tax + waiver + uploads + sign. Drop the
+        // primary-only pages from the co-holder sequence.
+        if (CO_HOLDER && p.getAttribute('data-primary-only') != null) return false;
         var when = p.getAttribute('data-page-when'); // conditional page (e.g. lawyer leg)
         if (when && !pageConditionMet(when)) return false;
         return true;
@@ -3026,6 +2990,26 @@
           if (!firstError) firstError = holder;
         }
       });
+      // Page-level: the primary/second citizenship must differ (EasySend
+      // differentCitizenship formula). When "additional citizenship" is chosen, its
+      // value cannot equal the primary citizenship. Applies to any citizenship pair
+      // on the page (primary + co-holder both fill investorsArray[0] here). Reuses
+      // the approved EasySend message verbatim.
+      Array.prototype.forEach.call(pageEl.querySelectorAll('select[name$=".additionalCitizenship"]'), function (sel) {
+        var holder = sel.closest('.lvp-field, .lvp-fieldset');
+        if (!holder || isHidden(holder)) return;
+        var addV = String(sel.value || '').trim();
+        if (!addV) return;   // emptiness is the required pass's job
+        var baseName = sel.name.replace(/\.additionalCitizenship$/, '.citizenship');
+        var baseEl = pageEl.querySelector('[name="' + cssEsc(baseName) + '"]');
+        var baseV = baseEl ? String(baseEl.value || '').trim() : '';
+        if (baseV && baseV === addV) {
+          ok = false;
+          holder.classList.add('lvp-field--error');
+          setFieldError(holder, displayFor('נא להזין מדינות אזרחות שונות', curLang));
+          if (!firstError) firstError = holder;
+        }
+      });
       // Page-level: the single address search field is only "answered" once its
       // hidden component fields are filled (a Places pick fills them synchronously;
       // manual typing fills via the parse+geocode fallback). If the search box is
@@ -3573,7 +3557,13 @@
       });
     }
     function savePage() {
-      return gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() })
+      // Co-holder scoping: a co-holder holds a SIGN token, not a resume token, so
+      // save_page (a resume-token action) would be rejected. Their autosave rides
+      // the whitelisted save_signer_progress action keyed by the sign token.
+      var saveCall = CO_HOLDER
+        ? gateway('save_signer_progress', { signToken: CFG.token, submission: collectAll() })
+        : gateway('save_page', { page: currentPageEl().getAttribute('data-page'), submission: collectAll() });
+      return saveCall
         .then(function (res) { setSaveNote(''); return res; })
         .catch(function () {
           // A server-save miss (transient gateway timeout / lock contention) is a
@@ -3617,7 +3607,22 @@
       // up, same approved copy); only a real server error or exhausted retries
       // shows the failure copy.
       var attempt = function (retriesLeft) {
-        return gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' }).then(function (res) {
+        // Co-holder scoping: a joint co-holder is NOT the primary submitter. Their
+        // leg posts the whitelisted record_signature action on their SIGN token,
+        // carrying their own KYC (investorsArray[0], the current-filler slot) as a
+        // single raw investor object for the server to sanitize + merge wholesale
+        // onto additionalInvestors[coHolderIndex], plus their signature + ID uploads.
+        // Their leg is the last action, so there is no nextUrl on success.
+        var submitCall = CO_HOLDER
+          ? gateway('record_signature', {
+              signToken: CFG.token,
+              investor: (submission.investorsArray || [])[0],
+              signaturePng: sigPadPng || '',
+              uploads: files
+            })
+          : gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' });
+        return submitCall.then(function (res) {
+          if (CO_HOLDER) { showSubmittedCard(); return; }
           if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
           // §15A independent attestation (go-live fix 2026-07-08): the server emailed
           // the lawyer/CPA their own signing link (independent qualification form), so
