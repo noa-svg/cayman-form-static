@@ -3619,6 +3619,11 @@
       var attempt = function (retriesLeft) {
         return gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' }).then(function (res) {
           if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
+          // §15A independent attestation (go-live fix 2026-07-08): the server emailed
+          // the lawyer/CPA their own signing link (independent qualification form), so
+          // there is NO nextUrl for the LP. Show the lawyer-emailed completion card;
+          // never navigate the LP's window to the lawyer's pane.
+          if (res.detail && res.detail.lawyerEmailed) { showLawyerEmailedCard(); return; }
           showSubmittedCard();
         }).catch(function (err) {
           var isTimeout = err && err.message === 'timeout';
@@ -3642,6 +3647,18 @@
         '<div class="lvp-result__divider"></div>' +
         '<h2>' + esc(displayFor('המסמכים נשלחו בהצלחה!', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('תודה על שיתוף הפעולה', curLang)) + '</p>',
+        true);
+    }
+    // §15A independent attestation (go-live fix 2026-07-08): the LP has finished and
+    // the lawyer/CPA was emailed their own qualification-form link. Noa-approved
+    // completion line, VERBATIM; invent no other LP-facing copy here.
+    function showLawyerEmailedCard() {
+      showResultCard(
+        '<div class="lvp-result__check" aria-hidden="true">' +
+        '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</div>' +
+        '<div class="lvp-result__divider"></div>' +
+        '<h2>' + esc('המסמכים נשלחו בהצלחה. הגורם המאשר קיבל קישור לחתימה על טופס הכשירות.') + '</h2>',
         true);
     }
     var resultEl = null;
