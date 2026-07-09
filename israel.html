@@ -487,7 +487,7 @@
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isNotQualified" value="true" data-qual-none="indQual" data-show-when-trigger="__indQual"> אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.</label>
           </fieldset>
 
-          <div data-show-when="__indQualified=true">
+          <div data-show-when="__indQualified=true" data-primary-only>
             <h3 class="lvp-subhead">אישור כשירות</h3>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
@@ -1886,6 +1886,22 @@
         var match = String(cur) === String(want);
         el.hidden = neg ? match : !match;
       });
+      // Element-level co-holder scoping (mirror of the page-level data-primary-only
+      // drop in visiblePages). A joint co-holder inherits the primary's
+      // submission-level isSignedQualification (the server overwrites it at
+      // caymanApplyIsraeliCoHolderLeg_), so the "did you pre-sign the qualification
+      // form?" radio is inert on the co-holder's form: hide it and clear its inputs
+      // so it can never satisfy a conditional-page predicate (lawyerNeededInd) or
+      // client validation. Runs after the data-show-when pass so it wins the hide.
+      if (CO_HOLDER) {
+        root.querySelectorAll('[data-primary-only]').forEach(function (el) {
+          if (el.classList.contains('lvp-page')) return; // page-level handled by visiblePages()
+          el.hidden = true;
+          el.querySelectorAll('input, select, textarea').forEach(function (f) {
+            if (f.type === 'radio' || f.type === 'checkbox') f.checked = false; else f.value = '';
+          });
+        });
+      }
       // Address language by residency (Noa 2026-07-08): the residence-address search is
       // Hebrew-validated ONLY when the LP resides in Israel; a foreign resident types their
       // address in English/Latin (no Hebrew-only rule, which otherwise blocks a valid
