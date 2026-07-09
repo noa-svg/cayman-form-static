@@ -1242,6 +1242,10 @@
        __israelOnCfgUpdate re-apply hook). The deployment token in the URL is the
        lane's shared secret by design; the localhost-only ?gas= override targets the
        dev HEAD deployment during testing and is inert in production. -->
+  <!-- D1 shared validation module: the FORMAT rules, verbatim mirror of the server
+       validators (ju-cayman/IsraeliValidation.js), so client and server can't drift.
+       Loaded before the app script so window.LVPRules is defined for validateField. -->
+  <script src="validation-rules.js"></script>
   <script>
     (function () {
       var p = new URLSearchParams(location.search);
@@ -3036,71 +3040,49 @@
     }
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     function validateField(inp) {
-      // returns null if ok, else an error message string (Hebrew source key)
+      // returns null if ok, else an error message string (Hebrew source key).
+      // D1: the shared FORMAT rules delegate to LVPRules (validation-rules.js), a verbatim
+      // mirror of the server validators (ju-cayman/IsraeliValidation.js), so the client
+      // accepts exactly what the server accepts (no drift; proven by test/validation-
+      // parity-harness.cjs). If the shared module failed to load, the format check is
+      // skipped and the server stays the gate (graceful degradation, never throw). The
+      // approved Hebrew messages are unchanged.
       var v = (inp.value || '').trim();
       if (!v) return null; // emptiness handled by the required pass
       var rule = inp.getAttribute('data-validate');
-      // Email format: type=email fields never had a format check (the form is
-      // novalidate). Reuse the approved Israeli-lane string. A bad lawyer email is
-      // the signing channel, so this matters.
-      if (inp.type === 'email' && !EMAIL_RE.test(v)) return 'יש להזין כתובת מייל תקינה.';
-      if (rule === 'il-id' && !isValidIlId(v)) return 'מספר תעודת הזהות אינו תקין.';
-      if ((rule === 'date-past' || rule === 'date-future') && v) {
-        var dt = parseDdMmYyyy(v);
-        if (!dt) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        var today = new Date(); today.setHours(0, 0, 0, 0);
-        if (rule === 'date-past' && dt >= today) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        if (rule === 'date-future' && dt <= today) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        var minAge = inp.getAttribute('data-min-age');
-        if (minAge) {
-          var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - Number(minAge));
-          if (dt > cutoff) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        }
+      var R = (typeof LVPRules !== 'undefined' && LVPRules) ? LVPRules : null;
+      if (inp.type === 'email') { if (R && !R.validateFormat('email', v)) return 'יש להזין כתובת מייל תקינה.'; }
+      if (rule === 'il-id') { if (R && !R.validateFormat('il-id', v)) return 'מספר תעודת הזהות אינו תקין.'; }
+      if (rule === 'date-past') {
+        var dRule = inp.getAttribute('data-min-age') ? 'date-past-18' : 'date-past';
+        if (R && !R.validateFormat(dRule, v)) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+      }
+      if (rule === 'date-future') {
+        // No shared rule (unused on inputs today); keep the local check verbatim.
+        var dtf = parseDdMmYyyy(v);
+        var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+        if (!dtf || dtf <= t0) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
       }
       if (rule === 'first-business-day') {
-        // investmentDate rule: must be EXACTLY the first business day (Sun-Thu) of
-        // next month. Mirrors the server's israeliFirstBusinessDayOfNextMonth_
-        // (IsraeliValidation.js) so the LP never hits the opaque server bounce
-        // must_be_first_business_day_next_month. Error text reuses the field's own
-        // approved data-help sentence (already in EN_MAP).
-        var fbdDt = parseDdMmYyyy(v);
-        if (!fbdDt) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        var fbd = firstBusinessDayNextMonth();
-        if (fbdDt.getTime() !== fbd.getTime()) return 'נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב';
+        // investmentDate: must be EXACTLY the first business day (Sun-Thu) of next month,
+        // mirroring the server so the LP never hits the opaque must_be_first_business_day
+        // bounce. Two-message UX preserved (unparseable vs wrong-day).
+        if (R && !R.validDate(v)) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
+        if (R && !R.isFirstBusinessDayNextMonth(v)) return 'נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב';
       }
-      if (rule === 'gt50000') {
-        var n = Number(v.replace(/[,\s]/g, ''));
-        if (!isFinite(n) || n <= 50000) return 'סכום ההשקעה חייב להיות גדול מ-50,000.';
-      }
-      // Audit #7 remainder + #8 range (Noa-approved copy 2026-07-03; #3 edited to ח.פ).
-      if (rule === 'cell-il') {
-        var digits = v.replace(/[^0-9]/g, '');
-        if (/^\s*\+/.test(v)) {
-          // International: a leading + then a country code + number (E.164, 8-15 digits).
-          if (!(digits.length >= 8 && digits.length <= 15)) return 'מספר הטלפון הנייד אינו תקין.';
-        } else if (!(digits.length === 10 && digits.indexOf('05') === 0)) {
-          // Israeli mobile: 05xxxxxxxx.
-          return 'מספר הטלפון הנייד אינו תקין.';
-        }
-      }
-      if (rule === 'ssn') {
-        if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר ה-SSN אינו תקין.';
-      }
-      if (rule === 'company-num') {
-        if (v.replace(/[^0-9]/g, '').length !== 9) return 'מספר הח.פ אינו תקין.';
-      }
-      // Bank account: the server rejects non-digits (digits_required, ISRAELI_DIGITS_RE_)
-      // with only the generic submit toast; gate it on the page (Noa-approved copy
-      // 2026-07-04, found by the prod go-live smoke).
+      if (rule === 'gt50000') { if (R && !R.validateFormat('gt50000', v)) return 'סכום ההשקעה חייב להיות גדול מ-50,000.'; }
+      // Audit #7/#8 messages (Noa-approved 2026-07-03). cell-il/ssn/pct now match the
+      // server exactly (a non-+972 international phone, a structurally-invalid SSN, and a
+      // sub-0.1 ownership are rejected inline instead of bouncing at the server).
+      if (rule === 'cell-il') { if (R && !R.validateFormat('cell-il', v)) return 'מספר הטלפון הנייד אינו תקין.'; }
+      if (rule === 'ssn') { if (R && !R.validateFormat('ssn', v)) return 'מספר ה-SSN אינו תקין.'; }
+      if (rule === 'company-num') { if (R && !R.validateFormat('company-num', v)) return 'מספר הח.פ אינו תקין.'; }
       if (rule === 'il-account') {
-        // digits only (server rule) + 4-13 length, the same bound the Israeli
-        // increase/withdrawal server lane enforces (F-2.1) and banking reality.
+        // Client is intentionally STRICTER than the server here (server rule = digits
+        // only): the 4-13 digit bound is a Noa-approved UX gate (2026-07-04), kept local.
         if (!/^\d{4,13}$/.test(v)) return 'מספר החשבון אינו תקין.';
       }
-      if (rule === 'pct') {
-        var pn = Number(v.replace(/[,\s%]/g, ''));
-        if (!isFinite(pn) || pn <= 0 || pn > 100) return 'שיעור ההחזקה חייב להיות בין 0 ל-100.';
-      }
+      if (rule === 'pct') { if (R && !R.validateFormat('pct', v)) return 'שיעור ההחזקה חייב להיות בין 0 ל-100.'; }
       return null;
     }
     function validatePage(pageEl) {
