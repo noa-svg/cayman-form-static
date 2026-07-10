@@ -1809,8 +1809,11 @@
           readRadio('investorsArray[0].qualification.isSignedQualification') === 'לא';
       }
       if (cond === 'lawyerNeededEnt') {
-        return entQualified() &&
-          readRadio('corporationDetails.isSignedQualification') === 'לא';
+        // Entity certifier (עו"ד/רו"ח) is mandatory for EVERY entity: the beneficiary +
+        // certification docs always render the "Sign here (lawyer):" anchor, so the
+        // certifier leg must always be collected or the pack cannot seal. (A qualified
+        // not-pre-signed entity uses the same leg to also attest §15A qualification.)
+        return true;
       }
       return true;
     }
