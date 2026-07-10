@@ -3127,7 +3127,7 @@
           if (i.disabled) return;
           sawControl = true;
           if (i.type === 'radio' || i.type === 'checkbox') { if (i.checked) filled = true; }
-          else if (i.hasAttribute('data-upload')) { if (pendingUploads[i.getAttribute('data-upload')]) filled = true; }
+          else if (i.hasAttribute('data-upload')) { var _us = i.getAttribute('data-upload'); if (pendingUploads[_us] || preAttached[_us]) filled = true; }
           else if (i.value && i.value.trim()) filled = true;
         });
         if (sawControl && !filled) {
