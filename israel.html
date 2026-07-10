@@ -1165,9 +1165,9 @@
         <section class="lvp-page" data-page="lawyer.evidence" data-lawyer-only hidden>
           <h2 class="lvp-page__title">כשירות המשקיע/ה</h2>
           <fieldset class="lvp-fieldset lvp-fieldset--bare">
-            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkLiquid" value="true" data-show-when-trigger="lawyerDetails.checkLiquid"> בחינת שווי נכסים נזילים (כמשמעותם בחוק) באמצעות אסמכתאות בחשבונות בנק של המשקיע/ה, מעודכן לתאריך</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkLiquid" value="true" data-show-when-trigger="lawyerDetails.checkLiquid"> <span data-applicant="individual">בחינת שווי נכסים נזילים (כמשמעותם בחוק) באמצעות אסמכתאות בחשבונות בנק של המשקיע/ה, מעודכן לתאריך</span><span data-applicant="entity">בחינת הדוחות הכספיים של החברה, מהם עולה כי ההון העצמי שלה עולה על 50 מיליון שקלים חדשים, מעודכן לתאריך</span></label>
             <label class="lvp-field" data-show-when="lawyerDetails.checkLiquid=true"><span class="lvp-field__label">תאריך אסמכתאות</span><input class="lvp-input" type="text" name="lawyerDetails.evidenceDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="יש לפרט כולל תאריך מ-3 החודשים האחרונים"></label>
-            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkIncome" value="true"> בחינת תלושי שכר או דוחות מס שנתיים של המשקיע/ה המעידים על הכנסתו/ה במידה וסומן שעומד/ת בכשירות לפי מבחן הכנסות.</label>
+            <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkIncome" value="true"> <span data-applicant="individual">בחינת תלושי שכר או דוחות מס שנתיים של המשקיע/ה המעידים על הכנסתו/ה במידה וסומן שעומד/ת בכשירות לפי מבחן הכנסות.</span><span data-applicant="entity">בחינת מרשם בעלי המניות של החברה וכשירותם, מהם עולה כי כל בעלי מניותיה הינם משקיעים כשירים.</span></label>
             <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkOther" value="true" data-show-when-trigger="lawyerDetails.checkOther"> בחינת אסמכתאות ו/או אמצעים אחרים</label>
             <label class="lvp-field" data-show-when="lawyerDetails.checkOther=true"><span class="lvp-field__label">בחינת אסמכתאות ו/או אמצעים אחרים</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.otherEvidence"></label>
           </fieldset>
@@ -1319,6 +1319,10 @@
     // Pending file uploads, keyed by upload slot. base64 client-side, routed to a
     // token-gated Drive folder by the server (never public-shared).
     var pendingUploads = {};
+    // Operator pre-seeded docs (cfg.prefillUploads): slot -> true once shown attached.
+    // The required-upload gate treats a pre-attached slot as satisfied; picking a new
+    // file or Remove clears it so the LP's fresh choice wins.
+    var preAttached = {};
 
     // ===================================================================
     // Bilingual HE/EN toggle.
@@ -1742,6 +1746,7 @@
       // values land AFTER the guard seeding, so they always beat auto defaults.
       markSnapFromPrefill();
       if (cfg.prefill) hydrateFromPrefill(true);
+      if (cfg.prefillUploads) applyPrefillUploads(cfg.prefillUploads);
       applyInferredDefaults();
       // Config landed but carried no snapshot (fresh session on the server, or the
       // save never reached it): restore this device's own local snapshot instead.
@@ -2746,6 +2751,21 @@
       holder.classList.add('lvp-field--has-file');
       if (nameEl) nameEl.textContent = filename;
     }
+    // Operator pre-seeded documents: mark each already-stored slot attached so the LP
+    // sees the filename with the Replace/Remove control and the required-upload gate
+    // counts it satisfied. The bytes already live in the token-gated folder; the form
+    // sends no base64 for these unless the LP replaces one. Hidden/conditional slots
+    // (display:none) still get marked; the gate skips hidden holders anyway.
+    function applyPrefillUploads(map) {
+      if (!map || typeof map !== 'object') return;
+      Object.keys(map).forEach(function (slot) {
+        var meta = map[slot]; if (!meta) return;
+        var inp = form.querySelector('input[data-upload="' + slot + '"]');
+        if (!inp) return;
+        preAttached[slot] = true;
+        setFileSuccess(inp, meta.fileName || 'קובץ שהועלה');
+      });
+    }
     // Accepted upload MIME types, mirroring the accept="" attribute on every
     // file input. The accept attribute is advisory only (a .txt renamed .pdf, or
     // a wrong file the OS picker lets through, still reaches change), so we
@@ -2777,6 +2797,7 @@
       var reader = new FileReader();
       reader.onload = function () {
         pendingUploads[slot] = { slot: slot, filename: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: String(reader.result).split(',')[1] };
+        delete preAttached[slot];   // the LP's fresh file supersedes any pre-seeded doc
         setFileSuccess(inp, f.name);
       };
       reader.readAsDataURL(f);
@@ -2793,7 +2814,9 @@
       e.stopPropagation();
       var holder = btn.closest('.lvp-field'); if (!holder) return;
       var inp = holder.querySelector('input[data-upload]'); if (!inp) return;
-      delete pendingUploads[inp.getAttribute('data-upload')];
+      var rmSlot = inp.getAttribute('data-upload');
+      delete pendingUploads[rmSlot];
+      delete preAttached[rmSlot];   // removing a pre-seeded doc re-arms the required gate
       inp.value = '';
       setFileSuccess(inp, null);
       clearFieldError_(holder);   // drop any prior wrong-type/size error on this field
