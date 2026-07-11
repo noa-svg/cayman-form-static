@@ -458,10 +458,10 @@
                contract (city/street/houseNumber/postalCode + the English mirrors the
                W-8 needs). If the components are incomplete on Next, the search field
                itself gets the standard required treatment. -->
-          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="investorsArray[0].israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
+          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="investorsArray[0].israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
           <input type="hidden" name="investorsArray[0].israelAddress.city">
           <input type="hidden" name="investorsArray[0].israelAddress.street">
-          <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" inputmode="numeric" name="investorsArray[0].israelAddress.houseNumber"></label>
+          <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
           <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
@@ -549,10 +549,10 @@
 
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">כתובת התאגיד</legend>
-            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="corporationDetails.israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
+            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="corporationDetails.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
             <input type="hidden" name="corporationDetails.israelAddress.city">
             <input type="hidden" name="corporationDetails.israelAddress.street">
-            <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="corporationDetails.israelAddress.houseNumber"></label>
+            <input type="hidden" name="corporationDetails.israelAddress.houseNumber">
             <input type="hidden" name="corporationDetails.israelAddress.postalCode">
             <input type="hidden" name="corporationDetails.englishDetails.englishAddress.city">
             <input type="hidden" name="corporationDetails.englishDetails.englishAddress.street">
@@ -601,10 +601,10 @@
                verbatim from the approved investor address block. -->
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
-            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="firstAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
+            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="firstAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
             <input type="hidden" name="firstAuthorized.israelAddress.city">
             <input type="hidden" name="firstAuthorized.israelAddress.street">
-            <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="firstAuthorized.israelAddress.houseNumber"></label>
+            <input type="hidden" name="firstAuthorized.israelAddress.houseNumber">
             <input type="hidden" name="firstAuthorized.israelAddress.postalCode">
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.city">
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
@@ -635,10 +635,10 @@
                  verbatim from the approved investor address block. -->
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
-              <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="secondAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
+              <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="secondAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
               <input type="hidden" name="secondAuthorized.israelAddress.city">
               <input type="hidden" name="secondAuthorized.israelAddress.street">
-              <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="secondAuthorized.israelAddress.houseNumber"></label>
+              <input type="hidden" name="secondAuthorized.israelAddress.houseNumber">
               <input type="hidden" name="secondAuthorized.israelAddress.postalCode">
               <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.city">
               <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.street">
@@ -844,10 +844,10 @@
                 <!-- Same-as-first convenience (Noa-approved wording 2026-07-03). Client-side copy
                      only: no name attr so it never enters the payload; hidden on row 0 via CSS. -->
                 <label class="lvp-checkbox lvp-same-addr"><input type="checkbox" data-same-addr> הכתובת זהה לזו של בעל/ת השליטה הראשון/ה</label>
-                <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddressSearch" autocomplete="off" data-help="עיר ורחוב"></label>
+                <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.city">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.street">
-                <label class="lvp-field"><span class="lvp-field__label">מספר בית</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber"></label>
+                <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.postalCode">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street">
