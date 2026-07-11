@@ -3267,7 +3267,14 @@
         if (String(srch.value || '').trim() && !componentsOk) {
           ok = false;
           var sh = srch.closest('.lvp-field');
-          if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
+          if (sh) {
+            sh.classList.add('lvp-field--error');
+            if (!firstError) firstError = sh;
+            // When street+city resolved but house is still missing, say so explicitly.
+            if (gv(pset.street) && gv(pset.city) && !gv(pset.house)) {
+              setFieldError(sh, displayFor('יש לכלול מספר בית בכתובת', curLang));
+            }
+          }
           // Kick the fallback again so a manual typer converges by the next click.
           try { placesManualFallback_(pset, srch); } catch (e) {}
         }
