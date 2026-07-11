@@ -3031,6 +3031,13 @@
           }
         } else {
           val = getPath(pf, name);
+          if ((val === undefined || val === null) && /israelAddressSearch$/.test(name)) {
+            var _base = name.slice(0, -'israelAddressSearch'.length);
+            var _st = getPath(pf, _base + 'israelAddress.street');
+            var _ho = getPath(pf, _base + 'israelAddress.houseNumber');
+            var _ci = getPath(pf, _base + 'israelAddress.city');
+            if (_st && _ci) val = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
+          }
         }
         if (val === undefined || val === null) return;
         if (inp.hasAttribute('data-upload')) return;   // files are not restorable from a snapshot
