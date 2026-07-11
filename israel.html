@@ -144,6 +144,9 @@
     .lvp-subhead { color: var(--lvp-navy); font-size: 17px; font-weight: 700; margin: 24px 0 12px; }
     .lvp-hint-small { color: var(--lvp-text-muted); font-size: 13px; margin: 4px 0 12px; }
     .lvp-hint--help { margin: 4px 0 0; }   /* field help sits snug under its input */
+    .lvp-field--addr-ok .lvp-hint--help { color: #2e8a59; font-weight: 500; }
+    .lvp-field--addr-ok .lvp-input { border-color: #4caf50 !important; }
+    .pac-container { z-index: 99999 !important; }
     /* File inputs: the native control renders the browser's own locale text
        ("Choose File" / "No file chosen"), which is English and off-brand on a
        Hebrew-only form. We keep the real <input type="file"> in the DOM (the
@@ -458,7 +461,7 @@
                contract (city/street/houseNumber/postalCode + the English mirrors the
                W-8 needs). If the components are incomplete on Next, the search field
                itself gets the standard required treatment. -->
-          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="investorsArray[0].israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
+          <label class="lvp-field"><span class="lvp-field__label">כתובת מגורים</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="investorsArray[0].israelAddressSearch" autocomplete="off" inputmode="search" data-help="לדוגמה: הרצל 10, תל אביב"></label>
           <input type="hidden" name="investorsArray[0].israelAddress.city">
           <input type="hidden" name="investorsArray[0].israelAddress.street">
           <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
@@ -549,7 +552,7 @@
 
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">כתובת התאגיד</legend>
-            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="corporationDetails.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
+            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="corporationDetails.israelAddressSearch" autocomplete="off" inputmode="search" data-help="לדוגמה: הרצל 10, תל אביב"></label>
             <input type="hidden" name="corporationDetails.israelAddress.city">
             <input type="hidden" name="corporationDetails.israelAddress.street">
             <input type="hidden" name="corporationDetails.israelAddress.houseNumber">
@@ -601,7 +604,7 @@
                verbatim from the approved investor address block. -->
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
-            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="firstAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
+            <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="firstAuthorized.israelAddressSearch" autocomplete="off" inputmode="search" data-help="לדוגמה: הרצל 10, תל אביב"></label>
             <input type="hidden" name="firstAuthorized.israelAddress.city">
             <input type="hidden" name="firstAuthorized.israelAddress.street">
             <input type="hidden" name="firstAuthorized.israelAddress.houseNumber">
@@ -635,7 +638,7 @@
                  verbatim from the approved investor address block. -->
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">כתובת מגורים</legend>
-              <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="secondAuthorized.israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
+              <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="secondAuthorized.israelAddressSearch" autocomplete="off" inputmode="search" data-help="לדוגמה: הרצל 10, תל אביב"></label>
               <input type="hidden" name="secondAuthorized.israelAddress.city">
               <input type="hidden" name="secondAuthorized.israelAddress.street">
               <input type="hidden" name="secondAuthorized.israelAddress.houseNumber">
@@ -844,7 +847,7 @@
                 <!-- Same-as-first convenience (Noa-approved wording 2026-07-03). Client-side copy
                      only: no name attr so it never enters the payload; hidden on row 0 via CSS. -->
                 <label class="lvp-checkbox lvp-same-addr"><input type="checkbox" data-same-addr> הכתובת זהה לזו של בעל/ת השליטה הראשון/ה</label>
-                <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddressSearch" autocomplete="off" data-help="עיר, רחוב ומספר בית"></label>
+                <label class="lvp-field"><span class="lvp-field__label">כתובת</span><input class="lvp-input" type="text" data-script="he" data-script-il-only name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddressSearch" autocomplete="off" inputmode="search" data-help="לדוגמה: הרצל 10, תל אביב"></label>
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.city">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.street">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber">
@@ -2667,25 +2670,42 @@
             acS.addListener('place_changed', function () {
               var place = acS.getPlace();
               if (!place || !place.address_components) return;
-              // Number source: place.formatted_address always carries the house number
-              // ("טיומקין 3, תל אביב-יפו") even when IL Places drops the street_number
-              // component; sInput.value can lag the event. Feed the reliable text so the
-              // house field is captured (placesFanOutHe_ parses the number from it).
               placesFanOutHe_(set, place.address_components, place.formatted_address || sInput.value);
-              // Keep the house number IN the main address line: IL Places often omits
-              // street_number from the picked description, leaving a filled address line
-              // above an empty מספר בית. Recompose the visible line as "street number,
-              // city" from the fanned-out components so the number the LP sees always
-              // matches the captured house field.
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
               if (_st && _ci) sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
               if (place.place_id) placesFillEnglish_(place.place_id, set);
+              var _sh = sInput.closest('.lvp-field');
+              if (_sh) {
+                _sh.classList.add('lvp-field--addr-ok');
+                _sh.classList.remove('lvp-field--error');
+                var _hp = _sh.querySelector('.lvp-hint--help');
+                var _z = vs(set.zip);
+                if (_hp) _hp.textContent = _z ? 'מיקוד ' + _z : '✓ כתובת נקלטה';
+              }
             });
             sInput.setAttribute('data-places-bound', '1');
             sInput.__lvpAc = acS;   // exposed for the deploy-gate walk
             sInput.addEventListener('blur', function () {
               if (!vs(set.street) || !vs(set.city)) placesManualFallback_(set, sInput);
               else deriveEnglishFromHebrew_(set);
+            });
+            sInput.addEventListener('input', function () {
+              var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
+              if (!_st && !_ci) return;
+              var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
+              if (sInput.value.trim() !== composed) {
+                [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity].forEach(function (n) {
+                  var el = form.querySelector('[name="' + cssEsc(n) + '"]');
+                  if (el) el.value = '';
+                  delete TOUCHED[n];
+                });
+                var _sh2 = sInput.closest('.lvp-field');
+                if (_sh2) {
+                  _sh2.classList.remove('lvp-field--addr-ok');
+                  var _hp2 = _sh2.querySelector('.lvp-hint--help');
+                  if (_hp2) _hp2.textContent = sInput.getAttribute('data-help') || '';
+                }
+              }
             });
           }
           return;   // hidden components need no bindings of their own
@@ -2740,12 +2760,38 @@
           var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
           if (_st && _ci) sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
           if (place.place_id) placesFillEnglish_(place.place_id, dset);
+          var _gsh = sInput.closest('.lvp-field');
+          if (_gsh) {
+            _gsh.classList.add('lvp-field--addr-ok');
+            _gsh.classList.remove('lvp-field--error');
+            var _ghp = _gsh.querySelector('.lvp-hint--help');
+            var _gz = vs(dset.zip);
+            if (_ghp) _ghp.textContent = _gz ? 'מיקוד ' + _gz : '✓ כתובת נקלטה';
+          }
         });
         sInput.setAttribute('data-places-bound', '1');
         sInput.__lvpAc = acG;
         sInput.addEventListener('blur', function () {
           if (!vs(dset.street) || !vs(dset.city)) placesManualFallback_(dset, sInput);
           else deriveEnglishFromHebrew_(dset);
+        });
+        sInput.addEventListener('input', function () {
+          var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
+          if (!_st && !_ci) return;
+          var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
+          if (sInput.value.trim() !== composed) {
+            [dset.street, dset.city, dset.house, dset.zip, dset.enStreet, dset.enCity].forEach(function (n) {
+              var el = form.querySelector('[name="' + cssEsc(n) + '"]');
+              if (el) el.value = '';
+              delete TOUCHED[n];
+            });
+            var _gsh2 = sInput.closest('.lvp-field');
+            if (_gsh2) {
+              _gsh2.classList.remove('lvp-field--addr-ok');
+              var _ghp2 = _gsh2.querySelector('.lvp-hint--help');
+              if (_ghp2) _ghp2.textContent = sInput.getAttribute('data-help') || '';
+            }
+          }
         });
       });
     }
@@ -3263,20 +3309,29 @@
         var srch = pageEl.querySelector('[name="' + cssEsc(pset.search) + '"]');
         if (!srch || isHidden(srch.closest('.lvp-field') || srch)) return;
         var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-        var componentsOk = gv(pset.street) && gv(pset.city) && gv(pset.house);
+        var componentsOk = gv(pset.street) && gv(pset.city);
         if (String(srch.value || '').trim() && !componentsOk) {
           ok = false;
           var sh = srch.closest('.lvp-field');
-          if (sh) {
-            sh.classList.add('lvp-field--error');
-            if (!firstError) firstError = sh;
-            // When street+city resolved but house is still missing, say so explicitly.
-            if (gv(pset.street) && gv(pset.city) && !gv(pset.house)) {
-              setFieldError(sh, displayFor('יש לכלול מספר בית בכתובת', curLang));
-            }
-          }
-          // Kick the fallback again so a manual typer converges by the next click.
+          if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
           try { placesManualFallback_(pset, srch); } catch (e) {}
+        }
+      });
+      // Generic check for address search fields not covered by PLACES_SETS (e.g. CP rows).
+      var _coveredSearch = PLACES_SETS.reduce(function (acc, p) { if (p.search) acc[p.search] = 1; return acc; }, {});
+      Array.prototype.forEach.call(pageEl.querySelectorAll('input[name$="israelAddressSearch"]'), function (srch) {
+        if (_coveredSearch[srch.name]) return;
+        var sh = srch.closest('.lvp-field');
+        if (!sh || isHidden(sh)) return;
+        if (!String(srch.value || '').trim()) return;
+        var _base = srch.name.slice(0, -'israelAddressSearch'.length);
+        var gv2 = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+        if (!gv2(_base + 'israelAddress.street') || !gv2(_base + 'israelAddress.city')) {
+          ok = false;
+          sh.classList.add('lvp-field--error');
+          if (!firstError) firstError = sh;
+          var _fb = { street: _base + 'israelAddress.street', city: _base + 'israelAddress.city', house: _base + 'israelAddress.houseNumber', zip: _base + 'israelAddress.postalCode', enStreet: _base + 'englishDetails.englishAddress.street', enCity: _base + 'englishDetails.englishAddress.city' };
+          try { placesManualFallback_(_fb, srch); } catch (e) {}
         }
       });
       // Page-level: the controlling persons' ownership percentages must total 100%
