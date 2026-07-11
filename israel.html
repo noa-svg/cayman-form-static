@@ -147,6 +147,7 @@
     .lvp-field--addr-ok .lvp-hint--help { color: #2e8a59; font-weight: 500; }
     .lvp-field--addr-ok .lvp-input { border-color: #4caf50 !important; }
     .pac-container { z-index: 99999 !important; }
+    .lvp-input--apt { font-size: 0.875em; margin-top: 2px; }
     /* File inputs: the native control renders the browser's own locale text
        ("Choose File" / "No file chosen"), which is English and off-brand on a
        Hebrew-only form. We keep the real <input type="file"> in the DOM (the
@@ -466,6 +467,7 @@
           <input type="hidden" name="investorsArray[0].israelAddress.street">
           <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
           <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
+          <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="investorsArray[0].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
 
@@ -557,6 +559,7 @@
             <input type="hidden" name="corporationDetails.israelAddress.street">
             <input type="hidden" name="corporationDetails.israelAddress.houseNumber">
             <input type="hidden" name="corporationDetails.israelAddress.postalCode">
+            <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="corporationDetails.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
             <input type="hidden" name="corporationDetails.englishDetails.englishAddress.city">
             <input type="hidden" name="corporationDetails.englishDetails.englishAddress.street">
           </fieldset>
@@ -609,6 +612,7 @@
             <input type="hidden" name="firstAuthorized.israelAddress.street">
             <input type="hidden" name="firstAuthorized.israelAddress.houseNumber">
             <input type="hidden" name="firstAuthorized.israelAddress.postalCode">
+            <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="firstAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.city">
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
           </fieldset>
@@ -643,6 +647,7 @@
               <input type="hidden" name="secondAuthorized.israelAddress.street">
               <input type="hidden" name="secondAuthorized.israelAddress.houseNumber">
               <input type="hidden" name="secondAuthorized.israelAddress.postalCode">
+              <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="secondAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
               <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.city">
               <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.street">
             </fieldset>
@@ -852,6 +857,7 @@
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.street">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.postalCode">
+                <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street">
               </fieldset>
@@ -2222,7 +2228,7 @@
       var row = cb.closest('[data-row-index]');
       var first = row.parentElement && row.parentElement.querySelector('[data-row-index="0"]');
       if (!row || !first || row === first) return;
-      ['city','street','houseNumber','postalCode'].forEach(function (k) {
+      ['city','street','houseNumber','postalCode','apartmentNumber'].forEach(function (k) {
         var src = first.querySelector('[name$=".israelAddress.' + k + '"]');
         var dst = row.querySelector('[name$=".israelAddress.' + k + '"]');
         if (src && dst) { dst.value = src.value; dst.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -2491,6 +2497,7 @@
         city: 'investorsArray[0].israelAddress.city',
         house: 'investorsArray[0].israelAddress.houseNumber',
         zip: 'investorsArray[0].israelAddress.postalCode',
+        apt: 'investorsArray[0].israelAddress.apartmentNumber',
         enStreet: 'investorsArray[0].englishDetails.englishAddress.street',
         enCity: 'investorsArray[0].englishDetails.englishAddress.city' },
       { search: '__addinv[0].israelAddressSearch',
@@ -2498,6 +2505,7 @@
         city: '__addinv[0].israelAddress.city',
         house: '__addinv[0].israelAddress.houseNumber',
         zip: '__addinv[0].israelAddress.postalCode',
+        apt: '__addinv[0].israelAddress.apartmentNumber',
         enStreet: '__addinv[0].englishDetails.englishAddress.street',
         enCity: '__addinv[0].englishDetails.englishAddress.city' },
       { search: '__addinv[1].israelAddressSearch',
@@ -2505,6 +2513,7 @@
         city: '__addinv[1].israelAddress.city',
         house: '__addinv[1].israelAddress.houseNumber',
         zip: '__addinv[1].israelAddress.postalCode',
+        apt: '__addinv[1].israelAddress.apartmentNumber',
         enStreet: '__addinv[1].englishDetails.englishAddress.street',
         enCity: '__addinv[1].englishDetails.englishAddress.city' },
       { search: 'corporationDetails.israelAddressSearch',
@@ -2512,6 +2521,7 @@
         city: 'corporationDetails.israelAddress.city',
         house: 'corporationDetails.israelAddress.houseNumber',
         zip: 'corporationDetails.israelAddress.postalCode',
+        apt: 'corporationDetails.israelAddress.apartmentNumber',
         enStreet: 'corporationDetails.englishDetails.englishAddress.street',
         enCity: 'corporationDetails.englishDetails.englishAddress.city' },
       { search: 'firstAuthorized.israelAddressSearch',
@@ -2519,6 +2529,7 @@
         city: 'firstAuthorized.israelAddress.city',
         house: 'firstAuthorized.israelAddress.houseNumber',
         zip: 'firstAuthorized.israelAddress.postalCode',
+        apt: 'firstAuthorized.israelAddress.apartmentNumber',
         enStreet: 'firstAuthorized.englishDetails.englishAddress.street',
         enCity: 'firstAuthorized.englishDetails.englishAddress.city' },
       { search: 'secondAuthorized.israelAddressSearch',
@@ -2526,6 +2537,7 @@
         city: 'secondAuthorized.israelAddress.city',
         house: 'secondAuthorized.israelAddress.houseNumber',
         zip: 'secondAuthorized.israelAddress.postalCode',
+        apt: 'secondAuthorized.israelAddress.apartmentNumber',
         enStreet: 'secondAuthorized.englishDetails.englishAddress.street',
         enCity: 'secondAuthorized.englishDetails.englishAddress.city' }
     ];
@@ -2629,6 +2641,7 @@
       placesSetHe_(set.house, num);
       placesSetHe_(set.city, placesCity_(comps));
       placesSetHe_(set.zip, placesComp_(comps, 'postal_code'));
+      if (set.apt !== undefined) placesSetHe_(set.apt, placesComp_(comps, 'subpremise'));
     }
     // Manual entry on the single search field (the LP typed instead of picking):
     // instant heuristic parse ("רחוב מספר, עיר") so the components are never empty
@@ -2694,7 +2707,7 @@
               if (!_st && !_ci) return;
               var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
               if (sInput.value.trim() !== composed) {
-                [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity].forEach(function (n) {
+                [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
                   var el = form.querySelector('[name="' + cssEsc(n) + '"]');
                   if (el) el.value = '';
                   delete TOUCHED[n];
@@ -2744,6 +2757,7 @@
           city: base + 'israelAddress.city',
           house: base + 'israelAddress.houseNumber',
           zip: base + 'israelAddress.postalCode',
+          apt: base + 'israelAddress.apartmentNumber',
           enStreet: base + 'englishDetails.englishAddress.street',
           enCity: base + 'englishDetails.englishAddress.city'
         };
@@ -2780,7 +2794,7 @@
           if (!_st && !_ci) return;
           var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
           if (sInput.value.trim() !== composed) {
-            [dset.street, dset.city, dset.house, dset.zip, dset.enStreet, dset.enCity].forEach(function (n) {
+            [dset.street, dset.city, dset.house, dset.zip, dset.enStreet, dset.enCity, dset.apt].filter(Boolean).forEach(function (n) {
               var el = form.querySelector('[name="' + cssEsc(n) + '"]');
               if (el) el.value = '';
               delete TOUCHED[n];
