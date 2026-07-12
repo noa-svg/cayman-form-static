@@ -617,9 +617,6 @@
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
           </fieldset>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email"></label>
-          <!-- FL1 fix: consent was a standalone label the required pass skipped.
-               Bare fieldset holder = enforced by the existing mechanic. -->
-          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="firstAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label></fieldset>
 
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">האם לפי פרוטוקול מורשי החתימה יש נציג/ה נוסף/ת שמחויב/ת בחתימה?</legend>
@@ -652,8 +649,6 @@
               <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.street">
             </fieldset>
             <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
-            <!-- FL1 fix: enforced via the bare fieldset holder (see first signatory). -->
-            <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="secondAuthorized.isReadClaims" value="true"> קראתי והנני מאשר/ת את כתב ויתור הטענות.</label></fieldset>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">האם הנציג/ה המורשה הנוסף/ת הוא/היא בעל/ת שליטה בתאגיד?</legend>
               <label class="lvp-radio"><input type="radio" name="secondAuthorized.isControlling" value="כן"> כן</label>
@@ -1045,17 +1040,6 @@
           </template>
         </section>
 
-        <!-- PAGE: waiver of claims (investorsArray[0].isReadClaims) - individual only -->
-        <section class="lvp-page" data-page="ind.waiver" data-applicant="individual" hidden>
-          <h2 class="lvp-page__title">כתב ויתור טענות</h2>
-          <p class="lvp-note">אני הח"מ, ת.ז. <span data-waiver-id></span> שותפ/ה מוגבל/ת בקרן לגאסי ואליו פרטנרס ש.מ (להלן: "הקרן"), מאשר/ת בזה האמור להלן:
-1. ביום <span data-waiver-date></span> נחתם ביני לבין ולורט קפיטל מנג׳מנט בע״מ (להלן: "השותף הכללי") הסכם השקעה/שותפות (להלן: "הסכם ההשקעה").
-2. הריני מאשר/ת בזה, למען הסר ספק, כי על הבנק לא תחול כל אחריות באשר היא כלפי, כלפי השותף הכללי, השותפים המוגבלים וכלפי הקרן, באשר לקיום התחייבויות השותף הכללי על פי הסכם ההשקעה, לרבות ביחס לאופן ניהול ההשקעות על-ידי השותף הכללי ולעמידת השותף הכללי בהוראות מדיניות ההשקעות של הקרן.
-3. בנוסף הריני מאשר/ת בחתימתי על גבי מסמך זה כי אין ולא תהיה לי כל טענה ו/או תביעה כנגד הבנק ו/או מי מטעמו כמפורט בסעיף 2 לעיל.</p>
-          <!-- FL1 fix: the waiver consent was skippable (standalone label). Bare
-               fieldset holder = the page can no longer advance unchecked. -->
-          <fieldset class="lvp-fieldset lvp-fieldset--bare"><label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].isReadClaims" value="true"> קראתי והנני מאשר/ת את הכתוב לעיל</label></fieldset>
-        </section>
 
         <!-- PAGE: additional investors gate (additionalInvestors) - individual only -->
         <section class="lvp-page" data-page="ind.additional" data-applicant="individual" data-primary-only hidden>
@@ -3478,7 +3462,6 @@
         if (!LAWYER) loadSignPreview();
       }
       if (page.getAttribute('data-page') === 'review') seedContactDefault();
-      if (page.getAttribute('data-page') === 'ind.waiver') fillWaiver();
       prevBtn.hidden = idx === 0;
       var last = idx === pages.length - 1;
       nextBtn.hidden = last;
@@ -3610,19 +3593,6 @@
     var sigPadReady = false;
     var sigPadPng = null;
     var sigPadRefit = null;   // set by initSigPad; re-fits the canvas on re-entry to ind.sign
-    // Fill the waiver's ת.ז. from what the LP entered on the personal page and the
-    // date (today, the signing day) so the read-and-approve text shows no blanks.
-    function fillWaiver() {
-      var idEl = form.querySelector('[name="investorsArray[0].idNumber"]');
-      var idSpan = document.querySelector('[data-waiver-id]');
-      if (idSpan) idSpan.textContent = idEl ? String(idEl.value || '').trim() : '';
-      var dateSpan = document.querySelector('[data-waiver-date]');
-      if (dateSpan) {
-        var d = new Date();
-        var dd = ('0' + d.getDate()).slice(-2), mm = ('0' + (d.getMonth() + 1)).slice(-2);
-        dateSpan.textContent = dd + '/' + mm + '/' + d.getFullYear();
-      }
-    }
     // ---- sign-step doc preview (2026-07-07) ----
     // Fetches the LP's rendered subscription doc via the Israeli render_preview
     // branch and shows it above the pad. Sub-second server render (same md sources
