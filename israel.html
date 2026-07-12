@@ -3951,6 +3951,12 @@
             })
           : gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' });
         return submitCall.then(function (res) {
+          // The local resume snapshot's job is done once the server has the
+          // submission. It holds full PII (ID, DOB, address, bank details, PEP/
+          // beneficiary declarations) in localStorage indefinitely otherwise --
+          // clear it on every success path so a shared/family-office-assisted
+          // device doesn't keep it around after the LP is done.
+          try { localStorage.removeItem(LOCAL_SNAP_KEY); } catch (e) {}
           if (LAWYER) { showSubmittedCard(); return; }
           if (CO_HOLDER) { showSubmittedCard(); return; }
           if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
