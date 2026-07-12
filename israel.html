@@ -119,6 +119,27 @@
     /* Visible keyboard focus for everyone (WCAG 2.4.7). Mouse focus stays clean via :focus-visible. */
     .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
 
+    /* CFG-fetch failure gate (2026-07-12): ported byte-for-byte from index.html's
+       #lvp-gate, which already handles this on the English form. israel.html had
+       no equivalent, a bad/expired/revoked token or an unreachable gateway left
+       the LP staring at a blank/default form with no visible error and no path
+       forward. Icon-only, no text content, so no new LP-facing copy is being
+       introduced here. */
+    #lvp-gate { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; position: fixed; inset: 0; background: linear-gradient(-45deg,#FBF7EC,#EEF3FF,#FFF5F0,#F0F7F4); background-size: 400% 400%; animation: gateShift 12s ease infinite; }
+    @keyframes gateShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    .lvp-gate-mode #lvp-gate { display: flex; }
+    .lvp-gate-mode .lvp-lang, .lvp-gate-mode .lvp-app { display: none; }
+    .lvp-gate__logo { width: 140px; margin-bottom: 28px; opacity: .92; animation: gateLogoIn .8s cubic-bezier(.34,1.56,.64,1) both, gateFloat 5s ease-in-out .8s infinite; }
+    @keyframes gateLogoIn { from{opacity:0;transform:translateY(-22px) scale(.75)} to{opacity:.92;transform:translateY(0) scale(1)} }
+    @keyframes gateFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+    .lvp-gate__icon { font-size: 60px; margin-bottom: 0; display: block; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both, gateSwing 6s 1s ease-in-out infinite; transform-origin: 50% 20%; }
+    @keyframes gateIconIn { from{opacity:0;transform:scale(.3) rotate(90deg)} to{opacity:1;transform:scale(1) rotate(0)} }
+    @keyframes gateSwing { 0%,70%,100%{transform:rotate(0)} 75%{transform:rotate(-16deg)} 82%{transform:rotate(16deg)} 88%{transform:rotate(-9deg)} 93%{transform:rotate(6deg)} 97%{transform:rotate(-2deg)} }
+    @media (prefers-reduced-motion: reduce) {
+      #lvp-gate { animation: none !important; background-position: 0% 50% !important; }
+      .lvp-gate__logo, .lvp-gate__icon { animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
+
     .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
     .lvp-btn {
       font: inherit; font-weight: 700; padding: 13px 36px;
@@ -386,6 +407,10 @@
 </style>
 </head>
 <body>
+  <div id="lvp-gate">
+    <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
+    <span class="lvp-gate__icon" role="img" aria-label="שגיאת טעינה">⛓️‍💥</span>
+  </div>
   <!-- Israeli fund = Hebrew only: the EN option is removed and the toggle hidden.
        The he button stays in the DOM (aria-pressed) so the default-language init is
        unchanged. -->
@@ -1277,10 +1302,29 @@
             .then(function (cfg) {
               applyCfg(cfg);
               try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch (e) {}
+              // Bad / expired / revoked token: the gateway returns a config with no
+              // usable flow (flowType '') by design (CaymanGateway.js:468,511, "the
+              // static form's if (!CFG.flowType) guard... bounces to the broken-link
+              // screen", written with this lane in mind but never wired up here).
+              // index.html has always done this; israel.html left the LP staring at
+              // a blank/default form with no visible error instead (2026-07-12 audit).
+              var tokenish = p.get('t');
+              if (tokenish && cfg && !cfg.completed && !cfg.flowType) {
+                document.documentElement.classList.add('lvp-gate-mode');
+              }
             })
             .catch(function () {
-              if (attempt < 3) setTimeout(function () { fetchCfg(attempt + 1); }, attempt * 2500);
-              else if (window.console) console.warn('[IsraelForm] CFG load failed after retries');
+              if (attempt < 3) { setTimeout(function () { fetchCfg(attempt + 1); }, attempt * 2500); return; }
+              if (window.console) console.warn('[IsraelForm] CFG load failed after retries');
+              // Retries exhausted: previously silent (console-only), same gap as
+              // above but for a network/gateway failure rather than a bad token.
+              // Only gate if nothing was ever successfully applied (no cached CFG
+              // from a prior visit and no flowType from this session), so a
+              // transient blip after a real config already loaded doesn't yank a
+              // mid-fill LP onto the gate screen.
+              if (!window.ISRAEL_CFG.flowType) {
+                document.documentElement.classList.add('lvp-gate-mode');
+              }
             });
         } catch (err) {
           if (window.console) console.warn('[IsraelForm] CFG load failed:', err);
