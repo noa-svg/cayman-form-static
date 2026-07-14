@@ -1744,6 +1744,12 @@
         // 2026-06-21.
         if (typeof dobInitAll === 'function') dobInitAll();
         if (typeof applyConditionals === 'function') applyConditionals();
+        // Same gap as dobInitAll above (2026-07-14): a resumed session that
+        // restored individual.citizenship='United States' on this async path
+        // never got usPersonStatus autofilled (that only fires on a live
+        // 'change' event or the sync boot path), so the LP could hit submit
+        // with a blank required fatcaCrs.usPersonStatus.
+        if (typeof syncUsCitizenshipToFatca === 'function') syncUsCitizenshipToFatca();
       }
       // Cold start: the sync boot ran before config resolved, so it could not jump
       // to the saved page and the LP is sitting on the welcome page with data

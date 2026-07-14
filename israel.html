@@ -2640,27 +2640,32 @@
       // placesFillEnglish_ only fires on a pick, so the hidden English mirror the W-8
       // needs stays empty. Geocode the typed Hebrew address in English and fill it.
       // No-op if English is already present (a pick filled it) or the Hebrew is partial.
+      // Returns a Promise that resolves (never rejects) once the attempt is done, so
+      // the submit belt (2026-07-14) can await it instead of racing the async geocode.
       var enS = form.querySelector('[name="' + cssEsc(set.enStreet) + '"]');
       var enC = form.querySelector('[name="' + cssEsc(set.enCity) + '"]');
-      if (enS && String(enS.value || '').trim() && enC && String(enC.value || '').trim()) return;
+      if (enS && String(enS.value || '').trim() && enC && String(enC.value || '').trim()) return Promise.resolve();
       var sEl = form.querySelector('[name="' + cssEsc(set.street) + '"]');
       var cEl = form.querySelector('[name="' + cssEsc(set.city) + '"]');
       var hEl = form.querySelector('[name="' + cssEsc(set.house) + '"]');
       var street = sEl ? String(sEl.value || '').trim() : '';
       var city = cEl ? String(cEl.value || '').trim() : '';
-      if (!street || !city) return;
+      if (!street || !city) return Promise.resolve();
       var addr = street + ' ' + (hEl ? String(hEl.value || '').trim() : '') + ', ' + city + ', ישראל';
-      try {
-        new google.maps.Geocoder().geocode({ address: addr, language: 'en' }, function (results, status) {
-          if (status === 'OK' && results && results[0]) {
-            var dComps = results[0].address_components;
-            var dNum = placesComp_(dComps, 'street_number') || (hEl ? String(hEl.value || '').trim() : '');
-            var dRoute = placesComp_(dComps, 'route');
-            inferOffer(set.enStreet, dRoute ? (dRoute + (dNum ? ' ' + dNum : '')) : '');
-            inferOffer(set.enCity, placesCity_(results[0].address_components));
-          }
-        });
-      } catch (e) {}
+      return new Promise(function (resolve) {
+        try {
+          new google.maps.Geocoder().geocode({ address: addr, language: 'en' }, function (results, status) {
+            if (status === 'OK' && results && results[0]) {
+              var dComps = results[0].address_components;
+              var dNum = placesComp_(dComps, 'street_number') || (hEl ? String(hEl.value || '').trim() : '');
+              var dRoute = placesComp_(dComps, 'route');
+              inferOffer(set.enStreet, dRoute ? (dRoute + (dNum ? ' ' + dNum : '')) : '');
+              inferOffer(set.enCity, placesCity_(results[0].address_components));
+            }
+            resolve();
+          });
+        } catch (e) { resolve(); }
+      });
     }
     // Fan a picked/geocoded place's components into the Hebrew fields. Places often
     // lacks the street number in IL, so recover it from the typed text as a fallback.
@@ -3943,17 +3948,23 @@
     function doSubmit() {
       if (submitting) return;
       submitting = true;
-      // Belt (2026-07-07 english_address rejection): if the hidden EN mirrors are
-      // still empty (async fill lost the race), fire the geocode derive once more
-      // before collecting. The server-side derive (@510) is the guarantee; this
-      // just raises the odds the payload is already complete. Never blocks.
+      // Belt (2026-07-07 english_address rejection, fixed properly 2026-07-14): if
+      // the hidden EN mirrors are still empty (a manual-entry address the LP typed
+      // instead of picking a suggestion), fire the geocode derive and AWAIT it
+      // before collecting -- firing without waiting let collectAll() run before the
+      // async geocode resolved, losing the race almost every time. Capped at 4s so
+      // an unreachable/slow geocode never hangs a real submit; the server-side
+      // derive (@510) is the guarantee either way.
+      var deriveWaits = [];
       try {
         var _v = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
         PLACES_SETS.forEach(function (_set) {
           if (!_set.search) return;
-          if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveEnglishFromHebrew_(_set);
+          if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveWaits.push(deriveEnglishFromHebrew_(_set));
         });
       } catch (e) {}
+      var deriveTimeout = new Promise(function (resolve) { setTimeout(resolve, 4000); });
+      Promise.race([Promise.all(deriveWaits), deriveTimeout]).then(function () {
       // Belt (2026-07-14 fatcaStatus blank on resume): if inferredDefaults didn't
       // fire during hydration (no trusted change event from snapshot restore),
       // run them once more so the autofill is guaranteed before collection.
@@ -4034,6 +4045,7 @@
         });
       };
       attempt(2);
+      });
     }
     function showSubmittedCard() {
       showResultCard(
