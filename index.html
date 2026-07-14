@@ -3416,7 +3416,18 @@
         if (timer) clearTimeout(timer);
         return r.json();
       }).then(function (res) {
-        if (!res || res.ok === false) throw new Error((res && res.error) || 'Something went wrong. Please try again.');
+        if (!res || res.ok === false) {
+          // Dev-only (2026-07-14 Ido audit, same gap ported from the Israeli
+          // lane): the server computes the exact validation reason on
+          // res.detail.validation but only ever put a generic string on
+          // res.error, so the LP-facing banner below is unchanged -- this just
+          // stops the specific reason from being invisible everywhere, incl.
+          // the console, when diagnosing a live submit failure.
+          if (res && res.detail && res.detail.validation && window.console) {
+            console.log('submit rejected, validation detail:', JSON.stringify(res.detail.validation));
+          }
+          throw new Error((res && res.error) || 'Something went wrong. Please try again.');
+        }
         return res;
       }).catch(function (err) {
         if (timer) clearTimeout(timer);

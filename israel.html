@@ -3915,7 +3915,18 @@
         body: JSON.stringify(body),
         signal: ctrl ? ctrl.signal : undefined
       }).then(function (r) { if (timer) clearTimeout(timer); return r.json(); }).then(function (res) {
-        if (!res || res.ok === false) throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+        if (!res || res.ok === false) {
+          // Dev-only (2026-07-14 Ido audit): the server computes the exact
+          // validation reason (res.detail.validation, e.g. entityW8.fatcaStatus
+          // fatca_status_out_of_scope) but only ever put a generic string on
+          // res.error, so the LP-facing banner below is unchanged -- this just
+          // stops the specific reason from being invisible everywhere, incl. the
+          // console, when diagnosing a live submit failure.
+          if (res && res.detail && res.detail.validation && window.console) {
+            console.log('submit rejected, validation detail:', JSON.stringify(res.detail.validation));
+          }
+          throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+        }
         return res;
       }).catch(function (err) {
         if (timer) clearTimeout(timer);
