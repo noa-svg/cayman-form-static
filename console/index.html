@@ -797,6 +797,29 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .row.done { opacity: 0.5; }
 .row.done:hover { opacity: 0.72; }
 
+/* Per-row copy-link icon (2026-07-14, Noa: quick-copy without opening the drawer).
+   Quiet by default, surfaces on row hover/focus so the dense list stays calm. */
+.rcopy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-base), background var(--dur-base), border-color var(--dur-base), color var(--dur-base);
+}
+.row:hover .rcopy, .rcopy:focus-visible { opacity: 1; }
+.rcopy:hover { background: var(--color-bg-hover); border-color: var(--color-border-subtle); color: var(--color-ink); }
+.rcopy.is-copied { opacity: 1; color: var(--color-green); }
+.rcopy svg { width: 15px; height: 15px; display: block; pointer-events: none; }
+
 /* Name column */
 .rn {
   flex: 0 0 auto;
@@ -3044,6 +3067,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return (a.ageNum||0)-(b.ageNum||0);
     });
   }
+  var RCOPY_ICON='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-8A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var RCOPY_CHECK='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function rowHtml(r){
     var nm=r.name||r.he||'?';
     var he=(r.he&&r.name)?r.he:'';
@@ -3051,7 +3076,36 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +railHtml(r)
+      +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
       +'</div>';
+  }
+  // Per-row copy: the board list never carries the resume-token link (only the
+  // drawer's ?api=opprocess mints one), so a click fetches it fresh, then copies.
+  // stopPropagation so the click never also opens the drawer underneath it.
+  function copyRowLink(btn){
+    var pid=btn.getAttribute('data-pid'); if(!pid) return;
+    var lane=btn.getAttribute('data-lane')||state.lane;
+    if(btn.disabled) return;
+    btn.disabled=true;
+    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+encodeURIComponent(lane)).then(function(d){
+      btn.disabled=false;
+      var link=d&&d.onboardingLink;
+      if(!link){ return; }
+      function fallbackCopy(){
+        var t=document.createElement('textarea'); t.value=link; document.body.appendChild(t); t.select();
+        try{document.execCommand('copy');}catch(e){}
+        document.body.removeChild(t);
+      }
+      function showCopied(){
+        btn.classList.add('is-copied'); btn.innerHTML=RCOPY_CHECK;
+        setTimeout(function(){ if(btn.isConnected){ btn.classList.remove('is-copied'); btn.innerHTML=RCOPY_ICON; } },1500);
+      }
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(showCopied).catch(function(){ fallbackCopy(); showCopied(); });
+      } else {
+        fallbackCopy(); showCopied();
+      }
+    }).catch(function(){ btn.disabled=false; });
   }
   function renderRows(rows){
     var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage);}));
@@ -3077,6 +3131,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var go=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};
       el.onclick=go;
       el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#list .rcopy"),function(btn){
+      btn.onclick=function(e){ e.stopPropagation(); copyRowLink(btn); };
+      btn.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); copyRowLink(btn); } };
     });
   }
   // One haystack per row: every field the row shows or carries, so search matches
