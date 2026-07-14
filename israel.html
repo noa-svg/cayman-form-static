@@ -1282,7 +1282,21 @@
         // country strings, so the config list is dropped and the form's own Hebrew
         // list is used until the gateway serves a Hebrew list for the israeli lane.
         delete window.ISRAEL_CFG.countries;
+        // The sessionStorage cache-hit path below runs SYNCHRONOUSLY at parse time,
+        // before the later <script> block that defines __israelOnCfgUpdate (and sets
+        // up idx/page visibility/showPage) has run. Calling it immediately here -
+        // tried once, reverted (2026-07-14) - fired before the rest of the page's
+        // own init had a chance to run and broke resumePage entirely (a returning LP
+        // landed on the welcome page instead of their real step). Deferring via
+        // setTimeout lets the current synchronous script execution (the whole rest
+        // of the page's init code) finish first, same as the async ?api=config path
+        // naturally gets by virtue of a network round-trip taking longer than parse.
+        function deferredCfgUpdate_(attempt) {
+          if (typeof window.__israelOnCfgUpdate === 'function') { window.__israelOnCfgUpdate(window.ISRAEL_CFG); return; }
+          if (attempt < 40) setTimeout(function () { deferredCfgUpdate_(attempt + 1); }, 25);
+        }
         if (typeof window.__israelOnCfgUpdate === 'function') window.__israelOnCfgUpdate(window.ISRAEL_CFG);
+        else setTimeout(function () { deferredCfgUpdate_(0); }, 0);
       }
       try {
         var raw = sessionStorage.getItem(cacheKey);
