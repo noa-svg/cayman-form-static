@@ -3954,6 +3954,10 @@
           if ((!_v(_set.enStreet) || !_v(_set.enCity)) && _v(_set.street) && _v(_set.city)) deriveEnglishFromHebrew_(_set);
         });
       } catch (e) {}
+      // Belt (2026-07-14 fatcaStatus blank on resume): if inferredDefaults didn't
+      // fire during hydration (no trusted change event from snapshot restore),
+      // run them once more so the autofill is guaranteed before collection.
+      applyInferredDefaults();
       var submission = collectAll();
       var files = collectFiles();
       showResultCard(
