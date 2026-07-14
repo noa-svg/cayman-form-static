@@ -448,8 +448,8 @@
         <section class="lvp-page" data-page="ind.personal" data-applicant="individual" hidden>
           <h2 class="lvp-page__title">פרטים אישיים</h2>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].firstName" data-help="כפי שמופיע בתעודת הזהות"></label>
-            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].lastName" data-help="כפי שמופיע בתעודת הזהות"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].firstName" data-help="כפי שמופיע בתעודת הזהות" autocomplete="given-name"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="investorsArray[0].lastName" data-help="כפי שמופיע בתעודת הזהות" autocomplete="family-name"></label>
           </div>
           <div class="lvp-en-group">
             <p class="lvp-page__hint lvp-hint--en">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
@@ -465,7 +465,7 @@
             <label class="lvp-radio"><input type="radio" name="investorsArray[0].gender" value="נקבה"> נקבה</label>
           </fieldset>
 
-          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="investorsArray[0].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="investorsArray[0].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת" inputmode="numeric"></label>
 
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="investorsArray[0].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
@@ -497,8 +497,8 @@
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
           <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
 
-          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email"></label>
-          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email" autocomplete="email"></label>
+          <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567" autocomplete="tel"></label>
         </section>
 
         <!-- PAGE: qualification (investorsArray[0].qualification) -->
@@ -573,8 +573,8 @@
           </div>
           <label class="lvp-field"><span class="lvp-field__label">תאריך התאגדות</span><input class="lvp-input" type="text" name="corporationDetails.incorporationDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="corporationDetails.email"></label>
-            <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="corporationDetails.phoneNumber" data-validate="cell-il"></label>
+            <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="corporationDetails.email" autocomplete="email"></label>
+            <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="corporationDetails.phoneNumber" data-validate="cell-il" autocomplete="tel"></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">מדינת תושבות</span><select class="lvp-input--select" name="corporationDetails.residencyCountry" data-country></select></label>
 
@@ -621,14 +621,14 @@
           <h2 class="lvp-page__title">פרטי נציגים מורשים</h2>
           <h3 class="lvp-subhead">פרטי הנציג/ה המורשה</h3>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.firstName"></label>
-            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.lastName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.firstName" autocomplete="given-name"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.lastName" autocomplete="family-name"></label>
           </div>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.firstName"></label>
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.lastName"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="firstAuthorized.idNumber" data-validate="il-id"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="firstAuthorized.idNumber" data-validate="il-id" inputmode="numeric"></label>
           <!-- EasySend production model: representative Israeli address. Labels + legend cloned
                verbatim from the approved investor address block. -->
           <fieldset class="lvp-fieldset">
@@ -642,7 +642,7 @@
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.city">
             <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
           </fieldset>
-          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email"></label>
+          <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email" autocomplete="email"></label>
 
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">האם לפי פרוטוקול מורשי החתימה יש נציג/ה נוסף/ת שמחויב/ת בחתימה?</legend>
@@ -660,7 +660,7 @@
               <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.firstName"></label>
               <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.lastName"></label>
             </div>
-            <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="secondAuthorized.idNumber" data-validate="il-id"></label>
+            <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="secondAuthorized.idNumber" data-validate="il-id" inputmode="numeric"></label>
             <!-- EasySend production model: representative Israeli address. Labels + legend cloned
                  verbatim from the approved investor address block. -->
             <fieldset class="lvp-fieldset">
@@ -856,7 +856,7 @@
                 <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].gender" value="זכר"> זכר</label>
                 <label class="lvp-radio"><input type="radio" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].gender" value="נקבה"> נקבה</label>
               </fieldset>
-              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].idNumber" data-validate="il-id"></label>
+              <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].idNumber" data-validate="il-id" inputmode="numeric"></label>
               <div class="lvp-grid-2">
                 <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
                 <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthCountry" data-country></select></label>
@@ -2064,7 +2064,10 @@
       // Per-row waiver ת.ז. mirrors the row's own ID as it is typed (the primary's
       // twin is fillWaiver on page entry).
       if (e && e.target && /^__addinv\[\d+\]\.idNumber$/.test(e.target.name || '')) fillAddinvWaivers();
-      clearError(currentPageEl());
+      // Scoped to the field being edited (2026-07-14), not the whole page: see
+      // clearFieldError's comment for why page-wide clearing was a real bug.
+      var holder = e && e.target && e.target.closest ? e.target.closest('.lvp-field, .lvp-fieldset') : null;
+      clearFieldError(holder);
     });
 
     // Input ergonomics (#11 #12). Date fields auto-insert the dd/mm/yyyy slashes as
@@ -3536,6 +3539,19 @@
       if (!pageEl) return;
       pageEl.querySelectorAll('.lvp-field--error, .lvp-fieldset--error').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); unbindFieldInvalid_(f); });
       pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
+    }
+    // Scoped to ONE field holder (2026-07-14): clearing the whole page on any
+    // keystroke made fixing field 1 of 3 errors silently drop the still-broken
+    // 2 and 3, only for them to reappear unexplained on the next Next click.
+    // Same removal logic as clearError, just one holder instead of the page.
+    function clearFieldError(holder) {
+      if (!holder) return;
+      if (holder.classList.contains('lvp-field--error') || holder.classList.contains('lvp-fieldset--error')) {
+        holder.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg');
+        unbindFieldInvalid_(holder);
+      }
+      var msg = holder.querySelector('.lvp-error-msg');
+      if (msg) msg.remove();
     }
 
     // ---- navigation ----
