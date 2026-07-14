@@ -1282,15 +1282,7 @@
         // country strings, so the config list is dropped and the form's own Hebrew
         // list is used until the gateway serves a Hebrew list for the israeli lane.
         delete window.ISRAEL_CFG.countries;
-        // The sessionStorage cache-hit path below runs SYNCHRONOUSLY at parse time,
-        // before the later <script> block that defines __israelOnCfgUpdate has even
-        // executed. Silently skipping the render here (the old behavior) left a
-        // returning LP staring at a blank-looking form even though their real data
-        // was sitting in window.ISRAEL_CFG the whole time (confirmed 2026-07-14 on
-        // ברמינגטון ניהול והחזקות בע"מ: sessionStorage had the 4 uploaded files,
-        // the page just never painted them). Queue it instead of dropping it.
         if (typeof window.__israelOnCfgUpdate === 'function') window.__israelOnCfgUpdate(window.ISRAEL_CFG);
-        else window.__israelCfgPending = true;
       }
       try {
         var raw = sessionStorage.getItem(cacheKey);
@@ -1820,15 +1812,6 @@
           typeof applyLocalSnap_ === 'function') applyLocalSnap_();
       markHydrationSettled_();
     };
-    // Flush a cfg that landed via the sessionStorage cache-hit before this
-    // function existed (see the queueing comment at the applyCfg call site
-    // above) - otherwise a returning LP's real data sits in memory but is
-    // never painted until the slower async re-fetch resolves, if it resolves
-    // in time at all.
-    if (window.__israelCfgPending) {
-      window.__israelCfgPending = false;
-      window.__israelOnCfgUpdate(window.ISRAEL_CFG);
-    }
 
     // §15A lawyer intro name: the EasySend header reads
     // «{{qualifiedInvestorsNames}} מבקש/ת את חתימתך...». The scoped lawyer config
