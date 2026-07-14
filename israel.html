@@ -1326,6 +1326,7 @@
               if (!window.ISRAEL_CFG.flowType) {
                 document.documentElement.classList.add('lvp-gate-mode');
               }
+              if (typeof window.__israelMarkHydrationSettled === 'function') window.__israelMarkHydrationSettled();
             });
         } catch (err) {
           if (window.console) console.warn('[IsraelForm] CFG load failed:', err);
@@ -1338,6 +1339,32 @@
   (function () {
     'use strict';
     var CFG = window.ISRAEL_CFG || {};
+    // Save-before-hydrated guard (2026-07-14, Noa/Ido "refresh resets data"):
+    // CFG starts with no prefill at all (window.ISRAEL_CFG only carries
+    // gatewayUrl/token/role); the saved snapshot only lands once the async
+    // ?api=config fetch resolves (or the sessionStorage cache/local-snapshot
+    // fallback applies it). caymanHandleSavePage_ REPLACES the server's whole
+    // session.snapshot with whatever collectAll() sends (not a merge), so a
+    // Next-click savePage() that fires before hydration lands would collect an
+    // empty/partial DOM and permanently stomp the LP's real saved answers -
+    // exactly the "data reset on refresh" symptom. hydrationSettled flips true
+    // once hydration from the server OR the local-snapshot fallback has had
+    // its chance to run; any save requested before that is queued instead of
+    // fired immediately, and replayed once hydration settles.
+    var hydrationSettled = false;
+    var pendingSaveAfterHydration = false;
+    function markHydrationSettled_() {
+      if (hydrationSettled) return;
+      hydrationSettled = true;
+      if (pendingSaveAfterHydration) {
+        pendingSaveAfterHydration = false;
+        savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+      }
+    }
+    // Exposed so the earlier <script> block's fetchCfg (a separate closure, only
+    // connected via window.__israelOnCfgUpdate for the success path) can also
+    // settle the guard on total network failure, when that success path never fires.
+    window.__israelMarkHydrationSettled = markHydrationSettled_;
     var form = document.getElementById('lvp-form');
     var statusEl = form.querySelector('[data-status]');
     var prevBtn = form.querySelector('[data-action="prev"]');
@@ -1783,6 +1810,7 @@
       // save never reached it): restore this device's own local snapshot instead.
       if (!(cfg.prefill && typeof cfg.prefill === 'object' && Object.keys(cfg.prefill).length) &&
           typeof applyLocalSnap_ === 'function') applyLocalSnap_();
+      markHydrationSettled_();
     };
 
     // §15A lawyer intro name: the EasySend header reads
@@ -3547,7 +3575,16 @@
       // failure copy («הפרטים נשמרים מקומית») is actually TRUE, and a refresh with
       // an unreachable gateway restores from here (server prefill wins when present).
       saveLocalSnap_();
-      savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+      // Guard (2026-07-14): never fire the SERVER save before hydration has had
+      // its chance to restore the DOM from the real saved snapshot -- collectAll()
+      // right now could be near-empty on a fast refresh, and caymanHandleSavePage_
+      // replaces (not merges) session.snapshot with it. localStorage above already
+      // covers this device; queue the server save for right after hydration settles.
+      if (hydrationSettled) {
+        savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+      } else {
+        pendingSaveAfterHydration = true;
+      }
     });
     var LOCAL_SNAP_KEY = 'lvp_il_snap_' + (CFG.token || '');
     var lastLocalSaveOk = false;   // did the most recent local snapshot persist?
@@ -3566,14 +3603,14 @@
     // wins when present, so a stale device copy can never clobber newer server state.
     var localSnapApplied = false;
     function applyLocalSnap_() {
-      if (localSnapApplied) return;
-      if (CFG.prefill && typeof CFG.prefill === 'object' && Object.keys(CFG.prefill).length) return;
+      if (localSnapApplied) { markHydrationSettled_(); return; }
+      if (CFG.prefill && typeof CFG.prefill === 'object' && Object.keys(CFG.prefill).length) { markHydrationSettled_(); return; }
       var raw = null;
       try { raw = localStorage.getItem(LOCAL_SNAP_KEY); } catch (e) {}
-      if (!raw) return;
+      if (!raw) { markHydrationSettled_(); return; }
       var snap = null;
-      try { snap = JSON.parse(raw); } catch (e) { return; }
-      if (!snap || !snap.data || typeof snap.data !== 'object') return;
+      try { snap = JSON.parse(raw); } catch (e) { markHydrationSettled_(); return; }
+      if (!snap || !snap.data || typeof snap.data !== 'object') { markHydrationSettled_(); return; }
       localSnapApplied = true;
       CFG.prefill = snap.data;
       markSnapFromPrefill();
@@ -3585,6 +3622,7 @@
         }
       }
       applyInferredDefaults();
+      markHydrationSettled_();
     }
     // Fire the local restore when the async config lands without a prefill, or on a
     // timer if the config never lands at all (gateway unreachable on a refresh).
