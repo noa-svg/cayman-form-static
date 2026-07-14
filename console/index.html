@@ -2804,7 +2804,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
     return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(d){
-      if(d&&d.ok===false&&d.error==='unauthorized'){clearAuth(d.reason);throw new Error('unauthorized');}
+      // Only a DEFINITIVE rejection of this token clears the session. A transient
+      // failure to reach Google's tokeninfo endpoint (network blip, non-200,
+      // parse error - server prefixes these 'tokeninfo_') must NOT log the
+      // operator out: the token itself may still be perfectly valid. Before this
+      // guard, any transient tokeninfo hiccup on any of the several parallel
+      // apiFetch calls fired right after sign-in wiped the whole session, which
+      // read as "logged out a few seconds after signing in" for a valid account.
+      if(d&&d.ok===false&&d.error==='unauthorized'){
+        var reason=d.reason||'';
+        var transient=reason.indexOf('tokeninfo_')===0;
+        if(!transient) clearAuth(reason);
+        throw new Error('unauthorized'+(transient?'_transient':''));
+      }
       return d;
     });
   }
