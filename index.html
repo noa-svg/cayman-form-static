@@ -1434,8 +1434,27 @@
       // Completed-link terminal screen: a reopened finished link (cfg.completed
       // from the gateway, set once submittedAt is recorded) shows the static
       // "already complete" screen instead of rehydrating the form (2026-06-28).
+      // Two-state copy (Noa-approved 2026-07-15, English verbatim): cfg.sealed
+      // (session.completedAt: the whole process finished and delivered) keeps
+      // the original pair; completed-but-not-sealed (reopen while other
+      // signatures are pending) shows the partial pair, whose sub-line is the
+      // existing approved sentence from the review page below. DEFENSIVE: a
+      // missing sealed field (older server) means NOT sealed, so the honest
+      // partial pair shows. Both branches set the text explicitly so a cached-
+      // config state is corrected in either direction when the fresh config
+      // lands.
       function markDoneIfCompleted(cfg) {
-        if (cfg && cfg.completed) document.documentElement.classList.add('lvp-done-mode');
+        if (!cfg || !cfg.completed) return;
+        var dnMsg = document.querySelector('#lvp-done .lvp-done__msg');
+        var dnSub = document.querySelector('#lvp-done .lvp-done__sub');
+        if (cfg.sealed === true) {
+          if (dnMsg) dnMsg.textContent = 'Your request is complete.';
+          if (dnSub) dnSub.textContent = 'A signed copy has been emailed to you.';
+        } else {
+          if (dnMsg) dnMsg.textContent = 'Your part is complete.';
+          if (dnSub) dnSub.textContent = 'Once everything is completed and signed, you will receive signed copies by email.';
+        }
+        document.documentElement.classList.add('lvp-done-mode');
       }
       window.__lvpMarkDone = markDoneIfCompleted;
 
@@ -1495,7 +1514,14 @@
     'use strict';
     var CFG = window.CAYMAN_CFG || {};
     // Reopened finished link: show the completed terminal screen, never the form.
-    if (CFG && CFG.completed) document.documentElement.classList.add('lvp-done-mode');
+    // Routed through markDoneIfCompleted (window.__lvpMarkDone, defined in the
+    // bootstrap script above) so this belt also applies the two-state
+    // sealed/partial copy pick (2026-07-15) instead of leaving the markup's
+    // default pair; class-only fallback if the hook is ever absent.
+    if (CFG && CFG.completed) {
+      if (typeof window.__lvpMarkDone === 'function') window.__lvpMarkDone(CFG);
+      else document.documentElement.classList.add('lvp-done-mode');
+    }
     if (!CFG.placesApiKey) CFG.placesApiKey = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw';
     var form = document.getElementById('lvp-form');
     var statusEl = form.querySelector('[data-status]');

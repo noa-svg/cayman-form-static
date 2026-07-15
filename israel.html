@@ -135,9 +135,20 @@
     .lvp-gate__icon { font-size: 60px; margin-bottom: 0; display: block; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both, gateSwing 6s 1s ease-in-out infinite; transform-origin: 50% 20%; }
     @keyframes gateIconIn { from{opacity:0;transform:scale(.3) rotate(90deg)} to{opacity:1;transform:scale(1) rotate(0)} }
     @keyframes gateSwing { 0%,70%,100%{transform:rotate(0)} 75%{transform:rotate(-16deg)} 82%{transform:rotate(16deg)} 88%{transform:rotate(-9deg)} 93%{transform:rotate(6deg)} 97%{transform:rotate(-2deg)} }
+    /* Completed-link terminal screen (English only, per Noa 2026-06-28), ported
+       VERBATIM from index.html (Noa 2026-07-15: "use the cayman screen").
+       cfg.completed from the gateway config flips .lvp-done-mode when a finished
+       link is reopened, replacing the form entirely. */
+    #lvp-done { display: none; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; padding: 40px 20px; text-align: center; position: fixed; inset: 0; background: linear-gradient(-45deg,#FBF7EC,#EEF3FF,#FFF5F0,#F0F7F4); background-size: 400% 400%; animation: gateShift 12s ease infinite; }
+    .lvp-done-mode #lvp-done { display: flex; }
+    .lvp-done-mode .lvp-lang, .lvp-done-mode .lvp-app, .lvp-done-mode #lvp-gate { display: none; }
+    .lvp-done__icon { margin-bottom: 20px; line-height: 1; animation: gateIconIn .5s .25s cubic-bezier(.34,1.56,.64,1) both; }
+    .lvp-done__msg { font-size: 19px; font-weight: 700; color: #1A2330; margin: 0 0 10px; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .45s both; }
+    .lvp-done__sub { font-size: 14px; color: #6B7280; margin: 0; direction: ltr; max-width: 340px; line-height: 1.5; animation: gateUp .5s .6s both; }
+    @keyframes gateUp { from{opacity:0;transform:translateY(13px)} to{opacity:1;transform:translateY(0)} }
     @media (prefers-reduced-motion: reduce) {
-      #lvp-gate { animation: none !important; background-position: 0% 50% !important; }
-      .lvp-gate__logo, .lvp-gate__icon { animation: none !important; opacity: 1 !important; transform: none !important; }
+      #lvp-gate, #lvp-done { animation: none !important; background-position: 0% 50% !important; }
+      .lvp-gate__logo, .lvp-gate__icon, .lvp-done__icon, .lvp-done__msg, .lvp-done__sub { animation: none !important; opacity: 1 !important; transform: none !important; }
     }
 
     .lvp-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
@@ -411,6 +422,15 @@
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <span class="lvp-gate__icon" role="img" aria-label="שגיאת טעינה">⛓️‍💥</span>
+  </div>
+  <!-- Completed-link terminal screen: ported VERBATIM from index.html (approved
+       2026-06-28; Noa 2026-07-15: "use the cayman screen"). Shown on REOPENS of a
+       completed link (cfg.completed at boot), never for the just-submitted card. -->
+  <div id="lvp-done">
+    <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
+    <span class="lvp-done__icon" aria-hidden="true"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2E9E5B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></span>
+    <p class="lvp-done__msg">Your request is complete.</p>
+    <p class="lvp-done__sub">A signed copy has been emailed to you.</p>
   </div>
   <!-- Israeli fund = Hebrew only: the EN option is removed and the toggle hidden.
        The he button stays in the DOM (aria-pressed) so the default-language init is
@@ -1260,6 +1280,13 @@
   <script src="validation-rules.js"></script>
   <script>
     (function () {
+      // Build tag for the stale-tab guard (2026-07-15, Bremington two-week-old
+      // tab). Bump this string on EVERY deploy of this file; the guard in the
+      // app script below re-fetches this page and hard-reloads a tab whose
+      // running tag no longer matches the served one. No server-side version
+      // signal exists today (?api=config carries no build field), so the page
+      // itself is the version source of truth.
+      window.__BUILD_TAG = 'israel-2026-07-15-1';
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
       // Dev override: only honored when the page itself is served from localhost.
@@ -1275,6 +1302,34 @@
       var cacheKey = 'lvp_il_cfg_v1_' + (p.get('t') || '');
       function applyCfg(cfg) {
         if (!cfg) return;
+        // Completed-link terminal screen (index.html markDoneIfCompleted parity,
+        // 2026-06-28 pattern): a reopened FINISHED link (cfg.completed = the
+        // session has submittedAt; the gateway freezes it server-side) renders
+        // the static done screen instead of rehydrating the form and offering a
+        // submit the server would only reject. applyCfg runs on BOTH the
+        // sessionStorage cached path and the fresh ?api=config fetch, so both
+        // are hooked, mirroring index.html. Co-holder / lawyer SIGN-token
+        // configs always carry completed:false server-side, so their legs are
+        // unaffected.
+        // Two-state copy (Noa-approved 2026-07-15, English verbatim): cfg.sealed
+        // (session.completedAt: the whole process finished and delivered) keeps
+        // the Cayman pair; completed-but-not-sealed (reopen while other
+        // signatures are pending) shows the partial pair. DEFENSIVE: a missing
+        // sealed field (older server) means NOT sealed, so the honest partial
+        // pair shows. Both branches set the text explicitly so a cached-config
+        // state is corrected in either direction when the fresh config lands.
+        if (cfg.completed) {
+          var dnMsg = document.querySelector('#lvp-done .lvp-done__msg');
+          var dnSub = document.querySelector('#lvp-done .lvp-done__sub');
+          if (cfg.sealed === true) {
+            if (dnMsg) dnMsg.textContent = 'Your request is complete.';
+            if (dnSub) dnSub.textContent = 'A signed copy has been emailed to you.';
+          } else {
+            if (dnMsg) dnMsg.textContent = 'Your part is complete.';
+            if (dnSub) dnSub.textContent = 'Once everything is completed and signed, you will receive signed copies by email.';
+          }
+          document.documentElement.classList.add('lvp-done-mode');
+        }
         for (var k in cfg) { if (Object.prototype.hasOwnProperty.call(cfg, k)) window.ISRAEL_CFG[k] = cfg[k]; }
         window.ISRAEL_CFG.gatewayUrl = gasUrl; // never let a cached/echoed URL redirect the POST target
         // The unified gateway's ?api=config serves the Cayman ENGLISH country list.
@@ -3983,15 +4038,19 @@
         body: JSON.stringify(body),
         signal: ctrl ? ctrl.signal : undefined
       }).then(function (r) { if (timer) clearTimeout(timer); return r.json(); }).then(function (res) {
-        if (!res || res.ok === false) {
-          // Dev-only (2026-07-14 Ido audit): the server computes the exact
-          // validation reason (res.detail.validation, e.g. entityW8.fatcaStatus
-          // fatca_status_out_of_scope) but only ever put a generic string on
-          // res.error, so the LP-facing banner below is unchanged -- this just
-          // stops the specific reason from being invisible everywhere, incl. the
-          // console, when diagnosing a live submit failure.
-          if (res && res.detail && res.detail.validation && window.console) {
-            console.log('submit rejected, validation detail:', JSON.stringify(res.detail.validation));
+        // ok !== true (was ok === false, tightened 2026-07-15): the gateway's
+        // envelope always sets a boolean ok, so a JSON body WITHOUT ok (an HTTP
+        // 500 page that happens to parse, a truncated proxy response) is not a
+        // success and must not sail through to the caller's success path.
+        if (!res || res.ok !== true) {
+          // Dev-only (2026-07-14 Ido audit, widened 2026-07-15): log the FULL
+          // rejected envelope (ok/stage/error/detail; detail is the server's
+          // curated publicDetail, PII-free by design), not just the validation
+          // array, so a live failure is diagnosable from the LP's console. The
+          // LP-facing banner below is unchanged; validation entries are machine
+          // codes ({path, code}), never LP copy.
+          if (window.console) {
+            try { console.log('gateway ' + action + ' rejected:', JSON.stringify(res)); } catch (eLog) {}
           }
           throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
         }
@@ -4023,10 +4082,105 @@
           return null;
         });
     }
+    // ---- stale-tab guard (2026-07-15, Bremington incident) ----
+    // The LP kept a two-week-old tab whose old JS was missing shipped fixes.
+    // GitHub Pages serves this file with window.__BUILD_TAG baked in (bootstrap
+    // script above); the gateway's ?api=config carries NO version field today,
+    // so staleness is detected by re-fetching THIS page same-origin with the
+    // HTTP cache bypassed and comparing the served tag to the running one.
+    // Triggers: (a) the tab becomes visible/focused after >12h hidden;
+    // (b) submit is clicked with the page open >24h (checked BEFORE the POST).
+    // On mismatch: snapshot locally and hard-reload. Typed data survives the
+    // reload (localStorage snapshot via saveLocalSnap_ + the server save_page /
+    // save_signer_progress autosave rehydrate on boot); picked files and a
+    // drawn signature are memory-only and are re-prompted by the existing
+    // required-upload gate + signature gate, so nothing is silently dropped.
+    // FAIL OPEN on any fetch error/timeout: the guard must never strand an LP
+    // whose network is flaky.
+    var STALE_HIDDEN_MS_ = 12 * 3600 * 1000;
+    var STALE_OPEN_MS_ = 24 * 3600 * 1000;
+    var pageOpenedAt_ = Date.now();
+    var lastHiddenAt_ = 0;
+    var staleCheckBusy_ = false;
+    function fetchLiveBuildTag_(cb) {
+      // cb(liveTagOrNull); null = could not determine (fail open). 4s budget so
+      // the submit-path check never visibly stalls a real submit.
+      var done = false;
+      function settle(tag) { if (done) return; done = true; cb(tag); }
+      var timer = setTimeout(function () { settle(null); }, 4000);
+      try {
+        fetch(location.pathname, { cache: 'no-store' }).then(function (r) {
+          return r.text();
+        }).then(function (txt) {
+          clearTimeout(timer);
+          var m = String(txt || '').match(/window\.__BUILD_TAG = '([^']+)'/);
+          settle(m ? m[1] : null);
+        }).catch(function () { clearTimeout(timer); settle(null); });
+      } catch (e) { clearTimeout(timer); settle(null); }
+    }
+    function staleReloadIfNewer_(onFresh) {
+      if (staleCheckBusy_) { if (onFresh) onFresh(); return; }
+      staleCheckBusy_ = true;
+      fetchLiveBuildTag_(function (liveTag) {
+        staleCheckBusy_ = false;
+        var mine = window.__BUILD_TAG || '';
+        if (liveTag && mine && liveTag !== mine) {
+          if (window.console) console.log('stale tab: running ' + mine + ', live is ' + liveTag + '; reloading');
+          try { saveLocalSnap_(); } catch (e) {}
+          location.reload();
+          return;
+        }
+        if (onFresh) onFresh();
+      });
+    }
+    function noteHidden_() { if (!lastHiddenAt_) lastHiddenAt_ = Date.now(); }
+    function noteVisible_() {
+      if (!lastHiddenAt_) return;
+      var hiddenFor = Date.now() - lastHiddenAt_;
+      lastHiddenAt_ = 0;
+      if (hiddenFor > STALE_HIDDEN_MS_) staleReloadIfNewer_(null);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) noteHidden_(); else noteVisible_();
+    });
+    window.addEventListener('blur', noteHidden_);
+    window.addEventListener('focus', function () { if (!document.hidden) noteVisible_(); });
+
+    // ---- proof-of-progress success gate (2026-07-15, Bremington replay) ----
+    // Stages that can legitimately follow a successful submit / record_signature.
+    var SUBMIT_OK_STAGES_ = { submitted: 1, signing: 1, all_signed: 1 };
+    // Evidence the server actually did WORK, verified against every genuine
+    // success shape the mono gateway can emit (IsraeliDocGen israeliHandleSubmit_
+    // + CaymanGateway caymanHandleRecordSignature_, read 2026-07-15): a signing
+    // link (nextUrl), a signer plan/count (signersPlanned / signerXofY), a
+    // diverted-signer notice (lawyerEmailed / coHolderEmailed), or the
+    // deferred-seal note. detail.replay is deliberately NOT evidence: the
+    // Bremington incident's fake success was exactly {ok:true, stage:'submitted',
+    // detail:{replay:true}} from a broken submittedAt latch while signing never
+    // started.
+    function submitShowsProgress_(res) {
+      if (!res || res.ok !== true) return false;
+      if (SUBMIT_OK_STAGES_[String(res.stage || '')] !== 1) return false;
+      if (res.nextUrl) return true;
+      var d = res.detail || {};
+      return !!(d.signersPlanned || d.signerXofY || d.lawyerEmailed || d.coHolderEmailed || d.note);
+    }
+
     var submitting = false;
     function doSubmit() {
       if (submitting) return;
       submitting = true;
+      // Stale-tab gate (b): a tab open >24h re-verifies the build tag BEFORE
+      // posting, so an ancient client never submits with outdated JS. Stale:
+      // snapshot + reload (the LP resumes on current code, re-attaches files,
+      // re-signs, and submits fresh). Fresh or undetermined: proceed unchanged.
+      if (Date.now() - pageOpenedAt_ > STALE_OPEN_MS_) {
+        staleReloadIfNewer_(function () { doSubmitNow_(); });
+        return;
+      }
+      doSubmitNow_();
+    }
+    function doSubmitNow_() {
       // Belt (2026-07-07 english_address rejection, fixed properly 2026-07-14): if
       // the hidden EN mirrors are still empty (a manual-entry address the LP typed
       // instead of picking a suggestion), fire the geocode derive and AWAIT it
@@ -4090,11 +4244,27 @@
             })
           : gateway('submit', { submission: submission, files: files, signaturePng: sigPadPng || '' });
         return submitCall.then(function (res) {
+          // Proof-of-progress gate (2026-07-15): ok:true alone must never paint
+          // the success card. Require an allowlisted stage AND a concrete
+          // progress marker (submitShowsProgress_ above). A bare replay answer
+          // with no evidence routes to the existing approved retry surface via
+          // the throw (a resubmit on the same token is safe: the server's
+          // idempotency layer dedupes), with the full response on the console
+          // for diagnosis.
+          if (!submitShowsProgress_(res)) {
+            if (window.console) {
+              try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); }
+              catch (eGate) { console.log('submit response failed the proof-of-progress gate'); }
+            }
+            throw new Error('no_progress_evidence');
+          }
           // The local resume snapshot's job is done once the server has the
           // submission. It holds full PII (ID, DOB, address, bank details, PEP/
           // beneficiary declarations) in localStorage indefinitely otherwise --
           // clear it on every success path so a shared/family-office-assisted
-          // device doesn't keep it around after the LP is done.
+          // device doesn't keep it around after the LP is done. Cleared only
+          // AFTER the proof-of-progress gate (2026-07-15), so a gated-out
+          // response keeps this device's local restore intact for the retry.
           try { localStorage.removeItem(LOCAL_SNAP_KEY); } catch (e) {}
           if (LAWYER) { showSubmittedCard(); return; }
           if (CO_HOLDER) { showSubmittedCard(); return; }

@@ -392,6 +392,15 @@
     (function () {
       'use strict';
 
+      // Build tag for the stale-tab guard (2026-07-15, Bremington two-week-old
+      // tab on israel.html; same class of failure applies here). Bump this
+      // string on EVERY deploy of this file; the guard below re-fetches this
+      // page and hard-reloads a tab whose running tag no longer matches the
+      // served one. No server-side version signal exists today (?api=config
+      // carries no build field), so the page itself is the version source of
+      // truth.
+      window.__BUILD_TAG = 'flow-2026-07-15-1';
+
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
       var token = qs.get('t') || '';
@@ -556,6 +565,75 @@
       document.addEventListener('change', function (e) {
         if (e.target.closest('[data-field], .lvp-amount-row, .lvp-radios')) scheduleSave();
       });
+
+      // ---- stale-tab guard (2026-07-15, Bremington incident on israel.html;
+      // same failure class here). This page is served by GitHub Pages with
+      // window.__BUILD_TAG baked in (top of this script); staleness is detected
+      // by re-fetching THIS page same-origin with the cache bypassed and
+      // comparing the served tag to the running one. Triggers: (a) tab becomes
+      // visible/focused after >12h hidden; (b) submit clicked with the page
+      // open >24h (checked BEFORE validate/POST). On mismatch: fire a final
+      // best-effort save_page, then hard-reload; typed data rehydrates from the
+      // server snapshot (cfg.prefill), uploads are re-picked by design (see
+      // applyResumeSnapshot) and the required-upload validation re-arms, so
+      // nothing is silently dropped. FAIL OPEN on any fetch error/timeout: the
+      // guard must never strand an LP whose network is flaky.
+      var STALE_HIDDEN_MS_ = 12 * 3600 * 1000;
+      var STALE_OPEN_MS_ = 24 * 3600 * 1000;
+      var pageOpenedAt_ = Date.now();
+      var lastHiddenAt_ = 0;
+      var staleCheckBusy_ = false;
+      function fetchLiveBuildTag_(cb) {
+        // cb(liveTagOrNull); null = could not determine (fail open).
+        var done = false;
+        function settle(tag) { if (done) return; done = true; cb(tag); }
+        var timer = setTimeout(function () { settle(null); }, 4000);
+        try {
+          var x = new XMLHttpRequest();
+          x.open('GET', location.pathname + '?nocache=' + Date.now(), true);
+          x.timeout = 4000;
+          x.ontimeout = function () { clearTimeout(timer); settle(null); };
+          x.onerror = function () { clearTimeout(timer); settle(null); };
+          x.onreadystatechange = function () {
+            if (x.readyState !== 4) return;
+            clearTimeout(timer);
+            if (x.status !== 200) { settle(null); return; }
+            var m = String(x.responseText || '').match(/window\.__BUILD_TAG = '([^']+)'/);
+            settle(m ? m[1] : null);
+          };
+          x.send();
+        } catch (e) { clearTimeout(timer); settle(null); }
+      }
+      function staleReloadIfNewer_(onFresh) {
+        if (staleCheckBusy_) { if (onFresh) onFresh(); return; }
+        staleCheckBusy_ = true;
+        fetchLiveBuildTag_(function (liveTag) {
+          staleCheckBusy_ = false;
+          var mine = window.__BUILD_TAG || '';
+          if (liveTag && mine && liveTag !== mine) {
+            if (window.console) console.log('stale tab: running ' + mine + ', live is ' + liveTag + '; reloading');
+            // Final best-effort server save so the reload restores the freshest
+            // typed state; brief delay lets the async XHR leave. The debounced
+            // autosave has been persisting all along, so this is belt only.
+            try { savePage(); } catch (e) {}
+            setTimeout(function () { location.reload(); }, 400);
+            return;
+          }
+          if (onFresh) onFresh();
+        });
+      }
+      function noteHidden_() { if (!lastHiddenAt_) lastHiddenAt_ = Date.now(); }
+      function noteVisible_() {
+        if (!lastHiddenAt_) return;
+        var hiddenFor = Date.now() - lastHiddenAt_;
+        lastHiddenAt_ = 0;
+        if (hiddenFor > STALE_HIDDEN_MS_) staleReloadIfNewer_(null);
+      }
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) noteHidden_(); else noteVisible_();
+      });
+      window.addEventListener('blur', noteHidden_);
+      window.addEventListener('focus', function () { if (!document.hidden) noteVisible_(); });
 
       function applyResumeSnapshot(snap) {
         if (!snap || typeof snap !== 'object') return;
@@ -1434,6 +1512,17 @@
         })();
       }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
+        // Stale-tab gate (b): a tab open >24h re-verifies the build tag BEFORE
+        // validating/posting, so an ancient client never submits with outdated
+        // JS. Stale: save + reload (the LP resumes on current code, re-attaches
+        // files, and submits fresh). Fresh or undetermined: proceed unchanged.
+        if (Date.now() - pageOpenedAt_ > STALE_OPEN_MS_) {
+          staleReloadIfNewer_(runSubmitFlow_);
+          return;
+        }
+        runSubmitFlow_();
+      });
+      function runSubmitFlow_() {
         if (!validateAllDataPages()) return;
         // Cancel any in-flight save_page debounce. Without this, the timer that
         // was queued by the LP's last keystroke fires AFTER the submit lands,
@@ -1485,16 +1574,32 @@
             var res;
             try { res = JSON.parse(p.responseText); }
             catch (e) { return fail(SUBMIT_FAIL_MSG); }
-            if (!res.ok) {
-              var msg = (res.detail && res.detail.validation && res.detail.validation[0]) || res.error || SUBMIT_FAIL_MSG;
+            if (res.ok !== true) {
+              // ok !== true (was !res.ok, tightened 2026-07-15): a JSON body
+              // WITHOUT ok (an HTTP 500 page that parses, a truncated proxy
+              // response) is not a success. Log the FULL rejected envelope
+              // (server-curated publicDetail, PII-free) for live diagnosis.
+              if (window.console) { try { console.log('gateway submit rejected:', JSON.stringify(res)); } catch (eLog) {} }
+              // Validation entries may be machine-code objects ({path, code});
+              // only a STRING entry is renderable copy. Never paint
+              // [object Object] at the LP.
+              var v0 = res.detail && res.detail.validation && res.detail.validation[0];
+              var msg = (typeof v0 === 'string' && v0) || (typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
               return fail(msg);
             }
             if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
+            // Proof-of-progress (2026-07-15 Bremington replay): ok:true WITHOUT a
+            // signing link shows no work done for this flow (increase/redemption
+            // success is always a nextUrl handoff), so it falls to the existing
+            // retry surface. This was already the behavior; the console log of
+            // the full response is what is new, so a replayed/evidence-free
+            // answer is diagnosable instead of invisible.
+            if (window.console) { try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); } catch (eLog2) {} }
             fail(SUBMIT_FAIL_MSG);
           };
           p.send(JSON.stringify(body));
         });
-      });
+      }
 
       function buildSubmission() {
         var s = { applicantType: applicantType, meta: { language: 'he' } };
