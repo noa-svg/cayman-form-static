@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const israelHtml = fs.readFileSync(path.join(__dirname, '..', 'israel.html'), 'utf8');
 const flowHtml = fs.readFileSync(path.join(__dirname, '..', 'flow.html'), 'utf8');
+const signerHtml = fs.readFileSync(path.join(__dirname, '..', 'signer.html'), 'utf8');
 
 let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : extra); } }
@@ -101,7 +102,7 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
 // ---- G3: build-tag self-consistency -----------------------------------------
 (function () {
   const RE = /window\.__BUILD_TAG = '([^']+)'/;
-  [['israel.html', israelHtml, 'israel-'], ['flow.html', flowHtml, 'flow-']].forEach(function ([name, html, prefix]) {
+  [['israel.html', israelHtml, 'israel-'], ['flow.html', flowHtml, 'flow-'], ['signer.html', signerHtml, 'signer-']].forEach(function ([name, html, prefix]) {
     const first = html.match(RE);
     ok('G3 ' + name + ' tag present', !!first);
     ok('G3 ' + name + ' tag prefix', !!first && first[1].indexOf(prefix) === 0);
@@ -159,6 +160,169 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
   t.env.staleReloadIfNewer_(() => { t.calls.fresh++; });
   await flush();
   ok('G4 tagless response -> fail open', t.calls.fresh === 1 && t.calls.reload === 0);
+})();
+
+// ---- S1: signer.html proof-of-progress gate truth table ---------------------
+(function () {
+  const m = signerHtml.match(/var SUBMIT_OK_STAGES_[\s\S]*?function submitShowsProgress_\(res\) \{[\s\S]*?\n    \}/);
+  if (!m) { fail++; console.log('FAIL S1 could not extract signer submitShowsProgress_'); return; }
+  const gate = new Function(m[0] + '; return submitShowsProgress_;')();
+
+  // The engine's evidence-free replay collapse (already-signed replay reaches
+  // the gateway with no signerXofY): MUST be refused, not painted as done.
+  ok('S1 replay collapse refused', gate({ ok: true, stage: 'signing', nextUrl: '', detail: {} }) === false);
+  ok('S1 replay-only refused', gate({ ok: true, stage: 'signing', detail: { replay: true } }) === false);
+  // Every genuine record_signature success shape the mono gateway emits
+  // (caymanHandleRecordSignature_, read 2026-07-15).
+  ok('S1 signing+signerXofY', gate({ ok: true, stage: 'signing', nextUrl: '', detail: { signerXofY: '2/3' } }) === true);
+  ok('S1 signing+nextUrl', gate({ ok: true, stage: 'signing', nextUrl: 'https://x/sign', detail: {} }) === true);
+  ok('S1 signing+lawyerEmailed', gate({ ok: true, stage: 'signing', detail: { lawyerEmailed: true, signerXofY: '2/3' } }) === true);
+  ok('S1 signing+coHolderEmailed', gate({ ok: true, stage: 'signing', detail: { coHolderEmailed: true } }) === true);
+  ok('S1 all_signed+XofY', gate({ ok: true, stage: 'all_signed', detail: { signerXofY: '3/3' } }) === true);
+  ok('S1 all_signed+seal note', gate({ ok: true, stage: 'all_signed', detail: { note: 'seal in progress' } }) === true);
+  // Refusals: ok-less JSON, ok:false, off-stage, evidence-free.
+  ok('S1 ok-less JSON refused', gate({ stage: 'signing', detail: { signerXofY: '1/2' } }) === false);
+  ok('S1 ok:false refused', gate({ ok: false, stage: 'signing', detail: { signerXofY: '1/2' } }) === false);
+  ok('S1 needs_attention refused', gate({ ok: true, stage: 'needs_attention', detail: { signerXofY: '1/2' } }) === false);
+  ok('S1 evidence-free refused', gate({ ok: true, stage: 'all_signed', detail: {} }) === false);
+  ok('S1 null refused', gate(null) === false);
+})();
+
+// ---- S2: signer.html stale guard (XHR variant + autosave flush) --------------
+(function () {
+  const m = signerHtml.match(/var STALE_HIDDEN_MS_[\s\S]*?function staleReloadIfNewer_\(onFresh\) \{[\s\S]*?\n    \}\n    function noteHidden_/);
+  if (!m) { fail++; console.log('FAIL S2 could not extract signer stale guard'); return; }
+  const src = m[0].replace(/\n    function noteHidden_$/, '');
+  // Controllable timer stub: records callbacks so a test can fire the 1s cap.
+  function makeTimers() {
+    const q = [];
+    return {
+      set: (fn, ms) => { q.push({ fn, ms, cleared: false }); return q.length - 1; },
+      clear: (id) => { if (q[id]) q[id].cleared = true; },
+      fire: (ms) => q.forEach(t => { if (!t.cleared && t.ms === ms) { t.cleared = true; t.fn(); } }),
+      q
+    };
+  }
+  function makeXhr(behavior) {
+    return function XHRStub() {
+      this.open = function () {};
+      this.send = function () {
+        if (behavior.error) { if (this.onerror) this.onerror(); return; }
+        this.readyState = 4;
+        this.status = behavior.status !== undefined ? behavior.status : 200;
+        this.responseText = behavior.body || '';
+        if (this.onreadystatechange) this.onreadystatechange();
+      };
+    };
+  }
+  function build(behavior, tag) {
+    const calls = { reload: 0, fresh: 0, flush: 0 };
+    const timers = makeTimers();
+    const env = new Function(
+      'XMLHttpRequest', 'window', 'location', 'setTimeout', 'clearTimeout', 'console', 'Date',
+      src + '; return { staleReloadIfNewer_: staleReloadIfNewer_, setFlush: function (f) { flushAutosaveForStale_ = f; } };'
+    )(
+      makeXhr(behavior),
+      { __BUILD_TAG: tag, console: { log: () => {}, error: () => {} } },
+      { pathname: '/signer.html', reload: () => { calls.reload++; } },
+      timers.set, timers.clear,
+      { log: () => {}, error: () => {} },
+      Date
+    );
+    return { env, calls, timers };
+  }
+  const LIVE_NEWER = "x window.__BUILD_TAG = 'signer-NEWER' y";
+
+  // A) stale + flush hook set: flush runs first, reload fires on its callback,
+  //    continuation blocked. All synchronous via the stubs.
+  let t = build({ body: LIVE_NEWER }, 'signer-OLD');
+  t.env.setFlush((done) => { t.calls.flush++; done(); });
+  t.env.staleReloadIfNewer_(() => { t.calls.fresh++; });
+  ok('S2 stale -> flush called', t.calls.flush === 1);
+  ok('S2 stale -> reload after flush', t.calls.reload === 1);
+  ok('S2 stale -> continuation blocked', t.calls.fresh === 0);
+
+  // B) stale + flush never calls back: the 1s cap still reloads (fail open).
+  t = build({ body: LIVE_NEWER }, 'signer-OLD');
+  t.env.setFlush(() => { t.calls.flush++; /* never calls done */ });
+  t.env.staleReloadIfNewer_(() => { t.calls.fresh++; });
+  ok('S2 hung flush -> no reload yet', t.calls.reload === 0);
+  t.timers.fire(1000);
+  ok('S2 hung flush -> cap reloads', t.calls.reload === 1);
+
+  // C) stale + no flush hook yet (form not rendered): reload directly.
+  t = build({ body: LIVE_NEWER }, 'signer-OLD');
+  t.env.staleReloadIfNewer_(() => { t.calls.fresh++; });
+  ok('S2 no hook -> still reloads', t.calls.reload === 1 && t.calls.fresh === 0);
+
+  // D) same tag -> continuation runs, no reload, no flush.
+  t = build({ body: "window.__BUILD_TAG = 'signer-SAME'" }, 'signer-SAME');
+  t.env.setFlush((done) => { t.calls.flush++; done(); });
+  t.env.staleReloadIfNewer_(() => { t.calls.fresh++; });
+  ok('S2 same tag -> proceeds', t.calls.fresh === 1 && t.calls.reload === 0 && t.calls.flush === 0);
+
+  // E) network error / non-200 / tagless body -> fail open.
+  [['net error', { error: true }], ['http 500', { status: 500, body: 'x' }], ['tagless', { body: '<html>none</html>' }]].forEach(function ([label, behavior]) {
+    const f = build(behavior, 'signer-OLD');
+    f.env.staleReloadIfNewer_(() => { f.calls.fresh++; });
+    ok('S2 ' + label + ' -> fail open', f.calls.fresh === 1 && f.calls.reload === 0);
+  });
+})();
+
+// ---- S3: flow.html stale reload flushes the debounced save ------------------
+(function () {
+  const m = flowHtml.match(/function staleReloadIfNewer_\(onFresh\) \{[\s\S]*?\n      \}\n      function noteHidden_/);
+  if (!m) { fail++; console.log('FAIL S3 could not extract flow staleReloadIfNewer_'); return; }
+  const src = m[0].replace(/\n      function noteHidden_$/, '');
+  function build(saveBehavior) {
+    const calls = { reload: 0, fresh: 0, saves: [], timerCleared: 0 };
+    const timers = [];
+    const env = new Function(
+      'fetchLiveBuildTag_', 'saveTimer', 'savePage', 'window', 'location', 'setTimeout', 'clearTimeout', 'console', 'staleCheckBusy_',
+      src + '; return staleReloadIfNewer_;'
+    )(
+      (cb) => cb('flow-NEWER'),                                  // live tag differs
+      123,                                                        // a pending debounce timer id
+      (page, cb) => { calls.saves.push({ page, hasCb: typeof cb === 'function' }); if (saveBehavior === 'settle' && cb) cb(); },
+      { __BUILD_TAG: 'flow-OLD', console: { log: () => {} } },
+      { reload: () => { calls.reload++; } },
+      (fn, ms) => { timers.push({ fn, ms }); return timers.length - 1; },
+      (id) => { calls.timerCleared++; },
+      { log: () => {} },
+      false
+    );
+    return { env, calls, timers };
+  }
+  // A) save settles -> reload immediately via the callback, debounce cancelled.
+  let t = build('settle');
+  t.env(() => { t.calls.fresh++; });
+  ok('S3 flush fired with callback', t.calls.saves.length === 1 && t.calls.saves[0].hasCb === true);
+  ok('S3 debounce timer cancelled', t.calls.timerCleared >= 1);
+  ok('S3 reload after save settles', t.calls.reload === 1);
+  ok('S3 continuation blocked', t.calls.fresh === 0);
+  // B) save hangs -> the 1s cap reloads (fail open).
+  t = build('hang');
+  t.env(() => { t.calls.fresh++; });
+  ok('S3 hung save -> no reload yet', t.calls.reload === 0);
+  const cap = t.timers.find(x => x.ms === 1000);
+  ok('S3 1s cap armed', !!cap);
+  if (cap) cap.fn();
+  ok('S3 hung save -> cap reloads', t.calls.reload === 1);
+})();
+
+// ---- S4: signer.html double-submit + failure-visibility source asserts ------
+(function () {
+  const click = signerHtml.indexOf("doneBtn.addEventListener('click', function () {");
+  const belt = signerHtml.indexOf('if (submitting) return;');
+  ok('S4 click handler present', click !== -1);
+  ok('S4 double-submit belt inside handler', belt !== -1 && belt > click && belt - click < 800);
+  const disable = signerHtml.indexOf('doneBtn.disabled = true; clearBtn.disabled = true;');
+  const send = signerHtml.indexOf('p.send(body);');
+  ok('S4 button disabled before POST', disable !== -1 && send !== -1 && disable < send);
+  ok('S4 submit-path stale gate wired', /staleReloadIfNewer_\(doSignSubmit_\);/.test(signerHtml));
+  ok('S4 gate guards the done screen', /if \(submitShowsProgress_\(res\)\) \{/.test(signerHtml));
+  ok('S4 onPostFail logs the envelope', /record_signature failed; status=/.test(signerHtml));
+  ok('S4 signerform non-ok logged', /signerform non-ok envelope/.test(signerHtml));
 })();
 
 // ---- G5: done-mode boot (jsdom) ----------------------------------------------
