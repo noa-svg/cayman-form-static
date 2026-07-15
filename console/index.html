@@ -83,23 +83,29 @@
   --sidebar-w: 210px; --sidebar-w-coll: 52px; --header-h: 48px;
   --strip-h: 40px; --drawer-w: 420px; --panel-w: 480px;
   --grid-gutter: 24px; --grid-max: 1440px;
-  /* Binary radius: squares or full pills, nothing in between. */
-  --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px; --radius-pill: 100px;
-  /* Bauhaus construction primitives */
-  --bw: 3px;            /* standard thick border */
-  --bw-heavy: 4px;      /* major divisions / cards / panels */
+  /* Console tightening (2026-07-15, Noa: "too childish"): the full Bauhaus
+     system (binary radii, thick flat borders, hard-offset block shadows)
+     stays for LP-facing pages (israel.html, signer.html) but is toned down
+     HERE for the console specifically - it's a dense internal admin tool,
+     not a hero page, and the loud construction-toy look fights legibility
+     at data-table density. Soft rounding instead of strict square/pill,
+     hairline borders instead of 3-4px slabs, quiet elevation shadows
+     instead of flat offset blocks. Palette/type/spacing tokens unchanged. */
+  --radius-sm: 3px; --radius-md: 5px; --radius-lg: 7px; --radius-xl: 10px; --radius-pill: 100px;
+  --bw: 1px;             /* standard border */
+  --bw-heavy: 1px;       /* major divisions / cards / panels */
   --color-sidebar-ink:      #FFFFFF;
   --color-sidebar-ink-sub:  rgba(255,255,255,0.66);
   --color-sidebar-ink-dim:  rgba(255,255,255,0.42);
   --color-sidebar-hover:    rgba(255,255,255,0.10);
   --color-sidebar-active:   rgba(255,255,255,0.16);
   --color-sidebar-line:     rgba(255,255,255,0.14);
-  /* Hard offset shadows only, never blurred. */
-  --shadow-card:   4px 4px 0 0 var(--color-ink);
-  --shadow-hover:  6px 6px 0 0 var(--color-ink);
-  --shadow-panel:  8px 8px 0 0 var(--color-ink);
-  --shadow-drawer: -8px 8px 0 0 var(--color-ink);
-  --shadow-modal:  8px 8px 0 0 var(--color-ink);
+  /* Quiet elevation shadows (soft, blurred) - no more flat hard-offset blocks. */
+  --shadow-card:   0 1px 2px rgba(20,20,20,0.08), 0 1px 1px rgba(20,20,20,0.06);
+  --shadow-hover:  0 4px 10px rgba(20,20,20,0.12), 0 1px 2px rgba(20,20,20,0.08);
+  --shadow-panel:  0 8px 24px rgba(20,20,20,0.14), 0 2px 4px rgba(20,20,20,0.08);
+  --shadow-drawer: -12px 0 32px rgba(20,20,20,0.16), -2px 0 6px rgba(20,20,20,0.08);
+  --shadow-modal:  0 12px 32px rgba(20,20,20,0.18), 0 3px 8px rgba(20,20,20,0.1);
   /* Mechanical, snappy motion. */
   --ease-out: cubic-bezier(0.2,0.9,0.3,1);
   --ease-in: cubic-bezier(0.4,0,1,1);
@@ -497,8 +503,8 @@ body.side-coll .side-foot .foot-gear { display: none; }
   z-index: 2;
   background: var(--color-bg-card);
   border: var(--bw-heavy) solid var(--color-ink);
-  border-radius: 0;
-  box-shadow: 10px 10px 0 0 var(--color-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
   width: 100%;
   max-width: 380px;
   padding: var(--space-10) var(--space-8) var(--space-8);
@@ -530,8 +536,8 @@ body.side-coll .side-foot .foot-gear { display: none; }
   gap: 12px;
   background: #fff;
   border: var(--bw) solid var(--color-ink);
-  border-radius: 0;
-  box-shadow: 5px 5px 0 0 var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hover);
   padding: 13px 22px;
   font-family: var(--font-body);
   font-size: 13px;
@@ -544,7 +550,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
   direction: rtl;
   transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
-.google-signin-btn:hover { background: var(--color-gold); transform: translate(-1px,-1px); box-shadow: 6px 6px 0 0 var(--color-ink); }
+.google-signin-btn:hover { background: var(--color-gold); transform: translate(-1px,-1px); box-shadow: var(--shadow-hover); }
 .google-signin-btn:active { transform: translate(2px,2px); box-shadow: none; }
 .lhint { position: absolute; left: 22px; bottom: 18px; z-index: 3; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink); opacity: 0.5; pointer-events: none; }
 .lstamp { position: absolute; z-index: 1; pointer-events: none; will-change: transform, opacity; }
@@ -847,6 +853,26 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Lane badge: the board can show mixed Cayman/Israel rows (search, "Show
+   completed"), and the two flows are legally + operationally distinct - a
+   misread lane at a glance is exactly the kind of mistake that's expensive
+   here. Two-letter, low-key, doesn't compete with the name. */
+.rlane {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: var(--weight-semi);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  width: fit-content;
+  margin-top: 1px;
+}
+.rlane.rlane-cayman { background: var(--color-gold-tint); color: var(--color-gold); border: 1px solid var(--color-gold); }
+.rlane.rlane-israeli { background: var(--color-blue-tint, #E4EEF7); color: var(--color-navy, #0D3F6A); border: 1px solid var(--color-navy, #0D3F6A); }
 
 /* THE STAGE RAIL (dominant per-row element) */
 .rstage {
@@ -1532,14 +1558,14 @@ input:focus {
   background: #fff;
   color: var(--color-ink);
   padding: 5px 10px;
-  border: 2px solid var(--color-ink);
-  border-radius: 0;
+  border: var(--bw) solid var(--color-border);
+  border-radius: var(--radius-pill);
   margin: 0 var(--space-2) var(--space-2) 0;
   cursor: pointer;
-  box-shadow: 2px 2px 0 0 var(--color-ink);
+  box-shadow: var(--shadow-card);
   transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast);
 }
-.ph:hover { background: var(--color-gold-tint); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 0 var(--color-ink); }
+.ph:hover { background: var(--color-gold-tint); transform: translate(-1px,-1px); box-shadow: var(--shadow-hover); }
 .ph:active { transform: translate(1px,1px); box-shadow: none; }
 .ph .ph-plus { font-weight: 800; color: var(--color-atrium); font-size: 15px; line-height: 1; }
 .ph.auto { background: var(--color-neutral-bg); }
@@ -1594,8 +1620,8 @@ input:focus {
   line-height: 1.9;
   color: var(--color-ink);
   background: var(--color-bg-input);
-  border: 3px solid var(--color-ink);
-  border-radius: 0;
+  border: var(--bw) solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1603,7 +1629,7 @@ input:focus {
   outline: none;
   cursor: text;
 }
-.chip-ed:focus { border-color: var(--color-border-focus); box-shadow: 3px 3px 0 0 var(--color-ink); }
+.chip-ed:focus { border-color: var(--color-border-focus); box-shadow: var(--shadow-card); }
 .chip-ed:empty::before { content: attr(data-ph); color: var(--color-ink-muted); pointer-events: none; }
 .tokchip {
   display: inline-block;
@@ -1616,8 +1642,8 @@ input:focus {
   margin: 0 1px;
   background: var(--color-atrium);
   color: #fff;
-  border: 2px solid var(--color-ink);
-  border-radius: 0;
+  border: var(--bw) solid var(--color-atrium-deep);
+  border-radius: var(--radius-sm);
   vertical-align: 1px;
   cursor: default;
   user-select: none;
@@ -2289,23 +2315,23 @@ body.side-coll .side-foot a[href*="atrium" i] { display: none; }
 .gmk.t{width:0;height:0;border:none;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid var(--color-gold)}
 
 /* ---- focus: red construction ring, no soft glow ---- */
-input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-color:var(--color-border-focus)!important;box-shadow:3px 3px 0 0 var(--color-ink)!important}
+input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-color:var(--color-border-focus)!important;box-shadow:var(--shadow-card)!important}
 
 /* ---- SIDEBAR ---- */
 .side{border-right:var(--bw-heavy) solid var(--color-ink)}
 .brand{border-bottom:var(--bw) solid rgba(255,255,255,0.22)}
-.brand-chip{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);padding:7px 9px}
+.brand-chip{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:7px 9px}
 .brand .mark{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
 .brand .sub{text-transform:uppercase;letter-spacing:0.18em;font-weight:800;font-size:10px}
-.fundsw{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;padding:0;box-shadow:4px 4px 0 0 var(--color-ink);gap:0;overflow:hidden}
+.fundsw{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:0;box-shadow:var(--shadow-card);gap:0;overflow:hidden}
 .fundsw button{color:var(--color-ink);border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;font-size:12px;padding:9px 0}
 .fundsw button + button{border-left:var(--bw) solid var(--color-ink)}
 .fundsw button.on{background:var(--color-gold);color:var(--color-ink)}
-.nav{border-radius:0;padding:11px 12px;margin:0 0 2px;text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:13px;border:var(--bw) solid transparent;background:transparent;color:#fff}
+.nav{border-radius:var(--radius-md);padding:11px 12px;margin:0 0 2px;text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:13px;border:var(--bw) solid transparent;background:transparent;color:#fff}
 .nav:hover{background:rgba(255,255,255,0.12)}
-.nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);border:var(--bw) solid var(--color-ink);box-shadow:4px 4px 0 0 rgba(0,0,0,0.35)}
+.nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);border:var(--bw) solid var(--color-ink);box-shadow:var(--shadow-hover)}
 .nav .nav-ic{font-size:16px}
-.nav .badge{background:var(--color-coral);color:#fff;border:2px solid var(--color-ink);border-radius:0;font-weight:800}
+.nav .badge{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-pill);font-weight:800}
 .nav.on .badge{background:var(--color-coral);color:#fff}
 .side-foot .foot-gear{border-radius:0}
 .side-foot{border-top:var(--bw) solid rgba(255,255,255,0.22)}
@@ -2315,20 +2341,20 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .top .sub{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:12px;color:var(--color-ink-sub)}
 
 /* ---- NEW button (primary action = coral block) ---- */
-.cmd-btn{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:5px 5px 0 0 var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.cmd-btn:hover{background:var(--color-coral);box-shadow:6px 6px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.cmd-btn{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cmd-btn:hover{background:var(--color-coral);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
 .cmd-btn:active{transform:translate(2px,2px);box-shadow:none}
 .cmd-btn.open{background:var(--color-atrium);border-color:var(--color-ink)}
 
 /* ---- NEW menu ---- */
-.new-dd{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:8px 8px 0 0 var(--color-ink);background:#fff;padding:10px}
+.new-dd{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);background:#fff;padding:10px}
 .new-dd-sep{background:var(--color-ink);height:var(--bw);margin:8px 4px}
 .new-dd-row .ndl{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
-.new-dd-item{border:var(--bw) solid var(--color-ink);border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;font-size:12px;color:var(--color-ink);padding:7px 12px;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff}
+.new-dd-item{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);font-weight:800;text-transform:uppercase;letter-spacing:0.04em;font-size:12px;color:var(--color-ink);padding:7px 12px;box-shadow:var(--shadow-card);background:#fff}
 .new-dd-item:hover{background:var(--color-atrium);border-color:var(--color-ink);color:#fff}
 
 /* ---- board search ---- */
-.board-search{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);background:#fff;font-weight:600;padding:11px 14px}
+.board-search{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;font-weight:600;padding:11px 14px}
 .board-search::placeholder{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:13px;color:var(--color-ink-muted)}
 
 /* ---- BOARD ROWS (quiet: thin black rule, square, snappy left-accent on hover) ---- */
@@ -2339,7 +2365,7 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .rhe{font-weight:600}
 /* rail segments: square, bordered, constructed */
 .rail{gap:4px}
-.rail .seg{height:9px;border-radius:0;border:1.5px solid var(--color-ink);background:#fff}
+.rail .seg{height:9px;border-radius:var(--radius-sm);border:1px solid var(--color-border-subtle);background:#fff}
 .rail .seg.done{background:var(--color-atrium)}
 .rail .seg.current{background:var(--color-gold);box-shadow:none}
 /* Sealing: the last beat fills as motion (transient seconds-long arrive-at-Done). */
@@ -2352,30 +2378,30 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .rail-lbl.muted{color:var(--color-ink-muted)}
 
 /* ---- generic buttons ---- */
-.btn{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.btn:hover{background:var(--color-gold);box-shadow:4px 4px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.btn{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.btn:hover{background:var(--color-gold);box-shadow:var(--shadow-card);transform:translate(-1px,-1px)}
 .btn:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- inputs ---- */
-input,textarea,select{border-radius:0!important}
-#panel input,#panel textarea,#panel select,#drawer input,#drawer textarea,#allowlist-input{border:var(--bw) solid var(--color-ink)!important;border-radius:0!important}
+input,textarea,select{border-radius:var(--radius-md)!important}
+#panel input,#panel textarea,#panel select,#drawer input,#drawer textarea,#allowlist-input{border:var(--bw) solid var(--color-ink)!important;border-radius:var(--radius-md)!important}
 
 /* ---- labels + tags ---- */
 label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:11px;color:var(--color-ink)}
 /* required marker: neutral bordered chip (ink on white), NOT red - red is reserved
    for stop/fail per the semantics block below. High contrast at this small size. */
-.tag{background:#fff;color:var(--color-ink);border:2px solid var(--color-ink);border-radius:0;text-transform:uppercase;letter-spacing:0.04em;font-weight:800;font-size:9px;padding:1px 6px}
+.tag{background:#fff;color:var(--color-ink);border:1px solid var(--color-border-strong);border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:0.04em;font-weight:800;font-size:9px;padding:1px 6px}
 .opt{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:9px;color:var(--color-ink-muted)}
 
 /* ---- segmented controls (language / classification) ---- */
-.seg{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);overflow:hidden;background:#fff}
+.seg{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);overflow:hidden;background:#fff}
 .seg button{border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:13px;color:var(--color-ink)}
 .seg button + button{border-left:var(--bw) solid var(--color-ink)}
 .seg button.on{background:var(--color-atrium);color:#fff}
 
 /* ---- primary CTA (coral block) ---- */
-.cta{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:5px 5px 0 0 var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.cta:hover{background:var(--color-coral);box-shadow:6px 6px 0 0 var(--color-ink);transform:translate(-1px,-1px)}
+.cta{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cta:hover{background:var(--color-coral);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
 .cta:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- create panel + drawer shells ---- */
@@ -2385,46 +2411,46 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .lead,#panelLead{text-transform:none;color:var(--color-ink-sub);font-weight:600}
 
 /* ---- LP picker ---- */
-.lp-results{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:8px 8px 0 0 var(--color-ink)}
-.lp-picked{border:var(--bw) solid var(--color-ink);border-radius:0;background:var(--color-gold-tint)}
+.lp-results{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-panel)}
+.lp-picked{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);background:var(--color-gold-tint)}
 
 /* ---- settings card ---- */
-.set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:0;box-shadow:var(--shadow-panel);background:#fff}
+.set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);background:#fff}
 .set-h{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
 
 /* ---- sidebar collapse ---- */
-#side-collapse{border-radius:0;border:2px solid rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.1em;font-weight:800;font-size:10px}
+#side-collapse{border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.1em;font-weight:800;font-size:10px}
 #side-collapse:hover{border-color:#fff;background:rgba(255,255,255,0.10)}
 
 /* ---- DRAWER internals ---- */
 .dh h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
-.dh .st{border-radius:0;border:2px solid var(--color-ink);text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:10px}
+.dh .st{border-radius:var(--radius-sm);border:1px solid var(--color-border-strong);text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:10px}
 .dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
-.dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
+.dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .dlink .cp:hover{background:var(--color-gold)}
-.dact .reseal,.dact .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.dact .reseal,.dact .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
 .dact .nudge{background:var(--color-coral);color:#fff}
 .dact .reseal,.dact .dvoid{background:#fff;color:var(--color-ink)}
-.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 0 var(--color-ink)}
+.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-card)}
 .dact .reseal:active,.dact .dvoid:active,.dact .nudge:active{transform:translate(2px,2px);box-shadow:none}
 .dact .dvoid:hover{background:var(--color-red-tint);border-color:var(--color-ink);color:var(--color-red)}
 
 /* ---- W-8 chips ---- */
-.w8tag{border-radius:0;border:2px solid var(--color-ink);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;font-size:10px}
+.w8tag{border-radius:var(--radius-sm);border:1px solid var(--color-border-strong);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;font-size:10px}
 .w8tag.w8-expired{background:var(--color-red);color:#fff}
-.w8tag.w8-expiring{background:var(--color-gold);color:var(--color-ink);border:2px solid var(--color-ink)}
+.w8tag.w8-expiring{background:var(--color-gold);color:var(--color-ink);border:1px solid var(--color-border-strong)}
 
 /* ---- MESSAGES editor ---- */
 .md-hd h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.92}
-.langtabs{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);overflow:hidden;display:inline-flex}
+.langtabs{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);overflow:hidden;display:inline-flex}
 .langtab{border-radius:0;text-transform:uppercase;letter-spacing:0.05em;font-weight:800;color:var(--color-ink)}
 .langtab + .langtab{border-left:var(--bw) solid var(--color-ink)}
 .langtab.on{background:var(--color-atrium);color:#fff}
-.mdetail input,.mdetail textarea{border:var(--bw) solid var(--color-ink)!important;border-radius:0!important}
-.msgbtns .save{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:4px 4px 0 0 var(--color-ink);background:var(--color-coral);color:#fff;text-transform:uppercase;letter-spacing:0.06em;font-weight:800}
-.msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:5px 5px 0 0 var(--color-ink)}
-.msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:0;box-shadow:3px 3px 0 0 var(--color-ink);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
-.preview{border:var(--bw) solid var(--color-ink);border-radius:0}
+.mdetail input,.mdetail textarea{border:var(--bw) solid var(--color-ink)!important;border-radius:var(--radius-md)!important}
+.msgbtns .save{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:var(--color-coral);color:#fff;text-transform:uppercase;letter-spacing:0.06em;font-weight:800}
+.msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+.msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
+.preview{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md)}
 .ph-note{font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;color:var(--color-ink-muted);margin-left:6px}
 .mrcpt-line{font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--color-ink-sub)}
 .md-rcpts .mrcpt-line{font-size:13px}
@@ -2434,7 +2460,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
    destructive / failed states are red. Neutral in-progress stays navy/gold. */
 .cta,.cmd-btn,.dact .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
 /* disabled go-actions must not read as live green */
-.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:2px 2px 0 0 var(--color-ink)!important;cursor:not-allowed;transform:none!important}
+.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:none!important;cursor:not-allowed;transform:none!important}
 .cta:hover,.cmd-btn:hover,.dact .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
 .cmd-btn.open{background:var(--color-atrium)!important}          /* menu open = neutral, not "go" */
 .dact .dvoid{background:var(--color-red)!important;color:#fff!important}
@@ -3074,7 +3100,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var he=(r.he&&r.name)?r.he:'';
     var done=isTerminalStage(r.stage)?' done':'';
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
       +'</div>';
