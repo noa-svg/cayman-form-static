@@ -156,7 +156,19 @@ body {
   flex-shrink: 0;
   background: var(--color-bg-sidebar);
   border-right: none;
-  overflow: hidden;
+  /* Sticky + full-height + own scroll (2026-07-15, audit finding #1): .side had
+     no height/position of its own, so it just stretched to match .main's
+     content height (default flex-stretch) and scrolled away with the page on
+     any board list taller than the viewport - losing nav + the lane toggle at
+     exactly the moment an operator is scanning a long list. Pin it to the
+     viewport; .main is the one that scrolls. overflow-y:auto is a safety net
+     for the rare case the sidebar's OWN content (many nav items, tall stats)
+     ever exceeds viewport height. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .brand {
@@ -716,6 +728,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
   padding: var(--space-8) var(--grid-gutter);
   max-width: var(--grid-max);
   width: 100%;
+  margin: 0 auto;
   overflow: auto;
 }
 
@@ -2109,6 +2122,14 @@ body.side-coll .nav .badge { display: none; }
 body.side-coll .side-foot .auth-email,
 body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
+/* Collapsed quick-stats (audit finding #2): the collapsed rail is too narrow
+   for "IN FLIGHT" / "NEED A LOOK" / "SIGNING" to wrap without breaking mid-
+   word into unreadable fragments. Same icon/number-only treatment the nav
+   items already get above - hide the label, center the number, add a title
+   tooltip so the meaning is still one hover away. */
+body.side-coll .side-stats { padding: 0; }
+body.side-coll .ss-row { justify-content: center; padding: 6px 0; }
+body.side-coll .ss-lbl { display: none; }
 
 /* ============================================================
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
@@ -2506,9 +2527,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
          loaded - no new endpoint, just surfacing counts that already exist
          client-side but were previously invisible until you opened Board. -->
     <div class="side-stats" id="sideStats" hidden>
-      <div class="ss-row"><span class="ss-n" id="ss-active">0</span><span class="ss-lbl">In flight</span></div>
-      <div class="ss-row ss-attn"><span class="ss-n" id="ss-attn">0</span><span class="ss-lbl">Need a look</span></div>
-      <div class="ss-row"><span class="ss-n" id="ss-signing">0</span><span class="ss-lbl">Signing</span></div>
+      <div class="ss-row" title="In flight"><span class="ss-n" id="ss-active">0</span><span class="ss-lbl">In flight</span></div>
+      <div class="ss-row ss-attn" title="Need a look"><span class="ss-n" id="ss-attn">0</span><span class="ss-lbl">Need a look</span></div>
+      <div class="ss-row" title="Signing"><span class="ss-n" id="ss-signing">0</span><span class="ss-lbl">Signing</span></div>
     </div>
     <div class="side-foot">
       <div class="foot-id">
@@ -3156,11 +3177,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       }
     }).catch(function(){ btn.disabled=false; });
   }
-  function renderRows(rows){
+  function renderRows(rows,query){
     var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage);}));
     var completed=sortRows(rows.filter(function(r){return isCompletedStage(r.stage);}));
     var canceled=sortRows(rows.filter(function(r){return isCanceledStage(r.stage);}));
-    var html=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">Nothing in flight.</div>';
+    // Distinct empty-state copy for "no search match" vs "genuinely nothing in
+    // flight" (audit finding #8) - both read as "Nothing in flight" before,
+    // which looked like a broken/empty board instead of an unmatched search.
+    var emptyMsg=query
+      ?'No processes match "'+esc2(query)+'". <a href="#" id="emptyClearSearch">Clear search</a>'
+      :'Nothing in flight.';
+    var html=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">'+emptyMsg+'</div>';
     if(showDone&&completed.length)html+=completed.map(rowHtml).join("");
     if(showCanceled&&canceled.length)html+=canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
@@ -3185,6 +3212,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       btn.onclick=function(e){ e.stopPropagation(); copyRowLink(btn); };
       btn.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); copyRowLink(btn); } };
     });
+    var clearLink=document.getElementById("emptyClearSearch");
+    if(clearLink)clearLink.onclick=function(e){e.preventDefault();var bs=document.getElementById("boardSearch");if(bs){bs.value="";bs.focus();}applySearch();};
   }
   // One haystack per row: every field the row shows or carries, so search matches
   // name, Hebrew name, stage (raw + spaced), type (word + raw), lane, age, next-action.
@@ -3196,7 +3225,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function applySearch(){
     var q=(document.getElementById("boardSearch").value||"").trim().toLowerCase();
     if(!q){renderRows(allRows);return;}
-    renderRows(allRows.filter(function(r){return rowHay(r).indexOf(q)>=0;}));
+    renderRows(allRows.filter(function(r){return rowHay(r).indexOf(q)>=0;}),q);
   }
   // Board nav badge: count of rows actually needing operator attention right now,
   // ALWAYS against the true full board (never the search-filtered subset renderRows
@@ -4113,6 +4142,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.execCommand('insertText',false,'\n');}});
     el.addEventListener('paste',function(e){e.preventDefault();var t=((e.clipboardData||window.clipboardData).getData('text/plain'))||'';document.execCommand('insertText',false,t);});
     el.addEventListener('input',updatePreview);
+    // Only a REAL user-placed caret (an actual click or key nav inside the body)
+    // should steer where a field chip lands. Chrome's default first-focus caret
+    // on a never-clicked contenteditable is position 0, which insertToken used
+    // to trust unconditionally - clicking a field chip on a freshly opened
+    // template (no prior click in the body) silently inserted at the very
+    // start, jamming into whatever token already opens the template (e.g. the
+    // Greeting chip), producing "David CohenDavid Cohen" with no space (audit
+    // finding #6, 2026-07-15).
+    el.addEventListener('mouseup',function(){_realCaretInBody=true;});
+    el.addEventListener('keyup',function(){_realCaretInBody=true;});
   }
   // F7: write live field values back into the model before any re-render.
   function captureEditor(){
@@ -4131,6 +4170,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
   // Track the last-focused field so token chips insert at the right caret.
   var _lastFocus=null;
+  var _realCaretInBody=false;
   function insertToken(tok){
     var f=_lastFocus||document.getElementById('m-body');
     if(!f)return;
@@ -4141,8 +4181,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
     f.focus();
     var sel=window.getSelection(),range;
-    if(sel.rangeCount&&f.contains(sel.anchorNode)){range=sel.getRangeAt(0);}
-    else{range=document.createRange();range.selectNodeContents(f);range.collapse(false);}
+    // Only trust the live selection when the user actually clicked/keyed inside
+    // the body THIS session (_realCaretInBody). Chrome plants a default caret at
+    // position 0 on a contenteditable's first-ever focus, which used to pass the
+    // f.contains(...) check and land the chip at the very start every time - see
+    // the wireChipEditor comment above for the exact failure this fixes.
+    if(_realCaretInBody&&sel.rangeCount&&f.contains(sel.anchorNode)){range=sel.getRangeAt(0);}
+    else{
+      range=document.createRange();range.selectNodeContents(f);range.collapse(false);
+      // Guard against jamming into whatever the body already ends with (e.g.
+      // running straight into the closing line with no space).
+      if(f.textContent&&!/\s$/.test(f.textContent)){range.insertNode(document.createTextNode(' '));range.collapse(false);}
+    }
     range.deleteContents();
     var chip=makeChipEl(tok);
     range.insertNode(chip);
@@ -4243,6 +4293,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(edIsChip(be)){edSet(be,L.body);wireChipEditor(be);}
     renderPreviewBody();
     _lastFocus=be;
+    _realCaretInBody=false;
     [se,be].forEach(function(f){if(f)f.addEventListener('focus',function(){_lastFocus=f;});});
     Array.prototype.forEach.call(det.querySelectorAll('.ph[data-tok]'),function(c){c.onclick=function(){insertToken(c.getAttribute('data-tok'));};});
     refreshDirtyGate();
