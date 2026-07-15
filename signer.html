@@ -317,6 +317,13 @@
   <script>
   (function () {
     'use strict';
+    // Build tag for the stale-tab guard (2026-07-15, Bremington two-week-old
+    // tab; ported here from israel.html/flow.html). Bump this string on EVERY
+    // deploy of this file; the guard below re-fetches this page and hard-reloads
+    // a tab whose running tag no longer matches the served one. No server-side
+    // version signal exists today, so the page itself is the version source of
+    // truth.
+    window.__BUILD_TAG = 'signer-2026-07-15-1';
     var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
     var params = new URLSearchParams(location.search);
     var TOKEN = params.get('t') || params.get('sign') || '';
@@ -538,6 +545,12 @@
         // renders in the signer's own language. Cayman/unknown stays English.
         setLaneFromCtx_(ctx);
         if (!ctx.ok) {
+          // Failure visibility (2026-07-15): log the raw envelope on every non-ok
+          // signerform answer so a support session can read WHY from the console
+          // instead of guessing from the terminal screen the signer describes.
+          if (window.console) {
+            try { console.log('signer: signerform non-ok envelope: ' + String(x.responseText || '').slice(0, 2000)); } catch (eLog) {}
+          }
           if (ctx.reason === 'not_current') { applyLang('he'); show('notyet'); return; }
           if (ctx.reason === 'already_signed') { applyLang('he'); show('signed'); return; }
           // Map known TERMINAL reasons to specific copy. F47. We set both the visible
@@ -571,12 +584,116 @@
         }
         renderSignerForm(ctx);
       };
-      x.ontimeout = function () { applyLang('he'); show('timeout'); };
-      x.onerror   = function () { applyLang('he'); show('timeout'); };
+      x.ontimeout = function () { if (window.console) console.log('signer: signerform timeout'); applyLang('he'); show('timeout'); };
+      x.onerror   = function () { if (window.console) console.log('signer: signerform network error'); applyLang('he'); show('timeout'); };
       x.send(null);
     }
     document.getElementById('retry-btn').onclick = loadSignerForm;
     loadSignerForm();
+
+    // ---- stale-tab guard (2026-07-15, Bremington incident on israel.html;
+    // same failure class here: emailed signer links get opened once and then
+    // parked in a tab for days). GitHub Pages serves this file with
+    // window.__BUILD_TAG baked in (top of this script); staleness is detected
+    // by re-fetching THIS page same-origin with the cache bypassed and
+    // comparing the served tag to the running one. Triggers: (a) tab becomes
+    // visible/focused after >12h hidden; (b) submit clicked with the page open
+    // >24h (checked BEFORE the POST). On mismatch: flush the pending autosave
+    // (1s budget), then hard-reload. What a signer.html reload loses: typed
+    // form fields rehydrate from the server autosave (save_signer_progress ->
+    // ctx.savedData), so at most the un-flushed tail is lost and the flush
+    // below closes that; the drawn/typed signature is memory-only and is
+    // re-prompted by the signature gate (they redraw); picked CP ID files and
+    // the lawyer stamp are memory-only base64, the REQUIRED ones (passport or
+    // ID front, lawyer stamp) are re-prompted by the existing submit gates,
+    // while the OPTIONAL CP slots (appendix / back side) must be re-picked by
+    // the signer and are the only silently droppable state, accepted for an
+    // ancient tab. FAIL OPEN on any fetch error/timeout: the guard must never
+    // strand a signer whose network is flaky.
+    var STALE_HIDDEN_MS_ = 12 * 3600 * 1000;
+    var STALE_OPEN_MS_ = 24 * 3600 * 1000;
+    var pageOpenedAt_ = Date.now();
+    var lastHiddenAt_ = 0;
+    var staleCheckBusy_ = false;
+    // Set by initPad once the autosave exists; the guard calls it to flush any
+    // pending debounced save before navigating. Null until the form renders.
+    var flushAutosaveForStale_ = null;
+    function fetchLiveBuildTag_(cb) {
+      // cb(liveTagOrNull); null = could not determine (fail open). 4s budget so
+      // the submit-path check never visibly stalls a real submit.
+      var done = false;
+      function settle(tag) { if (done) return; done = true; cb(tag); }
+      var timer = setTimeout(function () { settle(null); }, 4000);
+      try {
+        var x = new XMLHttpRequest();
+        x.open('GET', location.pathname + '?nocache=' + Date.now(), true);
+        x.timeout = 4000;
+        x.ontimeout = function () { clearTimeout(timer); settle(null); };
+        x.onerror = function () { clearTimeout(timer); settle(null); };
+        x.onreadystatechange = function () {
+          if (x.readyState !== 4) return;
+          clearTimeout(timer);
+          if (x.status !== 200) { settle(null); return; }
+          var m = String(x.responseText || '').match(/window\.__BUILD_TAG = '([^']+)'/);
+          settle(m ? m[1] : null);
+        };
+        x.send();
+      } catch (e) { clearTimeout(timer); settle(null); }
+    }
+    function staleReloadIfNewer_(onFresh) {
+      if (staleCheckBusy_) { if (onFresh) onFresh(); return; }
+      staleCheckBusy_ = true;
+      fetchLiveBuildTag_(function (liveTag) {
+        staleCheckBusy_ = false;
+        var mine = window.__BUILD_TAG || '';
+        if (liveTag && mine && liveTag !== mine) {
+          if (window.console) console.log('stale tab: running ' + mine + ', live is ' + liveTag + '; reloading');
+          // Flush the pending debounced autosave BEFORE navigating (1s budget,
+          // fail open) so the reload rehydrates the freshest saved fields.
+          var reloaded = false;
+          var go = function () { if (reloaded) return; reloaded = true; location.reload(); };
+          var cap = setTimeout(go, 1000);
+          try {
+            if (typeof flushAutosaveForStale_ === 'function') {
+              flushAutosaveForStale_(function () { clearTimeout(cap); go(); });
+            } else { clearTimeout(cap); go(); }
+          } catch (e) { clearTimeout(cap); go(); }
+          return;
+        }
+        if (onFresh) onFresh();
+      });
+    }
+    function noteHidden_() { if (!lastHiddenAt_) lastHiddenAt_ = Date.now(); }
+    function noteVisible_() {
+      if (!lastHiddenAt_) return;
+      var hiddenFor = Date.now() - lastHiddenAt_;
+      lastHiddenAt_ = 0;
+      if (hiddenFor > STALE_HIDDEN_MS_) staleReloadIfNewer_(null);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) noteHidden_(); else noteVisible_();
+    });
+    window.addEventListener('blur', noteHidden_);
+    window.addEventListener('focus', function () { if (!document.hidden) noteVisible_(); });
+
+    // ---- proof-of-progress success gate (2026-07-15, Bremington replay) ----
+    // Stages that can legitimately follow a successful record_signature.
+    var SUBMIT_OK_STAGES_ = { submitted: 1, signing: 1, all_signed: 1 };
+    // Evidence the server actually did WORK, verified against every genuine
+    // success shape caymanHandleRecordSignature_ can emit (mono CaymanGateway,
+    // read 2026-07-15): a next-signer link (nextUrl), a signer count
+    // (signerXofY / signersPlanned), a diverted-signer notice (lawyerEmailed /
+    // coHolderEmailed), or the deferred-seal note. The engine's bare replay
+    // collapse ({ok:true, stage:'signing', detail:{}} with no signerXofY) is
+    // deliberately NOT evidence: an ok answer that names no progress routes to
+    // the retry surface instead of painting the done screen.
+    function submitShowsProgress_(res) {
+      if (!res || res.ok !== true) return false;
+      if (SUBMIT_OK_STAGES_[String(res.stage || '')] !== 1) return false;
+      if (res.nextUrl) return true;
+      var d = res.detail || {};
+      return !!(d.signersPlanned || d.signerXofY || d.lawyerEmailed || d.coHolderEmailed || d.note);
+    }
 
     var CTX = null; // current signer context, kept in scope for re-translation on lang toggle (F5)
 
@@ -1374,13 +1491,19 @@
         });
         return data;
       }
-      function autosave() {
-        if (submitting) return;
+      // `onDone` (optional) fires exactly once when the save settles (success,
+      // failure, or skip), so the stale-guard flush can reload the moment the
+      // save has left. Failures stay silent to the signer (the values are still
+      // in the page and the final submit carries them) but now log to the
+      // console so a support session can see the autosave was not landing.
+      function autosave(onDone) {
+        var fin = function () { if (onDone) { var f = onDone; onDone = null; f(); } };
+        if (submitting) { fin(); return; }
         var data = collectFormData();
         var json = JSON.stringify(data);
-        if (json === lastSavedJson) return; // nothing changed since the last save
+        if (json === lastSavedJson) { fin(); return; } // nothing changed since the last save
         var anyValue = Object.keys(data).some(function (k) { return data[k] && data[k] !== 'false'; });
-        if (!anyValue) return;              // do not persist an all-empty form
+        if (!anyValue) { fin(); return; }              // do not persist an all-empty form
         var body = JSON.stringify({
           action: 'save_signer_progress',
           token: TOKEN,
@@ -1398,15 +1521,28 @@
           if (res && res.ok) {
             lastSavedJson = json;
             if (saveStatusEl) { saveStatusEl.textContent = tHe('Progress saved.'); saveStatusEl.hidden = false; }
+          } else if (window.console) {
+            try { console.log('signer: autosave non-ok (silent to signer): ' + String(x.responseText || '').slice(0, 500)); } catch (eLog) {}
           }
+          fin();
         };
-        x.ontimeout = function () {}; x.onerror = function () {};
+        x.ontimeout = function () { if (window.console) console.log('signer: autosave timeout (silent to signer)'); fin(); };
+        x.onerror = function () { if (window.console) console.log('signer: autosave network error (silent to signer)'); fin(); };
         x.send(body);
       }
       function scheduleAutosave() {
         if (autosaveTimer) clearTimeout(autosaveTimer);
         autosaveTimer = setTimeout(autosave, 800);
       }
+      // Stale-guard flush hook (2026-07-15): fire any pending debounced autosave
+      // NOW and report completion, so the stale reload navigates with the
+      // freshest server copy (the reload rehydrates fields from ctx.savedData).
+      // Fail open: every early-return and error path inside autosave still
+      // calls back, and the guard caps the wait at 1s regardless.
+      flushAutosaveForStale_ = function (onDone) {
+        if (autosaveTimer) { clearTimeout(autosaveTimer); autosaveTimer = null; }
+        try { autosave(onDone); } catch (e) { if (onDone) onDone(); }
+      };
 
       // Validate a field on blur: mark immediately if invalid, clear when corrected.
       var formEl = document.getElementById('signer-form');
@@ -1459,6 +1595,23 @@
       }
 
       doneBtn.addEventListener('click', function () {
+        // Double-submit belt (2026-07-15): the button disables during the POST
+        // below, but this flag also refuses re-entry in any gap (including
+        // while the stale-tab check below is in flight) so a slow seal can
+        // never be double-fired from this window. The server is idempotent
+        // either way; this keeps the signer from ever seeing two spinners.
+        if (submitting) return;
+        // Stale-tab gate (b): a tab open >24h re-verifies the build tag BEFORE
+        // validating/posting, so an ancient client never submits with outdated
+        // JS. Stale: flush autosave + reload (the signer resumes on current
+        // code, re-signs, and submits fresh). Fresh or undetermined: proceed.
+        if (Date.now() - pageOpenedAt_ > STALE_OPEN_MS_) {
+          staleReloadIfNewer_(doSignSubmit_);
+          return;
+        }
+        doSignSubmit_();
+      });
+      function doSignSubmit_() {
         // Server-declared field with no client renderer (F10 path). The unknown
         // field renders as a .field--error note but had no input bound, so a
         // signer was previously able to sign through and the server would catch
@@ -1597,6 +1750,12 @@
         p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
         p.timeout = 70000; // 70s. A cold GAS start plus the signature PNG upload and seal can exceed 40s; a too-short timeout surfaced an in-progress submit as a false "could not record" failure. Retry stays safe (the gateway dedupes by processId).
         function onPostFail() {
+          // Failure visibility (2026-07-15): log the envelope (or the network
+          // status) on every failure path; the signer sees the existing retry
+          // surface, the console carries the WHY. No silent catch.
+          if (window.console) {
+            try { console.error('signer: record_signature failed; status=' + p.status + ' body=' + String(p.responseText || '').slice(0, 2000)); } catch (eLog) {}
+          }
           errEl.textContent = tHe('We could not record your signature. Please try again.');
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
@@ -1606,7 +1765,14 @@
           if (p.readyState !== 4) return;
           var res = {};
           try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
-          if (res && res.ok) {
+          // Proof-of-progress gate (2026-07-15, Bremington parity): ok:true
+          // alone, including an ok-less JSON body or the engine's evidence-free
+          // replay collapse, never paints the done screen. Require an
+          // allowlisted stage AND concrete progress evidence
+          // (submitShowsProgress_ above). A gated-out response routes to the
+          // existing retry surface with the full envelope on the console (a
+          // retry is safe: the engine is locked + idempotent).
+          if (submitShowsProgress_(res)) {
             // EasySend shows the SAME post-sign splash after every signer (the
             // email/signed-copy promise lives on the welcome splash, not here), so
             // the message does not branch on stage.
@@ -1619,7 +1785,7 @@
         p.ontimeout = onPostFail;
         p.onerror   = onPostFail;
         p.send(body);
-      });
+      }
 
       // Clear field-error state as soon as the value becomes valid (reward early).
       // Reuses fieldError/markField so the aria-invalid + per-field message clear
