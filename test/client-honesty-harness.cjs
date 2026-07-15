@@ -223,6 +223,21 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
   const idx = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   ok('G5 index.html partial msg present', idx.indexOf("dnMsg.textContent = 'Your part is complete.'") !== -1);
   ok('G5 index.html sealed gate is === true', idx.indexOf('cfg.sealed === true') !== -1);
+
+  // G6: index.html BELT path (main-IIFE window.CAYMAN_CFG check, the path that
+  // does not go through the config fetch) must also apply the two-state pick.
+  // Boot the REAL index.html via the rig with an injected completed config.
+  try {
+    const { loadForm } = require('./rig.cjs');
+    const sealedIdx = await loadForm({ cfg: { completed: true, sealed: true } });
+    ok('G6 index belt sealed msg', sealedIdx.document.querySelector('#lvp-done .lvp-done__msg').textContent === 'Your request is complete.');
+    ok('G6 index belt sealed mode', sealedIdx.document.documentElement.classList.contains('lvp-done-mode'));
+    const partialIdx = await loadForm({ cfg: { completed: true } });   // sealed missing
+    ok('G6 index belt partial msg', partialIdx.document.querySelector('#lvp-done .lvp-done__msg').textContent === 'Your part is complete.');
+    ok('G6 index belt partial sub', partialIdx.document.querySelector('#lvp-done .lvp-done__sub').textContent === 'Once everything is completed and signed, you will receive signed copies by email.');
+  } catch (e) {
+    fail++; console.log('FAIL G6 rig boot: ' + e.message);
+  }
 })().then(() => {
   // Give the async IIFEs above a beat to settle before the verdict.
   setTimeout(() => {

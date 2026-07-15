@@ -1514,7 +1514,14 @@
     'use strict';
     var CFG = window.CAYMAN_CFG || {};
     // Reopened finished link: show the completed terminal screen, never the form.
-    if (CFG && CFG.completed) document.documentElement.classList.add('lvp-done-mode');
+    // Routed through markDoneIfCompleted (window.__lvpMarkDone, defined in the
+    // bootstrap script above) so this belt also applies the two-state
+    // sealed/partial copy pick (2026-07-15) instead of leaving the markup's
+    // default pair; class-only fallback if the hook is ever absent.
+    if (CFG && CFG.completed) {
+      if (typeof window.__lvpMarkDone === 'function') window.__lvpMarkDone(CFG);
+      else document.documentElement.classList.add('lvp-done-mode');
+    }
     if (!CFG.placesApiKey) CFG.placesApiKey = 'AIzaSyAiyz3JrVepIsedfYZdv6rk21o4UQYbpNw';
     var form = document.getElementById('lvp-form');
     var statusEl = form.querySelector('[data-status]');
