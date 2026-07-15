@@ -2335,10 +2335,24 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .nav.on .badge{background:var(--color-coral);color:#fff}
 .side-foot .foot-gear{border-radius:0}
 .side-foot{border-top:var(--bw) solid rgba(255,255,255,0.22)}
+/* ---- sidebar quick stats (fills the dead gap between nav and footer) ---- */
+.side-stats{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-sidebar-line);display:flex;flex-direction:column;gap:2px}
+.ss-row{display:flex;align-items:baseline;gap:9px;padding:5px 12px;color:var(--color-sidebar-ink-sub)}
+.ss-n{font-family:var(--font-display);font-weight:900;font-size:19px;color:#fff;min-width:20px}
+.ss-lbl{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:11px}
+.ss-row.ss-attn .ss-n{color:var(--color-coral)}
 
 /* ---- VIEW HEADERS (Fraunces, editorial-black, uppercase) ---- */
 .top h1{font-family:var(--font-display);font-weight:900;font-size:46px;line-height:0.86;text-transform:uppercase;letter-spacing:-0.03em}
 .top .sub{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:12px;color:var(--color-ink-sub)}
+/* Lane chip after every view H1 (2026-07-15, Noa: "not clear whether you're on
+   israel or cayman"). body[data-lane] is already set on every fund switch
+   (syncFund); this rides that attribute with zero JS changes, so it applies
+   to every .top h1 across Board/Messages/W-8/Settings automatically and never
+   drifts out of sync with the actual selected lane. */
+.top h1::after{display:inline-block;vertical-align:middle;margin-left:16px;font-family:var(--font-body);font-size:13px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:5px 12px;border-radius:var(--radius-pill);transform:translateY(-6px)}
+body[data-lane="israel"] .top h1::after{content:'Israel';background:var(--color-gold-tint);color:var(--color-gold);border:1px solid var(--color-gold)}
+body[data-lane="cayman"] .top h1::after{content:'Cayman';background:var(--color-atrium-tint);color:var(--color-atrium);border:1px solid var(--color-atrium)}
 
 /* ---- NEW button (primary action = coral block) ---- */
 .cmd-btn{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
@@ -2478,15 +2492,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   <aside class="side">
     <div class="brand">
       <span class="brand-chip"><img src="/brand-logo.png" alt="Legacy Value Partners" style="height:26px;width:auto;display:block"></span>
-      <div class="sub">Operator console</div>
+      <div class="sub">Console</div>
       <div class="fundsw" id="fundsw"><button data-v="cayman">Cayman</button><button class="on" data-v="israel">Israel</button></div>
       <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
-      <button class="nav on" data-view="board" aria-current="page"><span class="nav-ic" aria-hidden="true">🗂️</span><span class="nav-lbl">Board</span></button>
+      <button class="nav on" data-view="board" aria-current="page"><span class="nav-ic" aria-hidden="true">🗂️</span><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
       <button class="nav" data-view="messages"><span class="nav-ic" aria-hidden="true">✉️</span><span class="nav-lbl">Messages</span></button>
       <button class="nav" data-view="w8"><span class="nav-ic" aria-hidden="true">🕒</span><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
     </nav>
+    <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
+         of data we need to see"). Filled from the SAME allRows the board already
+         loaded - no new endpoint, just surfacing counts that already exist
+         client-side but were previously invisible until you opened Board. -->
+    <div class="side-stats" id="sideStats" hidden>
+      <div class="ss-row"><span class="ss-n" id="ss-active">0</span><span class="ss-lbl">In flight</span></div>
+      <div class="ss-row ss-attn"><span class="ss-n" id="ss-attn">0</span><span class="ss-lbl">Need a look</span></div>
+      <div class="ss-row"><span class="ss-n" id="ss-signing">0</span><span class="ss-lbl">Signing</span></div>
+    </div>
     <div class="side-foot">
       <div class="foot-id">
         <div class="auth-email" id="auth-status">not signed in</div>
@@ -2812,11 +2835,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       P('p9','Rivka Sela','רבקה סלע','voided',15,'','cayman_subscription','cayman','2026-06-19T16:30')
     ];
     var israel=[
-      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Signer 1 of 2','israeli_increase','israel','2026-06-30T08:00'),
-      P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Assemble pack','israeli_increase','israel','2026-06-29T13:25'),
-      P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israel','2026-06-30T07:45'),
-      P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'Awaiting figure from BDO','israeli_withdrawal','israel','2026-06-27T09:00'),
-      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israel','2026-06-24T15:40')
+      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Signer 1 of 2','israeli_increase','israeli','2026-06-30T08:00'),
+      P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Assemble pack','israeli_increase','israeli','2026-06-29T13:25'),
+      P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israeli','2026-06-30T07:45'),
+      P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'Awaiting figure from BDO','israeli_withdrawal','israeli','2026-06-27T09:00'),
+      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israeli','2026-06-24T15:40')
     ];
     var L=state.lane;
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
@@ -3175,8 +3198,34 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!q){renderRows(allRows);return;}
     renderRows(allRows.filter(function(r){return rowHay(r).indexOf(q)>=0;}));
   }
+  // Board nav badge: count of rows actually needing operator attention right now,
+  // ALWAYS against the true full board (never the search-filtered subset renderRows
+  // may receive) so it can't read wrong while a search is active. Same hidden-when-
+  // zero pattern as the existing W-8 badge (2026-07-15, Noa: sidebar "isn't baked" -
+  // the nav gave zero signal of what's waiting without opening the Board view first).
+  function setBoardBadge(rows){
+    var n=rows.filter(function(r){return r.stage==='needs_attention';}).length;
+    var b=document.getElementById("nav-board-badge");
+    if(!b)return;
+    if(n>0){b.textContent=n;b.hidden=false;}
+    else{b.textContent="";b.hidden=true;}
+  }
+  function setSideStats(rows){
+    var el=document.getElementById("sideStats");
+    if(!el)return;
+    if(!rows.length){el.hidden=true;return;}
+    var active=rows.filter(function(r){return !isTerminalStage(r.stage);}).length;
+    var attn=rows.filter(function(r){return r.stage==='needs_attention';}).length;
+    var signing=rows.filter(function(r){return r.stage==='signing';}).length;
+    document.getElementById("ss-active").textContent=active;
+    document.getElementById("ss-attn").textContent=attn;
+    document.getElementById("ss-signing").textContent=signing;
+    el.hidden=false;
+  }
   function render(rows){
     allRows=rows;
+    setBoardBadge(allRows);
+    setSideStats(allRows);
     applySearch();
   }
   (function(){
@@ -4223,7 +4272,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   </div>
   <div class="lc">
     <img class="llogo" src="/apple-touch-icon.png" alt="Legacy Value Partners">
-    <div class="lmark">Operator</div>
+    <div class="lmark">Console</div>
     <div class="lsub">Legacy Value Partners</div>
     <button class="google-signin-btn" onclick="startGoogleSignIn()">
       <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
