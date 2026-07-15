@@ -887,6 +887,64 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .rlane.rlane-cayman { background: var(--color-gold-tint); color: var(--color-gold); border: 1px solid var(--color-gold); }
 .rlane.rlane-israeli { background: var(--color-blue-tint, #E4EEF7); color: var(--color-navy, #0D3F6A); border: 1px solid var(--color-navy, #0D3F6A); }
 
+/* Amount column (2026-07-15 console wiring item 4): the board rows now carry
+   investmentAmount/investmentCurrency from the server. Quiet, tabular, blank
+   pre-submit. Hidden on narrow screens (the rail wins the space fight). */
+.ramt {
+  flex: 0 0 auto;
+  width: 104px;
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) { .ramt { display: none; } }
+
+/* Needs-a-look strip (2026-07-15 console wiring item 3): the ?api=attention
+   feed rendered at the top of the board. One quiet amber band per stuck row;
+   click opens the drawer. */
+.attn-strip { margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.attn-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-amber, #C99A2E);
+  border-radius: var(--radius-md);
+  background: var(--color-gold-tint, #FBF3E2);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  transition: background var(--dur-base);
+}
+.attn-row:hover { filter: brightness(0.98); }
+.attn-nm { font-weight: var(--weight-semi); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attn-why { color: var(--color-ink-sub); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attn-days { margin-left: auto; flex: 0 0 auto; color: var(--color-ink-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+
+/* Sidebar in-flight money total (item 4): one row per currency. Hidden when
+   the sidebar is collapsed to its icon rail (no room for a sum). */
+.ss-row.ss-total .ss-n { font-size: 13px; letter-spacing: 0.01em; }
+body.side-coll .ss-row.ss-total { display: none; }
+
+/* Drawer: current-signer block (item 2) + per-signer timestamps (item 1). */
+.cursig {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  font-family: var(--font-body); font-size: var(--text-sm);
+}
+.cursig .cs-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cursig .cs-nm { font-weight: var(--weight-semi); color: var(--color-ink); }
+.cursig .cs-xy { color: var(--color-ink-muted); font-size: var(--text-xs); }
+.cursig .cs-em { color: var(--color-ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pts { font-size: 11px; color: var(--color-ink-muted); line-height: 1.3; }
+.dtl-line { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-body); font-size: var(--text-xs); color: var(--color-ink-muted); padding: 2px 0; }
+.dtl-line .dtl-st { color: var(--color-ink-sub); }
+
 /* THE STAGE RAIL (dominant per-row element) */
 .rstage {
   flex: 1 1 auto;
@@ -1942,7 +2000,7 @@ input:focus {
    but-quiet, a soft filled tint that fills solid on hover; placed first. No confirm
    strip (it only re-sends the already-approved reminder). A short cooldown after a
    send keeps an accidental double-tap from double-mailing the signer. */
-.dact .nudge {
+.dact .nudge, .cursig .nudge {
   font-family: var(--font-body);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -1954,8 +2012,8 @@ input:focus {
   cursor: pointer;
   transition: background var(--dur-fast), color var(--dur-fast), opacity var(--dur-fast);
 }
-.dact .nudge:hover { background: var(--color-atrium); color: #fff; }
-.dact .nudge:disabled { opacity: 0.5; cursor: default; background: var(--color-atrium-tint); color: var(--color-atrium); }
+.dact .nudge:hover, .cursig .nudge:hover { background: var(--color-atrium); color: #fff; }
+.dact .nudge:disabled, .cursig .nudge:disabled { opacity: 0.5; cursor: default; background: var(--color-atrium-tint); color: var(--color-atrium); }
 .dact-status.ok { color: var(--color-green); }
 
 /* Inline confirm strip (replaces native confirm/alert for void + reseal) */
@@ -2496,11 +2554,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
 .dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .dlink .cp:hover{background:var(--color-gold)}
-.dact .reseal,.dact .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.dact .nudge{background:var(--color-coral);color:#fff}
+.dact .reseal,.dact .nudge,.cursig .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.dact .nudge,.cursig .nudge{background:var(--color-coral);color:#fff}
 .dact .reseal,.dact .dvoid{background:#fff;color:var(--color-ink)}
-.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-card)}
-.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active{transform:translate(2px,2px);box-shadow:none}
+.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover,.cursig .nudge:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-card)}
+.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active,.cursig .nudge:active{transform:translate(2px,2px);box-shadow:none}
 .dact .dvoid:hover{background:var(--color-red-tint);border-color:var(--color-ink);color:var(--color-red)}
 
 /* ---- W-8 chips ---- */
@@ -2526,10 +2584,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 /* ---- RED = stop/fail, GREEN = success/go (Noa 2026-07-07) ----
    Go / confirm / proceed actions and success states are green; stop /
    destructive / failed states are red. Neutral in-progress stays navy/gold. */
-.cta,.cmd-btn,.dact .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
+.cta,.cmd-btn,.dact .nudge,.cursig .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
 /* disabled go-actions must not read as live green */
-.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:none!important;cursor:not-allowed;transform:none!important}
-.cta:hover,.cmd-btn:hover,.dact .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
+.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.cursig .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:none!important;cursor:not-allowed;transform:none!important}
+.cta:hover,.cmd-btn:hover,.dact .nudge:hover,.cursig .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
 .cmd-btn.open{background:var(--color-atrium)!important}          /* menu open = neutral, not "go" */
 .dact .dvoid{background:var(--color-red)!important;color:#fff!important}
 .dact .dvoid:hover{background:var(--color-red)!important;color:#fff!important;border-color:var(--color-ink)!important}
@@ -2563,6 +2621,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="ss-row" title="In flight"><span class="ss-n" id="ss-active">0</span><span class="ss-lbl">In flight</span></div>
       <div class="ss-row ss-attn" title="Need a look"><span class="ss-n" id="ss-attn">0</span><span class="ss-lbl">Need a look</span></div>
       <div class="ss-row" title="Signing"><span class="ss-n" id="ss-signing">0</span><span class="ss-lbl">Signing</span></div>
+      <div id="ssTotals"></div>
     </div>
     <div class="side-foot">
       <div class="foot-id">
@@ -2617,6 +2676,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="listhead">
           <input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off">
         </div>
+        <div class="attn-strip" id="attnStrip" hidden></div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
@@ -2898,7 +2958,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israeli','2026-06-24T15:40')
     ];
     var L=state.lane;
+    // Demo amounts (wiring item 4): a representative spread, some rows pre-submit (no amount).
+    var DEMO_AMTS={p1:[250000,'USD'],p2:[1000000,'USD'],p6:[500000,'USD'],p3:[150000,'USD'],
+                   i1:[350000,'ILS'],i4:[1200000,'ILS'],i5:[400000,'ILS'],i2:[250000,'ILS']};
+    [].concat(cayman,israel).forEach(function(r){
+      var a=DEMO_AMTS[r.processId];
+      r.investmentAmount=a?a[0]:null; r.investmentCurrency=a?a[1]:'';
+    });
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
+    if(qs.indexOf('?api=attention')===0) return {ok:true,items:(L==='israel'
+      ?[{processId:'i5',displayName:'Yossi Barak',stage:'needs_attention',daysStuck:5,reason:'Process flagged an error',failReason:'fatca_status_out_of_scope'}]
+      :[{processId:'p4',displayName:'Helena Brandt',stage:'needs_attention',daysStuck:4,reason:'Process flagged an error',failReason:'passive_entity_manual_route'},
+         {processId:'p5',displayName:'Yael Adler',stage:'link_sent',daysStuck:8,reason:'Invite sent but not opened',failReason:''}])};
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
       {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
       {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
@@ -2907,9 +2978,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       {name:'Aurelie Marchand',variant:'W-9',status:'expiring',expiry:'2026-09-04'}
     ]};
     if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
-      signers:[{name:'Daniel Rosen',email:'daniel@example.com',role:'Subscriber',state:'done'},{name:'Sarah Rosen',email:'sarah@example.com',role:'Controlling person',state:'current'}],
+      signers:[
+        {name:'Daniel Rosen',email:'daniel@example.com',role:'subscriber',roleLabel:'Subscriber',state:'done',sentAt:'2026-06-25T09:00:00Z',signedAt:'2026-06-26T14:20:00Z'},
+        {name:'Sarah Rosen',email:'sarah@example.com',role:'cp1',roleLabel:'Controlling person',state:'current',sentAt:'2026-06-26T14:21:00Z',signedAt:null}],
+      signersDone:1,signersPlanned:2,
+      signing:{status:'signing',currentIndex:2,total:2,createdAt:'2026-06-25T09:00:00Z',updatedAt:'2026-06-28T10:00:00Z'},
+      currentSigner:{role:'cp1',name:'Sarah Rosen',email:'sarah@example.com',signerIndex:2,signerCount:2,link:'https://sign.legacyvpartners.com/signer.html?t=demo-current'},
+      events:[
+        {ts:'2026-06-25T09:00:00Z',stage:'link_sent',actor:'operator'},
+        {ts:'2026-06-25T11:30:00Z',stage:'in_progress',actor:'lp'},
+        {ts:'2026-06-26T14:20:00Z',stage:'submitted',actor:'lp'},
+        {ts:'2026-06-26T14:21:00Z',stage:'signing',actor:'engine'}],
+      createdAt:'2026-06-25T09:00:00Z',updatedAt:'2026-06-28T10:00:00Z',
+      people:[{role:'subscriber',roleLabel:'Investor',name:'Daniel Rosen',email:'daniel@example.com'}],
       links:[{label:'Signer link',url:'https://sign.legacyvpartners.com/?t=demo'}],
-      fields:{Process:'Cayman subscription',Lane:'Cayman',Created:'2026-06-25'}};
+      fields:{Process:'Cayman subscription',Lane:'Cayman',investmentAmount:250000,investmentCurrency:'USD'}};
     if(qs.indexOf('?api=lpHistory')===0) return {ok:true,processes:[]};
     if(qs.indexOf('?admin=getConsoleSettings')===0) return {ok:true,allowedEmails:['noa@legacyvpartners.com','omri@legacyvpartners.com']};
     if(qs.indexOf('?api=messages')===0) return {messages:demoMessages_(L)};
@@ -2950,6 +3033,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
   function clearAuth(reason){
     ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
+    // Stop any pending silent refresh: a signed-out console must never re-mint.
+    try{if(_refreshTimer){clearTimeout(_refreshTimer);_refreshTimer=null;}}catch(e){}
     // F13: on prod, keep failure reasons generic so a probe cannot confirm
     // valid operator emails. Detailed reasons only on non-prod hosts.
     var statusEl=document.getElementById('auth-status');
@@ -2988,6 +3073,75 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
   }
+  // ---- Silent session refresh (2026-07-15 wiring item 5) ----
+  // Google id_tokens live ~1h; the console used to hard-bounce to the login
+  // screen mid-shift. Shortly before expiry, re-mint the token in a hidden
+  // iframe with prompt=none (no UI; Google reuses the live Google session).
+  // The redirect target is this same origin, so the iframe's hash is readable.
+  // Any failure (revoked session, cookie block) is silent and leaves the old
+  // behavior intact: full sign-in at real expiry.
+  var _refreshTimer=null,_refreshIframe=null;
+  function tokenPayload(tok){
+    try{return JSON.parse(atob(String(tok).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(e){return null;}
+  }
+  // Pure: ms until the silent refresh should fire for a token expiring at expMs.
+  // 5 minutes early; clamped to [0, 12h] (never in the past, no setTimeout overflow).
+  function refreshDelayMs(expMs,nowMs){
+    if(!expMs)return 0;
+    var d=expMs-nowMs-5*60000;
+    if(d<0)d=0;
+    var cap=12*3600000;
+    if(d>cap)d=cap;
+    return d;
+  }
+  function scheduleTokenRefresh(){
+    if(DEMO||!ID_TOKEN)return;
+    if(_refreshTimer)clearTimeout(_refreshTimer);
+    var pl=tokenPayload(ID_TOKEN);
+    var expMs=pl?Number(pl.exp||0)*1000:0;
+    if(!expMs)return;
+    _refreshTimer=setTimeout(silentTokenRefresh,refreshDelayMs(expMs,Date.now()));
+  }
+  function silentTokenRefresh(){
+    if(DEMO||!ID_TOKEN)return;
+    var pl=tokenPayload(ID_TOKEN)||{};
+    var nonce=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    var p=new URLSearchParams({
+      client_id:GSI_CLIENT_ID,
+      redirect_uri:'https://sign.legacyvpartners.com/console/',
+      response_type:'id_token',
+      scope:'openid email profile',
+      nonce:nonce,
+      prompt:'none'
+    });
+    if(pl.email)p.set('login_hint',pl.email);
+    if(_refreshIframe){try{_refreshIframe.remove();}catch(e){}}
+    var f=document.createElement('iframe');
+    f.style.display='none';
+    f.setAttribute('aria-hidden','true');
+    _refreshIframe=f;
+    f.onload=function(){
+      var got=false;
+      try{
+        var hash=(f.contentWindow&&f.contentWindow.location.hash)||'';
+        if(hash.indexOf('id_token=')>=0){
+          var hp=new URLSearchParams(hash.replace(/^#/,''));
+          var t=hp.get('id_token');
+          if(t){
+            ID_TOKEN=t;localStorage.setItem(TOKEN_KEY,t);got=true;
+            var np=tokenPayload(t);var as=document.getElementById('auth-status');
+            if(as&&np&&np.email)as.textContent=np.email;
+          }
+        }
+      }catch(e){/* cross-origin read = Google refused silently; expire naturally */}
+      try{f.remove();}catch(e){}
+      _refreshIframe=null;
+      if(got)scheduleTokenRefresh();
+      // On failure: no retry loop. The next full sign-in happens at real expiry.
+    };
+    f.src='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
+    document.body.appendChild(f);
+  }
   function initAuth(){
     if(DEMO){
       var as=document.getElementById('auth-status');if(as)as.textContent='demo (local render)';
@@ -3013,6 +3167,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         document.getElementById('auth-status').textContent=(pl.email||'');
         document.getElementById('sign-out-btn').style.display='inline';
         document.getElementById('login-screen').classList.add('off');
+        scheduleTokenRefresh();
         load();
       }catch(e){document.getElementById('login-screen').classList.remove('off');}
     }else{
@@ -3160,10 +3315,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
   var allRows=[];
   var showDone=false, showCanceled=false; // quiet toggles: append completed / canceled rows below
-  // Sort by last-activity recency, newest first. lastActivityTs (ISO) if present,
+  var doneLoaded=false; // whether the current board fetch included terminal rows (includeDone=1)
+  // Sort: needs_attention rows pinned first (the server orders them first, but a
+  // pure recency sort used to bury them again - 2026-07-15 wiring item 3), then
+  // by last-activity recency, newest first. lastActivityTs (ISO) if present,
   // else ascending ageDays as a proxy (smaller age = more recent activity).
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
+      var an=(a.stage==='needs_attention')?1:0, bn=(b.stage==='needs_attention')?1:0;
+      if(an!==bn)return bn-an;
       if(a.lastActivityTs||b.lastActivityTs){
         var ta=a.lastActivityTs?Date.parse(a.lastActivityTs):0;
         var tb=b.lastActivityTs?Date.parse(b.lastActivityTs):0;
@@ -3172,14 +3332,38 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return (a.ageNum||0)-(b.ageNum||0);
     });
   }
+  // Amount display (wiring item 4): symbol for the currencies the fund actually
+  // sees, code suffix otherwise, '' when no amount was captured yet.
+  var CCY_SYMBOL={ILS:'₪',NIS:'₪',USD:'$',EUR:'€',GBP:'£'};
+  function fmtAmount(amount,ccy){
+    if(amount==null||amount===''||isNaN(Number(amount)))return '';
+    var n=Number(amount),s;
+    try{s=n.toLocaleString('en-US',{maximumFractionDigits:0});}catch(e){s=String(Math.round(n));}
+    var sym=CCY_SYMBOL[String(ccy||'').toUpperCase()];
+    return sym?(sym+s):(ccy?(s+' '+String(ccy).toUpperCase()):s);
+  }
+  // In-flight totals by currency for the sidebar. Terminal rows excluded; rows
+  // with no captured amount contribute nothing.
+  function inflightTotals(rows){
+    var t={};
+    (rows||[]).forEach(function(r){
+      if(isTerminalStage(r.stage))return;
+      if(r.amountNum==null||r.amountNum===''||isNaN(Number(r.amountNum)))return;
+      var c=String(r.ccy||'?').toUpperCase();
+      t[c]=(t[c]||0)+Number(r.amountNum);
+    });
+    return t;
+  }
   var RCOPY_ICON='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-8A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   var RCOPY_CHECK='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function rowHtml(r){
     var nm=r.name||r.he||'?';
     var he=(r.he&&r.name)?r.he:'';
     var done=isTerminalStage(r.stage)?' done':'';
+    var amt=fmtAmount(r.amountNum,r.ccy);
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+'</span>'
+      +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
       +'</div>';
@@ -3227,15 +3411,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(showCanceled&&canceled.length)html+=canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
     // Two quiet, independent toggles: completed (complete/sealed) and canceled
-    // (voided/expired) filter separately, mirroring each other.
+    // (voided/expired) filter separately, mirroring each other. The board now
+    // loads includeDone=0 by default (wiring item 5) - terminal rows are fetched
+    // lazily on first toggle - so until doneLoaded the toggle shows without a
+    // count (we cannot know it yet on the Monday-mirror path).
     var tg=document.getElementById("showDoneToggle");
     if(tg){
       if(completed.length){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=(showDone?'Hide completed - ':'Show completed - ')+completed.length;}
+      else if(!doneLoaded){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=showDone?'Loading completed...':'Show completed';}
       else{tg.hidden=true;}
     }
     var tc=document.getElementById("showCanceledToggle");
     if(tc){
       if(canceled.length){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=(showCanceled?'Hide canceled - ':'Show canceled - ')+canceled.length;}
+      else if(!doneLoaded){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=showCanceled?'Loading canceled...':'Show canceled';}
       else{tc.hidden=true;}
     }
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){
@@ -3284,7 +3473,44 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     document.getElementById("ss-active").textContent=active;
     document.getElementById("ss-attn").textContent=attn;
     document.getElementById("ss-signing").textContent=signing;
+    // In-flight money total, one row per currency (wiring item 4). Rows without
+    // a captured amount (pre-submit) contribute nothing; hidden when nothing sums.
+    var tot=document.getElementById("ssTotals");
+    if(tot){
+      var t=inflightTotals(rows);
+      tot.innerHTML=Object.keys(t).sort().map(function(c){
+        return '<div class="ss-row ss-total" title="In flight - '+esc2(c)+'"><span class="ss-n">'+esc2(fmtAmount(t[c],c))+'</span><span class="ss-lbl">In flight</span></div>';
+      }).join('');
+    }
     el.hidden=false;
+  }
+  // ---- Needs-a-look strip (wiring item 3): the ?api=attention feed ----------
+  function attnRowHtml(it){
+    var why=(it.reason||'')+(it.failReason?(' - '+it.failReason):'');
+    var days=(it.daysStuck!=null&&it.daysStuck!==999)?(it.daysStuck+'d'):'';
+    return '<div class="attn-row" data-pid="'+esc2(it.processId||'')+'" tabindex="0" role="button">'
+      +'<span class="attn-nm">'+esc2(it.displayName||'?')+'</span>'
+      +'<span class="attn-why">'+esc2(why)+'</span>'
+      +(days?'<span class="attn-days">'+esc2(days)+'</span>':'')
+      +'</div>';
+  }
+  var ATTN_SEQ=0;
+  function loadAttention(){
+    var el=document.getElementById('attnStrip');
+    if(!el)return;
+    var rid=++ATTN_SEQ;
+    apiFetch('?api=attention&lane='+state.lane).then(function(d){
+      if(rid!==ATTN_SEQ)return;
+      var items=(d&&d.ok&&d.items)||[];
+      if(!items.length){el.hidden=true;el.innerHTML='';return;}
+      el.innerHTML=items.slice(0,8).map(attnRowHtml).join('');
+      el.hidden=false;
+      Array.prototype.forEach.call(el.querySelectorAll('.attn-row'),function(rw){
+        var go=function(){var p=rw.getAttribute('data-pid');if(p)openDrawer(p);};
+        rw.onclick=go;
+        rw.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
+      });
+    }).catch(function(){if(rid===ATTN_SEQ){el.hidden=true;el.innerHTML='';}});
   }
   function render(rows){
     allRows=rows;
@@ -3296,9 +3522,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var si=document.getElementById("boardSearch");
     if(si)si.addEventListener("input",applySearch);
     var tg=document.getElementById("showDoneToggle");
-    if(tg)tg.addEventListener("click",function(){showDone=!showDone;applySearch();});
+    if(tg)tg.addEventListener("click",function(){showDone=!showDone;if(showDone&&!doneLoaded)load(true);applySearch();});
     var tc=document.getElementById("showCanceledToggle");
-    if(tc)tc.addEventListener("click",function(){showCanceled=!showCanceled;applySearch();});
+    if(tc)tc.addEventListener("click",function(){showCanceled=!showCanceled;if(showCanceled&&!doneLoaded)load(true);applySearch();});
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
@@ -3311,14 +3537,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function load(silent){
     var rid=++LOAD_SEQ;
     if(!silent) document.getElementById("list").innerHTML=boardSkeleton();
-    apiFetch('?api=list&lane='+state.lane+'&includeDone=1').then(function(d){
+    // includeDone=0 by default (wiring item 5): terminal rows are fetched only
+    // once a Show completed / Show canceled toggle asks for them.
+    var wantDone=(showDone||showCanceled);
+    apiFetch('?api=list&lane='+state.lane+'&includeDone='+(wantDone?'1':'0')).then(function(d){
       if(rid!==LOAD_SEQ)return;
+      doneLoaded=wantDone;
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(){if(rid!==LOAD_SEQ)return;if(!silent)document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
+    // Needs-a-look strip rides every board load (same 45s auto-refresh cadence).
+    loadAttention();
     // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
     // the operator must reload to see truth. Silent (no Loading flash, keeps the current
     // rows on a transient failure). LOAD_SEQ already guards against stale paints.
@@ -3447,6 +3679,41 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(st==='waiting')return '<span class="pstate wait"><span class="pdot"></span>waiting</span>';
     return '';
   }
+  // ISO timestamp -> compact operator-readable stamp ("2026-07-14 09:30"). ''
+  // for blank/invalid so a missing timestamp renders as nothing, never NaN.
+  function fmtTs(iso){
+    if(!iso)return '';
+    var t=Date.parse(iso);
+    if(isNaN(t))return '';
+    var d=new Date(t);
+    function p(n){return (n<10?'0':'')+n;}
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+  // Per-signer meta line under the email (wiring item 1): signed-at for done
+  // signers, invited-at for the rest. Pure so the harness can prove it.
+  function signerTsLine(s){
+    if(!s)return '';
+    if(s.state==='done'&&s.signedAt)return 'Signed '+fmtTs(s.signedAt);
+    if(s.sentAt)return 'Invited '+fmtTs(s.sentAt);
+    return '';
+  }
+  // Current-signer block body (wiring item 2). Pure HTML builder: name, email,
+  // X of Y, copyable live signing link. The Remind button reuses the existing
+  // ?admin=nudge action wiring.
+  function currentSignerHtml(cs){
+    if(!cs)return '';
+    var xy=(cs.signerIndex!=null&&cs.signerCount!=null)?(cs.signerIndex+' of '+cs.signerCount):'';
+    var h='<div class="cursig">'
+      +'<div class="cs-line"><span class="cs-nm">'+esc2(cs.name||cs.role||'?')+'</span>'
+      +(xy?'<span class="cs-xy">'+esc2(xy)+'</span>':'')+'</div>'
+      +(cs.email?'<div class="cs-line"><span class="cs-em">'+esc2(cs.email)+'</span></div>':'');
+    if(cs.link){
+      h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">Signing link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
+    }
+    h+='<div class="cs-line"><button class="nudge" data-act="nudge">Remind signer</button></div>';
+    h+='</div>';
+    return h;
+  }
   function renderDrawer(d){
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
@@ -3475,7 +3742,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // 2026-07-06 (Noa) as an ON-DEMAND control, distinct from the scheduled
     // caymanReminderScan; the 2026-06-11 removal was for the manual/auto duplication,
     // which the post-send cooldown below addresses.
-    if(awaitingSigner&&!isTerminal){
+    // When the drawer shows the current-signer block, that block owns the
+    // Remind button; keep the action row's copy only when there is no block.
+    if(awaitingSigner&&!isTerminal&&!d.currentSigner){
       dactBtns+='<button class="nudge" data-act="nudge">Remind signer</button>';
     }
     if(docsExist&&!isVoided){
@@ -3512,9 +3781,48 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       });
       h+='</div>';
     }
-    if(d.signers&&d.signers.length){h+='<div class="dsec"><h3>Signers</h3>';d.signers.forEach(function(s){var stc=(s.state==='done')?' is-done':'';h+='<div class="person'+stc+'"><div class="pn-wrap"><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div></div><div class="pright"><span class="pr">'+esc2(s.role)+'</span>'+signerStateHtml(s.state)+'</div></div>';});h+='</div>';}
+    // Current signer (wiring item 2): who the process is waiting on right now,
+    // with the live signing link + Remind. Server-side this rides the Tier-1
+    // Google-auth ?api=opprocess response (caymanConsoleCurrentSigner_).
+    if(d.currentSigner){h+='<div class="dsec"><h3>Current signer</h3>'+currentSignerHtml(d.currentSigner)+'</div>';}
+    if(d.signers&&d.signers.length){
+      // X of Y off the run record when present (signersDone/signersPlanned).
+      var sxy=(d.signersDone!=null&&d.signersPlanned)?(' <span class="frac">- '+esc2(d.signersDone+' of '+d.signersPlanned+' signed')+'</span>'):'';
+      h+='<div class="dsec"><h3>Signers'+sxy+'</h3>';
+      d.signers.forEach(function(s){
+        var stc=(s.state==='done')?' is-done':'';
+        var ts=signerTsLine(s);
+        h+='<div class="person'+stc+'"><div class="pn-wrap"><div class="pn">'+esc2(s.name)+'</div><div class="pe">'+esc2(s.email)+'</div>'+(ts?'<div class="pts">'+esc2(ts)+'</div>':'')+'</div><div class="pright"><span class="pr">'+esc2(s.roleLabel||s.role)+'</span>'+signerStateHtml(s.state)+'</div></div>';
+      });
+      h+='</div>';
+    } else if(d.people&&d.people.length){
+      // Pre-submit there is no signing roster yet; show who was invited
+      // (review P1 #6: d.people was returned by the server but never rendered).
+      h+='<div class="dsec"><h3>People</h3>';
+      d.people.forEach(function(p){
+        h+='<div class="person"><div class="pn-wrap"><div class="pn">'+esc2(p.name||'?')+'</div><div class="pe">'+esc2(p.email||'')+'</div></div><div class="pright"><span class="pr">'+esc2(p.roleLabel||p.role||'')+'</span></div></div>';
+      });
+      h+='</div>';
+    }
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
-    if(d.fields){h+='<div class="dsec"><h3>Details</h3>';Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});h+='</div>';}
+    if(d.fields||d.createdAt||d.updatedAt){
+      h+='<div class="dsec"><h3>Details</h3>';
+      if(d.fields)Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
+      // Process created/updated stamps (wiring item 1) - registry truth.
+      if(d.createdAt)h+='<div class="kv"><span class="k">Created</span><span class="v">'+esc2(fmtTs(d.createdAt)||d.createdAt)+'</span></div>';
+      if(d.updatedAt)h+='<div class="kv"><span class="k">Updated</span><span class="v">'+esc2(fmtTs(d.updatedAt)||d.updatedAt)+'</span></div>';
+      h+='</div>';
+    }
+    // Stage timeline (wiring item 1): the real state-log events (findStateRows_
+    // server-side), newest last. Compact; capped server-side at the last 12.
+    if(d.events&&d.events.length){
+      h+='<div class="dsec"><h3>Timeline</h3>';
+      d.events.forEach(function(ev){
+        var when=fmtTs(ev.ts)||'';
+        h+='<div class="dtl-line"><span class="dtl-st">'+esc2(stageMilestone(ev.stage)||ev.stage)+'</span>'+(when?'<span>'+esc2(when)+'</span>':'')+(ev.actor?'<span>'+esc2(ev.actor)+'</span>':'')+'</div>';
+      });
+      h+='</div>';
+    }
     // History placeholder: populated async if mondayItemId is known
     if(d.mondayItemId)h+='<div id="dhist" class="dsec" style="opacity:.5;font-size: 13px;color:var(--color-ink-muted)">Loading history...</div>';
     h+=dactHtml;
@@ -3541,7 +3849,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var base=(act==='void')?'Could not void this process':'Could not reseal the documents';
       return base+((r&&r.error)?(': '+r.error):'. Refresh and try again, or check the process in Monday.');
     }
-    Array.prototype.forEach.call(document.querySelectorAll(".dact-btns button"),function(b){
+    Array.prototype.forEach.call(document.querySelectorAll(".dact-btns button, #drawer .cursig button[data-act]"),function(b){
       var act=b.getAttribute("data-act");
       b.onclick=function(){
         // Nudge is non-destructive: no confirm strip, fire straight away, then a short
@@ -3649,7 +3957,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(mf)Array.prototype.forEach.call(mf.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
       // F3: a lane switch resets every per-lane view state and cache so nothing
       // from the prior lane bleeds across (toggle, search, w8, messages).
-      showDone=false; showCanceled=false;
+      showDone=false; showCanceled=false; doneLoaded=false;
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
       W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
