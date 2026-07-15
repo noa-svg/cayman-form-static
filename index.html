@@ -1434,8 +1434,27 @@
       // Completed-link terminal screen: a reopened finished link (cfg.completed
       // from the gateway, set once submittedAt is recorded) shows the static
       // "already complete" screen instead of rehydrating the form (2026-06-28).
+      // Two-state copy (Noa-approved 2026-07-15, English verbatim): cfg.sealed
+      // (session.completedAt: the whole process finished and delivered) keeps
+      // the original pair; completed-but-not-sealed (reopen while other
+      // signatures are pending) shows the partial pair, whose sub-line is the
+      // existing approved sentence from the review page below. DEFENSIVE: a
+      // missing sealed field (older server) means NOT sealed, so the honest
+      // partial pair shows. Both branches set the text explicitly so a cached-
+      // config state is corrected in either direction when the fresh config
+      // lands.
       function markDoneIfCompleted(cfg) {
-        if (cfg && cfg.completed) document.documentElement.classList.add('lvp-done-mode');
+        if (!cfg || !cfg.completed) return;
+        var dnMsg = document.querySelector('#lvp-done .lvp-done__msg');
+        var dnSub = document.querySelector('#lvp-done .lvp-done__sub');
+        if (cfg.sealed === true) {
+          if (dnMsg) dnMsg.textContent = 'Your request is complete.';
+          if (dnSub) dnSub.textContent = 'A signed copy has been emailed to you.';
+        } else {
+          if (dnMsg) dnMsg.textContent = 'Your part is complete.';
+          if (dnSub) dnSub.textContent = 'Once everything is completed and signed, you will receive signed copies by email.';
+        }
+        document.documentElement.classList.add('lvp-done-mode');
       }
       window.__lvpMarkDone = markDoneIfCompleted;
 
