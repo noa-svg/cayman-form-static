@@ -594,6 +594,8 @@
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <span class="lvp-gate__icon" role="img" aria-label="Broken link">⛓️‍💥</span>
+    <h1 class="lvp-done__msg">Link unavailable</h1>
+    <p class="lvp-done__sub">This signing link is invalid or has expired. Please contact Legacy Value Partners.</p>
   </div>
   <div id="lvp-done">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
@@ -1406,7 +1408,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-07-16-1';
+    window.__BUILD_TAG = 'index-2026-07-16-2';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
