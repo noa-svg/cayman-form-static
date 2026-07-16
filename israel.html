@@ -422,6 +422,11 @@
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <span class="lvp-gate__icon" role="img" aria-label="שגיאת טעינה">⛓️‍💥</span>
+    <!-- Same already-approved copy as index.html/signer.html, ported verbatim
+         (matching the #lvp-done pattern on this same file, which already ports
+         index.html's English text verbatim per Noa 2026-07-15). -->
+    <h1 class="lvp-done__msg">Link unavailable</h1>
+    <p class="lvp-done__sub">This signing link is invalid or has expired. Please contact Legacy Value Partners.</p>
   </div>
   <!-- Completed-link terminal screen: ported VERBATIM from index.html (approved
        2026-06-28; Noa 2026-07-15: "use the cayman screen"). Shown on REOPENS of a
@@ -1286,7 +1291,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-07-16-1';
+      window.__BUILD_TAG = 'israel-2026-07-16-2';
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
       // Dev override: only honored when the page itself is served from localhost.
@@ -1372,14 +1377,16 @@
             .then(function (cfg) {
               applyCfg(cfg);
               try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch (e) {}
-              // Bad / expired / revoked token: the gateway returns a config with no
-              // usable flow (flowType '') by design (CaymanGateway.js:468,511, "the
-              // static form's if (!CFG.flowType) guard... bounces to the broken-link
-              // screen", written with this lane in mind but never wired up here).
-              // index.html has always done this; israel.html left the LP staring at
-              // a blank/default form with no visible error instead (2026-07-12 audit).
-              var tokenish = p.get('t');
-              if (tokenish && cfg && !cfg.completed && !cfg.flowType) {
+              // Bad / expired / revoked / MISSING token: the gateway returns a config
+              // with no usable flow (flowType '') by design (CaymanGateway.js:468,511,
+              // "the static form's if (!CFG.flowType) guard... bounces to the
+              // broken-link screen"). index.html has always done this for every
+              // no-token case; israel.html previously only gated when a `t=` param
+              // was PRESENT but invalid, so a bare tokenless link (no real invite ever
+              // sends one, per CaymanSigners.ts:364 / CaymanConsoleActions.ts:483-488)
+              // fell through to the raw welcome form instead of the broken-link screen
+              // (pixel-pass finding, 2026-07-16; half-fixed from the 2026-07-12 audit).
+              if (cfg && !cfg.completed && !cfg.flowType) {
                 document.documentElement.classList.add('lvp-gate-mode');
               }
             })
