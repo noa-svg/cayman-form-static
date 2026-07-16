@@ -425,6 +425,13 @@
       function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
       function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
 
+      // Flow-type predicates. The IL lane gateway may report a flow under either
+      // its cayman_* identifier or the israeli_* one (see console FLOW_LABEL map).
+      // Both name the same form, so branch on these helpers rather than a single
+      // literal — the raw flowType is still echoed back to the gateway verbatim.
+      function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
+      function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
+
       var $loading = document.getElementById('lvp-loading');
       var $form = document.getElementById('lvp-form');
 
@@ -656,7 +663,8 @@
         if (snap.fields) {
           Object.keys(snap.fields).forEach(function (id) {
             var el = document.getElementById(id);
-            if (el && (el.type === 'text' || el.type === 'email' || el.type === 'tel' || el.type === 'date' || el.tagName === 'SELECT')) {
+            // Never let a saved snapshot overwrite a locked (Monday-sourced) field.
+            if (el && !el.readOnly && (el.type === 'text' || el.type === 'email' || el.type === 'tel' || el.type === 'date' || el.tagName === 'SELECT')) {
               el.value = snap.fields[id];
             }
           });
@@ -723,11 +731,26 @@
         // authoritative (read off Monday), so name + ID land READ-ONLY when known
         // and the LP only confirms. An empty cell stays editable so the LP can
         // supply a missing value (some board rows lack a Hebrew name or ID).
+        // Merge 2026-07-16: field ids follow the current markup (single
+        // ind-fullName, no phone field); the lock mechanics (aria-readonly,
+        // required drop, tab skip, data-locked wrap) come from the
+        // israeli-fund-increase-readiness branch.
         var pre = (CFG.prefill && CFG.prefill.lp) || {};
-        function prefillRO(id, value) {
+        function prefillRO(id, v) {
           var el = document.getElementById(id);
-          if (!el) return;
-          if (value) { el.value = value; el.readOnly = true; el.classList.add('is-prefilled'); }
+          if (!el || !v) return;            // no value -> leave editable
+          el.value = v;
+          el.readOnly = true;
+          el.classList.add('is-prefilled');
+          el.setAttribute('aria-readonly', 'true');
+          el.removeAttribute('required');   // a locked, pre-filled field isn't a thing the LP must fill
+          el.tabIndex = -1;                 // skip locked fields in the tab order
+          var wrap = el.closest('.lvp-field');
+          if (wrap) {
+            wrap.setAttribute('data-locked', 'true');
+            var star = wrap.querySelector('.lvp-req');   // drop the now-meaningless red asterisk
+            if (star) star.hidden = true;
+          }
         }
         if (applicantType === 'entity') {
           prefillRO('ent-name', pre.legalName || '');
