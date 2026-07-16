@@ -2824,7 +2824,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-16-1';
+  window.__BUILD_TAG = 'console-2026-07-16-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3038,17 +3038,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
   }
   function clearAuth(reason){
+    // A rejection message is only honest when there WAS a session to reject:
+    // on a fresh never-signed-in visit a boot fetch can come back unauthorized
+    // and painted a premature red "Not authorized" under the sign-in button
+    // (found by the 2026-07-16 pixel pass). No session -> neutral state.
+    var hadSession=!!ID_TOKEN||!!localStorage.getItem(TOKEN_KEY);
     ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
     // Stop any pending silent refresh: a signed-out console must never re-mint.
     try{if(_refreshTimer){clearTimeout(_refreshTimer);_refreshTimer=null;}}catch(e){}
     // F13: on prod, keep failure reasons generic so a probe cannot confirm
     // valid operator emails. Detailed reasons only on non-prod hosts.
     var statusEl=document.getElementById('auth-status');
-    if(statusEl)statusEl.textContent=(reason?(IS_PROD_HOST?'not authorized':'auth failed: '+reason):'not signed in');
+    if(statusEl)statusEl.textContent=(reason&&hadSession?(IS_PROD_HOST?'not authorized':'auth failed: '+reason):'not signed in');
     document.getElementById('sign-out-btn').style.display='none';
     document.getElementById('login-screen').classList.remove('off');
     var dbg=document.getElementById('login-debug');
-    if(dbg&&reason)dbg.textContent=IS_PROD_HOST?'Not authorized':('reason: '+reason);
+    if(dbg)dbg.textContent=(reason&&hadSession)?(IS_PROD_HOST?'Not authorized':('reason: '+reason)):'';
     // F43: blank every rendered LP data region, close open panels, and drop
     // in-memory caches so nothing stays visible behind the login overlay on a
     // shared machine.
