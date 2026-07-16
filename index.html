@@ -1400,6 +1400,13 @@
     // and reloads if the live copy has a different build token. Ensures LPs never see
     // a cached older version of the form after a deploy.
     var BUILD = 'v144-2026-06-08';
+    // Build tag for the stale-tab guard (ported 2026-07-16 from israel.html's
+    // 2026-07-15 Bremington hardening). Bump this string on EVERY deploy of this
+    // file; the guard in the app script below re-fetches this page and hard-
+    // reloads a tab whose running tag no longer matches the served one. It
+    // complements the one-shot BUILD check below, which runs only at load and
+    // cannot catch a tab that stays open across a deploy.
+    window.__BUILD_TAG = 'index-2026-07-16-1';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -3457,7 +3464,15 @@
         return res;
       }).catch(function (err) {
         if (timer) clearTimeout(timer);
-        if (err && err.name === 'AbortError') throw new Error('Request timed out. Please try again.');
+        if (err && err.name === 'AbortError') {
+          // Same message as before (console-only; no catch ever shows it to the
+          // LP). The flag lets the submit path distinguish a client-side abort
+          // (safe to quietly retry on the same idempotency key) from a real
+          // server error, without matching on the string.
+          var tErr = new Error('Request timed out. Please try again.');
+          tErr.lvpTimeout = true;
+          throw tErr;
+        }
         throw err;
       });
     }
@@ -3531,10 +3546,114 @@
         return k;
       } catch (e) { return ''; }
     }
+    // ---- stale-tab guard (ported 2026-07-16 from israel.html's 2026-07-15
+    // Bremington incident hardening) ----
+    // An LP can keep a weeks-old tab whose old JS is missing shipped fixes.
+    // GitHub Pages serves this file with window.__BUILD_TAG baked in (bootstrap
+    // script above); the gateway's ?api=config carries NO version field today,
+    // so staleness is detected by re-fetching THIS page same-origin with the
+    // HTTP cache bypassed and comparing the served tag to the running one.
+    // Triggers: (a) the tab becomes visible/focused after >12h hidden;
+    // (b) submit is clicked with the page open >24h (checked BEFORE the POST).
+    // On mismatch: best-effort save_page flush (this form keeps no local
+    // snapshot; the server session + resume token is its restore path, and a
+    // tokenless anonymous session cannot save either way), then hard-reload.
+    // Picked files and a drawn signature are memory-only and are re-prompted by
+    // the existing required-upload gate + signature gate, so nothing is
+    // silently dropped. FAIL OPEN on any fetch error/timeout: the guard must
+    // never strand an LP whose network is flaky.
+    var STALE_HIDDEN_MS_ = 12 * 3600 * 1000;
+    var STALE_OPEN_MS_ = 24 * 3600 * 1000;
+    var pageOpenedAt_ = Date.now();
+    var lastHiddenAt_ = 0;
+    var staleCheckBusy_ = false;
+    function fetchLiveBuildTag_(cb) {
+      // cb(liveTagOrNull); null = could not determine (fail open). 4s budget so
+      // the submit-path check never visibly stalls a real submit.
+      var done = false;
+      function settle(tag) { if (done) return; done = true; cb(tag); }
+      var timer = setTimeout(function () { settle(null); }, 4000);
+      try {
+        fetch(location.pathname, { cache: 'no-store' }).then(function (r) {
+          return r.text();
+        }).then(function (txt) {
+          clearTimeout(timer);
+          var m = String(txt || '').match(/window\.__BUILD_TAG = '([^']+)'/);
+          settle(m ? m[1] : null);
+        }).catch(function () { clearTimeout(timer); settle(null); });
+      } catch (e) { clearTimeout(timer); settle(null); }
+    }
+    function staleReloadIfNewer_(onFresh) {
+      if (staleCheckBusy_) { if (onFresh) onFresh(); return; }
+      staleCheckBusy_ = true;
+      fetchLiveBuildTag_(function (liveTag) {
+        staleCheckBusy_ = false;
+        var mine = window.__BUILD_TAG || '';
+        if (liveTag && mine && liveTag !== mine) {
+          if (window.console) console.log('stale tab: running ' + mine + ', live is ' + liveTag + '; reloading');
+          // Flush the current page to the server session first (the signer.html/
+          // flow.html idiom), capped at 1s so a dead gateway never blocks the
+          // reload. The latch makes the reload fire exactly once.
+          var reloaded = false;
+          var go = function () { if (reloaded) return; reloaded = true; location.reload(); };
+          try { savePage().then(go, go); } catch (e) { go(); }
+          setTimeout(go, 1000);
+          return;
+        }
+        if (onFresh) onFresh();
+      });
+    }
+    function noteHidden_() { if (!lastHiddenAt_) lastHiddenAt_ = Date.now(); }
+    function noteVisible_() {
+      if (!lastHiddenAt_) return;
+      var hiddenFor = Date.now() - lastHiddenAt_;
+      lastHiddenAt_ = 0;
+      if (hiddenFor > STALE_HIDDEN_MS_) staleReloadIfNewer_(null);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) noteHidden_(); else noteVisible_();
+    });
+    window.addEventListener('blur', noteHidden_);
+    window.addEventListener('focus', function () { if (!document.hidden) noteVisible_(); });
+
+    // ---- proof-of-progress success gate (ported 2026-07-16 from israel.html's
+    // 2026-07-15 Bremington replay hardening) ----
+    // Stages that can legitimately follow a successful Cayman onboarding submit.
+    var SUBMIT_OK_STAGES_ = { submitted: 1, signing: 1, all_signed: 1 };
+    // Evidence the server actually did WORK, verified against every genuine
+    // success shape the mono gateway can emit for a Cayman-lane onboarding
+    // submit (CaymanGateway.ts caymanSubmitOnboarding_ + the idempotent-replay
+    // guard in caymanHandleSubmit_, read 2026-07-16): a signing link (nextUrl),
+    // a signer plan/count (detail.signersPlanned / detail.signerXofY), or the
+    // deferred-seal note (detail.note). The Israeli-lane lawyerEmailed /
+    // coHolderEmailed markers are record_signature shapes this form never
+    // receives, so they are deliberately not listed. detail.replay is
+    // deliberately NOT evidence: the Bremington incident's fake success was
+    // exactly {ok:true, stage:'submitted', detail:{replay:true}} from a broken
+    // submittedAt latch while signing never started.
+    function submitShowsProgress_(res) {
+      if (!res || res.ok !== true) return false;
+      if (SUBMIT_OK_STAGES_[String(res.stage || '')] !== 1) return false;
+      if (res.nextUrl) return true;
+      var d = res.detail || {};
+      return !!(d.signersPlanned || d.signerXofY || d.note);
+    }
+
     var submitting = false;
     function doSubmit() {
       if (submitting) return;          // synchronous guard: no duplicate pack on a double-tap
       submitting = true;
+      // Stale-tab gate (b): a tab open >24h re-verifies the build tag BEFORE
+      // posting, so an ancient client never submits with outdated JS. Stale:
+      // flush + reload (the LP resumes on current code, re-attaches files,
+      // re-signs, and submits fresh). Fresh or undetermined: proceed unchanged.
+      if (Date.now() - pageOpenedAt_ > STALE_OPEN_MS_) {
+        staleReloadIfNewer_(function () { doSubmitNow_(); });
+        return;
+      }
+      doSubmitNow_();
+    }
+    function doSubmitNow_() {
       var snapshot = collectAll();
       // Full-card loading state: assembling a roughly 30-page pack takes several
       // seconds, so show a clear "we are preparing your documents" card (spinner +
@@ -3545,22 +3664,54 @@
         '<div class="lvp-result__spinner" aria-hidden="true"></div>' +
         '<h2>' + esc(displayFor('Submitting your subscription', curLang)) + '</h2>' +
         '<p>' + esc(displayFor('Recording your signature and finalizing your documents. Please keep this window open.', curLang)) + '</p>');
-      gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '', idempotencyKey: caymanSubmitIdemKey_() }).then(function (res) {
-        // Single-signer (individual, no lawyer): all done.
-        if (res.stage === 'all_signed') { showSubmittedCard(); return; }
-        // Multi-signer: the primary signed inline, next signers get their own links.
-        if (res.nextSignerUrl || res.stage === 'signing') { showSubmittedCard(); return; }
-        // Fallback: immediate link (legacy path).
-        if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
-        if (res.polling && res.processId) { pollSignStatus(res.processId, 0); return; }
-        showSubmittedCard();
-      }).catch(function (err) {
-        submitting = false;
-        hideResultCard();
-        // Never print a raw/technical server string to an investor. Fixed, calm line.
-        if (window.console) console.log('submit error:', err && err.message || err);
-        setStatus('We could not submit your subscription just now. Your entries are saved on this page. Please try again, or contact Legacy Value Partners.', true);
-      });
+      // Timeout resilience (ported 2026-07-16 from israel.html): the server can
+      // finish the heavy pack render AFTER the client's 120s abort, in which
+      // case the old code showed the failure copy for a submit that actually
+      // SUCCEEDED. A re-submit on the same idempotency key is safe: the server
+      // (CaymanSubmitIdempotency + the replay guard) collapses every retry onto
+      // one pack. So on a client-side timeout we quietly retry (spinner stays
+      // up, same approved copy, SAME key); only a real server error or
+      // exhausted retries shows the failure copy. The key is minted once here
+      // so every attempt of this submit carries the identical key.
+      var idemKey = caymanSubmitIdemKey_();
+      var attempt = function (retriesLeft) {
+        return gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '', idempotencyKey: idemKey }).then(function (res) {
+          // Proof-of-progress gate (2026-07-16): ok:true alone must never paint
+          // the success card. Require an allowlisted stage AND a concrete
+          // progress marker (submitShowsProgress_ above). A bare replay answer
+          // with no evidence routes to the existing approved retry surface via
+          // the throw (a resubmit on the same key is safe: the server's
+          // idempotency layer dedupes), with the full response on the console
+          // for diagnosis.
+          if (!submitShowsProgress_(res)) {
+            if (window.console) {
+              try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); }
+              catch (eGate) { console.log('submit response failed the proof-of-progress gate'); }
+            }
+            throw new Error('no_progress_evidence');
+          }
+          // Single-signer (individual, no lawyer): all done.
+          if (res.stage === 'all_signed') { showSubmittedCard(); return; }
+          // Multi-signer: the primary signed inline, next signers get their own links.
+          if (res.nextSignerUrl || res.stage === 'signing') { showSubmittedCard(); return; }
+          // Fallback: immediate link (legacy path).
+          if (res.nextUrl) { window.top.location.href = res.nextUrl; return; }
+          if (res.polling && res.processId) { pollSignStatus(res.processId, 0); return; }
+          showSubmittedCard();
+        }).catch(function (err) {
+          var isTimeout = !!(err && err.lvpTimeout);
+          if (isTimeout && retriesLeft > 0) {
+            if (window.console) console.log('submit timeout; retrying (' + retriesLeft + ' left)');
+            return new Promise(function (r) { setTimeout(r, 5000); }).then(function () { return attempt(retriesLeft - 1); });
+          }
+          submitting = false;
+          hideResultCard();
+          // Never print a raw/technical server string to an investor. Fixed, calm line.
+          if (window.console) console.log('submit error:', err && err.message || err);
+          setStatus('We could not submit your subscription just now. Your entries are saved on this page. Please try again, or contact Legacy Value Partners.', true);
+        });
+      };
+      attempt(2);
     }
     function showSubmittedCard() {
       showResultCard(
