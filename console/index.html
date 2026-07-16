@@ -3747,7 +3747,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(awaitingSigner&&!isTerminal&&!d.currentSigner){
       dactBtns+='<button class="nudge" data-act="nudge">Remind signer</button>';
     }
-    if(docsExist&&!isVoided){
+    // Reseal is a RECOVERY control for a stuck pack; a complete/sealed process
+    // has nothing to re-drive (the server-side re-drive would no-op with
+    // "0 resealed", which reads as a failure to the operator). Gate it on
+    // !isTerminal, not just !isVoided (2026-07-16 console hygiene).
+    if(docsExist&&!isTerminal){
       dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
     }
     if(!isTerminal){
@@ -3827,7 +3831,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(d.mondayItemId)h+='<div id="dhist" class="dsec" style="opacity:.5;font-size: 13px;color:var(--color-ink-muted)">Loading history...</div>';
     h+=dactHtml;
     document.getElementById("dbody").innerHTML=h;
-    Array.prototype.forEach.call(document.querySelectorAll("#drawer .cp"),function(b){b.onclick=function(){var t=document.createElement("textarea");t.value=b.getAttribute("data-c");document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(t);b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1200);};});
+    Array.prototype.forEach.call(document.querySelectorAll("#drawer .cp"),function(b){b.onclick=function(){
+      // navigator.clipboard first; deprecated execCommand only as the fallback
+      // (same pattern as the row copy button). A copy that failed BOTH ways says
+      // so instead of lying "Copied" (2026-07-16 console hygiene).
+      var val=b.getAttribute("data-c");
+      function fb(){var t=document.createElement("textarea");t.value=val;document.body.appendChild(t);t.select();var ok=false;try{ok=document.execCommand("copy");}catch(e){ok=false;}document.body.removeChild(t);return ok;}
+      function done(ok){b.textContent=ok?"Copied":"Copy failed";setTimeout(function(){b.textContent="Copy";},1200);}
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(val).then(function(){done(true);}).catch(function(){done(fb());});}
+      else{done(fb());}
+    };});
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
