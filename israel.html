@@ -3672,6 +3672,36 @@
       }
     });
     var LOCAL_SNAP_KEY = 'lvp_il_snap_' + (CFG.token || '');
+    // PII TTL purge (2026-07-16, shared/FO devices). Snapshots are full PII and
+    // used to persist FOREVER on abandoned sessions. On every page init, any
+    // lvp_il_snap_* entry (all tokens, not just this one) whose ts stamp is
+    // older than 30 days is removed. An entry with NO ts (pre-stamp era) is
+    // stamped now instead of deleted, so an LP mid-flow is never wiped; it
+    // then ages out on its own. Unparsable entries are removed (restore would
+    // discard them anyway, and they may still hold PII fragments). The whole
+    // pass is try/catch-wrapped: a localStorage failure must never break init.
+    (function purgeStaleSnaps_() {
+      try {
+        var TTL_MS = 30 * 24 * 60 * 60 * 1000;
+        var now = Date.now();
+        var keys = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('lvp_il_snap_') === 0) keys.push(k);
+        }
+        for (var j = 0; j < keys.length; j++) {
+          var snap = null;
+          try { snap = JSON.parse(localStorage.getItem(keys[j]) || 'null'); } catch (e) {}
+          if (!snap || typeof snap !== 'object') { localStorage.removeItem(keys[j]); continue; }
+          if (typeof snap.ts !== 'number' || !snap.ts) {
+            snap.ts = now;
+            try { localStorage.setItem(keys[j], JSON.stringify(snap)); } catch (e) {}
+            continue;
+          }
+          if (now - snap.ts > TTL_MS) localStorage.removeItem(keys[j]);
+        }
+      } catch (e) { /* storage unavailable: nothing to purge, never block init */ }
+    })();
     var lastLocalSaveOk = false;   // did the most recent local snapshot persist?
     function saveLocalSnap_() {
       try {
