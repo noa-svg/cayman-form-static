@@ -2824,7 +2824,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-16-2';
+  window.__BUILD_TAG = 'console-2026-07-17-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3034,6 +3034,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!transient) clearAuth(reason);
         throw new Error('unauthorized'+(transient?'_transient':''));
       }
+      // ANY other {ok:false} is a genuine server error and must THROW, not
+      // resolve. Before this, a non-auth error envelope (a Sheets/scope failure,
+      // an internal error) resolved as `d`, and each panel treated it as data:
+      // the board painted "Nothing in flight", the W-8 panel "All current",
+      // messages/onboarding/settings/search all read as empty or not-found. A
+      // false all-clear over live money and a compliance clock. Throwing routes
+      // every such response to the caller's .catch, which renders an honest
+      // error state. A response with NO ok field (bare data) is untouched
+      // (undefined !== false), so success shapes still pass. (2026-07-17 review.)
+      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||'unknown'; throw e; }
       return d;
     });
   }
@@ -3045,7 +3055,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var hadSession=!!ID_TOKEN||!!localStorage.getItem(TOKEN_KEY);
     ID_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
     // Stop any pending silent refresh: a signed-out console must never re-mint.
+    // The timer is not enough - a refresh iframe already in flight will still
+    // fire its onload, read a valid id_token from its hash, and write it back to
+    // localStorage BEHIND the login screen (then re-arm the cycle). So a bare
+    // "Sign out" left a live token on a shared machine. Bump the epoch so any
+    // late onload aborts, and tear the iframe down now.
     try{if(_refreshTimer){clearTimeout(_refreshTimer);_refreshTimer=null;}}catch(e){}
+    try{_refreshEpoch++;if(_refreshIframe){_refreshIframe.onload=null;_refreshIframe.remove();_refreshIframe=null;}}catch(e){}
     // F13: on prod, keep failure reasons generic so a probe cannot confirm
     // valid operator emails. Detailed reasons only on non-prod hosts.
     var statusEl=document.getElementById('auth-status');
@@ -3091,7 +3107,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // The redirect target is this same origin, so the iframe's hash is readable.
   // Any failure (revoked session, cookie block) is silent and leaves the old
   // behavior intact: full sign-in at real expiry.
-  var _refreshTimer=null,_refreshIframe=null;
+  var _refreshTimer=null,_refreshIframe=null,_refreshEpoch=0;
   function tokenPayload(tok){
     try{return JSON.parse(atob(String(tok).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(e){return null;}
   }
@@ -3127,11 +3143,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     if(pl.email)p.set('login_hint',pl.email);
     if(_refreshIframe){try{_refreshIframe.remove();}catch(e){}}
+    var epoch=_refreshEpoch; // if clearAuth bumps this before onload, abort the write
     var f=document.createElement('iframe');
     f.style.display='none';
     f.setAttribute('aria-hidden','true');
     _refreshIframe=f;
     f.onload=function(){
+      // Sign-out (or another refresh) happened while this iframe was loading:
+      // never resurrect a token behind a signed-out console.
+      if(epoch!==_refreshEpoch){try{f.remove();}catch(e){}return;}
       var got=false;
       try{
         var hash=(f.contentWindow&&f.contentWindow.location.hash)||'';
@@ -3863,6 +3883,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         goEl=document.getElementById('dacGo'),cancelEl=document.getElementById('dacCancel'),
         statusEl=document.getElementById('dactStatus');
     var pendingAct=null;
+    // In-flight lock: while a void/reseal Go is running, re-arming another action
+    // (its onclick sets goEl.disabled=false and swaps pendingAct) would let a
+    // second destructive action fire over the first. dactBusy freezes the confirm
+    // strip until the in-flight action resolves. Void succeeds -> drawer closes;
+    // reseal succeeds -> drawer reloads (fresh closure), so the lock only needs
+    // clearing on the failure paths.
+    var dactBusy=false;
     function dStatus(msg,kind){
       if(!statusEl)return;
       if(!msg){statusEl.hidden=true;statusEl.textContent='';statusEl.className='dact-status';return;}
@@ -3892,6 +3919,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           return;
         }
         var c=ACT_CONFIRM[act];if(!c||!confEl)return;
+        if(dactBusy)return; // an action is already running; do not re-arm mid-flight
         pendingAct=act;dStatus('',null);
         msgEl.textContent=c.msg;
         goEl.textContent=c.cta;goEl.className='dac-go'+(c.danger?' danger':'');
@@ -3903,7 +3931,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(cancelEl)cancelEl.onclick=function(){dHideConfirm();};
     if(goEl)goEl.onclick=function(){
       var act=pendingAct;if(!act)return;
+      if(dactBusy)return; // guard a double-tap on Go itself
       var c=ACT_CONFIRM[act];
+      dactBusy=true;
       goEl.disabled=true;cancelEl.disabled=true;
       dStatus(c.working,'');
       apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
@@ -3912,8 +3942,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           if(act==='void'){dHideConfirm();dclose();load();}
           else{load();if(currentPid)openDrawer(currentPid);}
         }
-        else{goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,r),'error');}
-      }).catch(function(){goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,null),'error');});
+        else{dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,r),'error');}
+      }).catch(function(){dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,null),'error');});
     };
     // Async history load
     if(d.mondayItemId){
@@ -4387,14 +4417,33 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
 
   // Settings
+  // Guard against the allowlist-wipe hazard: if the current allowlist never
+  // loaded (fetch failed, auth lapsed), the textarea reads empty, and a blind
+  // Save would push an empty allowlist and lock every operator out. Save is
+  // refused until a successful load has populated the field.
+  var ALLOWLIST_LOADED=false;
   function loadSettings(){
+    ALLOWLIST_LOADED=false;
+    var st=document.getElementById('allowlist-status');
     apiFetch('?admin=getConsoleSettings').then(function(d){
-      if(d&&d.ok) document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
-    }).catch(function(){});
+      if(d&&d.ok){
+        document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
+        ALLOWLIST_LOADED=true;
+        if(st){st.textContent='';}
+      } else if(st){
+        st.textContent='Could not load the current allowlist. Do not save.';st.style.color='var(--color-danger)';
+      }
+    }).catch(function(){
+      if(st){st.textContent='Could not load the current allowlist. Do not save.';st.style.color='var(--color-danger)';}
+    });
   }
   document.getElementById('allowlist-save').onclick=function(){
     var raw=document.getElementById('allowlist-input').value;
     var st=document.getElementById('allowlist-status');
+    if(!ALLOWLIST_LOADED){
+      st.textContent='The current allowlist has not loaded. Refresh before saving so you do not overwrite it.';st.style.color='var(--color-danger)';
+      return;
+    }
     st.textContent='Saving...';st.style.color='var(--color-ink-muted)';
     apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw)).then(function(d){
       if(d&&d.ok){st.textContent='Saved';st.style.color='var(--color-success)';}
