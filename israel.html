@@ -1283,6 +1283,11 @@
        validators (ju-cayman/IsraeliValidation.js), so client and server can't drift.
        Loaded before the app script so window.LVPRules is defined for validateField. -->
   <script src="validation-rules.js"></script>
+  <!-- Batch D shared gateway transport (fetch + timeout + envelope check + retry
+       helper). Mechanics only; every LP-facing string and console diagnostic
+       stays in this file's gateway() wrapper. Loaded before the app script so
+       window.LVPGateway is defined when gateway() first runs. -->
+  <script src="lvp-gateway.js"></script>
   <script>
     (function () {
       // Build tag for the stale-tab guard (2026-07-15, Bremington two-week-old
@@ -1291,7 +1296,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-07-18-1';
+      window.__BUILD_TAG = 'israel-2026-07-18-2';
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
       // Dev override: only honored when the page itself is served from localhost.
@@ -4064,50 +4069,53 @@
       // flow names (it throws on the legacy onboarding_individual/onboarding_entity
       // strings) and defaults the empty case to the onboarding flow; the authoritative
       // lane + applicant type live on the operator's mint session, not the envelope.
-      var body = { action: action, token: CFG.token, lane: 'israeli', payload: payload || {} };
-      // C2: bound the fetch with an AbortController so a dead/blocked network
-      // aborts instead of hanging the submit spinner forever (mirrors
-      // index.html's gateway). 'submit' assembles the full conditional pack
-      // server-side (~30pp) before responding, so it gets a generous budget; the
-      // rest stay snappy. On abort the error propagates to doSubmit's catch,
-      // which surfaces the approved Hebrew submit-error and re-enables the form
-      // (the server's replay idempotency bounds any retry). A caller may pass an
-      // explicit budget (render_preview: a COLD full-pack render measured just
-      // over 20s, so its budget must exceed the sign-preview watchdog).
-      var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      // Batch D (2026-07-18): the transport (fetch + AbortController + timeout +
+      // JSON parse + the ok !== true envelope check, tightened 2026-07-15: a
+      // JSON body WITHOUT ok, e.g. an HTTP 500 page that happens to parse or a
+      // truncated proxy response, is not a success) lives in the shared module
+      // lvp-gateway.js (window.LVPGateway, loaded before this script; same UMD
+      // pattern as validation-rules.js). This wrapper keeps everything
+      // per-form: the envelope body (lane/token), the per-action budgets, the
+      // console diagnostics, and the approved Hebrew error copy. If the module
+      // failed to load (blocked script / partial deploy), gateway() fails LOUD
+      // on first use with the existing approved generic line instead of
+      // duplicating the transport inline: like the stale-tab guard, the LP is
+      // never stranded silently (the retry surface + saved entries stay
+      // intact, and a reload re-fetches the script).
+      if (!window.LVPGateway) {
+        if (window.console) { try { console.log('lvp-gateway.js missing; gateway ' + action + ' cannot post'); } catch (eMiss) {} }
+        return Promise.reject(new Error('אירעה תקלה. נא לנסות שוב.'));
+      }
+      // 'submit' assembles the full conditional pack server-side (~30pp) before
+      // responding, so it gets a generous budget; the rest stay snappy. On
+      // abort the error propagates to doSubmit's catch, which surfaces the
+      // approved Hebrew submit-error and re-enables the form (the server's
+      // replay idempotency bounds any retry). A caller may pass an explicit
+      // budget (render_preview: a COLD full-pack render measured just over
+      // 20s, so its budget must exceed the sign-preview watchdog).
       // record_signature (co-holder / lawyer final submit) shares submit's 120s budget:
       // it runs inside the global caymanWithLock_ (up to a 20s waitLock) plus a stamp/ID
       // Drive upload, which can exceed the 30s default and falsely time out -> the LP
       // retried and it "worked the 3rd time" (Noa 2026-07-08). 120s covers the lock wait.
       var timeoutMs = timeoutOverrideMs
         || ((action === 'submit' || action === 'record_signature') ? 120000 : 30000);
-      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
-      return fetch(CFG.gatewayUrl + '?source=lp', {
-        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body),
-        signal: ctrl ? ctrl.signal : undefined
-      }).then(function (r) { if (timer) clearTimeout(timer); return r.json(); }).then(function (res) {
-        // ok !== true (was ok === false, tightened 2026-07-15): the gateway's
-        // envelope always sets a boolean ok, so a JSON body WITHOUT ok (an HTTP
-        // 500 page that happens to parse, a truncated proxy response) is not a
-        // success and must not sail through to the caller's success path.
-        if (!res || res.ok !== true) {
+      return window.LVPGateway.post({
+        url: CFG.gatewayUrl,
+        body: { action: action, token: CFG.token, lane: 'israeli', payload: payload || {} },
+        timeoutMs: timeoutMs,
+        classifyReject: function (res) {
           // Dev-only (2026-07-14 Ido audit, widened 2026-07-15): log the FULL
           // rejected envelope (ok/stage/error/detail; detail is the server's
           // curated publicDetail, PII-free by design), not just the validation
           // array, so a live failure is diagnosable from the LP's console. The
-          // LP-facing banner below is unchanged; validation entries are machine
+          // LP-facing banner is unchanged; validation entries are machine
           // codes ({path, code}), never LP copy.
           if (window.console) {
             try { console.log('gateway ' + action + ' rejected:', JSON.stringify(res)); } catch (eLog) {}
           }
-          throw new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
-        }
-        return res;
-      }).catch(function (err) {
-        if (timer) clearTimeout(timer);
-        if (err && err.name === 'AbortError') throw new Error('timeout');
-        throw err;
+          return new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+        },
+        classifyTimeout: function () { return new Error('timeout'); }
       });
     }
     function savePage() {
@@ -4263,8 +4271,10 @@
       // it replays fast if the signing run exists, or properly re-runs if the
       // server died mid-submit. So on 'timeout' we quietly retry (spinner stays
       // up, same approved copy); only a real server error or exhausted retries
-      // shows the failure copy.
-      var attempt = function (retriesLeft) {
+      // shows the failure copy. Batch D (2026-07-18): the retry loop itself is
+      // the shared LVPGateway.retryOnTimeout helper (timeout-only, same 2x5s
+      // contract); attempt routing + all copy stay here.
+      var runAttempt = function () {
         // Co-holder scoping: a joint co-holder is NOT the primary submitter. Their
         // leg posts the whitelisted record_signature action on their SIGN token,
         // carrying their own KYC (investorsArray[0], the current-filler slot) as a
@@ -4330,19 +4340,26 @@
           // co-holder line is approved (copy gate).
           if (res.detail && res.detail.coHolderEmailed) { showSubmittedCard(); return; }
           showSubmittedCard();
-        }).catch(function (err) {
-          var isTimeout = err && err.message === 'timeout';
-          if (isTimeout && retriesLeft > 0) {
-            if (window.console) console.log('submit timeout; retrying (' + retriesLeft + ' left)');
-            return new Promise(function (r) { setTimeout(r, 5000); }).then(function () { return attempt(retriesLeft - 1); });
-          }
-          submitting = false;
-          hideResultCard();
-          if (window.console) console.log('submit error:', err && err.message || err);
-          setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
         });
       };
-      attempt(2);
+      // Module missing: gateway() already rejected loud; run once with no retry
+      // layer so the existing failure surface below still paints.
+      var submitRun = window.LVPGateway
+        ? window.LVPGateway.retryOnTimeout(runAttempt, {
+            retries: 2,
+            backoffMs: 5000,
+            isTimeout: function (err) { return !!(err && err.message === 'timeout'); },
+            onRetry: function (retriesLeft) {
+              if (window.console) console.log('submit timeout; retrying (' + retriesLeft + ' left)');
+            }
+          })
+        : runAttempt();
+      submitRun.catch(function (err) {
+        submitting = false;
+        hideResultCard();
+        if (window.console) console.log('submit error:', err && err.message || err);
+        setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
+      });
       });
     }
     function showSubmittedCard() {

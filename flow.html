@@ -389,6 +389,11 @@
   </div>
 
   <script src="validation-rules.js"></script>
+  <!-- Batch D shared gateway transport (fetch + timeout + envelope check + retry
+       helper). Mechanics only; every LP-facing string and console diagnostic
+       stays in this file's submit path. Loaded before the app script so
+       window.LVPGateway is defined when the submit first runs. -->
+  <script src="lvp-gateway.js"></script>
   <script>
     (function () {
       'use strict';
@@ -400,7 +405,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-07-18-2';
+      window.__BUILD_TAG = 'flow-2026-07-18-3';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -1654,46 +1659,54 @@
           // replay when the first attempt actually succeeded past the client's
           // 60s ceiling. Only a TIMEOUT retries (2x, 5s apart, spinner stays up);
           // a real server error still fails immediately with the same copy.
-          function attempt(retriesLeft) {
-            var p = new XMLHttpRequest();
-            p.open('POST', GW + '?source=lp', true);
-            p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-            // 60s hard ceiling. submit runs a SYNCHRONOUS Drive render (makeCopy +
-            // replaceText of the increase template) that on a cold Drive can take
-            // 10-25s; 30s was clipping that and showing a false broken-link, so the
-            // ceiling is raised so a normal cold render never times out. A dead /exec
-            // still fails after 60s rather than hanging the spinner forever. Gateway
-            // dedupes submit per-process so a retry of the same payload is a no-op.
-            p.timeout = 60000;
-            p.ontimeout = function () {
-              if (retriesLeft > 0) {
-                if (window.console) { try { console.log('submit timeout; retrying (' + retriesLeft + ' left)'); } catch (eT) {} }
-                setTimeout(function () { attempt(retriesLeft - 1); }, 5000);
-                return;
-              }
-              fail(SUBMIT_FAIL_MSG);
-            };
-            p.onerror   = function () { fail(SUBMIT_FAIL_MSG); };
-            p.onreadystatechange = function () {
-              if (p.readyState !== 4) return;
-              if (p.status === 0) return; // timeout/abort path; ontimeout owns it
-              if (p.status !== 200) return fail(SUBMIT_FAIL_MSG);
-              var res;
-              try { res = JSON.parse(p.responseText); }
-              catch (e) { return fail(SUBMIT_FAIL_MSG); }
-              if (res.ok !== true) {
-                // ok !== true (was !res.ok, tightened 2026-07-15): a JSON body
-                // WITHOUT ok (an HTTP 500 page that parses, a truncated proxy
-                // response) is not a success. Log the FULL rejected envelope
+          // Batch D (2026-07-18): the transport (fetch + AbortController + timeout
+          // + JSON parse + the ok !== true envelope check) and the timeout-only
+          // retry loop live in the shared module lvp-gateway.js (window.
+          // LVPGateway, loaded before this script; same UMD pattern as
+          // validation-rules.js). Same observable contract as the XHR it
+          // replaces: 60s hard ceiling (submit runs a SYNCHRONOUS Drive render,
+          // makeCopy + replaceText of the increase template, that on a cold
+          // Drive can take 10-25s; a dead /exec still fails after 60s rather
+          // than hanging the spinner forever), 2 retries 5s apart on timeout
+          // only, same curated failure copy on everything else. If the module
+          // failed to load (blocked script / partial deploy), the submit fails
+          // LOUD with the existing approved SUBMIT_FAIL_MSG instead of
+          // duplicating the transport inline: like the stale-tab guard, the LP
+          // is never stranded silently (the button re-enables and a reload
+          // re-fetches the script).
+          function postSubmitOnce_() {
+            if (!window.LVPGateway) {
+              if (window.console) { try { console.log('lvp-gateway.js missing; submit cannot post'); } catch (eMiss) {} }
+              return Promise.reject(new Error('lvp_gateway_missing'));
+            }
+            return window.LVPGateway.post({
+              url: GW,
+              body: body,
+              timeoutMs: 60000,
+              classifyReject: function (res) {
+                // ok !== true (tightened 2026-07-15): a JSON body WITHOUT ok
+                // (an HTTP 500 page that parses, a truncated proxy response)
+                // is not a success. Log the FULL rejected envelope
                 // (server-curated publicDetail, PII-free) for live diagnosis.
                 if (window.console) { try { console.log('gateway submit rejected:', JSON.stringify(res)); } catch (eLog) {} }
                 // Validation entries may be machine-code objects ({path, code});
                 // only a STRING entry is renderable copy. Never paint
                 // [object Object] at the LP.
-                var v0 = res.detail && res.detail.validation && res.detail.validation[0];
-                var msg = (typeof v0 === 'string' && v0) || (typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
-                return fail(msg);
+                var v0 = res && res.detail && res.detail.validation && res.detail.validation[0];
+                var msg = (typeof v0 === 'string' && v0) || (res && typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
+                var rErr = new Error(msg);
+                rErr.lvpCurated = true;   // safe to show: server-curated or approved fallback
+                return rErr;
+              },
+              classifyTimeout: function () {
+                var tErr = new Error('timeout');
+                tErr.lvpTimeout = true;
+                return tErr;
               }
+            });
+          }
+          function runAttempt() {
+            return postSubmitOnce_().then(function (res) {
               if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
               // Proof-of-progress (2026-07-15 Bremington replay): ok:true WITHOUT a
               // signing link shows no work done for this flow (increase/redemption
@@ -1702,11 +1715,27 @@
               // the full response is what is new, so a replayed/evidence-free
               // answer is diagnosable instead of invisible.
               if (window.console) { try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); } catch (eLog2) {} }
-              fail(SUBMIT_FAIL_MSG);
-            };
-            p.send(JSON.stringify(body));
+              var gErr = new Error(SUBMIT_FAIL_MSG);
+              gErr.lvpCurated = true;
+              throw gErr;
+            });
           }
-          attempt(2);
+          var submitRun = window.LVPGateway
+            ? window.LVPGateway.retryOnTimeout(runAttempt, {
+                retries: 2,
+                backoffMs: 5000,
+                isTimeout: function (err) { return !!(err && err.lvpTimeout); },
+                onRetry: function (retriesLeft) {
+                  if (window.console) { try { console.log('submit timeout; retrying (' + retriesLeft + ' left)'); } catch (eT) {} }
+                }
+              })
+            : runAttempt();
+          submitRun.catch(function (err) {
+            // Only a curated message (server validation string / res.error /
+            // the approved fallback) is ever painted; a raw network or parse
+            // error shows the same approved SUBMIT_FAIL_MSG as before.
+            fail(err && err.lvpCurated ? err.message : SUBMIT_FAIL_MSG);
+          });
         });
       }
 
