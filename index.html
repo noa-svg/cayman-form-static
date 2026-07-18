@@ -1294,7 +1294,7 @@
         </section>
 
         <!-- ========================= PAGE: CONTROLLING PERSONS (entity, N expansion) ========================= -->
-        <section class="lvp-page" data-page="entity.controllingPersons" data-applicant="entity" data-page-when="fatcaCrs.crs.branch=5.3;fatcaCrs.fatca.subType=(e);fatcaCrs.entityClassification=passiveNfe" hidden>
+        <section class="lvp-page" data-page="entity.controllingPersons" data-applicant="entity" data-page-when="fatcaCrs.crs.branch=5.3;fatcaCrs.fatca.subType=(e);fatcaCrs.entityClassification=passiveNfe;signatories.primary.isControlling=true;signatories.secondary.isControlling=true;fatcaCrs.crs.subType51=(c)" hidden>
           <h2 class="lvp-page__title">Controlling persons</h2>
           <p class="lvp-page__hint">Because the entity is a Passive NFE, list each person who controls it. Each one receives their own link to complete details and sign, after you.</p>
           <div data-repeating-typed-path="controllingPersons" data-repeating-min="1" data-repeating-template="cp"></div>
@@ -1408,7 +1408,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-07-16-3';
+    window.__BUILD_TAG = 'index-2026-07-18-1';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
