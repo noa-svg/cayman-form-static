@@ -2824,7 +2824,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-17-1';
+  window.__BUILD_TAG = 'console-2026-07-18-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -2848,7 +2848,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       try{
         var p=new URLSearchParams(hash.replace(/^#/,''));
         var t=p.get('id_token');
-        if(t){ID_TOKEN=t;localStorage.setItem(TOKEN_KEY,t);}
+        // OIDC nonce check (defense-in-depth; the server is the real boundary and
+        // validates every token via Google tokeninfo + the operator allowlist).
+        // startGoogleSignIn mints a nonce into sessionStorage before redirecting;
+        // only accept a redirect-returned token whose `nonce` claim matches it, so
+        // a crafted `#id_token=...` link cannot seed a session behind the login
+        // screen. Fail closed: no stored nonce or a mismatch drops the token and
+        // initAuth falls through to a fresh sign-in. nonceMatches_/tokenPayload are
+        // hoisted function declarations, callable here. (2026-07-18 review.)
+        if(t&&nonceMatches_(t,sessionStorage.getItem('gsi_nonce')||'')){
+          ID_TOKEN=t;localStorage.setItem(TOKEN_KEY,t);
+          sessionStorage.removeItem('gsi_nonce');
+        }
       }catch(e){}
     }
   })();
@@ -3110,6 +3121,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   var _refreshTimer=null,_refreshIframe=null,_refreshEpoch=0;
   function tokenPayload(tok){
     try{return JSON.parse(atob(String(tok).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));}catch(e){return null;}
+  }
+  // Pure: does this token's OIDC nonce claim match the one we minted for this
+  // sign-in? Both must be present and equal. Empty token, empty expected nonce,
+  // an undecodable token, or a missing/blank nonce claim all return false (fail
+  // closed). Used to reject a redirect-returned token we did not request.
+  function nonceMatches_(token,expectNonce){
+    if(!token||!expectNonce)return false;
+    var pl=tokenPayload(token);
+    return !!(pl&&pl.nonce&&pl.nonce===expectNonce);
   }
   // Pure: ms until the silent refresh should fire for a token expiring at expMs.
   // 5 minutes early; clamped to [0, 12h] (never in the past, no setTimeout overflow).
