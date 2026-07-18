@@ -388,6 +388,7 @@
     <p class="lvp-busy__warn">נא לא לסגור את החלון.</p>
   </div>
 
+  <script src="validation-rules.js"></script>
   <script>
     (function () {
       'use strict';
@@ -399,7 +400,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-07-18-1';
+      window.__BUILD_TAG = 'flow-2026-07-18-2';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -813,6 +814,26 @@
         // Save the snapshot at the page boundary so a refresh on the next page
         // restores the state we just left. Fire-and-forget; never blocks nav.
         try { savePage(target); } catch (err) {}
+        // Back-gesture support (2026-07-18): push a history entry per FORWARD
+        // page move, so the phone's native back button/gesture steps the pager
+        // back one page instead of exiting the form entirely (the #1 "my form
+        // disappeared" path on mobile). Backward in-form moves don't push (the
+        // popstate handler below owns those transitions).
+        if (nextIdx > curIdx) {
+          try { history.pushState({ lvpPage: target }, '', location.href); } catch (errH) {}
+        }
+        goToPage(target);
+      });
+      window.addEventListener('popstate', function (e) {
+        // Only intercept while mid-form: past submit (result card up) or before
+        // init, let the browser do its normal thing.
+        var cur = getCurrentPage();
+        var curIdx = PAGE_ORDER.indexOf(cur);
+        if (curIdx <= 0) return; // on the first page, back = leave, as the LP expects
+        var target = (e.state && e.state.lvpPage) ? String(e.state.lvpPage) : PAGE_ORDER[curIdx - 1];
+        // Never popstate FORWARD past validation: only honor a target that is
+        // backward (or same) relative to the current page.
+        if (PAGE_ORDER.indexOf(target) >= curIdx) target = PAGE_ORDER[curIdx - 1];
         goToPage(target);
       });
       function getCurrentPage() {
@@ -1337,9 +1358,31 @@
       function validateField(name) {
         switch (name) {
           case 'ind-fullName':   return vRequired('ind-fullName');
-          case 'ind-idNumber':   return vDigits('ind-idNumber', 9, 9);
+          case 'ind-idNumber': {
+            // 2026-07-18: real Israeli-ID checksum via the shared D1 module
+            // (validation-rules.js, verbatim port of the server validator),
+            // matching israel.html. The old bare 9-digit length check let a
+            // checksum-invalid ID through to a server-side bounce. Fallback to
+            // the length check only if the module somehow failed to load, so a
+            // script-load hiccup can never brick the form.
+            var idnRes = vDigits('ind-idNumber', 9, 9);
+            if (!idnRes.ok) return idnRes;
+            if (window.LVPRules && typeof window.LVPRules.validId === 'function' && !window.LVPRules.validId(val('ind-idNumber'))) {
+              return { ok: false, msg: 'מספר תעודת הזהות אינו תקין.' };
+            }
+            return { ok: true };
+          }
           case 'ent-name':       return vRequired('ent-name');
-          case 'ent-number':     return vDigits('ent-number', 9, 9);
+          case 'ent-number': {
+            // Same shared-module upgrade as ind-idNumber (company-number rule),
+            // same load-failure fallback. Error copy verbatim from israel.html.
+            var entRes = vDigits('ent-number', 9, 9);
+            if (!entRes.ok) return entRes;
+            if (window.LVPRules && typeof window.LVPRules.validateFormat === 'function' && !window.LVPRules.validateFormat('company-num', val('ent-number'))) {
+              return { ok: false, msg: 'מספר הח.פ אינו תקין.' };
+            }
+            return { ok: true };
+          }
           case 'lp-email':       return vEmail('lp-email');
           case 'bank-name':      return vBank();
           case 'bank-branch':    return vBranch();
@@ -1604,49 +1647,66 @@
             lane: 'israeli',
             payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
           };
-          var p = new XMLHttpRequest();
-          p.open('POST', GW + '?source=lp', true);
-          p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-          // 60s hard ceiling. submit runs a SYNCHRONOUS Drive render (makeCopy +
-          // replaceText of the increase template) that on a cold Drive can take
-          // 10-25s; 30s was clipping that and showing a false broken-link, so the
-          // ceiling is raised so a normal cold render never times out. A dead /exec
-          // still fails after 60s rather than hanging the spinner forever. Gateway
-          // dedupes submit per-process so a retry of the same payload is a no-op.
-          p.timeout = 60000;
           function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || SUBMIT_FAIL_MSG); }
-          p.ontimeout = function () { fail(SUBMIT_FAIL_MSG); };
-          p.onerror   = function () { fail(SUBMIT_FAIL_MSG); };
-          p.onreadystatechange = function () {
-            if (p.readyState !== 4) return;
-            if (p.status !== 200) return fail(SUBMIT_FAIL_MSG);
-            var res;
-            try { res = JSON.parse(p.responseText); }
-            catch (e) { return fail(SUBMIT_FAIL_MSG); }
-            if (res.ok !== true) {
-              // ok !== true (was !res.ok, tightened 2026-07-15): a JSON body
-              // WITHOUT ok (an HTTP 500 page that parses, a truncated proxy
-              // response) is not a success. Log the FULL rejected envelope
-              // (server-curated publicDetail, PII-free) for live diagnosis.
-              if (window.console) { try { console.log('gateway submit rejected:', JSON.stringify(res)); } catch (eLog) {} }
-              // Validation entries may be machine-code objects ({path, code});
-              // only a STRING entry is renderable copy. Never paint
-              // [object Object] at the LP.
-              var v0 = res.detail && res.detail.validation && res.detail.validation[0];
-              var msg = (typeof v0 === 'string' && v0) || (typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
-              return fail(msg);
-            }
-            if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
-            // Proof-of-progress (2026-07-15 Bremington replay): ok:true WITHOUT a
-            // signing link shows no work done for this flow (increase/redemption
-            // success is always a nextUrl handoff), so it falls to the existing
-            // retry surface. This was already the behavior; the console log of
-            // the full response is what is new, so a replayed/evidence-free
-            // answer is diagnosable instead of invisible.
-            if (window.console) { try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); } catch (eLog2) {} }
-            fail(SUBMIT_FAIL_MSG);
-          };
-          p.send(JSON.stringify(body));
+          // Silent timeout retry (2026-07-18, ported from israel.html's 2026-07-16
+          // hardening; this lane was the one submit path without it). The gateway
+          // dedupes submit per-process, so a retry of the same payload is a no-op
+          // replay when the first attempt actually succeeded past the client's
+          // 60s ceiling. Only a TIMEOUT retries (2x, 5s apart, spinner stays up);
+          // a real server error still fails immediately with the same copy.
+          function attempt(retriesLeft) {
+            var p = new XMLHttpRequest();
+            p.open('POST', GW + '?source=lp', true);
+            p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+            // 60s hard ceiling. submit runs a SYNCHRONOUS Drive render (makeCopy +
+            // replaceText of the increase template) that on a cold Drive can take
+            // 10-25s; 30s was clipping that and showing a false broken-link, so the
+            // ceiling is raised so a normal cold render never times out. A dead /exec
+            // still fails after 60s rather than hanging the spinner forever. Gateway
+            // dedupes submit per-process so a retry of the same payload is a no-op.
+            p.timeout = 60000;
+            p.ontimeout = function () {
+              if (retriesLeft > 0) {
+                if (window.console) { try { console.log('submit timeout; retrying (' + retriesLeft + ' left)'); } catch (eT) {} }
+                setTimeout(function () { attempt(retriesLeft - 1); }, 5000);
+                return;
+              }
+              fail(SUBMIT_FAIL_MSG);
+            };
+            p.onerror   = function () { fail(SUBMIT_FAIL_MSG); };
+            p.onreadystatechange = function () {
+              if (p.readyState !== 4) return;
+              if (p.status === 0) return; // timeout/abort path; ontimeout owns it
+              if (p.status !== 200) return fail(SUBMIT_FAIL_MSG);
+              var res;
+              try { res = JSON.parse(p.responseText); }
+              catch (e) { return fail(SUBMIT_FAIL_MSG); }
+              if (res.ok !== true) {
+                // ok !== true (was !res.ok, tightened 2026-07-15): a JSON body
+                // WITHOUT ok (an HTTP 500 page that parses, a truncated proxy
+                // response) is not a success. Log the FULL rejected envelope
+                // (server-curated publicDetail, PII-free) for live diagnosis.
+                if (window.console) { try { console.log('gateway submit rejected:', JSON.stringify(res)); } catch (eLog) {} }
+                // Validation entries may be machine-code objects ({path, code});
+                // only a STRING entry is renderable copy. Never paint
+                // [object Object] at the LP.
+                var v0 = res.detail && res.detail.validation && res.detail.validation[0];
+                var msg = (typeof v0 === 'string' && v0) || (typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
+                return fail(msg);
+              }
+              if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
+              // Proof-of-progress (2026-07-15 Bremington replay): ok:true WITHOUT a
+              // signing link shows no work done for this flow (increase/redemption
+              // success is always a nextUrl handoff), so it falls to the existing
+              // retry surface. This was already the behavior; the console log of
+              // the full response is what is new, so a replayed/evidence-free
+              // answer is diagnosable instead of invisible.
+              if (window.console) { try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); } catch (eLog2) {} }
+              fail(SUBMIT_FAIL_MSG);
+            };
+            p.send(JSON.stringify(body));
+          }
+          attempt(2);
         });
       }
 

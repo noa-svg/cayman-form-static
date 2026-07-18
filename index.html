@@ -1408,7 +1408,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-07-18-1';
+    window.__BUILD_TAG = 'index-2026-07-18-2';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -2876,7 +2876,19 @@
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
       if (!validatePage(page)) { if (!statusEl.textContent) setStatus('Please complete the required fields.', true); return; }
+      // Back-gesture support (2026-07-18): push a history entry per forward page
+      // move, so the phone's native back button/gesture steps the pager back one
+      // page instead of exiting the form entirely. Forward moves only; prevBtn
+      // and popstate transitions never push.
+      try { history.pushState({ lvpIdx: idx + 1 }, '', location.href); } catch (eH) {}
       showPage(idx + 1); savePage().catch(function () { setStatus('Could not auto-save. Your progress may not be preserved.', true); });
+    });
+    window.addEventListener('popstate', function () {
+      // Mid-form back gesture steps the in-form pager back one page. On the
+      // first page there is nothing to step back to; the browser handles it
+      // (back = leave, as the LP expects). Never steps FORWARD (no validation
+      // bypass): popstate only ever lands on idx - 1.
+      if (idx > 0) showPage(idx - 1);
     });
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();

@@ -1291,7 +1291,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-07-16-2';
+      window.__BUILD_TAG = 'israel-2026-07-18-1';
       var p = new URLSearchParams(location.search);
       var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
       // Dev override: only honored when the page itself is served from localhost.
@@ -3651,6 +3651,13 @@
       window.scrollTo(0, 0);
     }
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
+    window.addEventListener('popstate', function () {
+      // Mid-form back gesture steps the in-form pager back one page. On the
+      // first page there is nothing to step back to; the browser handles it
+      // (back = leave, as the LP expects). Never steps FORWARD (no validation
+      // bypass): popstate only ever lands on idx - 1.
+      if (idx > 0) showPage(idx - 1);
+    });
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();
       // ONE error surface (Noa 2026-07-07: the summary + the bottom line read as
@@ -3661,6 +3668,11 @@
       // Advance INSTANTLY (optimistic); persist for resume in the background so
       // Continue never waits on the GAS round-trip. A failed save surfaces a note
       // but does not block navigation (state held client-side).
+      // Back-gesture support (2026-07-18): push a history entry per forward page
+      // move, so the phone's native back button/gesture steps the pager back one
+      // page instead of exiting the form entirely. Forward moves only; prevBtn
+      // and popstate transitions never push.
+      try { history.pushState({ lvpIdx: idx + 1 }, '', location.href); } catch (eH) {}
       showPage(idx + 1);
       // REAL local persistence (2026-07-07, Noa's refresh wipe): every advance also
       // snapshots the full form + position to localStorage, so the approved save-
