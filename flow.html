@@ -405,7 +405,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-07-18-3';
+      window.__BUILD_TAG = 'flow-2026-07-18-4';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -1398,9 +1398,13 @@
             // the only failure mode is "none picked" (silent-red per house style).
             return document.querySelector('input[name="wd-date"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'accountManagementApproval':
-            return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, silent: true };
+            // 2026-07-18 (pixel-pass finding): missing required uploads used the
+            // silent-red style, but unlike radios there is no adjacent red control
+            // making the omission obvious, so submit looked like it did nothing.
+            // Copy approved by Noa 2026-07-18.
+            return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
           case 'companyStamp':
-            return pendingUploads.companyStamp ? { ok: true } : { ok: false, silent: true };
+            return pendingUploads.companyStamp ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
         }
         return { ok: true };
       }
