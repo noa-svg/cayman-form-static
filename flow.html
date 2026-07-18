@@ -297,7 +297,7 @@
             <div id="redemption-partial-block" hidden>
               <div class="lvp-section"><h3 class="lvp-section__title lvp-section__title--sub">סכום הפדיון (ברוטו)</h3></div>
               <div id="amount-rows-redemption"></div>
-              <button type="button" class="lvp-amount-add" data-add-currency="redemption">+ הוספת מטבע</button>
+              <!-- Redemption is NIS-only (Noa 2026-07-18): no add-currency button. -->
             </div>
 
             <div class="lvp-section">
@@ -399,7 +399,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-07-16-1';
+      window.__BUILD_TAG = 'flow-2026-07-18-1';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -833,6 +833,20 @@
         var row = document.createElement('div');
         row.className = 'lvp-amount-row';
         row.setAttribute('data-amount-row', kind);
+        // Redemption is NIS-only (Noa 2026-07-18): a fixed שקל currency, no picker
+        // and no extra-currency legs. Only the amount is entered. collectAmounts
+        // still reads [data-currency] - here a hidden input pinned to שקל.
+        if (kind === 'redemption') {
+          row.innerHTML =
+            '<label class="lvp-field"><span class="lvp-field__label">סכום<span class="lvp-req" aria-hidden="true">*</span></span>' +
+            '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="סכום" aria-describedby="err-' + rowId + '"></label>' +
+            '<label class="lvp-field"><span class="lvp-field__label">מטבע פדיון</span>' +
+            '<input class="lvp-input" type="text" value="שקל" disabled aria-label="מטבע פדיון">' +
+            '<input type="hidden" data-currency value="שקל"></label>' +
+            '<span class="lvp-field__error" id="err-' + rowId + '" style="grid-column:1/-1;"></span>';
+          host.appendChild(row);
+          return;
+        }
         // Each row carries an amount + currency dropdown + labelled error. No
         // per-row "amount" heading; the section heading carries it. The remove
         // button surfaces only when more than one row exists.
