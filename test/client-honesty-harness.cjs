@@ -23,6 +23,22 @@ const path = require('path');
 const israelHtml = fs.readFileSync(path.join(__dirname, '..', 'israel.html'), 'utf8');
 const flowHtml = fs.readFileSync(path.join(__dirname, '..', 'flow.html'), 'utf8');
 const signerHtml = fs.readFileSync(path.join(__dirname, '..', 'signer.html'), 'utf8');
+// Batch D shared transport source: evaluated inside each test's stubbed env
+// (injected fetch/timers) so the extracted gateway() wrapper exercises the
+// REAL module, not a reimplementation.
+const gatewayModuleSrc = fs.readFileSync(path.join(__dirname, '..', 'lvp-gateway.js'), 'utf8');
+function buildGatewayModule(fetchImpl, setTimeoutImpl, clearTimeoutImpl, AbortControllerImpl) {
+  const holder = { exports: {} };
+  new Function('module', 'fetch', 'setTimeout', 'clearTimeout', 'AbortController', gatewayModuleSrc)(
+    holder, fetchImpl, setTimeoutImpl, clearTimeoutImpl, AbortControllerImpl
+  );
+  return holder.exports;
+}
+// jsdom boots (G5) run with runScripts:'dangerously', which does not fetch
+// external <script src>; inline the module the same way rig-israel.cjs does.
+const GW_TAG = '<script src="lvp-gateway.js"></script>';
+if (israelHtml.indexOf(GW_TAG) === -1) { console.log('FAIL lvp-gateway.js script tag missing from israel.html'); process.exit(1); }
+const israelHtmlInlined = israelHtml.replace(GW_TAG, '<script>\n' + gatewayModuleSrc + '\n</script>');
 
 let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : extra); } }
@@ -62,14 +78,21 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
   let fetchImpl;
   const logs = [];
   const consoleStub = { log: (...a) => logs.push(a.join(' ')), warn: () => {} };
+  // Build the REAL shared module in the same stubbed env, then hand it to the
+  // extracted wrapper on the window stub (production wiring).
+  const LVPGatewayStub = buildGatewayModule(
+    (...a) => fetchImpl(...a),
+    () => 0, () => 0,
+    undefined            // no AbortController: timer stays null, no abort path
+  );
   const gw = new Function(
     'CFG', 'fetch', 'window', 'AbortController', 'setTimeout', 'clearTimeout', 'console',
     src + '; return gateway;'
   )(
     { token: 'T', gatewayUrl: 'https://gw.invalid/exec' },
     (...a) => fetchImpl(...a),
-    { console: consoleStub },
-    undefined,           // no AbortController: timer stays null, no abort path
+    { console: consoleStub, LVPGateway: LVPGatewayStub },
+    undefined,
     () => 0, () => 0,
     consoleStub
   );
@@ -346,7 +369,7 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
       language: 'he', wire: null
     };
     if (sealed !== undefined) cfg.sealed = sealed;
-    const dom = new JSDOM(israelHtml, {
+    const dom = new JSDOM(israelHtmlInlined, {
       runScripts: 'dangerously',
       pretendToBeVisual: true,
       url: 'https://sign.legacyvpartners.com/israel.html?t=TESTTOKEN',

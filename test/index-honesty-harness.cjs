@@ -159,7 +159,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok('I4 submit-path stale gate wired before the POST', /staleReloadIfNewer_\(function \(\) \{ doSubmitNow_\(\); \}\);/.test(indexHtml));
   ok('I4 idempotency key minted once outside the retry loop', /var idemKey = caymanSubmitIdemKey_\(\);/.test(indexHtml));
   ok('I4 every attempt posts the same key', /idempotencyKey: idemKey/.test(indexHtml) && !/idempotencyKey: caymanSubmitIdemKey_\(\)/.test(indexHtml));
-  ok('I4 timeout flag drives the retry', /var isTimeout = !!\(err && err\.lvpTimeout\);/.test(indexHtml));
+  ok('I4 timeout flag drives the retry', /isTimeout: function \(err\) \{ return !!\(err && err\.lvpTimeout\); \}/.test(indexHtml));
   ok('I4 gateway abort carries the flag', /tErr\.lvpTimeout = true;/.test(indexHtml));
   // The legacy unguarded chain (gateway('submit', ...).then directly painting
   // success) must be gone: the only submit POST goes through attempt().
