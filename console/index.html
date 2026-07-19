@@ -983,7 +983,12 @@ body.side-coll .ss-row.ss-total { display: none; }
   white-space: nowrap;
 }
 .rail-lbl.muted { color: var(--color-ink-muted); }
+.rail-lbl.warn { color: var(--color-danger); }
 .rail-lbl .frac { color: var(--color-ink-muted); }
+/* C2 (2026-07-19): board-level next-action subtitle so "what is this row waiting
+   on" never costs a drawer open. Muted, one line, truncated. */
+.rwait { display:block; font-size: 11px; font-weight: 500; color: var(--color-ink-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
+@media (max-width: 720px) { .rwait { max-width: 180px; } }
 
 /* Age column */
 .rage {
@@ -2407,6 +2412,18 @@ body.side-coll .ss-lbl { display: none; }
 .lp-nm{font-size:13px;color:var(--color-ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
+.lp-empty-detail{margin-top:4px;font-size:11px;color:var(--color-ink-muted);word-break:break-word}
+/* C3 inline review confirm (send paths) */
+.crev{font-size:13px}
+.crev-line{display:flex;gap:8px;padding:2px 0}
+.crev-k{font-weight:800;min-width:64px;text-transform:uppercase;font-size:10px;letter-spacing:0.06em;align-self:center}
+.crev-v{font-weight:600;word-break:break-word}
+.crev-btns{display:flex;gap:10px;margin-top:10px;align-items:center}
+.crev-cancel{background:transparent;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:8px 14px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;color:var(--color-ink)}
+/* C7 Needs-you queue additions */
+.attn-act-hint{color:var(--color-ink-muted);font-weight:500}
+.attn-nudge{margin-inline-start:8px;background:var(--color-atrium-tint);color:var(--color-atrium);border:1px solid var(--color-atrium);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;flex-shrink:0}
+.attn-nudge:disabled{opacity:.6;cursor:default}
 .lp-picked{display:flex;align-items:center;gap: 12px;padding: 12px 12px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
 .lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
@@ -2824,7 +2841,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-18-1';
+  window.__BUILD_TAG = 'console-2026-07-19-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3341,12 +3358,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(st==='voided'||st==='void'){ railCls='dead'; segs=['up','up','up','up']; lbl='Canceled'; lblCls='muted'; }
     else if(st==='expired'){ railCls='dead'; segs=['up','up','up','up']; lbl='Expired'; lblCls='muted'; }
     else if(st==='needs_attention'){
-      // Freeze at the last real beat we can infer; default to In progress.
-      var fm=(STAGE_TO_MILESTONE[r.lastStage]!=null)?STAGE_TO_MILESTONE[r.lastStage]:1; if(fm>3)fm=3;
-      railCls='frozen'; segs=[]; for(var i=0;i<4;i++)segs.push(i<fm?'done':(i===fm?'current':'up'));
+      // C6d (2026-07-19): the list feed never emits lastStage, so the old
+      // STAGE_TO_MILESTONE[r.lastStage] read was dead code that always fell to
+      // its default - the rail froze at "In progress" while LOOKING like it knew
+      // where the process stalled. Freeze honestly at one fixed beat; the row's
+      // wait subtitle (C2) carries the real why.
+      railCls='frozen'; segs=['done','current','up','up'];
       lbl='Needs a look'; lblCls='muted';
     } else if(isCompletedStage(st)){
-      segs=['done','done','done','done']; lbl='Done';
+      // C1 (2026-07-19): a phantom-complete row (registry says complete, the
+      // completion tail failed a records write; server sends stale:true) must
+      // never read as a clean green Done on the board. The drawer already said
+      // "Needs review"; the board rail now agrees.
+      if(r.stale){ railCls='frozen'; segs=['done','done','done','current']; lbl='Needs review'; lblCls='warn'; }
+      else { segs=['done','done','done','done']; lbl='Done'; }
     } else if(SEALING_STAGES[st]){
       // Sealing = arriving at Done: the last segment fills as motion, not a static beat.
       railCls='sealing'; segs=['done','done','done','sealing']; lbl='Sealing'; lblCls='muted';
@@ -3418,10 +3443,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function rowHtml(r){
     var nm=r.name||r.he||'?';
     var he=(r.he&&r.name)?r.he:'';
-    var done=isTerminalStage(r.stage)?' done':'';
+    // C1 fix-of-the-fix (pixel pass 2026-07-19): a stale-complete row must not
+    // get the .done 50%-opacity fade - the whole point is that it is NOT quietly
+    // finished. Same exemption the renderRows filter applies.
+    var done=(isTerminalStage(r.stage)&&!(isCompletedStage(r.stage)&&r.stale))?' done':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
+    // C2 (2026-07-19): surface the server's next-action phrase on the row itself.
+    // Suppressed on clean terminal rows (nothing is waited on) and when the rail
+    // label already says the same thing (the signing fraction case - the pixel
+    // pass caught that this comment used to CLAIM the suppression without doing it).
+    var wait=(!isTerminalStage(r.stage)||r.stale)?String(r.wait||''):'';
+    if(r.stage==='signing'&&wait&&signerFraction(r))wait='';
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+'</span>'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+'</span>'
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
@@ -3438,7 +3472,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+encodeURIComponent(lane)).then(function(d){
       btn.disabled=false;
       var link=d&&d.onboardingLink;
-      if(!link){ return; }
+      if(!link){
+        // C6c (2026-07-19): a copy click with no link back is feedback-worthy, not
+        // silent - the operator cannot tell "copied" from "nothing happened".
+        var old=btn.innerHTML; btn.classList.add('is-copied'); btn.innerHTML='<span style="font-size:9px;font-weight:700">No link</span>';
+        setTimeout(function(){ if(btn.isConnected){ btn.classList.remove('is-copied'); btn.innerHTML=old; } },1500);
+        return;
+      }
       function fallbackCopy(){
         var t=document.createElement('textarea'); t.value=link; document.body.appendChild(t); t.select();
         try{document.execCommand('copy');}catch(e){}
@@ -3456,8 +3496,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }).catch(function(){ btn.disabled=false; });
   }
   function renderRows(rows,query){
-    var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage);}));
-    var completed=sortRows(rows.filter(function(r){return isCompletedStage(r.stage);}));
+    // C1 (2026-07-19): a stale-complete row (records write failed) is NOT quietly
+    // terminal - it needs the operator, so it stays on the default board instead
+    // of hiding behind "Show completed".
+    var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}));
+    var completed=sortRows(rows.filter(function(r){return isCompletedStage(r.stage)&&!r.stale;}));
     var canceled=sortRows(rows.filter(function(r){return isCanceledStage(r.stage);}));
     // Distinct empty-state copy for "no search match" vs "genuinely nothing in
     // flight" (audit finding #8) - both read as "Nothing in flight" before,
@@ -3545,12 +3588,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
   // ---- Needs-a-look strip (wiring item 3): the ?api=attention feed ----------
   function attnRowHtml(it){
-    var why=(it.reason||'')+(it.failReason?(' - '+it.failReason):'');
+    // S4 (2026-07-19): prefer the server-humanized sentence; a raw machine code
+    // (fatca_status_out_of_scope) only appears if the server predates the field.
+    var frTxt=it.failReasonHuman||it.failReason;
+    var why=(it.reason||'')+(frTxt?(' - '+frTxt):'');
     var days=(it.daysStuck!=null&&it.daysStuck!==999)?(it.daysStuck+'d'):'';
+    // C7 (2026-07-19): the strip is a "Needs you" queue - each row says what to
+    // DO, and the common action (nudge a stuck LP/signer) is one click right
+    // here instead of drawer -> find button -> click.
+    var canNudge=(it.stage==='link_sent'||it.stage==='opened'||it.stage==='signing');
     return '<div class="attn-row" data-pid="'+esc2(it.processId||'')+'" tabindex="0" role="button">'
       +'<span class="attn-nm">'+esc2(it.displayName||'?')+'</span>'
-      +'<span class="attn-why">'+esc2(why)+'</span>'
+      +'<span class="attn-why">'+esc2(why)+(it.action?'<span class="attn-act-hint"> · '+esc2(it.action)+'</span>':'')+'</span>'
       +(days?'<span class="attn-days">'+esc2(days)+'</span>':'')
+      +(canNudge?'<button type="button" class="attn-nudge" data-pid="'+esc2(it.processId||'')+'">Remind</button>':'')
       +'</div>';
   }
   var ATTN_SEQ=0;
@@ -3561,6 +3612,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     apiFetch('?api=attention&lane='+state.lane).then(function(d){
       if(rid!==ATTN_SEQ)return;
       var items=(d&&d.ok&&d.items)||[];
+      // C7 (2026-07-19): operator-owned rows only. Engineer-owned faults follow
+      // the same split the alert email uses (they live in the drawer + state
+      // log for the developer); a queue of things Noa cannot act on is noise.
+      // A server predating `owner` sends undefined -> keep the row (fail open).
+      items=items.filter(function(it){return it.owner!=='engineer';});
       if(!items.length){el.hidden=true;el.innerHTML='';return;}
       el.innerHTML=items.slice(0,8).map(attnRowHtml).join('');
       el.hidden=false;
@@ -3568,6 +3624,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var go=function(){var p=rw.getAttribute('data-pid');if(p)openDrawer(p);};
         rw.onclick=go;
         rw.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
+      });
+      // One-click Remind straight from the queue (same ?admin=nudge the drawer
+      // uses; the server's per-process cooldown makes a double-click safe).
+      Array.prototype.forEach.call(el.querySelectorAll('.attn-nudge'),function(nb){
+        nb.onclick=function(e){
+          e.stopPropagation();
+          if(nb.disabled)return;
+          nb.disabled=true;nb.textContent='Sending...';
+          apiFetch('?admin=nudge&processId='+encodeURIComponent(nb.getAttribute('data-pid')||'')).then(function(r){
+            nb.textContent=(r&&r.ok)?'Sent':((r&&r.cooldown)?'Already sent':'Failed');
+            setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
+          }).catch(function(){
+            nb.textContent='Failed';
+            setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
+          });
+        };
       });
     }).catch(function(){if(rid===ATTN_SEQ){el.hidden=true;el.innerHTML='';}});
   }
@@ -3604,10 +3676,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       doneLoaded=wantDone;
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
-    }).catch(function(){if(rid!==LOAD_SEQ)return;if(!silent)document.getElementById("list").innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';});
+    }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
+      // C5 (2026-07-19): the board error state gets an in-place Retry and the real
+      // cause in small print, instead of a dead-end "refresh or check auth" guess.
+      var el=document.getElementById("list");
+      el.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load the board. '
+        +'<a href="#" id="boardRetry">Retry</a>'
+        +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+        +'</div>';
+      var br=document.getElementById('boardRetry');
+      if(br)br.onclick=function(e){e.preventDefault();load();};
+    }});
     // Needs-a-look strip rides every board load (same 45s auto-refresh cadence).
     loadAttention();
     // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
@@ -3804,7 +3886,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // When the drawer shows the current-signer block, that block owns the
     // Remind button; keep the action row's copy only when there is no block.
     if(awaitingSigner&&!isTerminal&&!d.currentSigner){
-      dactBtns+='<button class="nudge" data-act="nudge">Remind signer</button>';
+      // C6b (2026-07-19): pre-submit there is no "signer" yet - the LP has not
+      // started or is mid-form. Label by what the reminder actually does.
+      var preSubmit=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress');
+      dactBtns+='<button class="nudge" data-act="nudge">'+(preSubmit?'Resend invite reminder':'Remind signer')+'</button>';
     }
     // Reseal is a RECOVERY control for a stuck pack; a complete/sealed process
     // has nothing to re-drive (the server-side re-drive would no-op with
@@ -4006,7 +4091,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!drawer.classList.contains("on"))drawerOpener=document.activeElement;
     currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden';
     document.getElementById("dbody").innerHTML='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
-    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(){document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process.</div></div>';});
+    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(err){
+      // C5 (2026-07-19): drawer load failure gets an in-place Retry + cause.
+      document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process. '
+        +'<a href="#" id="drawerRetry">Retry</a>'
+        +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+        +'</div></div>';
+      var dr=document.getElementById('drawerRetry');
+      if(dr)dr.onclick=function(e){e.preventDefault();openDrawer(pid);};
+    });
   }
 
   // F18: keyboard shortcuts. Escape closes (dropdown > panel > drawer, one per
@@ -4102,7 +4195,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(q.length<2){box.hidden=true;rows=[];return;}
       if(T)clearTimeout(T);
       T=setTimeout(function(){
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(){rows=[];box.innerHTML='<div class="lp-empty">Search failed.</div>';box.hidden=false;});
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(err){
+          // C5 (2026-07-19): a search ERROR is not "no matches" - say so, offer a
+          // one-click retry, and name the likely cause (a server error here was the
+          // tell of both grant outages; the operator should not have to guess).
+          rows=[];
+          box.innerHTML='<div class="lp-empty">Search hit a server error (not "no matches"). '
+            +'<a href="#" id="lpSearchRetry">Retry</a>'
+            +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+            +'<div class="lp-empty-detail">If this keeps failing, the system may be down. Check your inbox for an URGENT alert.</div></div>';
+          box.hidden=false;
+          var rl=document.getElementById('lpSearchRetry');
+          if(rl)rl.onclick=function(e){e.preventDefault();inp.dispatchEvent(new Event('input'));};
+        });
       },220);
     });
     inp.addEventListener('keydown',function(e){
@@ -4243,6 +4348,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     emailEl.addEventListener("blur",validateEmailField);
     emailEl.addEventListener("input",function(){if(!document.getElementById("emailErr").hidden)validateEmailField();});
   })();
+  // C3 (2026-07-19): one inline review confirm for every send path, replacing the
+  // native confirm() (unstyled, blocking, clumsy one-thumbed) and covering the
+  // money path, which auto-sent with NO confirm at all. Shows what is about to
+  // happen (who, which flow, where the email goes) with explicit Send / Cancel.
+  function createReviewConfirm(lines,goLabel,onGo){
+    var msg=document.getElementById("msg");
+    msg.style.display='block';msg.style.background='var(--color-neutral-bg)';msg.style.color='var(--color-ink)';msg.style.border='2px solid var(--color-ink)';
+    msg.setAttribute('role','status');msg.setAttribute('aria-live','polite');
+    msg.innerHTML='<div class="crev">'
+      +lines.map(function(l){return '<div class="crev-line"><span class="crev-k">'+esc2(l[0])+'</span><span class="crev-v" dir="auto">'+esc2(l[1])+'</span></div>';}).join('')
+      +'<div class="crev-btns"><button type="button" id="crevGo" class="cta" style="width:auto;padding:8px 18px">'+esc2(goLabel)+'</button>'
+      +'<button type="button" id="crevNo" class="crev-cancel">Cancel</button></div></div>';
+    document.getElementById('crevNo').onclick=function(){msg.innerHTML='';msg.style.display='none';};
+    document.getElementById('crevGo').onclick=function(){msg.innerHTML='';msg.style.display='none';onGo();};
+    document.getElementById('crevGo').focus();
+  }
   document.getElementById("createBtn").onclick=function(){
     var btn=this;
     var msg=document.getElementById("msg");
@@ -4251,6 +4372,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // increase has a Send-to-LP action server-side).
     if(state.process==="increase"||state.process==="withdrawal"){
       if(!state.selectedPeopleId){showMsg("Pick the existing LP filing the request.",true);return;}
+      // C3 (2026-07-19): this money path used to mint AND auto-send with no
+      // confirmation at all - the weakest guard on the highest-stakes send. One
+      // review card: who, which flow, where the invite goes. No amount exists at
+      // mint time (the LP enters it in the form), so the card shows what CAN be
+      // wrong here: the person and the flow.
+      createReviewConfirm([
+        ['LP',(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name))||('Monday item '+state.selectedPeopleId)],
+        ['Flow',(state.process==='withdrawal'?'Redemption':'Increase')+' · '+(state.type||'')],
+        ['Invite goes to','the LP by email, cc Omri']
+      ],'Create + send invite',function(){
       btn.disabled=true;btn.textContent="Creating...";
       document.getElementById("res").classList.remove("on");
       showMsg("Creating the request and sending the invite...",false);
@@ -4279,6 +4410,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           load();
         });
       }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+      });
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
@@ -4289,16 +4421,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var nameOk=validateNameField(),emailOk=validateEmailField();
     if(!nameOk){showMsg("Enter at least one name, English or Hebrew.",true);document.getElementById("name").focus();return}
     if(!emailOk){showMsg("Enter a valid investor email.",true);document.getElementById("email").focus();return}
-    if(!confirm('Send the invite to '+email+'?'))return;
+    // C3 (2026-07-19): the native confirm() showed only the email - right email +
+    // wrong LP/lane sailed through. Same inline review card as the money path.
+    createReviewConfirm([
+      ['Name',name||nameHebrew],
+      ['Email',email],
+      ['Flow','Onboarding · '+(state.type||'')+' · '+(state.lane==='israel'?'Israel':'Cayman')]
+    ],'Send invite',function(){doCreateOnboarding();});
+    function doCreateOnboarding(force){
     btn.disabled=true;btn.textContent="Sending...";
     document.getElementById("res").classList.remove("on");
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
     // Rev share is new-subscription-only; never carry a value an existing-LP submit hid.
     var _rsel=document.getElementById('revShareSel');var revShare=(state.lpKind==='new'&&_rsel)?(_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):_rsel.value):'';
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')).then(function(res){
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
-      if(!res||!res.ok){showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
+      if(!res||!res.ok){
+        // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
+        // resolution (force re-mint revokes the old link) that used to be
+        // unreachable from the UI - the operator had to hunt the old row down and
+        // void it by hand.
+        if(res&&res.duplicate&&res.existingProcessId){
+          var m2=document.getElementById("msg");
+          m2.style.display='block';m2.style.background='var(--color-red-tint)';m2.style.color='var(--color-red)';m2.style.border='2px solid var(--color-red)';
+          m2.setAttribute('role','alert');
+          m2.innerHTML=esc2(res.error||'This LP already has a process in flight.')
+            +'<div class="crev-btns"><button type="button" id="dupOpen" class="crev-cancel">Open existing</button>'
+            +'<button type="button" id="dupForce" class="cta" style="width:auto;padding:8px 18px">Re-mint anyway</button></div>';
+          document.getElementById('dupOpen').onclick=function(){m2.innerHTML='';m2.style.display='none';openDrawer(res.existingProcessId);};
+          document.getElementById('dupForce').onclick=function(){m2.innerHTML='';m2.style.display='none';doCreateOnboarding(true);};
+          return;
+        }
+        showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
       showMsg("",false);
       document.getElementById("res").classList.add("on");
       document.getElementById("lk").textContent=res.url||"";
@@ -4307,6 +4462,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       caymanClearCreateForm();
       load();
     }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+    }
   };
   document.getElementById("copyLinkBtn").onclick=function(){
     var lk=document.getElementById("lk").textContent;
@@ -4440,7 +4596,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       W8=null;
       setW8Badge(0);
       var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
-      document.getElementById('w8list').innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';
+      var wle=document.getElementById('w8list');
+      wle.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. <a href="#" id="w8Retry">Retry</a></div>';
+      var wr=document.getElementById('w8Retry');
+      if(wr)wr.onclick=function(e){e.preventDefault();loadW8();};
     });
   }
 
@@ -4527,7 +4686,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // next visit retries.
       if(rid!==MSG_SEQ)return;
       MSGS=null;
-      document.getElementById('msgspine').innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. Refresh or check auth.</div>';
+      var mse=document.getElementById('msgspine');
+      mse.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. <a href="#" id="msgRetry">Retry</a></div>';
+      var mr=document.getElementById('msgRetry');
+      if(mr)mr.onclick=function(e){e.preventDefault();loadMsgs();};
     });
   }
   // Skeleton: a few ghost node bars under a phase header (geometry, not "Loading...").
