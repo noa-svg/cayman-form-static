@@ -3386,12 +3386,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Amount display (wiring item 4): symbol for the currencies the fund actually
   // sees, code suffix otherwise, '' when no amount was captured yet.
   var CCY_SYMBOL={ILS:'₪',NIS:'₪',USD:'$',EUR:'€',GBP:'£'};
+  // 2026-07-19: Israeli-lane submissions carry the raw Hebrew word the LP picked
+  // on the form (שקל/דולר/יורו/אירו), not an ISO code - CCY_SYMBOL's lookup missed
+  // every one of those and fell through to the raw-text fallback, so the console
+  // (otherwise all-English chrome) showed "1,000,000 שקל" instead of "₪1,000,000".
+  // Mirrors caymanCurrencyCode_ (CaymanModel.ts) so both sides normalize the same
+  // Hebrew-word/symbol/code variants to one ISO code before formatting.
+  var CCY_ALIASES={'שקל':'ILS','דולר':'USD','יורו':'EUR','אירו':'EUR'};
   function fmtAmount(amount,ccy){
     if(amount==null||amount===''||isNaN(Number(amount)))return '';
     var n=Number(amount),s;
     try{s=n.toLocaleString('en-US',{maximumFractionDigits:0});}catch(e){s=String(Math.round(n));}
-    var sym=CCY_SYMBOL[String(ccy||'').toUpperCase()];
-    return sym?(sym+s):(ccy?(s+' '+String(ccy).toUpperCase()):s);
+    var ccyNorm=CCY_ALIASES[String(ccy||'').trim()]||ccy;
+    var sym=CCY_SYMBOL[String(ccyNorm||'').toUpperCase()];
+    return sym?(sym+s):(ccyNorm?(s+' '+String(ccyNorm).toUpperCase()):s);
   }
   // In-flight totals by currency for the sidebar. Terminal rows excluded; rows
   // with no captured amount contribute nothing.
