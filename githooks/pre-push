@@ -1,0 +1,40 @@
+#!/bin/bash
+# pre-push gate (2026-07-19, tracked+wired via core.hooksPath 2026-07-20): a
+# push to origin IS a production deploy (GitHub Pages serves
+# sign.legacyvpartners.com from this repo). Most test/ harnesses are
+# deliberately untracked (test/* gitignored, a handful un-ignored by name)
+# so the bulk of the rig never ships on the LP domain, which means this
+# hook is the ONLY automated gate between an edit and live LP-facing forms
+# for most of the checks below -- no CI can run what it can't see.
+#
+# This script itself now lives here (githooks/pre-push, tracked) instead of
+# only in .git/hooks/pre-push (never version-controlled, local to one
+# clone). Wire it up after a fresh clone with:
+#   git config core.hooksPath githooks
+# `pnpm install` doesn't apply here (no package.json / build step on this
+# static site), so unlike legacy-tools-mono this can't self-wire on
+# install; run the config command by hand once per clone.
+#
+# Known pre-existing gap, not fixed by this pass: israel-flow.cjs and
+# console-harness.cjs (both invoked below) are themselves untracked. A
+# fresh clone with only this hook wired and no test/ restored will
+# correctly fail closed at the `[ ! -d test ]` check, but restoring test/
+# itself is still a manual step today.
+#
+# Bypass (emergencies only): git push --no-verify
+set -e
+cd "$(git rev-parse --show-toplevel)"
+if [ ! -d test ]; then
+  echo "pre-push: test/ harnesses not present on this machine; refusing to deploy unverified. (git push --no-verify to override)"
+  exit 1
+fi
+echo "pre-push: running deploy gate harnesses..."
+node test/coupling-check.cjs
+node test/client-honesty-harness.cjs  >/dev/null && echo "client-honesty OK"
+node test/index-honesty-harness.cjs   >/dev/null && echo "index-honesty OK"
+node test/snap-ttl-harness.cjs        >/dev/null && echo "snap-ttl OK"
+node test/israel-flow.cjs             >/dev/null && echo "israel-flow OK"
+node test/console-harness.cjs         >/dev/null && echo "console-harness OK"
+node test/lvp-token-consistency.cjs   >/dev/null && echo "lvp-token-consistency OK"
+node test/atrium-palette-sync.cjs     >/dev/null && echo "atrium-palette-sync OK"
+echo "pre-push: all green - deploying to Pages."

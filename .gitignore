@@ -1,2 +1,4 @@
 test/*
 !test/console-action-contract.cjs
+!test/lvp-token-consistency.cjs
+!test/atrium-palette-sync.cjs
