@@ -3963,7 +3963,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields||d.createdAt||d.updatedAt){
       h+='<div class="dsec"><h3>Details</h3>';
-      if(d.fields)Object.keys(d.fields).forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
+      if(d.fields){
+        // 2026-07-19: investmentAmount/investmentCurrency used to dump as two
+        // bare raw fields ("Investment Amount: 250000", "Investment Currency:
+        // USD") via the generic key/value loop below, while the SAME data on
+        // the board row correctly renders "$250,000" through fmtAmount. Fold
+        // the pair into one formatted line, reusing the board's own formatter
+        // so the two views of the same number can never drift again.
+        var fkeys=Object.keys(d.fields);
+        if('investmentAmount' in d.fields){
+          var famt=fmtAmount(d.fields.investmentAmount,d.fields.investmentCurrency);
+          if(famt)h+='<div class="kv"><span class="k">Investment</span><span class="v">'+esc2(famt)+'</span></div>';
+          fkeys=fkeys.filter(function(k){return k!=='investmentAmount'&&k!=='investmentCurrency';});
+        }
+        fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
+      }
       // Process created/updated stamps (wiring item 1) - registry truth.
       if(d.createdAt)h+='<div class="kv"><span class="k">Created</span><span class="v">'+esc2(fmtTs(d.createdAt)||d.createdAt)+'</span></div>';
       if(d.updatedAt)h+='<div class="kv"><span class="k">Updated</span><span class="v">'+esc2(fmtTs(d.updatedAt)||d.updatedAt)+'</span></div>';
