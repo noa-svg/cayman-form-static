@@ -2495,6 +2495,16 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman';background:var(--color-
 .new-dd-row .ndl{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
 .new-dd-item{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);font-weight:800;text-transform:uppercase;letter-spacing:0.04em;font-size:12px;color:var(--color-ink);padding:7px 12px;box-shadow:var(--shadow-card);background:#fff}
 .new-dd-item:hover{background:var(--color-atrium);border-color:var(--color-ink);color:#fff}
+/* Ive pass 2026-07-19: 6 pills at identical weight read as a flat toolbar with
+   no primary path. Onboarding (data-kind="new") is almost certainly the most
+   common action in a fund-ops mint tool; the three existing-LP rows demote to
+   a quieter material (thin border, no shadow, lighter weight) so the eye finds
+   the likely action first without losing the others. Same click targets, same
+   copy - material only. */
+.new-dd > .new-dd-row .ndl{font-weight:600;letter-spacing:0.06em;color:var(--color-ink-muted)}
+.new-dd > .new-dd-row .new-dd-item{border-width:1px;border-color:var(--color-border-strong);box-shadow:none;font-weight:600;letter-spacing:0.02em}
+.new-dd > .new-dd-row .new-dd-item:hover{background:var(--color-atrium-tint);border-color:var(--color-atrium);color:var(--color-atrium-deep)}
+.dd-onboarding .new-dd-row .ndl{color:var(--color-atrium)}
 
 /* ---- board search ---- */
 .board-search{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;font-weight:600;padding:11px 14px}
@@ -2546,6 +2556,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .cta{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
 .cta:hover{background:var(--color-coral);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
 .cta:active{transform:translate(2px,2px);box-shadow:none}
+
+/* ---- Ive pass 2026-07-19: drawer action buttons (reseal/void/nudge/confirm)
+   never got the ATELIER pass the rest of the app did - thin 1px colored
+   borders, no shadow, medium weight, no tracking, while every other button
+   in the app (cta/cmd-btn/new-dd-item) is bold black-bordered + shadowed +
+   uppercase tracked. Two button languages in one app is the loudest possible
+   "unconsidered" signal. Structural treatment only - the semantic colors
+   (atrium=reseal/nudge, red=void/danger) are exactly what should differ
+   between these actions, so they stay untouched; only the weight/border/
+   shadow/tracking that should be CONSISTENT across every button gets fixed. */
+.dact .reseal,.dact .nudge,.cursig .nudge,.dact-confirm .dac-cancel,.dact-confirm .dac-go{
+  border-width:var(--bw);border-color:var(--color-ink);box-shadow:var(--shadow-card);
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.dact .dvoid{
+  border-width:var(--bw);box-shadow:var(--shadow-card);
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out),color var(--dur-fast),border-color var(--dur-fast),background var(--dur-fast);
+}
+.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active,.cursig .nudge:active,.dact-confirm .dac-cancel:active,.dact-confirm .dac-go:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- create panel + drawer shells ---- */
 #panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-drawer)}
@@ -2626,9 +2657,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <button id="side-collapse">&#171; collapse</button>
     </div>
     <nav>
-      <button class="nav on" data-view="board" aria-current="page"><span class="nav-ic" aria-hidden="true">🗂️</span><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
-      <button class="nav" data-view="messages"><span class="nav-ic" aria-hidden="true">✉️</span><span class="nav-lbl">Messages</span></button>
-      <button class="nav" data-view="w8"><span class="nav-ic" aria-hidden="true">🕒</span><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
+      <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
+      <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
+      <button class="nav" data-view="w8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
     </nav>
     <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
          of data we need to see"). Filled from the SAME allRows the board already
