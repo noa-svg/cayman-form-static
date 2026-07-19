@@ -422,53 +422,60 @@ body.side-coll .side-foot .foot-gear { display: none; }
    ============================================================ */
 
 :root[data-theme="light"] {
-  /* LIGHT EDITORIAL - cream ground, factsheet blue primary, gold accent */
-  --color-bg-page:        #FBF7EF;
-  --color-bg-sidebar:     #3A6485;
+  /* LIGHT EDITORIAL, retinted 2026-07-19 to match Atrium/NavPortal's canonical
+     palette (operate.legacyvpartners.com), the same brand-color source used
+     across every operator tool. Atrium's navy/banner-blue were pixel-sampled
+     directly off the real Fact Sheet PDF (see nav-portal's tokens.css), so
+     that palette is treated as canon here rather than reintroduced ad hoc.
+     Structural tokens (font/space/radius/motion/sidebar-dims) are unchanged,
+     defined once in the base :root above and still load-bearing there since
+     this block only overrides colors and shadows, not structure. */
+  --color-bg-page:        #FAFAF8;
+  --color-bg-sidebar:     #0D406B;
   --color-bg-card:        #FFFFFF;
   --color-bg-panel:       #FFFFFF;
   --color-bg-input:       #FFFFFF;
-  --color-bg-hover:       #F4EEE2;
-  --color-bg-strip:       #FBF7EF;
+  --color-bg-hover:       #EFEEEA;
+  --color-bg-strip:       #FAFAF8;
   --color-bg-drawer:      #FFFFFF;
   --color-bg-overlay:     rgba(20,30,40,0.40);
-  --color-atrium:         #3F729A;
-  --color-atrium-deep:    #355E80;
-  --color-atrium-tint:    #EAF1F8;
-  --color-atrium-tint-md: #D9E6F2;
-  --color-atrium-muted:   rgba(35,100,158,0.12);
-  --color-ink:            #2A231C;
-  --color-ink-sub:        #6E6252;
-  --color-ink-muted:      #8C887A;
+  --color-atrium:         #1F5DB0;
+  --color-atrium-deep:    #184C90;
+  --color-atrium-tint:    rgba(31,93,176,0.08);
+  --color-atrium-tint-md: rgba(31,93,176,0.16);
+  --color-atrium-muted:   rgba(31,93,176,0.12);
+  --color-ink:            #141414;
+  --color-ink-sub:        #6D6657;
+  --color-ink-muted:      #8A8268;
   --color-ink-disabled:   #C2BBA8;
   --color-ink-inverse:    #FFFFFF;
-  --color-border:         #EAE1CF;
-  --color-border-subtle:  #F0E9DA;
-  --color-border-strong:  #D7CDB6;
+  --color-border:         rgba(20,20,20,0.16);
+  --color-border-subtle:  rgba(20,20,20,0.08);
+  --color-border-strong:  rgba(20,20,20,0.32);
   --color-border-focus:   #23649E;
-  --color-gold:           #D9A93A;
-  --color-gold-tint:      #FBF1D9;
-  --color-coral:          #C0563E;
-  --color-coral-tint:     #F6E4DA;
-  --color-green:          #4E8C6A;
-  --color-green-tint:     #E4F0E9;
-  --color-amber:          #C99A2E;
-  --color-amber-tint:     #FBF1D9;
-  --color-red:            #C2483C;
-  --color-red-tint:       #F8E5E1;
+  --color-gold:           #D4A227;
+  --color-gold-tint:      rgba(212,162,39,0.14);
+  --color-coral:          #D85E4C;
+  --color-coral-tint:     rgba(216,94,76,0.10);
+  --color-green:          #2E8540;
+  --color-green-tint:     rgba(46,133,64,0.10);
+  --color-amber:          #9A7410;
+  --color-amber-tint:     rgba(154,116,16,0.14);
+  --color-red:            #C0202E;
+  --color-red-tint:       rgba(192,32,46,0.08);
   --color-dim:            #B8B2A4;
-  --color-success:        #4E8C6A;
-  --color-success-bg:     #E4F0E9;
-  --color-warning:        #C99A2E;
-  --color-warning-bg:     #FBF1D9;
-  --color-danger:         #C2483C;
-  --color-danger-bg:      #F8E5E1;
+  --color-success:        #2E8540;
+  --color-success-bg:     rgba(46,133,64,0.10);
+  --color-warning:        #9A7410;
+  --color-warning-bg:     rgba(154,116,16,0.14);
+  --color-danger:         #C0202E;
+  --color-danger-bg:      rgba(192,32,46,0.08);
   --color-info:           #23649E;
   --color-info-bg:        #EAF1F8;
-  --color-neutral:        #8C887A;
+  --color-neutral:        #8A8268;
   --color-neutral-bg:     #F0ECE2;
   --shadow-card:          0 1px 3px rgba(21,32,63,0.07);
-  --shadow-hover:         0 2px 10px rgba(21,32,63,0.10), 0 0 0 1px #EAE1CF;
+  --shadow-hover:         0 2px 10px rgba(21,32,63,0.10), 0 0 0 1px rgba(20,20,20,0.16);
   --shadow-panel:         0 6px 28px rgba(21,32,63,0.14);
   --shadow-drawer:        -2px 0 26px rgba(21,32,63,0.12);
   --shadow-modal:         0 10px 44px rgba(21,32,63,0.18);
@@ -911,7 +918,7 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .attn-row {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 12px;
-  border: 1px solid var(--color-amber, #C99A2E);
+  border: 1px solid var(--color-amber, #9A7410);
   border-radius: var(--radius-md);
   background: var(--color-gold-tint, #FBF3E2);
   cursor: pointer;
