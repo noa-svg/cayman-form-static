@@ -2691,7 +2691,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
       <div class="content">
         <div class="listhead">
-          <input class="board-search" id="boardSearch" type="search" placeholder="Search" autocomplete="off">
+          <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off">
         </div>
         <div class="attn-strip" id="attnStrip" hidden></div>
         <div id="list"></div>
@@ -3118,13 +3118,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function startGoogleSignIn(){
     var nonce=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
     sessionStorage.setItem('gsi_nonce',nonce);
+    // 2026-07-19: hl='en' forces Google's hosted sign-in page to English
+    // regardless of the browser's own locale. Without it this otherwise
+    // all-English console showed a Hebrew sign-in button (Google auto-
+    // localizes the OAuth page from browser locale) - the first thing anyone
+    // sees, every session, breaking the language consistency of the app's
+    // own first pixel.
     var p=new URLSearchParams({
       client_id:GSI_CLIENT_ID,
       redirect_uri:'https://sign.legacyvpartners.com/console/',
       response_type:'id_token',
       scope:'openid email profile',
       nonce:nonce,
-      prompt:'select_account'
+      prompt:'select_account',
+      hl:'en'
     });
     window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString();
   }
@@ -3176,7 +3183,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       response_type:'id_token',
       scope:'openid email profile',
       nonce:nonce,
-      prompt:'none'
+      prompt:'none',
+      hl:'en'
     });
     if(pl.email)p.set('login_hint',pl.email);
     if(_refreshIframe){try{_refreshIframe.remove();}catch(e){}}
