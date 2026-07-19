@@ -2872,7 +2872,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-19-1';
+  window.__BUILD_TAG = 'console-2026-07-19-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3640,7 +3640,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +'<span class="attn-nm">'+esc2(it.displayName||'?')+'</span>'
       +'<span class="attn-why">'+esc2(why)+(it.action?'<span class="attn-act-hint"> · '+esc2(it.action)+'</span>':'')+'</span>'
       +(days?'<span class="attn-days">'+esc2(days)+'</span>':'')
-      +(canNudge?'<button type="button" class="attn-nudge" data-pid="'+esc2(it.processId||'')+'">Remind</button>':'')
+      +(canNudge?'<button type="button" class="attn-nudge" data-pid="'+esc2(it.processId||'')+'" data-stage="'+esc2(it.stage||'')+'">Remind</button>':'')
       +'</div>';
   }
   var ATTN_SEQ=0;
@@ -3664,23 +3664,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         rw.onclick=go;
         rw.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
       });
-      // One-click Remind straight from the queue (same ?admin=nudge the drawer
-      // uses; the server's per-process cooldown makes a double-click safe).
+      // One-click Remind straight from the queue. Stage-aware route (2026-07-19):
+      // a pre-submit process (link_sent/opened) has NO signing request, so
+      // ?admin=nudge can never succeed there - it resends the ORIGINAL invite
+      // via ?admin=resendInvite instead. Signing-stage rows nudge the current
+      // signer as before. The server's per-process cooldown makes a
+      // double-click safe on both routes.
       Array.prototype.forEach.call(el.querySelectorAll('.attn-nudge'),function(nb){
         nb.onclick=function(e){
           e.stopPropagation();
           if(nb.disabled)return;
           nb.disabled=true;nb.textContent='Sending...';
-          apiFetch('?admin=nudge&processId='+encodeURIComponent(nb.getAttribute('data-pid')||'')).then(function(r){
+          var st=nb.getAttribute('data-stage')||'';
+          var route=(st==='signing')?'?admin=nudge&processId=':'?admin=resendInvite&processId=';
+          apiFetch(route+encodeURIComponent(nb.getAttribute('data-pid')||'')).then(function(r){
             nb.textContent=(r&&r.ok)?'Sent':((r&&r.cooldown)?'Already sent':'Failed');
+            if(r&&!r.ok&&r.error)nb.title=r.error;
             setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
-          }).catch(function(){
+          }).catch(function(err){
             nb.textContent='Failed';
+            if(err&&err.serverError)nb.title=err.serverError;
             setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
           });
         };
       });
-    }).catch(function(){if(rid===ATTN_SEQ){el.hidden=true;el.innerHTML='';}});
+    }).catch(function(err){
+      // A failed needs-you load must not read as "nothing needs you" (silence
+      // is not health). Show an honest one-line failure; the next 45s board
+      // refresh retries it automatically.
+      if(rid!==ATTN_SEQ)return;
+      el.hidden=false;
+      el.innerHTML='<div class="attn-row"><span class="attn-why" style="color:var(--color-danger)">Needs-a-look list failed to load'
+        +((err&&err.serverError)?(': '+esc2(String(err.serverError).slice(0,100))):'')+'</span></div>';
+    });
   }
   function render(rows){
     allRows=rows;
@@ -3928,7 +3944,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // C6b (2026-07-19): pre-submit there is no "signer" yet - the LP has not
       // started or is mid-form. Label by what the reminder actually does.
       var preSubmit=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress');
-      dactBtns+='<button class="nudge" data-act="nudge">'+(preSubmit?'Resend invite reminder':'Remind signer')+'</button>';
+      dactBtns+='<button class="nudge" data-act="'+(preSubmit?'resendInvite':'nudge')+'">'+(preSubmit?'Resend invite reminder':'Remind signer')+'</button>';
     }
     // Reseal is a RECOVERY control for a stuck pack; a complete/sealed process
     // has nothing to re-drive (the server-side re-drive would no-op with
@@ -4069,19 +4085,33 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     Array.prototype.forEach.call(document.querySelectorAll(".dact-btns button, #drawer .cursig button[data-act]"),function(b){
       var act=b.getAttribute("data-act");
       b.onclick=function(){
-        // Nudge is non-destructive: no confirm strip, fire straight away, then a short
-        // cooldown so a double-tap can't double-mail the signer.
-        if(act==='nudge'){
+        // Nudge / invite-resend are non-destructive: no confirm strip, fire straight
+        // away, then a short cooldown so a double-tap can't double-mail. Route by
+        // stage (2026-07-19): pre-submit has no signing request, so the button is
+        // rendered as data-act="resendInvite" and drives ?admin=resendInvite (the
+        // original invite, fresh token, lane-aware); at signing, ?admin=nudge
+        // reminds the current signer. Before this, the pre-submit button hit the
+        // nudge route and failed deterministically for every LP.
+        if(act==='nudge'||act==='resendInvite'){
           b.disabled=true;dStatus('Sending the reminder...','');
-          apiFetch('?admin=nudge&processId='+encodeURIComponent(currentPid)).then(function(r){
+          var remRoute=(act==='resendInvite')?'?admin=resendInvite&processId=':'?admin=nudge&processId=';
+          apiFetch(remRoute+encodeURIComponent(currentPid)).then(function(r){
             if(r&&r.ok){
-              dStatus('Reminder sent'+(curSignerName?(' to '+curSignerName):'')+'.','ok');
+              dStatus((act==='resendInvite')?'Invite reminder sent.':('Reminder sent'+(curSignerName?(' to '+curSignerName):'')+'.'),'ok');
               setTimeout(function(){if(b&&b.isConnected)b.disabled=false;},6000);
             }else{
               b.disabled=false;
               dStatus('Could not send the reminder'+((r&&r.error)?(': '+r.error):'. Try again in a moment.'),'error');
             }
-          }).catch(function(){b.disabled=false;dStatus('Could not send the reminder. Check the connection and try again.','error');});
+          }).catch(function(err){
+            // Surface the REAL server error (apiFetch throws on any {ok:false}
+            // since 2026-07-17 and attaches it as err.serverError). The old
+            // generic "check the connection" text disguised deterministic
+            // server refusals as network blips, which is why the dead
+            // pre-submit route survived unreported.
+            b.disabled=false;
+            dStatus('Could not send the reminder'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection and try again.'),'error');
+          });
           return;
         }
         var c=ACT_CONFIRM[act];if(!c||!confEl)return;
@@ -4109,7 +4139,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           else{load();if(currentPid)openDrawer(currentPid);}
         }
         else{dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,r),'error');}
-      }).catch(function(){dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,null),'error');});
+      }).catch(function(err){dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,(err&&err.serverError)?{error:err.serverError}:null),'error');});
     };
     // Async history load
     if(d.mondayItemId){
@@ -4314,7 +4344,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         subs=(d&&d.submissions)||[];
         status.textContent=subs.length?(subs.length+' pending'):'None pending';
         render();
-      }).catch(function(){status.textContent='Load failed.';subs=[];});
+      }).catch(function(err){status.textContent='Load failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'.');subs=[];});
     };
     document.addEventListener('click',function(e){var w=document.getElementById('onbPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
   })();
@@ -4462,8 +4492,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           if(window.__clearCreateDraft)window.__clearCreateDraft();
           load();
         });
-      }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
-      });
+      }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&(e.serverError||e.message))||"unknown"),true);});
+  });
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
@@ -4514,7 +4544,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       document.getElementById('resSub').textContent='Copy the link to share manually.';
       caymanClearCreateForm();
       load();
-    }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&e.message)||"unknown"),true);});
+    }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&(e.serverError||e.message))||"unknown"),true);});
     }
   };
   document.getElementById("copyLinkBtn").onclick=function(){
@@ -4531,7 +4561,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid)).then(function(r){
       if(r&&r.ok){b.textContent="Invite sent";if(st){st.style.color='var(--color-success)';st.textContent='Sent to '+(r.sentTo||'the LP')+(r.cc?(' · cc '+r.cc):'');}}
       else{b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent=(r&&r.error)||'Send failed. Try again.';}}
-    }).catch(function(e){b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&e.message)||'unknown');}});
+    }).catch(function(e){b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&(e.serverError||e.message))||'unknown');}});
   };
 
   // view switching
@@ -5000,13 +5030,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var L2=curMsg[curLang]||(curMsg[curLang]={subject:'',body:''});
       L2.subject=sub;L2.body=body;L2.overridden=true;renderSpine();
       sv.textContent="Saving...";
-      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(){sv.textContent='Save failed';});
+      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(err){sv.textContent='Save failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
     };
     document.getElementById('m-reset').onclick=function(){
       if(document.getElementById('m-reset').disabled)return;
       var sv=document.getElementById('m-saved');
       sv.textContent="Reverting...";
-      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane).then(function(){MSGS=null;curMsg=null;var d2=document.getElementById('msgdetail');d2.className='msgempty';d2.innerHTML='Select an email to edit its copy and preview what sends.';loadMsgs();}).catch(function(){sv.textContent='Revert failed';});
+      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane).then(function(){MSGS=null;curMsg=null;var d2=document.getElementById('msgdetail');d2.className='msgempty';d2.innerHTML='Select an email to edit its copy and preview what sends.';loadMsgs();}).catch(function(err){sv.textContent='Revert failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
     };
   }
 </script>
