@@ -1006,6 +1006,12 @@ body.side-coll .ss-row.ss-total { display: none; }
    on" never costs a drawer open. Muted, one line, truncated. */
 .rwait { display:block; font-size: 11px; font-weight: 500; color: var(--color-ink-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
 @media (max-width: 720px) { .rwait { max-width: 180px; } }
+/* Row-level reminder status (2026-07-20): who needs a nudge, at a glance,
+   with no drawer click. Material carries the urgency - amber ink for
+   never-reminded, quiet muted ink once one has gone out - no icon. */
+.rrem { display:inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+.rrem-none { color: var(--color-amber); }
+.rrem-sent { color: var(--color-ink-muted); font-weight: 500; text-transform: none; letter-spacing: normal; }
 
 /* Age column */
 .rage {
@@ -1848,6 +1854,7 @@ input:focus {
   display: inline-flex;
   align-items: center;
   margin-top: var(--space-2);
+  margin-right: 6px;
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
@@ -1856,6 +1863,11 @@ input:focus {
   background: var(--color-atrium-tint);
   color: var(--color-atrium);
 }
+/* Entity FATCA classification chip (2026-07-20): passive gets the amber tone
+   the app reserves for attention-worthy state - it is the branch requiring
+   the manual per-CP W-8BEN legs, not a decorative variant. */
+.dh .st-class-active { background: var(--color-neutral-bg); color: var(--color-ink-sub); }
+.dh .st-class-passive { background: color-mix(in srgb, var(--color-amber) 16%, transparent); color: var(--color-amber); }
 
 .dsec {
   padding: var(--space-5) var(--space-6);
@@ -3515,8 +3527,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // pass caught that this comment used to CLAIM the suppression without doing it).
     var wait=(!isTerminalStage(r.stage)||r.stale)?String(r.wait||''):'';
     if(r.stage==='signing'&&wait&&signerFraction(r))wait='';
+    // Reminder status on the row itself (Noa 2026-07-20, top priority: "I need
+    // to remind some people maybe" - the board is where she scans for who,
+    // not a per-row drawer click). Signing-stage only: a pre-submit row has no
+    // signer to remind yet, a terminal row is done. Material-honest (E1): the
+    // never-reminded case gets the amber ink the rest of the app reserves for
+    // attention, not an icon bolted onto an otherwise-neutral row.
+    var remChip='';
+    if(r.stage==='signing'&&!isTerminalStage(r.stage)){
+      remChip=r.reminderCount
+        ?'<span class="rrem rrem-sent" title="Reminded '+r.reminderCount+'x, last '+esc2(fmtTs(r.lastReminderAt))+'">reminded '+r.reminderCount+'x</span>'
+        :'<span class="rrem rrem-none" title="No reminder sent yet">not reminded</span>';
+    }
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+'</span>'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+remChip+'</span>'
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
@@ -3753,7 +3777,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       doneLoaded=wantDone;
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',reminderCount:it.reminderCount||0,lastReminderAt:it.lastReminderAt||null};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
@@ -3955,11 +3979,36 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     h+='</div>';
     return h;
   }
+  // Entity FATCA classification chip (Noa 2026-07-20: "show what entity type =
+  // passive/active"). Prefers the deterministic post-submission read
+  // (classification.chapter4Status, computed from the LP's own FATCA self-
+  // cert); falls back to the operator's mint-time choice for an Israeli
+  // entity that hasn't submitted yet (entityClassification). Individuals
+  // carry no meaningful classification here, so the chip is entity-only.
+  // Passive gets the amber tone - it is the branch that requires the manual
+  // per-CP W-8BEN legs (ops guard), genuinely more operator-attention-worthy
+  // than active, not decoration.
+  function entityClassChipHtml(d){
+    var lbl='',tone='';
+    var c4=d.classification&&d.classification.chapter4Status;
+    if(c4){
+      if(/Active NFFE/.test(c4)){lbl='Active NFFE';tone='active';}
+      else if(/Passive NFFE/.test(c4)){lbl='Passive NFFE';tone='passive';}
+      else if(/^US person/.test(c4)){lbl='US person';tone='';}
+      else if(/individual/i.test(c4)){lbl='';}
+      else{lbl=c4.split('(')[0].trim();}
+    }else if(d.entityClassification){
+      lbl=(d.entityClassification==='passive')?'Passive (at mint)':'Active (at mint)';
+      tone=(d.entityClassification==='passive')?'passive':'active';
+    }
+    if(!lbl)return '';
+    return '<span class="st st-class'+(tone?' st-class-'+tone:'')+'">'+esc2(lbl)+'</span>';
+  }
   function renderDrawer(d){
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
     if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top: 4px">'+esc2(d.nameHebrew)+'</div>';
-    h+='<span class="st">'+esc2(stageMilestone(d.stage||d.currentStage))+'</span></div>';
+    h+='<span class="st">'+esc2(stageMilestone(d.stage||d.currentStage))+'</span>'+entityClassChipHtml(d)+'</div>';
     // F44: gate lifecycle actions on stage so a footgun (reseal with no docs,
     // void on a completed sub) can never be clicked.
     // 2026-06-11 Noa decision: Resend invite + Nudge signer buttons removed.
@@ -4051,6 +4100,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       h+='<div class="dsec"><h3>People</h3>';
       d.people.forEach(function(p){
         h+='<div class="person"><div class="pn-wrap"><div class="pn">'+esc2(p.name||'?')+'</div><div class="pe">'+esc2(p.email||'')+'</div></div><div class="pright"><span class="pr">'+esc2(p.roleLabel||p.role||'')+'</span></div></div>';
+      });
+      h+='</div>';
+    }
+    // Also cc'd (Noa 2026-07-20: "show emails for comms not just email").
+    // Named parties already have their email next to their name above; this
+    // is only the addresses on the thread that AREN'T a named party - the
+    // family-office cc and the standing operator cc - so nothing repeats.
+    if(d.commsExtra&&d.commsExtra.length){
+      h+='<div class="dsec"><h3>Also cc\'d</h3>';
+      d.commsExtra.forEach(function(c){
+        h+='<div class="person"><div class="pn-wrap"><div class="pe">'+esc2(c.email||'')+'</div></div><div class="pright"><span class="pr">'+esc2(c.label||'')+'</span></div></div>';
       });
       h+='</div>';
     }

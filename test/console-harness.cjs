@@ -238,5 +238,47 @@ function extractVar(name) {
     /sessionStorage\.setItem\('gsi_nonce',nonce\)/.test(html));
 })();
 
+// ---- K9: entity FATCA classification chip (2026-07-20, Noa: "show what entity
+// type = passive/active") ----------------------------------------------------
+(function () {
+  const src = extractFn('esc2') + ';' + extractFn('entityClassChipHtml') + '; return entityClassChipHtml;';
+  const entityClassChipHtml = new Function(src)();
+  ok('K9 Active NFFE renders as Active NFFE',
+    entityClassChipHtml({ classification: { chapter4Status: 'Active NFFE (W-8BEN-E Part XXV)' } }).includes('>Active NFFE<'));
+  ok('K9 Active NFFE gets the active tone class',
+    entityClassChipHtml({ classification: { chapter4Status: 'Active NFFE (W-8BEN-E Part XXV)' } }).includes('st-class-active'));
+  ok('K9 Passive NFFE renders as Passive NFFE',
+    entityClassChipHtml({ classification: { chapter4Status: 'Passive NFFE (W-8BEN-E Part XXVI + Part XXX)' } }).includes('>Passive NFFE<'));
+  ok('K9 Passive NFFE gets the amber-tone class (attention-worthy: manual CP legs)',
+    entityClassChipHtml({ classification: { chapter4Status: 'Passive NFFE (W-8BEN-E Part XXVI + Part XXX)' } }).includes('st-class-passive'));
+  ok('K9 individual classification renders nothing (chip is entity-only)',
+    entityClassChipHtml({ classification: { chapter4Status: 'N/A (individual: Chapter 3 nonresident alien)' } }) === '');
+  ok('K9 no classification at all renders nothing',
+    entityClassChipHtml({}) === '');
+  ok('K9 pre-submit Israeli entity falls back to the operator mint-time choice',
+    entityClassChipHtml({ entityClassification: 'passive' }).includes('Passive (at mint)') &&
+    entityClassChipHtml({ entityClassification: 'passive' }).includes('st-class-passive'));
+  ok('K9 pre-submit active mint choice',
+    entityClassChipHtml({ entityClassification: 'active' }).includes('Active (at mint)'));
+})();
+
+// ---- K10: board-row reminder status + drawer comms extras (2026-07-20, Noa's
+// top priority: "I need to remind some people maybe") -------------------------
+(function () {
+  // Source-level: the board fetch maps reminderCount/lastReminderAt off the
+  // server row, and rowHtml renders a chip for signing-stage rows only.
+  ok('K10 board row mapping carries reminderCount', html.includes('reminderCount:it.reminderCount||0'));
+  ok('K10 board row mapping carries lastReminderAt', html.includes('lastReminderAt:it.lastReminderAt||null'));
+  const rowSrc = extractFn('rowHtml');
+  ok('K10 rowHtml renders the never-reminded chip', rowSrc.includes('not reminded'));
+  ok('K10 rowHtml renders the reminded-N-times chip', rowSrc.includes(">reminded '+r.reminderCount+'x</span>"));
+  ok('K10 reminder chip is signing-stage only', /r\.stage===['"]signing['"]&&!isTerminalStage\(r\.stage\)/.test(rowSrc));
+  // Drawer: "Also cc'd" section carries the family-office + operator cc
+  // extras WITHOUT re-listing named parties already shown in Signers/People
+  // (Ive S1 - the server already dedupes; the client just renders what it's given).
+  const drawerSrc = extractFn('renderDrawer');
+  ok("K10 drawer renders commsExtra under Also cc'd", drawerSrc.includes('d.commsExtra&&d.commsExtra.length') && drawerSrc.includes("Also cc'd"));
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
