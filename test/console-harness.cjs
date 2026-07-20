@@ -105,9 +105,10 @@ function extractVar(name) {
 // ---- K4: drawer signer truth + current-signer block ---------------------------
 (function () {
   const src = extractFn('esc2') + ';' + extractFn('fmtTs') + ';' + extractFn('signerTsLine') + ';'
+    + extractFn('signerReminders') + ';' + extractFn('reminderHistLine') + ';'
     + extractFn('currentSignerHtml')
-    + '; return { signerTsLine: signerTsLine, currentSignerHtml: currentSignerHtml, fmtTs: fmtTs };';
-  const { signerTsLine, currentSignerHtml, fmtTs } = new Function(src)();
+    + '; return { signerTsLine: signerTsLine, currentSignerHtml: currentSignerHtml, fmtTs: fmtTs, reminderHistLine: reminderHistLine };';
+  const { signerTsLine, currentSignerHtml, fmtTs, reminderHistLine } = new Function(src)();
   ok('K4 signed signer shows signed-at', /^Signed 2026-06-26/.test(signerTsLine({ state: 'done', signedAt: '2026-06-26T14:20:00Z', sentAt: '2026-06-25T09:00:00Z' })));
   ok('K4 awaited signer shows invited-at', /^Invited 2026-06-25/.test(signerTsLine({ state: 'current', sentAt: '2026-06-25T09:00:00Z' })));
   ok('K4 no timestamps -> empty line', signerTsLine({ state: 'waiting' }) === '');
@@ -120,6 +121,24 @@ function extractVar(name) {
   ok('K4 block carries the nudge action', cs.includes('data-act="nudge"'));
   ok('K4 no signer -> empty block', currentSignerHtml(null) === '');
   ok('K4 html-escapes the name', currentSignerHtml({ name: '<img>', signerIndex: 1, signerCount: 1 }).includes('&lt;img&gt;'));
+  // Reminder history (2026-07-20, Noa: "it's not appearing that we already
+  // reminded him"): the block must say whether, when, and how a reminder went.
+  const csNoRem = currentSignerHtml({ name: 'A', signerIndex: 2, signerCount: 2 }, []);
+  ok('K4 no reminders -> explicit none line', csNoRem.includes('No reminder sent yet.'));
+  ok('K4 no reminders -> button says Remind signer', csNoRem.includes('>Remind signer<'));
+  const rems = [
+    { ts: '2026-07-14T08:00:00Z', kind: 'manual', signerIndex: 2 },
+    { ts: '2026-07-15T09:47:00Z', kind: 'auto', signerIndex: 2 },
+  ];
+  const csRem = currentSignerHtml({ name: 'A', signerIndex: 2, signerCount: 2 }, rems);
+  ok('K4 reminded twice reads as twice', csRem.includes('Reminded twice.'));
+  ok('K4 last reminder timestamp + kind shown', /Last 2026-07-15 \d{2}:\d{2} \(automatic\)\./.test(csRem));
+  ok('K4 reminded -> button says Remind again', csRem.includes('>Remind again<'));
+  // Other-signer reminders don't pollute this signer's line.
+  const csOther = currentSignerHtml({ name: 'A', signerIndex: 2, signerCount: 2 }, [{ ts: '2026-07-14T08:00:00Z', kind: 'manual', signerIndex: 1 }]);
+  ok('K4 other-signer reminders filtered out', csOther.includes('No reminder sent yet.'));
+  // Legacy events without a signerIndex stay visible (never hide a real send).
+  ok('K4 index-less reminder stays visible', reminderHistLine({ signerIndex: 2 }, [{ ts: '2026-07-14T08:00:00Z', kind: 'manual', signerIndex: null }]).includes('Reminded once.'));
 })();
 
 // ---- K5: needs-a-look strip row ----------------------------------------------
@@ -146,8 +165,17 @@ function extractVar(name) {
   ok('K6 no unconditional includeDone=1 fetch left', !loadSrc.includes('includeDone=1'));
   const drawerSrc = extractFn('renderDrawer');
   ok('K6 drawer renders d.people pre-submit (P1 #6)', drawerSrc.includes('d.people&&d.people.length'));
-  ok('K6 drawer renders the current-signer block', drawerSrc.includes('currentSignerHtml(d.currentSigner)'));
+  ok('K6 drawer renders the current-signer block', drawerSrc.includes('currentSignerHtml(d.currentSigner,d.reminders)'));
   ok('K6 drawer renders the events timeline', drawerSrc.includes('d.events&&d.events.length'));
+  // 2026-07-20 batch: doc NAMES not a count; reminder events named in the
+  // timeline; drawer opens on an instant row-data skeleton; current signer
+  // leads the panel (Ive Y2) - Quick links render after it.
+  ok('K6 drawer renders per-doc names', drawerSrc.includes('d.docs&&d.docs.length'));
+  ok('K6 no bare docsCount line left', !html.includes('docsCount'));
+  ok('K6 timeline names reminder events', drawerSrc.includes("'Reminder sent'"));
+  ok('K6 current signer precedes quick links', drawerSrc.indexOf('Current signer') < drawerSrc.indexOf('Quick links'));
+  const openSrc = extractFn('openDrawer');
+  ok('K6 drawer opens with row-data skeleton', /allRows\[ki\]\.pid===pid/.test(openSrc) && openSrc.includes('Loading details...'));
   ok('K6 drawer shows created/updated stamps', drawerSrc.includes('d.createdAt') && drawerSrc.includes('d.updatedAt'));
   // The retired unauthenticated curl routes must not be referenced anywhere client-side.
   ok('K6 no linkToOperator reference', !html.includes('linkToOperator'));

@@ -949,6 +949,16 @@ body.side-coll .ss-row.ss-total { display: none; }
 .cursig .cs-xy { color: var(--color-ink-muted); font-size: var(--text-xs); }
 .cursig .cs-em { color: var(--color-ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pts { font-size: 11px; color: var(--color-ink-muted); line-height: 1.3; }
+/* Reminder history line inside the current-signer card: the answer to "did we
+   already remind him" lives right next to the button that reminds. */
+.cursig .cs-remhist { font-size: var(--text-xs); color: var(--color-ink-sub); }
+.cursig .cs-remhist.is-none { color: var(--color-ink-muted); }
+/* Drawer: per-document lines (names, not a count) with a quiet state word. */
+.docline { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-ink); }
+.docline .doc-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.docline.is-done .doc-nm { color: var(--color-ink-sub); }
+.docline .doc-st { margin-left: auto; flex: 0 0 auto; font-size: var(--text-2xs); color: var(--color-ink-muted); }
+.docline .doc-st.sealed, .docline .doc-st.delivered { color: var(--color-green); }
 .dtl-line { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-body); font-size: var(--text-xs); color: var(--color-ink-muted); padding: 2px 0; }
 .dtl-line .dtl-st { color: var(--color-ink-sub); }
 
@@ -3056,11 +3066,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       signersDone:1,signersPlanned:2,
       signing:{status:'signing',currentIndex:2,total:2,createdAt:'2026-06-25T09:00:00Z',updatedAt:'2026-06-28T10:00:00Z'},
       currentSigner:{role:'cp1',name:'Sarah Rosen',email:'sarah@example.com',signerIndex:2,signerCount:2,link:'https://sign.legacyvpartners.com/signer.html?t=demo-current'},
+      reminders:[{ts:'2026-06-28T10:00:00Z',kind:'auto',signerRole:'cp1',signerIndex:2}],
+      docs:[
+        {key:'sub_agreement',label:'Subscription agreement',sealed:false,pending:false,required:true,delivered:false},
+        {key:'w8ben',label:'W-8BEN',sealed:false,pending:false,required:true,delivered:false}],
       events:[
         {ts:'2026-06-25T09:00:00Z',stage:'link_sent',actor:'operator'},
         {ts:'2026-06-25T11:30:00Z',stage:'in_progress',actor:'lp'},
         {ts:'2026-06-26T14:20:00Z',stage:'submitted',actor:'lp'},
-        {ts:'2026-06-26T14:21:00Z',stage:'signing',actor:'engine'}],
+        {ts:'2026-06-26T14:21:00Z',stage:'signing',actor:'engine'},
+        {ts:'2026-06-28T10:00:00Z',stage:'signing',actor:'system',detail:'{"autoReminder":true,"signerRole":"cp1","signerIndex":2,"signerCount":2,"reminder":"1 of 2"}'}],
       createdAt:'2026-06-25T09:00:00Z',updatedAt:'2026-06-28T10:00:00Z',
       people:[{role:'subscriber',roleLabel:'Investor',name:'Daniel Rosen',email:'daniel@example.com'}],
       links:[{label:'Signer link',url:'https://sign.legacyvpartners.com/?t=demo'}],
@@ -3903,7 +3918,29 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Current-signer block body (wiring item 2). Pure HTML builder: name, email,
   // X of Y, copyable live signing link. The Remind button reuses the existing
   // ?admin=nudge action wiring.
-  function currentSignerHtml(cs){
+  // Reminder history for the current signer (Noa 2026-07-20: the drawer never
+  // said a reminder already went out, so "Remind signer" read as "never
+  // reminded"). Server sends d.reminders (manual nudges + auto-scan sends,
+  // each stamped with signerIndex). Filter to this signer when both sides
+  // carry an index; older events without one stay visible rather than hidden.
+  function signerReminders(cs,rems){
+    return (rems||[]).filter(function(r){
+      return r.signerIndex==null||cs.signerIndex==null||r.signerIndex===cs.signerIndex;
+    });
+  }
+  function reminderHistLine(cs,rems){
+    var list=signerReminders(cs,rems);
+    if(!list.length)return '<div class="cs-remhist is-none">No reminder sent yet.</div>';
+    var last=list[list.length-1];
+    var n=list.length;
+    var times=(n===1)?'once':(n===2)?'twice':(n+' times');
+    var kind=(last.kind==='auto')?'automatic':'from the console';
+    return '<div class="cs-remhist">Reminded '+times+'. Last '+esc2(fmtTs(last.ts))+' ('+kind+').</div>';
+  }
+  // Current-signer block body (wiring item 2). Pure HTML builder: name, email,
+  // X of Y, copyable live signing link. The Remind button reuses the existing
+  // ?admin=nudge action wiring.
+  function currentSignerHtml(cs,rems){
     if(!cs)return '';
     var xy=(cs.signerIndex!=null&&cs.signerCount!=null)?(cs.signerIndex+' of '+cs.signerCount):'';
     var h='<div class="cursig">'
@@ -3913,7 +3950,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(cs.link){
       h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">Signing link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
     }
-    h+='<div class="cs-line"><button class="nudge" data-act="nudge">Remind signer</button></div>';
+    h+=reminderHistLine(cs,rems);
+    h+='<div class="cs-line"><button class="nudge" data-act="nudge">'+(signerReminders(cs,rems).length?'Remind again':'Remind signer')+'</button></div>';
     h+='</div>';
     return h;
   }
@@ -3978,6 +4016,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       + '</div>'
       + '<div class="dact-status" id="dactStatus" role="status" aria-live="polite" hidden></div>'
       + '</div>';
+    // Current signer LEADS (Ive Y2, 2026-07-20): the person the process is
+    // waiting on is the drawer's reason to exist at signing stage; reference
+    // links (Monday, the pre-submit onboarding link) demote below it.
+    // Server-side this rides the Tier-1 Google-auth ?api=opprocess response
+    // (caymanConsoleCurrentSigner_).
+    if(d.currentSigner){h+='<div class="dsec"><h3>Current signer</h3>'+currentSignerHtml(d.currentSigner,d.reminders)+'</div>';}
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
@@ -3991,10 +4035,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       });
       h+='</div>';
     }
-    // Current signer (wiring item 2): who the process is waiting on right now,
-    // with the live signing link + Remind. Server-side this rides the Tier-1
-    // Google-auth ?api=opprocess response (caymanConsoleCurrentSigner_).
-    if(d.currentSigner){h+='<div class="dsec"><h3>Current signer</h3>'+currentSignerHtml(d.currentSigner)+'</div>';}
     if(d.signers&&d.signers.length){
       // X of Y off the run record when present (signersDone/signersPlanned).
       var sxy=(d.signersDone!=null&&d.signersPlanned)?(' <span class="frac">- '+esc2(d.signersDone+' of '+d.signersPlanned+' signed')+'</span>'):'';
@@ -4014,6 +4054,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       });
       h+='</div>';
     }
+    // Documents by NAME (Noa 2026-07-20: "show doc names not just docs count").
+    // The pack plan exists from submission on, so this lists what the pack IS
+    // even before signing; sealed/delivered state rides each line once real.
+    if(d.docs&&d.docs.length){
+      var sealedN=d.docs.filter(function(x){return x.sealed;}).length;
+      var dfrac=sealedN?(' <span class="frac">- '+esc2(sealedN+' of '+d.docs.length+' sealed')+'</span>'):'';
+      h+='<div class="dsec"><h3>Documents'+dfrac+'</h3>';
+      d.docs.forEach(function(doc){
+        var dst=doc.delivered?'delivered':(doc.sealed?'sealed':(doc.pending?'pending':''));
+        h+='<div class="docline'+(doc.sealed||doc.delivered?' is-done':'')+'"><span class="doc-nm">'+esc2(doc.label)+'</span>'
+          +(dst?'<span class="doc-st '+dst+'">'+dst+'</span>':'')+'</div>';
+      });
+      h+='</div>';
+    }
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields||d.createdAt||d.updatedAt){
       h+='<div class="dsec"><h3>Details</h3>';
@@ -4030,6 +4084,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           if(famt)h+='<div class="kv"><span class="k">Investment</span><span class="v">'+esc2(famt)+'</span></div>';
           fkeys=fkeys.filter(function(k){return k!=='investmentAmount'&&k!=='investmentCurrency';});
         }
+        // Ive S1: the entity name already headlines the drawer; a Details row
+        // repeating it verbatim is chrome. Keep it only when it differs.
+        var hdrName=String(d.displayName||d.name||'').trim().toLowerCase();
+        if(d.fields.entityName&&String(d.fields.entityName).trim().toLowerCase()===hdrName){
+          fkeys=fkeys.filter(function(k){return k!=='entityName';});
+        }
         fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
       }
       // Process created/updated stamps (wiring item 1) - registry truth.
@@ -4043,7 +4103,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       h+='<div class="dsec"><h3>Timeline</h3>';
       d.events.forEach(function(ev){
         var when=fmtTs(ev.ts)||'';
-        h+='<div class="dtl-line"><span class="dtl-st">'+esc2(stageMilestone(ev.stage)||ev.stage)+'</span>'+(when?'<span>'+esc2(when)+'</span>':'')+(ev.actor?'<span>'+esc2(ev.actor)+'</span>':'')+'</div>';
+        // Reminder events used to render as a bare repeated "Signing" line -
+        // indistinguishable from real stage movement. Name what happened.
+        var lbl=stageMilestone(ev.stage)||ev.stage;
+        try{
+          var evd=ev.detail?JSON.parse(ev.detail):null;
+          if(evd&&(evd.nudge||evd.autoReminder))lbl=evd.autoReminder?'Reminder sent (automatic)':'Reminder sent';
+        }catch(e){}
+        h+='<div class="dtl-line"><span class="dtl-st">'+esc2(lbl)+'</span>'+(when?'<span>'+esc2(when)+'</span>':'')+(ev.actor?'<span>'+esc2(ev.actor)+'</span>':'')+'</div>';
       });
       h+='</div>';
     }
@@ -4105,6 +4172,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           apiFetch(remRoute+encodeURIComponent(currentPid)).then(function(r){
             if(r&&r.ok){
               dStatus((act==='resendInvite')?'Invite reminder sent.':('Reminder sent'+(curSignerName?(' to '+curSignerName):'')+'.'),'ok');
+              // Ive E1: the history line is the material record of the send.
+              // Update it in place so the panel never claims "No reminder sent
+              // yet" seconds after one went out; button label follows.
+              if(act==='nudge'){
+                var rh=document.querySelector('#drawer .cs-remhist');
+                if(rh){rh.classList.remove('is-none');rh.style.transition='opacity 180ms ease';rh.style.opacity='0';setTimeout(function(){rh.textContent='Reminded just now (from the console).';rh.style.opacity='1';},180);}
+                if(b&&b.isConnected)b.textContent='Remind again';
+              }
               setTimeout(function(){if(b&&b.isConnected)b.disabled=false;},6000);
             }else{
               b.disabled=false;
@@ -4180,7 +4255,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function openDrawer(pid){
     if(!drawer.classList.contains("on"))drawerOpener=document.activeElement;
     currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden';
-    document.getElementById("dbody").innerHTML='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
+    // Instant header from the board row already in memory (Noa 2026-07-20: the
+    // drawer "takes forever to load"). The GAS round-trip still runs, but the
+    // panel opens showing WHO and WHERE immediately instead of a bare Loading.
+    var known=null;
+    for(var ki=0;ki<allRows.length;ki++){if(allRows[ki].pid===pid){known=allRows[ki];break;}}
+    var skel='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
+    if(known){
+      skel='<div class="dh"><h2>'+esc2(known.name||'LP')+'</h2>'
+        +(known.he?'<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top: 4px">'+esc2(known.he)+'</div>':'')
+        +'<span class="st">'+esc2(stageMilestone(known.stage)||known.stage||'')+'</span></div>'
+        +'<div class="dsec" style="color:var(--color-ink-muted)">Loading details...</div>';
+    }
+    document.getElementById("dbody").innerHTML=skel;
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(err){
       // C5 (2026-07-19): drawer load failure gets an in-place Retry + cause.
       document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process. '
