@@ -2,3 +2,6 @@ test/*
 !test/console-action-contract.cjs
 !test/lvp-token-consistency.cjs
 !test/atrium-palette-sync.cjs
+!test/israel-flow.cjs
+!test/console-harness.cjs
+!test/rig-israel.cjs
