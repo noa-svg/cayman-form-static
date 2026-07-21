@@ -2172,6 +2172,65 @@ input:focus {
 .cursig .cs-at-status { font-size: var(--text-xs); }
 .cursig .cs-at-status.ok { color: var(--color-green); }
 .cursig .cs-at-status.error { color: var(--color-danger); }
+.cursig .cs-attach2-toggle {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.cursig .cs-attach2-toggle:hover { color: var(--color-ink); }
+.cursig .cs-attach2form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-bg);
+}
+.cursig .cs-attach2form input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-ink);
+  width: 100%;
+}
+.cursig .cs-at2-save {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-green);
+  background: var(--color-green);
+  color: #fff;
+  cursor: pointer;
+}
+.cursig .cs-at2-save:hover { opacity: 0.9; }
+.cursig .cs-at2-save:disabled { opacity: 0.5; cursor: default; }
+.cursig .cs-at2-cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.cursig .cs-at2-cancel:hover { color: var(--color-ink); }
+.cursig .cs-at2-status { font-size: var(--text-xs); }
+.cursig .cs-at2-status.ok { color: var(--color-green); }
+.cursig .cs-at2-status.error { color: var(--color-danger); }
 
 /* Correct-a-sealed-doc control, per document line (2026-07-21, Bermington):
    regenerates one doc's content from already-stored signer data via
@@ -4196,6 +4255,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'<div class="cs-at-status" hidden></div>'
         +'</div>';
     }
+    // Company-stamp sibling (2026-07-21, Bermington): an entity's own stamp
+    // never had ANY rendering path in the Israeli lane at all, so for entities
+    // whose stamp was collected outside the structured upload flow (KYC
+    // intake, not a live-form upload) there is no submission-side field to
+    // recover FROM - this attaches an already-known Drive file straight onto
+    // docRef.companyStampDriveId (opAttachCompanyStamp). Offered on the
+    // subscriber role (harmless no-op for an individual applicant, who simply
+    // never has a reason to use it).
+    if(String(cs.role||'')==='subscriber'){
+      h+='<div class="cs-attach-toggle-wrap"><button class="cs-attach2-toggle" type="button">Attach company stamp</button></div>'
+        +'<div class="cs-attach2form" hidden>'
+        +'<div class="cs-line"><input class="cs-at2-drive" type="text" placeholder="Drive file id of the entity\'s already-uploaded stamp"></div>'
+        +'<div class="cs-line"><button class="cs-at2-save" type="button">Attach</button><button class="cs-at2-cancel" type="button">Cancel</button></div>'
+        +'<div class="cs-at2-status" hidden></div>'
+        +'</div>';
+    }
     h+='</div>';
     return h;
   }
@@ -4559,6 +4634,48 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         }).catch(function(err){
           asaveEl.disabled=false;
           astatus("Could not attach"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
+        });
+      };
+    })();
+    // Attach-company-stamp recovery editor (Current signer card, subscriber
+    // role): sibling of the lawyer-stamp editor above, calls
+    // ?api=opAttachCompanyStamp instead. Distinct class names throughout
+    // (cs-attach2-*/cs-at2-*) so this querySelector never collides with the
+    // lawyer-stamp editor's when both controls exist in the same drawer.
+    (function(){
+      var atoggle2=document.querySelector("#drawer .cs-attach2-toggle");
+      var aform2=document.querySelector("#drawer .cs-attach2form");
+      if(!atoggle2||!aform2)return;
+      var driveEl2=aform2.querySelector(".cs-at2-drive"),asaveEl2=aform2.querySelector(".cs-at2-save"),
+          acancelEl2=aform2.querySelector(".cs-at2-cancel"),astatusEl2=aform2.querySelector(".cs-at2-status");
+      function astatus2(msg,kind){
+        if(!astatusEl2)return;
+        if(!msg){astatusEl2.hidden=true;astatusEl2.textContent="";astatusEl2.className="cs-at2-status";return;}
+        astatusEl2.hidden=false;astatusEl2.textContent=msg;astatusEl2.className="cs-at2-status"+(kind?(" "+kind):"");
+      }
+      atoggle2.onclick=function(){
+        var opening=aform2.hidden;
+        aform2.hidden=!opening;
+        atoggle2.textContent=opening?"Cancel":"Attach company stamp";
+        if(opening&&driveEl2)driveEl2.focus();
+      };
+      if(acancelEl2)acancelEl2.onclick=function(){aform2.hidden=true;atoggle2.textContent="Attach company stamp";astatus2("",null);};
+      if(asaveEl2)asaveEl2.onclick=function(){
+        var driveId=(driveEl2&&driveEl2.value||"").trim();
+        if(!driveId){astatus2("A Drive file id is required.","error");return;}
+        asaveEl2.disabled=true;astatus2("Attaching...",null);
+        var q="?api=opAttachCompanyStamp&processId="+encodeURIComponent(currentPid)+"&driveId="+encodeURIComponent(driveId);
+        apiFetch(q).then(function(r){
+          if(r&&r.ok){
+            astatus2("Attached. Run 'Correct this doc' on the subscription document to re-seal with it.","ok");
+            setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
+          }else{
+            asaveEl2.disabled=false;
+            astatus2("Could not attach"+((r&&r.error)?(": "+r.error):". Try again."),"error");
+          }
+        }).catch(function(err){
+          asaveEl2.disabled=false;
+          astatus2("Could not attach"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
         });
       };
     })();
