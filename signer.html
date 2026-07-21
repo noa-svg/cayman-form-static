@@ -416,6 +416,7 @@
       "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
       "Please enter a valid email address.": "יש להזין כתובת מייל תקינה.",
       "This field is required.": "שדה חובה.",
+      "Please check at least one option.": "יש לסמן לפחות רובריקה אחת.",
       "Progress saved.": "ההתקדמות נשמרה.",
       "Taking a moment": "רגע...",
       "The server is warming up. Please tap to try again.": "השרת מתחמם. נא להקיש לנסות שוב.",
@@ -915,8 +916,40 @@
         firmName:     { label: 'Firm name', type: 'text', autocomplete: 'organization' },
         controlType:  { label: 'Control type *', type: 'text' },
         ownershipPercentage: { label: 'Ownership percentage *', type: 'text', inputmode: 'decimal' },
-        attestationConfirmed: { label: 'I independently confirm the accredited-investor qualification *', type: 'checkbox' }
+        attestationConfirmed: { label: 'I independently confirm the accredited-investor qualification *', type: 'checkbox' },
+        // F-lawyer-evidence (2026-07-21): the Israeli lawyer/CPA qualification leg
+        // (caymanApplyIsraeliLawyerLeg_) declares these five fields server-side but
+        // never had client defs, so every lawyer signer hard-blocked at Sign & Send
+        // (doSignSubmit_'s "no client def" guard) - discovered live on a real
+        // Bermington signature attempt. Labels are the VERBATIM already-approved
+        // Hebrew clause text from CaymanSources.ts (israeli-ent-qual / israeli-ind-
+        // qual), not new copy. Entity vs individual clause text differs for
+        // checkLiquid/checkIncome (checkOther's clause is identical both lanes);
+        // checkLiquid/checkIncome get overwritten just below once lc.companyName
+        // (entity vs individual) is known - the individual-lane text here is only
+        // the pre-override default. None of the three carry `required` individually
+        // (the server validates "at least one evidence box", not all three); a
+        // group-level check is added in doSignSubmit_ instead.
+        checkLiquid:  { label: 'בחינת שווי נכסים נזילים (כמשמעותם בחוק) באמצעות אסמכתאות בחשבונות בנק של המשקיע/ה.', type: 'checkbox' },
+        checkIncome:  { label: 'בחינת תלושי שכר או דוחות מס שנתיים של המשקיע/ה המעידים על הכנסתו/ה במידה וסומן שעומד/ת בכשירות לפי מבחן הכנסות.', type: 'checkbox' },
+        checkOther:   { label: 'בחינת אסמכתאות ו/או אמצעים אחרים (יש לפרט כולל תאריך מ-3 החודשים האחרונים).', type: 'checkbox' },
+        // No trailing '*' on these two: their requirement is CONDITIONAL (only
+        // when the checkbox that needs them is checked), not absolute - the
+        // static isReq-from-'*' mechanism would wrongly force both on every
+        // lawyer regardless of which single box they checked. Enforced instead
+        // by the lawyer-evidence group check in doSignSubmit_ below. Labels are
+        // verbatim fragments of the shipped form's own clause text.
+        evidenceDate: { label: 'מעודכן לתאריך (חובה למלא תאריך ב-3 החודשים האחרונים)', type: 'date' },
+        otherEvidence:{ label: 'יש לפרט כולל תאריך מ-3 החודשים האחרונים', type: 'textarea' }
       };
+      // Entity clause text overrides the individual-lane default above for the two
+      // fields whose wording differs by applicant type (CaymanSources.ts
+      // israeli-ent-qual, verbatim). checkOther's clause is identical in both
+      // sources, so it needs no override.
+      if (ctx.lockedContext && ctx.lockedContext.companyName) {
+        fieldDefs.checkLiquid.label = 'בחינת הדוחות הכספיים של החברה, מהם עולה כי ההון העצמי שלה עולה על 50 מיליון שקלים חדשים.';
+        fieldDefs.checkIncome.label = 'בחינת מרשם בעלי המניות של החברה וכשירותם, מהם עולה כי כל בעלי מניותיה הינם משקיעים כשירים.';
+      }
       // Build the control markup for a field by type. Falls through to a visible
       // "contact us" notice for any field the server returns that has no def, so a
       // declared-but-unrenderable field can never silently vanish (F10).
@@ -967,7 +1000,12 @@
           var def = fieldDefs[f];
           if (!def) {
             // F10: never silently drop a server-declared field. Surface it.
-            fieldsHtml += '<div class="field field--error"><label>' + esc(f) +
+            // field--unsupported (2026-07-21): its own marker class, because the
+            // submit hard-block used to count .field--error, which ordinary
+            // validation ALSO toggles - so a second Sign & Send click after any
+            // required-field miss showed the wrong "complete with the fund"
+            // message instead of the real validation guidance.
+            fieldsHtml += '<div class="field field--error field--unsupported"><label>' + esc(f) +
               '</label><p class="signer-note">' +
               esc(tHe('This detail needs to be completed with Legacy Value Partners.')) + '</p></div>';
             if (window.console) console.warn('signer: no client def for server field "' + f + '"');
@@ -1617,7 +1655,7 @@
         // signer was previously able to sign through and the server would catch
         // it downstream. Hard-block here so the operator must add the renderer
         // before the signer can proceed (Noa CTO finding 2).
-        var unsupported = document.querySelectorAll('#signer-form .field--error').length;
+        var unsupported = document.querySelectorAll('#signer-form .field--unsupported').length;
         if (unsupported > 0) {
           errEl.textContent = tHe('This detail needs to be completed with Legacy Value Partners.');
           return;
@@ -1631,6 +1669,32 @@
           markField(inp, msg);
           if (msg && !firstInvalid) firstInvalid = inp;
         });
+        // Lawyer-evidence group check (2026-07-21): the server-side leg validator
+        // (caymanApplyIsraeliLawyerLeg_) requires AT LEAST ONE evidence box, not
+        // all three, so the boxes carry no individual `required` attr; enforce
+        // the group rule here. Conditional companions per the clause text:
+        // checkLiquid needs the evidence date; checkOther needs the free-text
+        // detail. checkIncome needs neither. Fields exist only on lawyer legs -
+        // absent inputs skip the whole block (every other signer role unchanged).
+        var evLiquid = document.getElementById('f-checkLiquid');
+        var evIncome = document.getElementById('f-checkIncome');
+        var evOther = document.getElementById('f-checkOther');
+        if (evLiquid && evIncome && evOther) {
+          var evDate = document.getElementById('f-evidenceDate');
+          var evText = document.getElementById('f-otherEvidence');
+          if (!evLiquid.checked && !evIncome.checked && !evOther.checked) {
+            markField(evLiquid, tHe('Please check at least one option.'));
+            if (!firstInvalid) firstInvalid = evLiquid;
+          }
+          if (evLiquid.checked && evDate && !String(evDate.value).trim()) {
+            markField(evDate, tHe('This field is required.'));
+            if (!firstInvalid) firstInvalid = evDate;
+          }
+          if (evOther.checked && evText && !String(evText.value).trim()) {
+            markField(evText, tHe('This field is required.'));
+            if (!firstInvalid) firstInvalid = evText;
+          }
+        }
         rebuildErrSummary();
         if (firstInvalid) {
           errEl.textContent = tHe('Please fill in all required fields.');
@@ -1722,6 +1786,38 @@
           pngBase64: png,
           signerFormData: formData
         };
+        // Israeli lawyer leg (2026-07-21): the seal-time signerFormData merge
+        // (caymanApplySignerField_'s lawyer branch) routes only name/email/phone/
+        // idUploads and silently DROPS the evidence fields + license number, so a
+        // lawyer signing via this page would seal a qualification doc with empty
+        // evidence boxes. The designed server path (caymanApplyIsraeliLawyerLeg_,
+        // proven E2E by the nightly israeliEntityLawyerSealE2eProof) fires on a
+        // wholesale payload.lawyer object - the shape israel.html's scoped leg
+        // posts - validating name + email-or-phone + at-least-one-evidence-box
+        // BEFORE recording, and merging with correct types. Build that object
+        // here whenever the evidence inputs exist (lawyer legs only; every other
+        // role has none of these inputs and is untouched). Checkboxes MUST be
+        // real booleans: signerFormData's 'true'/'false' STRINGS would coerce
+        // !!'false' -> true server-side, rendering every box checked on the
+        // sealed legal doc regardless of what the lawyer actually chose.
+        var lawLiquid = document.getElementById('f-checkLiquid');
+        var lawIncome = document.getElementById('f-checkIncome');
+        var lawOther = document.getElementById('f-checkOther');
+        if (isLawyer && lawLiquid && lawIncome && lawOther) {
+          function lawVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+          payloadObj.lawyer = {
+            firstName: lawVal('f-firstName'),
+            lastName: lawVal('f-lastName'),
+            email: lawVal('f-email'),
+            phone: lawVal('f-phone'),
+            licenseNumber: lawVal('f-licenseNumber'),
+            checkLiquid: !!lawLiquid.checked,
+            checkIncome: !!lawIncome.checked,
+            checkOther: !!lawOther.checked,
+            evidenceDate: lawVal('f-evidenceDate'),
+            otherEvidence: lawVal('f-otherEvidence')
+          };
+        }
         // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so
         // the server sees payload.uploads.lawyer_stamp with the same shape as a CP
         // slot. Merge (not overwrite) so if both ever apply neither clobbers the
