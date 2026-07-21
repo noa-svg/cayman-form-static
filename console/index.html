@@ -2113,6 +2113,65 @@ input:focus {
 .cursig .cs-ed-status { font-size: var(--text-xs); }
 .cursig .cs-ed-status.ok { color: var(--color-green); }
 .cursig .cs-ed-status.error { color: var(--color-danger); }
+.cursig .cs-attach-toggle {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.cursig .cs-attach-toggle:hover { color: var(--color-ink); }
+.cursig .cs-attachform {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-bg);
+}
+.cursig .cs-attachform input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-ink);
+  width: 100%;
+}
+.cursig .cs-at-save {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-green);
+  background: var(--color-green);
+  color: #fff;
+  cursor: pointer;
+}
+.cursig .cs-at-save:hover { opacity: 0.9; }
+.cursig .cs-at-save:disabled { opacity: 0.5; cursor: default; }
+.cursig .cs-at-cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.cursig .cs-at-cancel:hover { color: var(--color-ink); }
+.cursig .cs-at-status { font-size: var(--text-xs); }
+.cursig .cs-at-status.ok { color: var(--color-green); }
+.cursig .cs-at-status.error { color: var(--color-danger); }
 
 /* Correct-a-sealed-doc control, per document line (2026-07-21, Bermington):
    regenerates one doc's content from already-stored signer data via
@@ -4120,6 +4179,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +'<div class="cs-line"><button class="cs-ed-save" type="button">Save</button><button class="cs-ed-cancel" type="button">Cancel</button></div>'
       +'<div class="cs-ed-status" hidden></div>'
       +'</div>';
+    // Reattach-stamp recovery (2026-07-21, Bermington): a stamp uploaded on an
+    // attempt that then failed the rest of the leg's validation was, before
+    // that fix, orphaned in Drive - never attached to any submission. This is
+    // the manual recovery for a file already known to be orphaned: paste its
+    // Drive file id, the server verifies it actually lives inside THIS
+    // process's own KYC folder before attaching (opAttachLawyerStamp). Only
+    // offered for the lawyer role - the only self-fill leg that collects a
+    // stamp upload today. Demoted (text button) like Reassign - a recovery
+    // action, not a routine one.
+    if(String(cs.role||'')==='lawyer'){
+      h+='<div class="cs-attach-toggle-wrap"><button class="cs-attach-toggle" type="button">Attach stamp file</button></div>'
+        +'<div class="cs-attachform" hidden>'
+        +'<div class="cs-line"><input class="cs-at-drive" type="text" placeholder="Drive file id of the already-uploaded stamp"></div>'
+        +'<div class="cs-line"><button class="cs-at-save" type="button">Attach</button><button class="cs-at-cancel" type="button">Cancel</button></div>'
+        +'<div class="cs-at-status" hidden></div>'
+        +'</div>';
+    }
     h+='</div>';
     return h;
   }
@@ -4445,6 +4521,47 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         });
       };
     });
+    // Attach-stamp recovery editor (Current signer card, lawyer role only):
+    // toggle reveals a single Drive-file-id input, Save calls
+    // ?api=opAttachLawyerStamp. On success the drawer reloads so the attached
+    // file is reflected immediately (same material-honesty rule as Reassign).
+    (function(){
+      var atoggle=document.querySelector("#drawer .cs-attach-toggle");
+      var aform=document.querySelector("#drawer .cs-attachform");
+      if(!atoggle||!aform)return;
+      var driveEl=aform.querySelector(".cs-at-drive"),asaveEl=aform.querySelector(".cs-at-save"),
+          acancelEl=aform.querySelector(".cs-at-cancel"),astatusEl=aform.querySelector(".cs-at-status");
+      function astatus(msg,kind){
+        if(!astatusEl)return;
+        if(!msg){astatusEl.hidden=true;astatusEl.textContent="";astatusEl.className="cs-at-status";return;}
+        astatusEl.hidden=false;astatusEl.textContent=msg;astatusEl.className="cs-at-status"+(kind?(" "+kind):"");
+      }
+      atoggle.onclick=function(){
+        var opening=aform.hidden;
+        aform.hidden=!opening;
+        atoggle.textContent=opening?"Cancel":"Attach stamp file";
+        if(opening&&driveEl)driveEl.focus();
+      };
+      if(acancelEl)acancelEl.onclick=function(){aform.hidden=true;atoggle.textContent="Attach stamp file";astatus("",null);};
+      if(asaveEl)asaveEl.onclick=function(){
+        var driveId=(driveEl&&driveEl.value||"").trim();
+        if(!driveId){astatus("A Drive file id is required.","error");return;}
+        asaveEl.disabled=true;astatus("Attaching...",null);
+        var q="?api=opAttachLawyerStamp&processId="+encodeURIComponent(currentPid)+"&driveId="+encodeURIComponent(driveId);
+        apiFetch(q).then(function(r){
+          if(r&&r.ok){
+            astatus("Attached. Run 'Correct this doc' on the affected document to re-seal with it.","ok");
+            setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
+          }else{
+            asaveEl.disabled=false;
+            astatus("Could not attach"+((r&&r.error)?(": "+r.error):". Try again."),"error");
+          }
+        }).catch(function(err){
+          asaveEl.disabled=false;
+          astatus("Could not attach"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
+        });
+      };
+    })();
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
