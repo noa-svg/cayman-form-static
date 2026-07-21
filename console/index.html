@@ -2114,6 +2114,64 @@ input:focus {
 .cursig .cs-ed-status.ok { color: var(--color-green); }
 .cursig .cs-ed-status.error { color: var(--color-danger); }
 
+/* Correct-a-sealed-doc control, per document line (2026-07-21, Bermington):
+   regenerates one doc's content from already-stored signer data via
+   ?api=opCorrectSealedDoc - no re-invite. Rare/deliberate, so demoted (text
+   button) and gated behind its own inline confirm, same discipline as the
+   Reassign editor above and the drawer-wide void/reseal strip below. */
+.doccorrect { margin-top: var(--space-1); }
+.doc-correct-toggle {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.doc-correct-toggle:hover { color: var(--color-ink); }
+.doc-correct-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-bg);
+}
+.doc-correct-confirm span { font-size: var(--text-xs); color: var(--color-ink-muted); }
+.doc-correct-go {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-green);
+  background: var(--color-green);
+  color: #fff;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.doc-correct-go:hover { opacity: 0.9; }
+.doc-correct-go:disabled { opacity: 0.5; cursor: default; }
+.doc-correct-cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.doc-correct-cancel:hover { color: var(--color-ink); }
+.doc-correct-status { font-size: var(--text-xs); margin-top: var(--space-1); }
+.doc-correct-status.ok { color: var(--color-green); }
+.doc-correct-status.error { color: var(--color-danger); }
+
 /* Inline confirm strip (replaces native confirm/alert for void + reseal) */
 .dact-confirm {
   display: flex;
@@ -4211,6 +4269,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var dst=doc.delivered?'delivered':(doc.sealed?'sealed':(doc.pending?'pending':''));
         h+='<div class="docline'+(doc.sealed||doc.delivered?' is-done':'')+'"><span class="doc-nm">'+esc2(doc.label)+'</span>'
           +(dst?'<span class="doc-st '+dst+'">'+dst+'</span>':'')+'</div>';
+        // Correct a sealed doc's CONTENT from already-stored data, no re-invite
+        // of the signer (2026-07-21, Bermington). Only offered once a doc is
+        // actually sealed - correcting something not yet sealed makes no sense
+        // (the normal Reseal-docs recovery button already covers pre-seal).
+        // Own tiny inline confirm (not the drawer-wide void/reseal strip: this
+        // is per-document, not a lifecycle action on the whole process).
+        if(doc.sealed&&doc.key){
+          h+='<div class="doccorrect" data-key="'+esc2(doc.key)+'">'
+            +'<button class="doc-correct-toggle" type="button">Correct this doc</button>'
+            +'<div class="doc-correct-confirm" hidden>'
+            +'<span>Regenerate from the current data? The signer is NOT re-contacted; the existing sealed file is kept, renamed [SUPERSEDED].</span>'
+            +'<button class="doc-correct-go" type="button">Correct</button>'
+            +'<button class="doc-correct-cancel" type="button">Cancel</button>'
+            +'</div>'
+            +'<div class="doc-correct-status" hidden></div>'
+            +'</div>';
+        }
       });
       h+='</div>';
     }
@@ -4326,6 +4401,50 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         });
       };
     })();
+    // Correct-a-sealed-doc control: one per sealed document line, so
+    // querySelectorAll (not the Reassign block's single querySelector above -
+    // there is only ever one current-signer editor per drawer, but there can
+    // be several sealed docs). ?api=opCorrectSealedDoc schedules the actual
+    // (async) re-seal server-side and returns immediately with {scheduled:
+    // true}; it does NOT return the new PDF id synchronously, so the status
+    // line says so rather than claiming a result that hasn't happened yet -
+    // reload the drawer after the ~1 minute the server note promises to see it.
+    document.querySelectorAll("#drawer .doccorrect").forEach(function(box){
+      var docKey=box.getAttribute("data-key")||"";
+      var toggle=box.querySelector(".doc-correct-toggle");
+      var confirmBox=box.querySelector(".doc-correct-confirm");
+      var goEl=box.querySelector(".doc-correct-go");
+      var cancelEl3=box.querySelector(".doc-correct-cancel");
+      var statusEl3=box.querySelector(".doc-correct-status");
+      if(!toggle||!confirmBox)return;
+      function dcstatus(msg,kind){
+        if(!statusEl3)return;
+        if(!msg){statusEl3.hidden=true;statusEl3.textContent="";statusEl3.className="doc-correct-status";return;}
+        statusEl3.hidden=false;statusEl3.textContent=msg;statusEl3.className="doc-correct-status"+(kind?(" "+kind):"");
+      }
+      toggle.onclick=function(){
+        var opening=confirmBox.hidden;
+        confirmBox.hidden=!opening;
+        toggle.textContent=opening?"Cancel":"Correct this doc";
+      };
+      if(cancelEl3)cancelEl3.onclick=function(){confirmBox.hidden=true;toggle.textContent="Correct this doc";dcstatus("",null);};
+      if(goEl)goEl.onclick=function(){
+        if(!docKey||!currentPid){dcstatus("Missing processId/docKey - reload the drawer and try again.","error");return;}
+        goEl.disabled=true;dcstatus("Scheduling...",null);
+        var q="?api=opCorrectSealedDoc&processId="+encodeURIComponent(currentPid)+"&docKey="+encodeURIComponent(docKey);
+        apiFetch(q).then(function(r){
+          if(r&&r.ok){
+            dcstatus("Scheduled - runs within about a minute. Reopen this drawer shortly to see the result (or check the process's attention feed).","ok");
+          }else{
+            goEl.disabled=false;
+            dcstatus("Could not schedule the correction"+((r&&r.error)?(": "+r.error):". Try again."),"error");
+          }
+        }).catch(function(err){
+          goEl.disabled=false;
+          dcstatus("Could not schedule the correction"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
+        });
+      };
+    });
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
