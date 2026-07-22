@@ -1203,46 +1203,28 @@
 
           <label class="lvp-checkbox"><input type="checkbox" name="fatcaCrs.fatcaCrsDiffer" value="true" data-show-when-trigger="fatcaCrs.fatcaCrsDiffer"> Advanced: the entity's FATCA and CRS classifications differ</label>
 
-          <!-- Escape hatch: the full FATCA + CRS trees, only for the rare divergent case -->
+          <!-- Escape hatch: the FATCA + CRS trees, only for the rare divergent case.
+               The FATCA tree is limited to the two in-scope NFFE sub-statuses
+               (3.3(b) Active NFFE / 3.3(e) Passive NFFE) enforced by
+               CAYMAN_INSCOPE_FATCA_ in apps/ju-cayman/src/server/CaymanClassification.ts
+               and verified by tests/form-fatca-inscope-parity.test.mjs. FFI
+               branches (3.1/3.2) and off-ju NFFE sub-statuses (3.3(a) Exempt
+               BO, 3.3(c) Direct Reporting NFFE, 3.3(d) Sponsored DR-NFFE) are
+               off-scope architecturally and route manually; the server gate in
+               validateCaymanSubmission_ blocks any legacy/crafted payload
+               reaching those values. -->
           <div data-show-when="fatcaCrs.fatcaCrsDiffer=true">
             <h3 class="lvp-subhead">FATCA classification</h3>
             <p class="lvp-hint-small">Choose exactly one.</p>
-              <fieldset class="lvp-fieldset" data-required>
-                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.1" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.1 Registered Foreign Financial Institution (has a GIIN)</label>
-                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.2" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.2 Financial Institution unable to provide a GIIN</label>
-                <label class="lvp-radio"><input type="radio" name="fatcaCrs.fatca.branch" value="3.3" data-show-when-trigger="fatcaCrs.fatca.branch"> 3.3 Not a Foreign Financial Institution</label>
-              </fieldset>
-              <label class="lvp-field" data-required data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">3.1 sub-type</span>
-                <select class="lvp-input--select" name="fatcaCrs.fatca.subType31">
-                  <option value="">Select</option>
-                  <option value="(a)">(a) Reporting Model 1 FFI</option>
-                  <option value="(b)">(b) Registered Deemed Compliant FFI</option>
-                  <option value="(c)">(c) Reporting Model 2 FFI</option>
-                  <option value="(d)">(d) Participating FFI</option>
-                </select></label>
-              <label class="lvp-field" data-required data-show-when="fatcaCrs.fatca.branch=3.1"><span class="lvp-field__label">Global Intermediary Identification Number (GIIN)</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">If registration is in progress, indicate so.</p></label>
-              <div data-show-when="fatcaCrs.fatca.branch=3.2">
-                <label class="lvp-field" data-required><span class="lvp-field__label">3.2 sub-type</span>
-                  <select class="lvp-input--select" name="fatcaCrs.fatca.subType32">
-                    <option value="">Select</option>
-                    <option value="(a)">(a) Sponsored FFI (relies on sponsor GIIN)</option>
-                    <option value="(b)">(b) Trustee Documented Trust</option>
-                    <option value="(c)">(c) Certified Deemed Compliant FFI</option>
-                    <option value="(d)">(d) Non-Participating FFI</option>
-                  </select></label>
-                <label class="lvp-field"><span class="lvp-field__label">Sponsor or trustee GIIN</span><input class="lvp-input" type="text" name="fatcaCrs.fatca.giin32" placeholder="XXXXXX.XXXXX.XX.NNN"><p class="lvp-hint-small">The sponsoring entity's or trustee's GIIN, if applicable.</p></label>
-              </div>
-              <div data-show-when="fatcaCrs.fatca.branch=3.3">
-                <label class="lvp-field" data-required><span class="lvp-field__label">3.3 sub-status</span>
+              <div>
+                <label class="lvp-field" data-required><span class="lvp-field__label">FATCA 3.3 (NFFE) sub-status</span>
                   <select class="lvp-input--select" name="fatcaCrs.fatca.subType" data-show-when-trigger="fatcaCrs.fatca.subType">
                     <option value="">Select</option>
-                    <option value="(a)">(a) Exempt Beneficial Owner</option>
                     <option value="(b)">(b) Active NFFE</option>
-                    <option value="(c)">(c) Direct Reporting NFFE</option>
-                    <option value="(d)">(d) Sponsored Direct Reporting NFFE</option>
                     <option value="(e)">(e) Passive NFFE</option>
                   </select>
                 </label>
+                <input type="hidden" name="fatcaCrs.fatca.branch" value="3.3">
               </div>
             <h3 class="lvp-subhead">CRS classification</h3>
             <p class="lvp-hint-small">Choose exactly one. CRS classification need not match FATCA.</p>
