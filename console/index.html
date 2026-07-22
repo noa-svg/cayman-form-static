@@ -2232,6 +2232,68 @@ input:focus {
 .cursig .cs-at2-status.ok { color: var(--color-green); }
 .cursig .cs-at2-status.error { color: var(--color-danger); }
 
+/* Fix-2nd-signatory-address editor (2026-07-22, Politzer) - mirrors the
+   attach-company-stamp editor above, own class names only to avoid collision. */
+.cursig .cs-fixaddr-toggle {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.cursig .cs-fixaddr-toggle:hover { color: var(--color-ink); }
+.cursig .cs-fixaddrform {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-bg);
+}
+.cursig .cs-fixaddrform input {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+  color: var(--color-ink);
+  width: 100%;
+}
+.cursig .cs-fa-save {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-green);
+  background: var(--color-green);
+  color: #fff;
+  cursor: pointer;
+}
+.cursig .cs-fa-save:hover { opacity: 0.9; }
+.cursig .cs-fa-save:disabled { opacity: 0.5; cursor: default; }
+.cursig .cs-fa-cancel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+.cursig .cs-fa-cancel:hover { color: var(--color-ink); }
+.cursig .cs-fa-status { font-size: var(--text-xs); }
+.cursig .cs-fa-status.ok { color: var(--color-green); }
+.cursig .cs-fa-status.error { color: var(--color-danger); }
+
 /* Correct-a-sealed-doc control, per document line (2026-07-21, Bermington):
    regenerates one doc's content from already-stored signer data via
    ?api=opCorrectSealedDoc - no re-invite. Rare/deliberate, so demoted (text
@@ -4270,6 +4332,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'<div class="cs-line"><button class="cs-at2-save" type="button">Attach</button><button class="cs-at2-cancel" type="button">Cancel</button></div>'
         +'<div class="cs-at2-status" hidden></div>'
         +'</div>';
+      // Fix the second authorized signatory's address/idNumber (2026-07-22,
+      // Politzer - a stale/wrong record for the same person the primary
+      // controlling-person record already has correctly). Narrow, one-off
+      // field patch, offered next to the other subscriber-role recovery
+      // controls; NOT the general sealed-doc editor (deliberately deferred).
+      h+='<div class="cs-attach-toggle-wrap"><button class="cs-fixaddr-toggle" type="button">Fix 2nd signatory address</button></div>'
+        +'<div class="cs-fixaddrform" hidden>'
+        +'<div class="cs-line"><input class="cs-fa-street" type="text" placeholder="Street (leave blank to keep unchanged)"></div>'
+        +'<div class="cs-line"><input class="cs-fa-house" type="text" placeholder="House number"></div>'
+        +'<div class="cs-line"><input class="cs-fa-city" type="text" placeholder="City"></div>'
+        +'<div class="cs-line"><input class="cs-fa-id" type="text" placeholder="ID number (leave blank to keep unchanged)"></div>'
+        +'<div class="cs-line"><button class="cs-fa-save" type="button">Fix</button><button class="cs-fa-cancel" type="button">Cancel</button></div>'
+        +'<div class="cs-fa-status" hidden></div>'
+        +'</div>';
     }
     h+='</div>';
     return h;
@@ -4676,6 +4752,55 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         }).catch(function(err){
           asaveEl2.disabled=false;
           astatus2("Could not attach"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
+        });
+      };
+    })();
+    // Fix-2nd-signatory-address editor (2026-07-22, Politzer): distinct class
+    // names throughout (cs-fixaddr-*/cs-fa-*) so this querySelector never
+    // collides with the two editors above. Blank fields are omitted from the
+    // request (server keeps them unchanged) - only street/house/city/idNumber
+    // are ever touched, nothing else on the submission.
+    (function(){
+      var ftoggle=document.querySelector("#drawer .cs-fixaddr-toggle");
+      var fform=document.querySelector("#drawer .cs-fixaddrform");
+      if(!ftoggle||!fform)return;
+      var streetEl=fform.querySelector(".cs-fa-street"),houseEl=fform.querySelector(".cs-fa-house"),
+          cityEl=fform.querySelector(".cs-fa-city"),idEl=fform.querySelector(".cs-fa-id"),
+          fsaveEl=fform.querySelector(".cs-fa-save"),fcancelEl=fform.querySelector(".cs-fa-cancel"),
+          fstatusEl=fform.querySelector(".cs-fa-status");
+      function fstatus(msg,kind){
+        if(!fstatusEl)return;
+        if(!msg){fstatusEl.hidden=true;fstatusEl.textContent="";fstatusEl.className="cs-fa-status";return;}
+        fstatusEl.hidden=false;fstatusEl.textContent=msg;fstatusEl.className="cs-fa-status"+(kind?(" "+kind):"");
+      }
+      ftoggle.onclick=function(){
+        var opening=fform.hidden;
+        fform.hidden=!opening;
+        ftoggle.textContent=opening?"Cancel":"Fix 2nd signatory address";
+        if(opening&&streetEl)streetEl.focus();
+      };
+      if(fcancelEl)fcancelEl.onclick=function(){fform.hidden=true;ftoggle.textContent="Fix 2nd signatory address";fstatus("",null);};
+      if(fsaveEl)fsaveEl.onclick=function(){
+        var street=(streetEl&&streetEl.value||"").trim(),house=(houseEl&&houseEl.value||"").trim(),
+            city=(cityEl&&cityEl.value||"").trim(),idnum=(idEl&&idEl.value||"").trim();
+        if(!street&&!house&&!city&&!idnum){fstatus("Fill in at least one field to change.","error");return;}
+        fsaveEl.disabled=true;fstatus("Fixing...",null);
+        var q="?api=opFixSecondaryAddress&processId="+encodeURIComponent(currentPid);
+        if(street)q+="&street="+encodeURIComponent(street);
+        if(house)q+="&houseNumber="+encodeURIComponent(house);
+        if(city)q+="&city="+encodeURIComponent(city);
+        if(idnum)q+="&idNumber="+encodeURIComponent(idnum);
+        apiFetch(q).then(function(r){
+          if(r&&r.ok){
+            fstatus("Fixed. Run 'Correct this doc' on the affected document(s) to re-seal with it.","ok");
+            setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
+          }else{
+            fsaveEl.disabled=false;
+            fstatus("Could not fix"+((r&&r.error)?(": "+r.error):". Try again."),"error");
+          }
+        }).catch(function(err){
+          fsaveEl.disabled=false;
+          fstatus("Could not fix"+((err&&err.serverError)?(": "+err.serverError):". Check the connection and try again."),"error");
         });
       };
     })();
