@@ -846,6 +846,76 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .rcopy.is-copied { opacity: 1; color: var(--color-green); }
 .rcopy svg { width: 15px; height: 15px; display: block; pointer-events: none; }
 
+/* Per-row operator-private note (2026-07-22, Noa: "each row to get a little
+   note I can edit, its just for me"). Same quiet-by-default/reveal-on-hover
+   pattern as .rcopy, but .has-note stays visible so a scan of the board
+   surfaces every row with a pending reminder without hovering each one. */
+.rnote {
+  flex: 0 0 auto;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-base), background var(--dur-base), border-color var(--dur-base), color var(--dur-base);
+}
+.row:hover .rnote, .rnote:focus-visible, .rnote.has-note { opacity: 1; }
+.rnote:hover { background: var(--color-bg-hover); border-color: var(--color-border-subtle); color: var(--color-ink); }
+.rnote.has-note { color: var(--color-amber); }
+.rnote svg { width: 15px; height: 15px; display: block; pointer-events: none; }
+.rnote-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-amber); }
+/* Same card treatment as .new-dd (the existing dropdown/popover precedent in
+   this file): thick ink border, shadow-panel, solid white - not the softer
+   subtle-border style used elsewhere, matching this console's own idiom. */
+.rnote-pop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  width: 260px;
+  background: #fff;
+  border: var(--bw) solid var(--color-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  padding: 8px;
+}
+.rnote-pop textarea {
+  width: 100%;
+  min-height: 64px;
+  font: inherit;
+  color: var(--color-ink);
+  resize: vertical;
+  border: var(--bw) solid var(--color-ink);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  box-sizing: border-box;
+}
+.rnote-pop-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.rnote-count { margin-right: auto; font-size: 10px; color: var(--color-ink-muted); }
+/* Same shape/case treatment as .msgbtns .save/.reset (the existing
+   save/reset-pair precedent in this file). */
+.rnote-pop-actions button {
+  border: var(--bw) solid var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  background: #fff;
+  color: var(--color-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.rnote-pop-actions .rnote-save { background: var(--color-coral); color: #fff; }
+
 /* Name column */
 .rn {
   flex: 0 0 auto;
@@ -3814,6 +3884,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return t;
   }
   var RCOPY_ICON='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="7" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-8A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  // Operator-private per-row note (2026-07-22, Noa: "each row to get a little
+  // note I can edit, its just for me"). Never LP-visible; data comes from the
+  // Tier-1 PII-gated ?api=opNotes fetch, never from the redacted ?api=list feed.
+  var RNOTE_ICON='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3.5h10a1 1 0 0 1 1 1v8.6a1 1 0 0 1-.3.7l-2.9 2.9a1 1 0 0 1-.7.3H5a1 1 0 0 1-1-1v-11.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   var RCOPY_CHECK='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function rowHtml(r){
     var nm=r.name||r.he||'?';
@@ -3851,8 +3925,51 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
+      +'<button type="button" class="rnote'+(r.note?' has-note':'')+'" data-pid="'+(r.pid||'')+'" data-note="'+esc2(r.note||'')+'" title="'+(r.note?esc2(r.note):'Add a note')+'" aria-label="Operator note">'+RNOTE_ICON+(r.note?'<span class="rnote-dot"></span>':'')+'</button>'
       +'</div>';
   }
+  // Small inline popover anchored under the clicked .rnote button - lowest
+  // friction, matches nothing else in this file needing a modal system.
+  // Operator-private: never rendered anywhere an LP could see it.
+  function closeAnyNotePopover(){ var ex=document.querySelector('.rnote-pop'); if(ex) ex.remove(); }
+  function toggleNotePopover(btn){
+    var wasOpenForThisBtn=btn.parentNode&&btn.parentNode.querySelector('.rnote-pop');
+    closeAnyNotePopover();
+    if(wasOpenForThisBtn) return;
+    var pid=btn.getAttribute('data-pid'); if(!pid) return;
+    var pop=document.createElement('div'); pop.className='rnote-pop';
+    pop.innerHTML='<textarea maxlength="240" placeholder="Private note (not visible to LPs)">'+esc2(btn.getAttribute('data-note')||'')+'</textarea>'
+      +'<div class="rnote-pop-actions"><span class="rnote-count"></span><button type="button" class="rnote-clear">Clear</button><button type="button" class="rnote-save">Save</button></div>';
+    btn.parentNode.style.position='relative';
+    btn.parentNode.appendChild(pop);
+    var ta=pop.querySelector('textarea');
+    var cnt=pop.querySelector('.rnote-count');
+    function updCount(){cnt.textContent=(240-ta.value.length)+' left';}
+    ta.oninput=updCount; updCount(); ta.focus();
+    pop.querySelector('.rnote-save').onclick=function(e){
+      e.stopPropagation();
+      apiFetch('?admin=saveNote&processId='+encodeURIComponent(pid)+'&text='+encodeURIComponent(ta.value)).then(function(r){
+        var text=(r&&r.text)||'';
+        btn.setAttribute('data-note',text);
+        btn.title=text||'Add a note';
+        btn.classList.toggle('has-note',!!text);
+        var dot=btn.querySelector('.rnote-dot');
+        if(text&&!dot){btn.insertAdjacentHTML('beforeend','<span class="rnote-dot"></span>');}
+        else if(!text&&dot){dot.remove();}
+        pop.remove();
+      }).catch(function(){ pop.remove(); });
+    };
+    pop.querySelector('.rnote-clear').onclick=function(e){
+      e.stopPropagation();
+      apiFetch('?admin=clearNote&processId='+encodeURIComponent(pid)).then(function(){
+        btn.setAttribute('data-note',''); btn.title='Add a note'; btn.classList.remove('has-note');
+        var dot=btn.querySelector('.rnote-dot'); if(dot)dot.remove();
+        pop.remove();
+      }).catch(function(){ pop.remove(); });
+    };
+    pop.onclick=function(e){ e.stopPropagation(); };
+  }
+  document.addEventListener('click',closeAnyNotePopover);
   // Per-row copy: the board list never carries the resume-token link (only the
   // drawer's ?api=opprocess mints one), so a click fetches it fresh, then copies.
   // stopPropagation so the click never also opens the drawer underneath it.
@@ -3929,6 +4046,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     Array.prototype.forEach.call(document.querySelectorAll("#list .rcopy"),function(btn){
       btn.onclick=function(e){ e.stopPropagation(); copyRowLink(btn); };
       btn.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); copyRowLink(btn); } };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#list .rnote"),function(btn){
+      btn.onclick=function(e){ e.stopPropagation(); toggleNotePopover(btn); };
+      btn.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); toggleNotePopover(btn); } };
     });
     var clearLink=document.getElementById("emptyClearSearch");
     if(clearLink)clearLink.onclick=function(e){e.preventDefault();var bs=document.getElementById("boardSearch");if(bs){bs.value="";bs.focus();}applySearch();};
@@ -4079,12 +4200,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // includeDone=0 by default (wiring item 5): terminal rows are fetched only
     // once a Show completed / Show canceled toggle asks for them.
     var wantDone=(showDone||showCanceled);
-    apiFetch('?api=list&lane='+state.lane+'&includeDone='+(wantDone?'1':'0')).then(function(d){
+    // opNotes is a SEPARATE, Tier-1-PII-gated fetch (never joined server-side
+    // into ?api=list, which is deliberately servable with no auth - see
+    // CaymanGateway.ts's opNotes route comment). Soft-fail: an unauthenticated
+    // or errored notes fetch must never block the board itself from rendering,
+    // rows just show no notes that load.
+    var notesFetch=apiFetch('?api=opNotes').catch(function(){return {notes:{}};});
+    Promise.all([
+      apiFetch('?api=list&lane='+state.lane+'&includeDone='+(wantDone?'1':'0')),
+      notesFetch
+    ]).then(function(results){
+      var d=results[0], notesResp=results[1];
       if(rid!==LOAD_SEQ)return;
       doneLoaded=wantDone;
+      var notes=(notesResp&&notesResp.notes)||{};
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);return {pid:it.processId||it.id||'',name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',reminderCount:it.reminderCount||0,lastReminderAt:it.lastReminderAt||null};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',reminderCount:it.reminderCount||0,lastReminderAt:it.lastReminderAt||null,note:(n&&n.text)||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){

@@ -44,6 +44,18 @@ function extractVar(name) {
   if (!m) throw new Error('var not found: ' + name);
   return m[0];
 }
+// Same brace-counting technique as extractFn, for a multi-line `var NAME={...};`
+// object literal (extractVar's single-line regex can't span these).
+function extractVarObj(name) {
+  const start = html.indexOf('var ' + name + '={');
+  if (start < 0) throw new Error('var object not found: ' + name);
+  let i = html.indexOf('{', start), depth = 0;
+  for (; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    else if (html[i] === '}') { depth--; if (depth === 0) break; }
+  }
+  return html.slice(start, i + 1) + ';';
+}
 
 // ---- K1: sortRows attention-first -------------------------------------------
 (function () {
@@ -285,6 +297,61 @@ function extractVar(name) {
   // (Ive S1 - the server already dedupes; the client just renders what it's given).
   const drawerSrc = extractFn('renderDrawer');
   ok("K10 drawer renders commsExtra under Also cc'd", drawerSrc.includes('d.commsExtra&&d.commsExtra.length') && drawerSrc.includes("Also cc'd"));
+})();
+
+// ---- K11: per-row operator-private notes (2026-07-22, Noa: "each row to get
+// a little note I can edit, its just for me") -------------------------------
+(function () {
+  // rowHtml is pure (no document access), so it's testable directly like K5's
+  // attnRowHtml / K4's currentSignerHtml.
+  const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
+    + extractVar('RAIL_MILESTONES') + ';' + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
+    + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('fmtAmount') + ';'
+    + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
+    + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';'
+    + extractFn('rowHtml') + '; return rowHtml;';
+  const rowHtml = new Function(src)();
+
+  const withNote = rowHtml({ pid: 'p1', name: 'Test LP', stage: 'signing', note: 'told Omri he is joining Sept 1' });
+  ok('K11 row with a note gets the has-note class', withNote.includes('class="rnote has-note"'));
+  ok('K11 row with a note carries data-note (escaped)', withNote.includes('data-note="told Omri he is joining Sept 1"'));
+  ok('K11 row with a note shows the note as the title tooltip', withNote.includes('title="told Omri he is joining Sept 1"'));
+  ok('K11 row with a note renders the dot indicator', withNote.includes('rnote-dot'));
+  ok('K11 note text is HTML-escaped (XSS discipline, same as esc2 elsewhere)',
+    rowHtml({ pid: 'p2', name: 'X', stage: 'signing', note: '<img onerror=alert(1)>' }).includes('&lt;img'));
+
+  const withoutNote = rowHtml({ pid: 'p3', name: 'No Note LP', stage: 'signing', note: '' });
+  ok('K11 row with no note has no has-note class', !withoutNote.includes('has-note'));
+  ok('K11 row with no note has no dot', !withoutNote.includes('rnote-dot'));
+  ok('K11 row with no note shows the Add-a-note tooltip', withoutNote.includes('title="Add a note"'));
+  ok('K11 note button always carries data-pid for the popover to key off', withoutNote.includes('data-pid="p3"'));
+})();
+
+(function () {
+  // Source-level assertions on load(): opNotes is fetched and merged, never
+  // relying on ?api=list to carry PII (see the CaymanGateway.ts opNotes route
+  // comment for why - this is the client-side half of that same invariant).
+  const loadSrc = extractFn('load');
+  ok('K11 load() fetches the separate PII-gated opNotes route', loadSrc.includes("apiFetch('?api=opNotes')"));
+  ok('K11 opNotes fetch is soft-failed (never blocks the board)', /notesFetch=apiFetch\('\?api=opNotes'\)\.catch/.test(loadSrc));
+  ok('K11 list and opNotes are fetched together via Promise.all', loadSrc.includes('Promise.all('));
+  ok('K11 row mapping pulls note text from the merged notes map, keyed by pid', loadSrc.includes('note:(n&&n.text)||\'\''));
+
+  // Save/Clear ride the same ?source=op tunnel every other admin action uses
+  // (never a bare GET with the token in the URL).
+  ok('K11 save wired to ?admin=saveNote', html.includes("'?admin=saveNote&processId='"));
+  ok('K11 clear wired to ?admin=clearNote', html.includes("'?admin=clearNote&processId='"));
+
+  // Click wiring: same stopPropagation discipline as .rcopy, so opening the
+  // popover never also opens the drawer underneath it.
+  ok('K11 .rnote click handler stops propagation', /document\.querySelectorAll\("#list \.rnote"\)[\s\S]{0,200}e\.stopPropagation\(\); toggleNotePopover\(btn\);/.test(html));
+
+  // Popover close-on-outside-click is wired globally, same as any other
+  // dismissible overlay in this file.
+  ok('K11 outside-click closes the note popover', html.includes("document.addEventListener('click',closeAnyNotePopover)"));
+
+  // Length cap enforced client-side too (server hard-truncates independently).
+  ok('K11 note textarea caps input at 240 chars', html.includes('maxlength="240"'));
 })();
 
 console.log(pass + ' pass, ' + fail + ' fail');
