@@ -4628,17 +4628,26 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var dst=doc.delivered?'delivered':(doc.sealed?'sealed':(doc.pending?'pending':''));
         h+='<div class="docline'+(doc.sealed||doc.delivered?' is-done':'')+'"><span class="doc-nm">'+esc2(doc.label)+'</span>'
           +(dst?'<span class="doc-st '+dst+'">'+dst+'</span>':'')+'</div>';
-        // Correct a sealed doc's CONTENT from already-stored data, no re-invite
-        // of the signer (2026-07-21, Bermington). Only offered once a doc is
-        // actually sealed - correcting something not yet sealed makes no sense
-        // (the normal Reseal-docs recovery button already covers pre-seal).
+        // Correct a doc's CONTENT from already-stored data, no re-invite of the
+        // signer (2026-07-21, Bermington). ORIGINALLY gated on doc.sealed - the
+        // reasoning was "the Reseal-docs recovery button already covers
+        // pre-seal" (see above), which is true for a process still IN FLIGHT
+        // (not terminal). It missed the case Bermington + Politzer both hit
+        // 2026-07-22: a TERMINAL/complete process where one doc in the pack
+        // never actually sealed (a real render-service failure, not a stuck
+        // in-flight pack) - Reseal-docs is gated on !isTerminal and does not
+        // show at all here, and Correct-this-doc didn't show either because
+        // doc.sealed was false, leaving NO recovery control for exactly the
+        // doc that needed one. The backend (caymanOpCorrectSealedDoc) has no
+        // sealed-first requirement - it already handles "nothing to rename"
+        // gracefully - so this was a frontend-only gap. Gate on doc.key alone.
         // Own tiny inline confirm (not the drawer-wide void/reseal strip: this
         // is per-document, not a lifecycle action on the whole process).
-        if(doc.sealed&&doc.key){
+        if(doc.key){
           h+='<div class="doccorrect" data-key="'+esc2(doc.key)+'">'
             +'<button class="doc-correct-toggle" type="button">Correct this doc</button>'
             +'<div class="doc-correct-confirm" hidden>'
-            +'<span>Regenerate from the current data? The signer is NOT re-contacted; the existing sealed file is kept, renamed [SUPERSEDED].</span>'
+            +'<span>Regenerate from the current data? The signer is NOT re-contacted'+(doc.sealed?'; the existing sealed file is kept, renamed [SUPERSEDED].':' - no sealed file exists yet for this doc, this seals it for the first time.')+'</span>'
             +'<button class="doc-correct-go" type="button">Correct</button>'
             +'<button class="doc-correct-cancel" type="button">Cancel</button>'
             +'</div>'
