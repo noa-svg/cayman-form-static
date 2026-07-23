@@ -3708,12 +3708,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   var MSG_META={
     invite_new:               {phase:'Onboarding', trigger:'On mint',           rcpt:R(['LP'],['Omri','Noa','FO']),  cls:'lp',           fmt:'html', en:'default-exists'},
     invite_existing:          {phase:'Onboarding', trigger:'On mint',           rcpt:R(['LP'],['Omri','Noa']),       cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_israeli:           {phase:'Onboarding', trigger:'On mint',           rcpt:R(['LP'],['FO']),               cls:'lp',           fmt:'html', en:'no-copy'},
     invite_signer_sub_individual:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Co-holder'],[]),         cls:'lp',           fmt:'html', en:'default-exists'},
     invite_signer_sub_entity: {phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['CP'],[]),                  cls:'lp',           fmt:'html', en:'default-exists'},
     invite_signer_lawyer_individual:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Lawyer'],[]),        cls:'lp',           fmt:'html', en:'default-exists'},
     invite_signer_lawyer_entity:{phase:'Onboarding', trigger:"When signer's turn", rcpt:R(['Lawyer'],[]),            cls:'lp',           fmt:'html', en:'default-exists'},
     mint_notify:              {phase:'Onboarding', trigger:'On mint',           rcpt:R(['Noa','Omri'],[]),           cls:'internal',     fmt:'text', en:'default-exists'},
     invite_reminder:          {phase:'Reminders',  trigger:'Stalled signer',    rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'default-exists'},
+    invite_reminder_lawyer:   {phase:'Reminders',  trigger:'Stalled signer',    rcpt:R(['Lawyer'],[]),               cls:'lp',           fmt:'html', en:'default-exists'},
     completion_lp:            {phase:'Completion', trigger:'All signed',        rcpt:R(['LP'],['Omri','Noa','FO']),  cls:'lp',           fmt:'text', en:'default-exists'},
     completion_cp:            {phase:'Completion', trigger:'All signed',        rcpt:R(['CP'],[]),                   cls:'lp',           fmt:'text', en:'default-exists'},
     completion_lawyer:        {phase:'Completion', trigger:'All signed',        rcpt:R(['Lawyer'],[]),               cls:'lp',           fmt:'text', en:'default-exists'},
@@ -3736,9 +3738,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   var MSG_AUTO_TOKENS={wireBlock:1,processBlock:1,flowSummary:1,amountSpelled:1,investorPhrase:1,redemptionClause:1,completedSigners:1,commsEmails:1,amountDisplay:1};
   var MSG_HUMAN_LABEL={
     invite_new:'New investor invite', invite_existing:'Existing investor transfer',
+    invite_israeli:'Israeli onboarding invite',
     invite_signer_sub_individual:'Co-subscriber signature', invite_signer_sub_entity:'Entity signatory signature',
     invite_signer_lawyer_individual:'Lawyer qualification (individual)', invite_signer_lawyer_entity:'Lawyer qualification (entity)',
-    mint_notify:'Mint confirmation', invite_reminder:'Invite reminder',
+    mint_notify:'Mint confirmation', invite_reminder:'Invite reminder', invite_reminder_lawyer:'Lawyer reminder',
     completion_lp:'Signed documents to LP', completion_cp:'Signed documents to CP', completion_lawyer:'Signed documents to lawyer',
     completion_internal:'Onboarding complete (internal)',
     bdo_draft:'BDO deposit cover', bank_draft:'Bank new-investor cover',
@@ -5640,10 +5643,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // get sample copy (they are server-computed at send time).
   var SAMPLE_VARS={
     name:"David Cohen", lpName:"David Cohen", link:"https://sign.legacyvpartners.com/?t=...",
-    greeting:"שלום David", greetingName:"עו\"ד כהן", firstFiller:"David Cohen",
+    greeting:"David", greetingName:" עו\"ד כהן", firstFiller:"David Cohen",
     completedSigners:"David Cohen", englishName:"David Cohen", hebrewName:"דוד כהן",
     amountDisplay:"$1,000,000", amountSpelled:"מיליון דולר", commsEmails:"david@example.com",
     investorPhrase:"לדוד כהן", redemptionClause:"חלקי על סך $250,000",
+    nickname:"David", entityName:"",
     processBlock:"[process steps]", wireBlock:"[wire details]", flowSummary:"[flow summary]"
   };
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
