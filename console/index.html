@@ -3242,17 +3242,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="hint" id="foEmailHint">Family office contact. Gets a cc on the invite.</div>
     </div>
 
-    <!-- Rev share % field REMOVED 2026-07-29: was session-only from its
-         original design (never wrote to Monday, see commit 50e7f8b), and
-         the concept it modeled (the Monday "Rev Share" column) was retired
-         2026-05-30 in favor of "FO Share" - a multi-select column with
-         compound Name+% tokens and four semantic types, not a flat percent
-         list. FO Share assignment is a distinct post-onboarding operator
-         task (fo-docs' LpFlow.ts editor, or a direct Monday-board edit),
-         not something this mint-time form ever wrote. Confirmed dead by a
-         full grep of session.revShare across ju-cayman - zero downstream
-         readers, so removing this field changes no LP-visible or
-         Monday-visible behavior. -->
+    <!-- FO share picker (2026-07-29, replaces the removed hardcoded percent
+         field - see its own prior comment in git history for that story).
+         Options are the LIVE Monday FO Share catalog (?api=foShareLabels),
+         fetched once and cached, never hardcoded - Noa: "it should show the
+         monday options." Selecting a tag WRITES it to the new LP's Monday
+         item (FO Share column) at mint via caymanConsoleMintLink_ - a real
+         assignment this time, not session-only dead plumbing. -->
+    <div id="foShareSection">
+    <label for="foShareSel">FO share <span class="opt">optional</span></label>
+    <select id="foShareSel" onchange="(function(v){document.getElementById('foShareCustomWrap').style.display=v==='custom'?'block':'none';})(this.value)" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink);cursor:pointer;appearance:auto">
+      <option value="">None</option>
+      <option value="custom">Custom...</option>
+    </select>
+    <div id="foShareCustomWrap" style="display:none;margin-top: 8px">
+      <input id="foShareCustom" type="text" placeholder="e.g. Ashri25%" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
+    </div>
+    <div class="hint" id="foShareHint">Only for new subscriptions. Creates the label on Monday if it does not exist yet.</div>
+    </div>
 
 
     <button class="cta" id="createBtn">Send invite</button>
@@ -3512,6 +3519,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||'unknown'; throw e; }
       return d;
     });
+  }
+  // FO share picker: fetch the LIVE Monday FO Share label catalog once,
+  // cache it, and populate #foShareSel (inserted before the "Custom..."
+  // option, "None" stays first). Fail-soft: a fetch failure leaves the
+  // select at None+Custom only - the operator can still type a tag by hand,
+  // never blocks the New-process panel. Called on every panel open but only
+  // fetches once (foShareLoaded guards re-fetching a static-for-the-session
+  // catalog on every "+ New process" click).
+  var foShareLoaded=false;
+  function loadFoShareLabels(){
+    if(foShareLoaded||DEMO)return;
+    foShareLoaded=true;
+    apiFetch('?api=foShareLabels').then(function(d){
+      var sel=document.getElementById('foShareSel');
+      if(!sel||!d||!d.ok||!Array.isArray(d.labels))return;
+      var customOpt=sel.querySelector('option[value="custom"]');
+      d.labels.forEach(function(name){
+        var opt=document.createElement('option');
+        opt.value=name;opt.textContent=name;
+        sel.insertBefore(opt,customOpt);
+      });
+    }).catch(function(){/* fail-soft: keep None+Custom, never block the panel */});
   }
   function clearAuth(reason){
     // A rejection message is only honest when there WAS a session to reject:
@@ -4257,7 +4286,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isExisting?"block":"none";
     if(isExisting){
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
-      ["classRow","manualLpFields","foRow","langRow"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
+      ["classRow","manualLpFields","foRow","langRow","foShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
@@ -4272,6 +4301,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
+    // FO share is a NEW-subscription field, same reasoning as classRow/langRow above.
+    el=document.getElementById("foShareSection");if(el)el.style.display="";
+    loadFoShareLabels();
     el=document.getElementById("panelLead");if(el)el.textContent="Creates the Monday item, emails the investor, and notifies the team.";
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
@@ -4288,6 +4320,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
+    var fss=document.getElementById('foShareSel');if(fss)fss.value='';
+    var fsw=document.getElementById('foShareCustomWrap');if(fsw)fsw.style.display='none';
+    var fsc=document.getElementById('foShareCustom');if(fsc)fsc.value='';
     // A completed submit drops the persisted draft for this lane+process so the next
     // create starts clean. Draft survives click-out/reopen/reload; only submit clears it.
     if(window.__clearCreateDraft)window.__clearCreateDraft();
@@ -5414,7 +5449,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     document.getElementById("res").classList.remove("on");
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
+    // FO share is new-subscription-only, same reasoning as the old rev-share field.
+    var _fssel=document.getElementById('foShareSel');var foShare=(state.lpKind==='new'&&_fssel)?(_fssel.value==='custom'?(document.getElementById('foShareCustom')?document.getElementById('foShareCustom').value.trim():''):_fssel.value):'';
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
