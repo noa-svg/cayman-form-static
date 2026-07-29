@@ -3238,21 +3238,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="hint" id="foEmailHint">Family office contact. Gets a cc on the invite.</div>
     </div>
 
-    <div id="revShareSection">
-    <label for="revShareSel">Rev share % <span class="opt">optional</span></label>
-    <select id="revShareSel" onchange="(function(v){document.getElementById('revShareCustomWrap').style.display=v==='custom'?'block':'none';})(this.value)" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink);cursor:pointer;appearance:auto">
-      <option value="">None</option>
-      <option value="20">20% - Ashri families</option>
-      <option value="25">25% - Standard</option>
-      <option value="26.667">26.667%</option>
-      <option value="33.333">33.333%</option>
-      <option value="custom">Custom...</option>
-    </select>
-    <div id="revShareCustomWrap" style="display:none;margin-top: 8px">
-      <input id="revShareCustom" type="text" inputmode="decimal" pattern="[0-9.]*" placeholder="Enter %" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
-    </div>
-    <div class="hint">Only for new subscriptions. Pick "Custom" to enter any value.</div>
-    </div>
+    <!-- Rev share % field REMOVED 2026-07-29: was session-only from its
+         original design (never wrote to Monday, see commit 50e7f8b), and
+         the concept it modeled (the Monday "Rev Share" column) was retired
+         2026-05-30 in favor of "FO Share" - a multi-select column with
+         compound Name+% tokens and four semantic types, not a flat percent
+         list. FO Share assignment is a distinct post-onboarding operator
+         task (fo-docs' LpFlow.ts editor, or a direct Monday-board edit),
+         not something this mint-time form ever wrote. Confirmed dead by a
+         full grep of session.revShare across ju-cayman - zero downstream
+         readers, so removing this field changes no LP-visible or
+         Monday-visible behavior. -->
+
 
     <button class="cta" id="createBtn">Send invite</button>
     <div id="msg" role="status" aria-live="polite" style="margin-top: 16px;padding: 12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
@@ -4256,7 +4253,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isExisting?"block":"none";
     if(isExisting){
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
-      ["classRow","manualLpFields","foRow","langRow","revShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
+      ["classRow","manualLpFields","foRow","langRow"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
       el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
@@ -4271,12 +4268,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
-    // Rev share is a NEW-subscription field (the FO/family revenue split is set at onboarding,
-    // never for an existing LP). Onboarding is always a new LP, so this shows here and is hidden
-    // for increase/withdrawal; reset it when hidden so no stale value lingers (submit re-gates).
-    var rsOn=(state.lpKind==="new");
-    el=document.getElementById("revShareSection");if(el)el.style.display=rsOn?"":"none";
-    if(!rsOn){var _rs=document.getElementById("revShareSel");if(_rs)_rs.value="";var _rw=document.getElementById("revShareCustomWrap");if(_rw)_rw.style.display="none";}
     el=document.getElementById("panelLead");if(el)el.textContent="Creates the Monday item, emails the investor, and notifies the team.";
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
@@ -4293,9 +4284,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
-    var rs=document.getElementById('revShareSel');if(rs)rs.value='';
-    var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display='none';
-    var rc=document.getElementById('revShareCustom');if(rc)rc.value='';
     // A completed submit drops the persisted draft for this lane+process so the next
     // create starts clean. Draft survives click-out/reopen/reload; only submit clears it.
     if(window.__clearCreateDraft)window.__clearCreateDraft();
@@ -5274,13 +5262,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return {
         v:1,
         name:g('name'),nameHebrew:g('nameHebrew'),nickname:g('nickname'),
-        email:g('email'),foEmail:g('foEmail'),
-        revShareSel:g('revShareSel'),revShareCustom:g('revShareCustom')
+        email:g('email'),foEmail:g('foEmail')
       };
     }
     function isEmpty(d){
-      return !d.name&&!d.nameHebrew&&!d.nickname&&!d.email&&!d.foEmail&&
-             !d.revShareSel&&!d.revShareCustom;
+      return !d.name&&!d.nameHebrew&&!d.nickname&&!d.email&&!d.foEmail;
     }
     function save(){
       try{
@@ -5296,20 +5282,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var s=function(id,val){var f=document.getElementById(id);if(f&&val!=null)f.value=val;};
       s('name',d.name);s('nameHebrew',d.nameHebrew);s('nickname',d.nickname);
       s('email',d.email);s('foEmail',d.foEmail);
-      var rs=document.getElementById('revShareSel');
-      if(rs&&d.revShareSel!=null){rs.value=d.revShareSel;
-        var rw=document.getElementById('revShareCustomWrap');if(rw)rw.style.display=(d.revShareSel==='custom')?'block':'none';
-      }
-      s('revShareCustom',d.revShareCustom);
     }
     window.__saveCreateDraft=save;
     window.__clearCreateDraft=clear;
     window.__restoreCreateDraft=restore;
     // Persist on every keystroke/change across all create fields.
-    ['name','nameHebrew','nickname','email','foEmail','revShareCustom'].forEach(function(id){
+    ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){
       var f=document.getElementById(id);if(f)f.addEventListener('input',save);
     });
-    var rsel=document.getElementById('revShareSel');if(rsel)rsel.addEventListener('change',save);
   })();
   // create
   function showMsg(text,isErr){var m=document.getElementById("msg");m.textContent=text;m.style.display=text?"block":"none";m.style.background=isErr?"var(--color-red-tint)":"var(--color-green-tint)";m.style.color=isErr?"var(--color-red)":"var(--color-green)";m.style.border=isErr?"2px solid var(--color-red)":"2px solid var(--color-green)";m.setAttribute('role',isErr?'alert':'status');m.setAttribute('aria-live',isErr?'assertive':'polite');}
@@ -5430,9 +5410,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     document.getElementById("res").classList.remove("on");
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
-    // Rev share is new-subscription-only; never carry a value an existing-LP submit hid.
-    var _rsel=document.getElementById('revShareSel');var revShare=(state.lpKind==='new'&&_rsel)?(_rsel.value==='custom'?(document.getElementById('revShareCustom')?document.getElementById('revShareCustom').value.trim():''):_rsel.value):'';
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(revShare?'&revShare='+encodeURIComponent(revShare):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
