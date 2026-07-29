@@ -3189,11 +3189,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
          status is implicit in the flow. quickPick sets state.type/state.lpKind directly.
          The old #typeKindRow/#segType/#segKind toggles were removed (Noa 2026-07-07): the
          segType toggle re-asked what the menu just captured, and segKind was never visible. -->
-    <!-- Israeli entity onboarding only: the OPERATOR sets active-vs-passive at mint
-         (Omri/Noa's call = ground truth; the LP never sees a chooser). Drives the
-         entity-active vs entity-passive pack. -->
+    <!-- Israeli entity onboarding only. OPTIONAL since 2026-07-29 (Noa: "the pre
+         pick should be optional only") - pack composition now derives SOLELY
+         from the LP's own entityW8.fatcaStatus self-cert
+         (israeliEntityIsPassive_, ju-cayman IsraeliDocGen.ts), matching
+         EasySend's original conduit practice. This toggle is a non-binding
+         guess/default only; send an entity link with no idea yet which it
+         is - the LP's own form answer decides for real, later. -->
     <div class="g2" id="classRow" style="display:none">
-      <div><label id="segClassLbl">Entity classification</label><div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button class="on" data-v="active" role="radio" aria-checked="true">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div></div>
+      <div><label id="segClassLbl">Entity classification <span class="opt">optional - LP's own answer decides</span></label><div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button class="on" data-v="active" role="radio" aria-checked="true">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div></div>
     </div>
     <div id="langRow">
     <label id="segLangLbl">Email language <span class="tag">required</span></label>
