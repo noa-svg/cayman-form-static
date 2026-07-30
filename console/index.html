@@ -1379,6 +1379,19 @@ label {
   font-weight: var(--weight-medium);
 }
 
+/* .seg.wrap: same chip look as .seg, but for a variable-length multi-select
+   set (FO share tokens) instead of a fixed 2-way radiogroup - wraps to
+   multiple lines, chips size to their own label instead of splitting the
+   row evenly. */
+.seg.wrap {
+  flex-wrap: wrap;
+}
+
+.seg.wrap button {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+}
+
 .g2 {
   display: flex;
   gap: var(--space-3);
@@ -3244,23 +3257,30 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="hint" id="foEmailHint">Family office contact. Gets a cc on the invite.</div>
     </div>
 
-    <!-- FO share picker (2026-07-29, replaces the removed hardcoded percent
-         field - see its own prior comment in git history for that story).
-         Options are the LIVE Monday FO Share catalog (?api=foShareLabels),
-         fetched once and cached, never hardcoded - Noa: "it should show the
-         monday options." Selecting a tag WRITES it to the new LP's Monday
-         item (FO Share column) at mint via caymanConsoleMintLink_ - a real
-         assignment this time, not session-only dead plumbing. -->
+    <!-- FO share picker (rebuilt 2026-07-30 as a real multi-select - the FO
+         Share Monday column is MULTI-select by design: a combined-family deal
+         (Gilad's split with Ashri and Eitan) is THREE simultaneous tokens
+         (Gilad15%+Ashri15%+Eitan15%), never one compound label - see
+         tools/revshare.md's "Decomposed tokens... PARALLEL cuts" convention.
+         A single-select dropdown could never represent that (2026-07-30
+         incident: Noa could not select Gilad's real split). Options are the
+         LIVE Monday FO Share catalog (?api=foShareLabels), fetched once and
+         cached, never hardcoded. Chips for the SAME FO (leading-letters
+         prefix, e.g. "Ashri" in Ashri25%/Ashri20%/Ashri26.667%/Ashri33%) are
+         mutually exclusive - selecting one auto-deselects the other, since
+         assigning one FO two different rates at once is never valid (the
+         wiki's own "two compound labels applied together corrupt totals"
+         gotcha) and Ashri specifically sits at 4 different tiers depending on
+         who he's paired with. No selection = None (nothing written), same
+         "truly optional" pattern as the entity-classification toggle. -->
     <div id="foShareSection">
-    <label for="foShareSel">FO share <span class="opt">optional</span></label>
-    <select id="foShareSel" onchange="(function(v){document.getElementById('foShareCustomWrap').style.display=v==='custom'?'block':'none';})(this.value)" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink);cursor:pointer;appearance:auto">
-      <option value="">None</option>
-      <option value="custom">Custom...</option>
-    </select>
-    <div id="foShareCustomWrap" style="display:none;margin-top: 8px">
-      <input id="foShareCustom" type="text" placeholder="e.g. Ashri25%" style="width:100%;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
+    <label id="foShareLbl">FO share <span class="opt">optional</span></label>
+    <div class="seg wrap" id="foShareSeg" role="group" aria-labelledby="foShareLbl"></div>
+    <div id="foShareCustomWrap" style="margin-top: 8px">
+      <button type="button" id="foShareCustomToggle" class="linklike" style="background:none;border:none;padding:0;font:inherit;color:var(--color-atrium);cursor:pointer;font-size:13px">+ Add a tag not listed above</button>
+      <input id="foShareCustom" type="text" placeholder="e.g. Ashri25%" style="display:none;width:100%;margin-top:8px;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
     </div>
-    <div class="hint" id="foShareHint">Only for new subscriptions. Creates the label on Monday if it does not exist yet.</div>
+    <div class="hint" id="foShareHint">Only for new subscriptions. Select every FO in this deal (e.g. Gilad + Ashri + Eitan). Creates a tag on Monday if it does not exist yet.</div>
     </div>
 
 
@@ -3523,26 +3543,75 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
   }
   // FO share picker: fetch the LIVE Monday FO Share label catalog once,
-  // cache it, and populate #foShareSel (inserted before the "Custom..."
-  // option, "None" stays first). Fail-soft: a fetch failure leaves the
-  // select at None+Custom only - the operator can still type a tag by hand,
-  // never blocks the New-process panel. Called on every panel open but only
-  // fetches once (foShareLoaded guards re-fetching a static-for-the-session
-  // catalog on every "+ New process" click).
+  // cache it, and render one toggle chip per label into #foShareSeg (the
+  // literal "None" label is skipped - an empty selection already means
+  // None, same convention as the entity-classification toggle). Fail-soft:
+  // a fetch failure leaves the chip row empty - the operator can still add
+  // a tag via "+ Add a tag not listed above", never blocks the New-process
+  // panel. Called on every panel open but only fetches once (foShareLoaded
+  // guards re-fetching a static-for-the-session catalog on every
+  // "+ New process" click).
   var foShareLoaded=false;
+  // Known FIXED combined-FO deals (Noa 2026-07-30: "gilad is always in the
+  // 3 way share with ashri and eitan... easier to just have on[e]
+  // selection") - one click writes all N real Monday tokens at once instead
+  // of forcing the operator to hunt down and click each one separately.
+  // data-v carries the real comma-joined tokens (foShareTokenPrefixes below
+  // splits it back apart for conflict-checking and the final submit-time
+  // join already handles a comma-bearing data-v with no special-casing).
+  // Extend this list only for deals Noa has confirmed are always the same
+  // fixed combination - a one-off combo stays a manual multi-click.
+  var FO_SHARE_KNOWN_COMBOS=[
+    {label:'Gilad + Ashri + Eitan (15%)',tokens:'Gilad15%,Ashri15%,Eitan15%'}
+  ];
+  // Leading-letters prefix ("Ashri" from "Ashri25%", "Gafner" from both
+  // "Gafner25%" and "Gafner-NoRevShare") - chips sharing a prefix are the
+  // SAME FO at different tiers/modes and must be mutually exclusive. A
+  // combo chip's data-v is comma-joined (multiple real tokens); prefix SETS
+  // are compared so the combo conflicts with (and clears) any atomic chip
+  // for one of ITS OWN FOs, and vice versa.
+  function foShareTokenPrefixes(dataV){return String(dataV||'').split(',').map(function(t){var m=/^[A-Za-z]+/.exec(t.trim());return m?m[0]:t.trim();});}
+  function foShareSetsIntersect(a,b){return a.some(function(x){return b.indexOf(x)>=0;});}
+  function foShareToggleChip(btn){
+    var seg=document.getElementById('foShareSeg');
+    if(!seg)return;
+    if(btn.classList.contains('on')){
+      btn.classList.remove('on');btn.setAttribute('aria-pressed','false');
+      return;
+    }
+    var prefixes=foShareTokenPrefixes(btn.getAttribute('data-v'));
+    Array.prototype.forEach.call(seg.children,function(other){
+      if(other!==btn&&other.classList.contains('on')&&foShareSetsIntersect(foShareTokenPrefixes(other.getAttribute('data-v')),prefixes)){
+        other.classList.remove('on');other.setAttribute('aria-pressed','false');
+      }
+    });
+    btn.classList.add('on');btn.setAttribute('aria-pressed','true');
+  }
+  function foShareMakeChip(label,dataV){
+    var seg=document.getElementById('foShareSeg');
+    var btn=document.createElement('button');
+    btn.type='button';btn.textContent=label;
+    btn.setAttribute('data-v',dataV);btn.setAttribute('aria-pressed','false');
+    btn.onclick=function(){foShareToggleChip(btn);};
+    seg.appendChild(btn);
+  }
   function loadFoShareLabels(){
     if(foShareLoaded||DEMO)return;
     foShareLoaded=true;
+    FO_SHARE_KNOWN_COMBOS.forEach(function(c){foShareMakeChip(c.label,c.tokens);});
     apiFetch('?api=foShareLabels').then(function(d){
-      var sel=document.getElementById('foShareSel');
-      if(!sel||!d||!d.ok||!Array.isArray(d.labels))return;
-      var customOpt=sel.querySelector('option[value="custom"]');
+      var seg=document.getElementById('foShareSeg');
+      if(!seg||!d||!d.ok||!Array.isArray(d.labels))return;
+      // Skip a raw atomic label already fully absorbed into a known combo
+      // above (Gilad15% never appears outside the Gilad+Ashri+Eitan deal) -
+      // avoids offering a redundant, easy-to-misclick standalone chip.
+      var absorbed={};
+      FO_SHARE_KNOWN_COMBOS.forEach(function(c){c.tokens.split(',').forEach(function(t){if(/^Gilad/.test(t))absorbed[t]=true;});});
       d.labels.forEach(function(name){
-        var opt=document.createElement('option');
-        opt.value=name;opt.textContent=name;
-        sel.insertBefore(opt,customOpt);
+        if(name==='None'||absorbed[name])return;
+        foShareMakeChip(name,name);
       });
-    }).catch(function(){/* fail-soft: keep None+Custom, never block the panel */});
+    }).catch(function(){/* fail-soft: empty chip row, Custom still works, never block the panel */});
   }
   function clearAuth(reason){
     // A rejection message is only honest when there WAS a session to reject:
@@ -4322,9 +4391,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
-    var fss=document.getElementById('foShareSel');if(fss)fss.value='';
-    var fsw=document.getElementById('foShareCustomWrap');if(fsw)fsw.style.display='none';
-    var fsc=document.getElementById('foShareCustom');if(fsc)fsc.value='';
+    var fsseg=document.getElementById('foShareSeg');if(fsseg)Array.prototype.forEach.call(fsseg.children,function(b){b.classList.remove('on');b.setAttribute('aria-pressed','false');});
+    var fsc=document.getElementById('foShareCustom');if(fsc){fsc.value='';fsc.style.display='none';}
+    var fst=document.getElementById('foShareCustomToggle');if(fst)fst.textContent='+ Add a tag not listed above';
     // Entity classification is a per-mint operator judgment call, not a sticky preference -
     // a completed mint must not leak its Active/Passive pick into the next one's default.
     state.classification='';
@@ -5191,6 +5260,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // to "" when nothing is chosen, which the mint call reads as "omit this param entirely".
   function wireToggleable(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;var wasOn=b.classList.contains("on");Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");x.setAttribute("aria-checked","false");});if(wasOn){state[key]="";}else{b.classList.add("on");b.setAttribute("aria-checked","true");state[key]=b.getAttribute("data-v");}syncPanelFields();};}
   wire("segLang","language");wireToggleable("segClass","classification");
+  (function(){var t=document.getElementById('foShareCustomToggle');var inp=document.getElementById('foShareCustom');if(!t||!inp)return;t.onclick=function(){var showing=inp.style.display!=='none';inp.style.display=showing?'none':'block';t.textContent=showing?'+ Add a tag not listed above':'− Hide';if(!showing)inp.focus();};})();
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
@@ -5462,7 +5532,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     showMsg("Creating process and sending invite...",false);
     var foEmail=document.getElementById('foEmail').value.trim();
     // FO share is new-subscription-only, same reasoning as the old rev-share field.
-    var _fssel=document.getElementById('foShareSel');var foShare=(state.lpKind==='new'&&_fssel)?(_fssel.value==='custom'?(document.getElementById('foShareCustom')?document.getElementById('foShareCustom').value.trim():''):_fssel.value):'';
+    // Comma-joined: every checked chip PLUS an optional custom tag - a
+    // combined-family deal (Gilad+Ashri+Eitan) is multiple simultaneous
+    // tokens, never one compound label (see foShareSection's own comment).
+    var foShare='';
+    if(state.lpKind==='new'){
+      var _fsseg=document.getElementById('foShareSeg');
+      var _fstoks=_fsseg?Array.prototype.filter.call(_fsseg.children,function(b){return b.classList.contains('on');}).map(function(b){return b.getAttribute('data-v');}):[];
+      var _fscustom=document.getElementById('foShareCustom');
+      if(_fscustom&&_fscustom.style.display!=='none'&&_fscustom.value.trim())_fstoks.push(_fscustom.value.trim());
+      foShare=_fstoks.join(',');
+    }
     apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
