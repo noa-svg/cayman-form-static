@@ -3196,8 +3196,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
          EasySend's original conduit practice. This toggle is a non-binding
          guess/default only; send an entity link with no idea yet which it
          is - the LP's own form answer decides for real, later. -->
-    <div class="g2" id="classRow" style="display:none">
-      <div><label id="segClassLbl">Entity classification <span class="opt">optional - LP's own answer decides</span></label><div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button class="on" data-v="active" role="radio" aria-checked="true">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div></div>
+    <div id="classRow" style="display:none">
+      <label id="segClassLbl">Entity classification <span class="opt">optional</span></label>
+      <div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button data-v="active" role="radio" aria-checked="false">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div>
+      <div class="hint">Leave unset if you're not sure - the LP's own form answer decides for real. Click a selected option again to clear it.</div>
     </div>
     <div id="langRow">
     <label id="segLangLbl">Email language <span class="tag">required</span></label>
@@ -3718,7 +3720,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
   }
 
-  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",language:"he",classification:"active",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
+  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",language:"he",classification:"",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
   // Israeli onboarding readiness flag: flip to true when the branded doc layer +
   // seal E2E are green (deploy gate). Gates the Onboarding menu group on the
   // Israel fund + the classification row.
@@ -4323,6 +4325,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var fss=document.getElementById('foShareSel');if(fss)fss.value='';
     var fsw=document.getElementById('foShareCustomWrap');if(fsw)fsw.style.display='none';
     var fsc=document.getElementById('foShareCustom');if(fsc)fsc.value='';
+    // Entity classification is a per-mint operator judgment call, not a sticky preference -
+    // a completed mint must not leak its Active/Passive pick into the next one's default.
+    state.classification='';
+    var segC=document.getElementById('segClass');
+    if(segC)Array.prototype.forEach.call(segC.children,function(x){x.classList.remove('on');x.setAttribute('aria-checked','false');});
     // A completed submit drops the persisted draft for this lane+process so the next
     // create starts clean. Draft survives click-out/reopen/reload; only submit clears it.
     if(window.__clearCreateDraft)window.__clearCreateDraft();
@@ -5178,7 +5185,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // consistent. Only the in-panel toggles are wired now (language, entity classification);
   // type + status are fixed by the New menu and never re-asked here.
   function wire(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");x.setAttribute("aria-checked","false");});b.classList.add("on");b.setAttribute("aria-checked","true");state[key]=b.getAttribute("data-v");syncPanelFields();};}
-  wire("segLang","language");wire("segClass","classification");
+  // Same as wire(), except this field is genuinely optional: clicking the already-selected
+  // button deselects it back to a neutral, nothing-picked state instead of forcing a choice
+  // (Noa 2026-07-30: "if its optional u shuold be able to not select it"). state[key] goes
+  // to "" when nothing is chosen, which the mint call reads as "omit this param entirely".
+  function wireToggleable(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;var wasOn=b.classList.contains("on");Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");x.setAttribute("aria-checked","false");});if(wasOn){state[key]="";}else{b.classList.add("on");b.setAttribute("aria-checked","true");state[key]=b.getAttribute("data-v");}syncPanelFields();};}
+  wire("segLang","language");wireToggleable("segClass","classification");
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
@@ -5451,7 +5463,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var foEmail=document.getElementById('foEmail').value.trim();
     // FO share is new-subscription-only, same reasoning as the old rev-share field.
     var _fssel=document.getElementById('foShareSel');var foShare=(state.lpKind==='new'&&_fssel)?(_fssel.value==='custom'?(document.getElementById('foShareCustom')?document.getElementById('foShareCustom').value.trim():''):_fssel.value):'';
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity')?'&classification='+encodeURIComponent(state.classification||'active'):'')+(force?'&force=1':'')).then(function(res){
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
