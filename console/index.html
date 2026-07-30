@@ -5203,7 +5203,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'<div class="dsec" style="color:var(--color-ink-muted)">Loading details...</div>';
     }
     document.getElementById("dbody").innerHTML=skel;
-    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(renderDrawer).catch(function(err){
+    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(function(d){
+      // Stale-response guard (2026-07-30): opening drawer B while A's fetch is
+      // still in flight moves currentPid to B. A's late response must not
+      // paint over the drawer the operator has since opened. Same idiom as
+      // the board's LOAD_SEQ guard above.
+      if(currentPid!==pid)return;
+      renderDrawer(d);
+    }).catch(function(err){
+      if(currentPid!==pid)return;
       // C5 (2026-07-19): drawer load failure gets an in-place Retry + cause.
       document.getElementById('dbody').innerHTML='<div class="dsec"><div class="pe">Could not load this process. '
         +'<a href="#" id="drawerRetry">Retry</a>'
