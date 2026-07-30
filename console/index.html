@@ -2827,6 +2827,17 @@ body.side-coll .ss-lbl { display: none; }
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
 .lp-empty-detail{margin-top:4px;font-size:11px;color:var(--color-ink-muted);word-break:break-word}
+/* Investments-deal disambiguation (2026-07-30): shown ONLY when a picked LP
+   resolves to 2+ linked Investments-board deals, so the operator picks the
+   right one instead of the mint silently guessing. Single-match resolves
+   silently (state.selectedInvestmentsId set, no UI); zero-match degrades to
+   today's blank/manual-attach behavior. See setPick()/resolveInvestmentsForPick(). */
+.lp-inv-pick[hidden]{display:none}
+.lp-inv-pick{margin-top:8px;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);overflow:hidden}
+.lp-inv-label{padding:8px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-muted);background:var(--color-bg-card)}
+.lp-inv-row{padding: 8px 12px;font-size:13px;cursor:pointer;border-top:1px solid var(--color-border-subtle)}
+.lp-inv-row:hover{background:var(--color-bg-hover)}
+.lp-inv-row.active{background:var(--color-atrium-tint);font-weight:700}
 /* C3 inline review confirm (send paths) */
 .crev{font-size:13px}
 .crev-line{display:flex;gap:8px;padding:2px 0}
@@ -3194,6 +3205,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div id="lpResults" class="lp-results" hidden></div>
       </div>
       <div id="lpPicked" class="lp-picked" hidden></div>
+      <div id="lpInvPick" class="lp-inv-pick" hidden></div>
       <div class="hint" id="lpSearchHint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
     </div>
     <!-- Investor type (Individual/Entity) and status (New/Existing) are both fixed by the
@@ -3303,7 +3315,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-07-19-2';
+  window.__BUILD_TAG = 'console-2026-07-30-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5266,12 +5278,59 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
   // routes process=increase|withdrawal -> caymanConsoleInitiateIsraeliFlow_ (no auto-send).
   (function(){
-    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
+    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked'),invBox=document.getElementById('lpInvPick');
     if(!inp||!box||!picked)return;
-    var T=null,rows=[],active=-1;
+    var T=null,rows=[],active=-1,invSeq=0;
     function subline(m){var en=m.name||m.nameEn;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
+    function clearInvPick(){invSeq++;if(invBox){invBox.hidden=true;invBox.innerHTML='';}}
+    function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;clearInvPick();}
     window.__lpClearPick=clearPick;
+    // Resolve the picked LP's linked Investments-board deal so the money-path mint
+    // carries a real investmentsId (2026-07-30 fix: this used to always send ''
+    // because nothing here ever called ?admin=searchInvestments). The Investments
+    // board only supports a NAME search, not a lookup by People id, so this
+    // searches by the picked LP's own name/email and then keeps only the results
+    // whose linkedPeopleItemId (resolved server-side from the deal_contact
+    // board_relation) matches the person just picked - that equality check is
+    // what makes this safe even if the name search also turns up someone else's
+    // similarly-named deal.
+    //   0 matches  -> leave selectedInvestmentsId blank (today's fail-soft
+    //                 behavior: seal-time falls back to the manual-attach
+    //                 needs_attention path, never guesses).
+    //   1 match    -> unambiguous; auto-fill silently, no extra operator step.
+    //   2+ matches -> a person CAN have more than one Investments deal row, so a
+    //                 blind auto-fill could route the signed PDF to the wrong
+    //                 deal (real money routing). Show a visible, resolvable
+    //                 picker instead of guessing; selectedInvestmentsId stays
+    //                 blank until the operator clicks one.
+    function resolveInvestmentsForPick(m){
+      clearInvPick();
+      var mySeq=++invSeq;
+      var term=(m.email||m.nameHe||m.nameEn||m.name||'').trim();
+      if(term.length<2)return;
+      apiFetch('?admin=searchInvestments&q='+encodeURIComponent(term)+'&limit=20').then(function(d){
+        if(mySeq!==invSeq)return; // stale: pick changed or cleared while this was in flight
+        if(state.selectedPeopleId!==(m.itemId||''))return;
+        var hits=((d&&d.matches)||[]).filter(function(x){return x.linkedPeopleItemId&&x.linkedPeopleItemId===state.selectedPeopleId;});
+        if(hits.length===1){
+          state.selectedInvestmentsId=hits[0].investmentsItemId||'';
+        } else if(hits.length>1&&invBox){
+          state.selectedInvestmentsId='';
+          invBox.innerHTML='<div class="lp-inv-label">Multiple linked investment deals - pick one</div>'+hits.map(function(h,i){
+            return '<div class="lp-inv-row" data-i="'+i+'">'+esc2(h.name||'(unnamed deal)')+(h.email?(' · '+esc2(h.email)):'')+'</div>';
+          }).join('');
+          invBox.hidden=false;
+          Array.prototype.forEach.call(invBox.querySelectorAll('.lp-inv-row'),function(r){
+            r.onclick=function(){
+              state.selectedInvestmentsId=hits[+r.getAttribute('data-i')].investmentsItemId||'';
+              Array.prototype.forEach.call(invBox.querySelectorAll('.lp-inv-row'),function(x){x.classList.remove('active');});
+              r.classList.add('active');
+            };
+          });
+        }
+        // 0 matches: state.selectedInvestmentsId is already '' from setPick - leave it.
+      }).catch(function(){ /* fail-soft: a search error degrades to the blank/manual-attach path, never guesses */ });
+    }
     function setPick(m){
       state.selectedInvestmentsId='';
       state.selectedPeopleId=m.itemId||'';
@@ -5280,6 +5339,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
       picked.hidden=false;box.hidden=true;inp.style.display='none';
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
+      resolveInvestmentsForPick(m);
     }
     function render(){
       if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
