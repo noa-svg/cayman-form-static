@@ -571,8 +571,8 @@ body.side-coll .side-foot .foot-gear { display: none; }
 }
 .google-signin-btn:hover { background: var(--color-gold); transform: translate(-1px,-1px); box-shadow: var(--shadow-hover); }
 .google-signin-btn:active { transform: translate(2px,2px); box-shadow: none; }
-.lhint { position: absolute; left: 22px; bottom: 18px; z-index: 3; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-ink); opacity: 0.5; pointer-events: none; }
-.lstamp { position: absolute; z-index: 1; pointer-events: none; will-change: transform, opacity; }
+/* .lhint / .lstamp removed 2026-07-30 with the click-to-stamp interaction they
+   styled (see the login-bauhaus-init removal note near the closing </body>). */
 
 /* ============================================================
    MAIN CONTENT AREA
@@ -2159,6 +2159,11 @@ input:focus {
   background: var(--color-neutral-bg);
   transition: opacity 180ms ease;
 }
+/* Same [hidden] specificity bug as .dact-confirm above: the author display:flex
+   beats the UA [hidden]{display:none}, so this rendered permanently expanded
+   on every drawer open regardless of the toggle JS. Fixed 2026-07-30, same
+   pattern as the .dact-confirm precedent (originally fixed 2026-07-16/before). */
+.cursig .cs-editform[hidden] { display: none; }
 .cursig .cs-editform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2218,6 +2223,8 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
+/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
+.cursig .cs-attachform[hidden] { display: none; }
 .cursig .cs-attachform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2277,6 +2284,8 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
+/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
+.cursig .cs-attach2form[hidden] { display: none; }
 .cursig .cs-attach2form input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2339,6 +2348,8 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
+/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
+.cursig .cs-fixaddrform[hidden] { display: none; }
 .cursig .cs-fixaddrform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2405,6 +2416,10 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
+/* [hidden] specificity fix, same as .dact-confirm above - this was the 5th and
+   last of the drawer sub-panels rendering permanently expanded regardless of
+   the toggle JS, confirmed 2026-07-30. */
+.doc-correct-confirm[hidden] { display: none; }
 .doc-correct-confirm span { font-size: var(--text-xs); color: var(--color-ink-muted); }
 .doc-correct-go {
   font-family: var(--font-body);
@@ -2848,6 +2863,7 @@ body.side-coll .ss-lbl { display: none; }
 /* C7 Needs-you queue additions */
 .attn-act-hint{color:var(--color-ink-muted);font-weight:500}
 .attn-nudge{margin-inline-start:8px;background:var(--color-atrium-tint);color:var(--color-atrium);border:1px solid var(--color-atrium);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;flex-shrink:0}
+.attn-nudge:hover:not(:disabled){background:var(--color-atrium);color:#fff}
 .attn-nudge:disabled{opacity:.6;cursor:default}
 .lp-picked{display:flex;align-items:center;gap: 12px;padding: 12px 12px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
 .lp-picked[hidden],.lp-results[hidden]{display:none}
@@ -2880,7 +2896,13 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .fundsw{background:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:0;box-shadow:var(--shadow-card);gap:0;overflow:hidden}
 .fundsw button{color:var(--color-ink);border-radius:0;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;font-size:12px;padding:9px 0}
 .fundsw button + button{border-left:var(--bw) solid var(--color-ink)}
-.fundsw button.on{background:var(--color-gold);color:var(--color-ink)}
+.fundsw button.on{background:var(--color-atrium);color:#fff}
+/* Fix (2026-07-30): base .fundsw button:hover (line ~245) sets white hover text,
+   written when this chip had a dark sidebar background. The white-card override
+   above never got a matching hover rule, so hovering the INACTIVE segment kept
+   inheriting white-on-white and the label visually vanished. */
+.fundsw button:hover{color:var(--color-ink)}
+.fundsw button.on:hover{background:var(--color-atrium);color:#fff}
 .nav{border-radius:var(--radius-md);padding:11px 12px;margin:0 0 2px;text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:13px;border:var(--bw) solid transparent;background:transparent;color:#fff}
 .nav:hover{background:rgba(255,255,255,0.12)}
 .nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);border:var(--bw) solid var(--color-ink);box-shadow:var(--shadow-hover)}
@@ -2904,15 +2926,23 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
    (syncFund); this rides that attribute with zero JS changes, so it applies
    to every .top h1 across Board/Messages/W-8/Settings automatically and never
    drifts out of sync with the actual selected lane. */
-.top h1::after{display:inline-block;vertical-align:middle;margin-left:16px;font-family:var(--font-body);font-size:13px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:5px 12px;border-radius:var(--radius-pill);transform:translateY(-6px)}
-body[data-lane="israel"] .top h1::after{content:'Israel';background:var(--color-gold-tint);color:var(--color-gold);border:1px solid var(--color-gold)}
-body[data-lane="cayman"] .top h1::after{content:'Cayman';background:var(--color-atrium-tint);color:var(--color-atrium);border:1px solid var(--color-atrium)}
+/* Lane identity dropped color 2026-07-30: atrium blue is now reserved exclusively
+   for "selected/active" everywhere in the app (lane toggle, segmented controls,
+   dropdown-open), so a blue lane pill would collide with that meaning instead of
+   signaling "Cayman." Both lanes share one neutral treatment; the label text
+   alone carries lane identity. */
+.top h1::after{display:inline-block;vertical-align:middle;margin-left:16px;font-family:var(--font-body);font-size:13px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:5px 12px;border-radius:var(--radius-pill);transform:translateY(-6px);background:var(--color-bg-hover);color:var(--color-ink-sub);border:1px solid var(--color-border-strong)}
+body[data-lane="israel"] .top h1::after{content:'Israel'}
+body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 
-/* ---- NEW button (primary action = coral block) ---- */
-.cmd-btn{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.cmd-btn:hover{background:var(--color-coral);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
+/* ---- NEW button (primary/"go" = solid green, one definition, consolidated
+   2026-07-30 - this used to be defined coral here, then silently forced to
+   green by a trailing !important block 150 lines down; folded into one rule) ---- */
+.cmd-btn{background:var(--color-green);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.08em;font-size:14px;padding:11px 18px;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cmd-btn:hover{background:var(--color-green);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
 .cmd-btn:active{transform:translate(2px,2px);box-shadow:none}
-.cmd-btn.open{background:var(--color-atrium);border-color:var(--color-ink)}
+.cmd-btn:disabled{background:var(--color-neutral-bg);color:var(--color-ink-muted);box-shadow:none;cursor:not-allowed;transform:none}
+.cmd-btn.open{background:var(--color-atrium);border-color:var(--color-ink)}  /* menu open = selected state (see fundsw/seg), not "go" */
 
 /* ---- NEW menu ---- */
 .new-dd{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);background:#fff;padding:10px}
@@ -2935,23 +2965,26 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman';background:var(--color-
 .board-search{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;font-weight:600;padding:11px 14px}
 .board-search::placeholder{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:13px;color:var(--color-ink-muted)}
 
-/* ---- BOARD ROWS (quiet: thin black rule, square, snappy left-accent on hover) ---- */
-.row{border-bottom:2px solid var(--color-ink);padding:15px 6px}
-.row:hover{background:var(--color-bg-hover);margin:0;padding-left:12px;padding-right:6px;border-radius:0;border-bottom-color:var(--color-ink);box-shadow:inset 5px 0 0 0 var(--color-coral)}
+/* ---- BOARD ROWS (hairline rule matching drawer/W-8's divider weight -
+   consolidated 2026-07-30, this used to be a 2px ink rule that only board rows
+   had, one screen out of step with the rest of the app; snappy left-accent on
+   hover) ---- */
+.row{border-bottom:1px solid var(--color-border-subtle);padding:15px 6px}
+.row:hover{background:var(--color-bg-hover);margin:0;padding-left:12px;padding-right:6px;border-radius:0;border-bottom-color:var(--color-border-strong);box-shadow:inset 5px 0 0 0 var(--color-atrium)}
 .row:active{transform:none}
 .rn-name{font-weight:800;font-size:16px}
 .rhe{font-weight:600}
 /* rail segments: square, bordered, constructed */
 .rail{gap:4px}
 .rail .seg{height:9px;border-radius:var(--radius-sm);border:1px solid var(--color-border-subtle);background:#fff}
-.rail .seg.done{background:var(--color-atrium)}
+.rail .seg.done{background:var(--color-green)}
 .rail .seg.current{background:var(--color-gold);box-shadow:none}
 /* Sealing: the last beat fills as motion (transient seconds-long arrive-at-Done). */
 @keyframes rail-seal{0%,100%{opacity:1}50%{opacity:.4}}
 .rail .seg.sealing{background:var(--color-gold);animation:rail-seal 1.1s var(--ease-inout) infinite}
 .rail.frozen .seg.done{background:#fff}
-.rail.frozen .seg.current{background:var(--color-gold)}
-.rail.dead .seg{background:#fff}
+.rail.frozen .seg.current{background:var(--color-red)}
+.rail.dead .seg{background:var(--color-red-tint)}
 .rail-lbl{text-transform:uppercase;letter-spacing:0.08em;font-weight:800;font-size:10px;color:var(--color-ink)}
 .rail-lbl.muted{color:var(--color-ink-muted)}
 
@@ -2977,31 +3010,56 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .seg button + button{border-left:var(--bw) solid var(--color-ink)}
 .seg button.on{background:var(--color-atrium);color:#fff}
 
-/* ---- primary CTA (coral block) ---- */
-.cta{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.cta:hover{background:var(--color-coral);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
+/* ---- primary CTA (solid green "go", same rule as .cmd-btn - consolidated 2026-07-30) ---- */
+.cta{background:var(--color-green);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-hover);font-weight:800;text-transform:uppercase;letter-spacing:0.09em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+.cta:hover{background:var(--color-green);box-shadow:var(--shadow-hover);transform:translate(-1px,-1px)}
 .cta:active{transform:translate(2px,2px);box-shadow:none}
+.cta:disabled{background:var(--color-neutral-bg);color:var(--color-ink-muted);box-shadow:none;cursor:not-allowed;transform:none}
 
-/* ---- Ive pass 2026-07-19: drawer action buttons (reseal/void/nudge/confirm)
-   never got the ATELIER pass the rest of the app did - thin 1px colored
-   borders, no shadow, medium weight, no tracking, while every other button
-   in the app (cta/cmd-btn/new-dd-item) is bold black-bordered + shadowed +
-   uppercase tracked. Two button languages in one app is the loudest possible
-   "unconsidered" signal. Structural treatment only - the semantic colors
-   (atrium=reseal/nudge, red=void/danger) are exactly what should differ
-   between these actions, so they stay untouched; only the weight/border/
-   shadow/tracking that should be CONSISTENT across every button gets fixed. */
-.dact .reseal,.dact .nudge,.cursig .nudge,.dact-confirm .dac-cancel,.dact-confirm .dac-go{
+/* ---- drawer action buttons: reseal/nudge share ONE secondary-tint language
+   with the board's own .attn-nudge (atrium-tint fill, solid atrium on hover) -
+   consolidated 2026-07-30. These are "gentle, supportive, re-trigger an
+   already-in-flight step" actions, not "go/submit" (that's cta/cmd-btn, green).
+   Previously: reseal's own base rule (and its own governing comment, right
+   above this one before today) said it should stay atrium-colored, but a
+   later rule in this same block silently stripped that to white/ink anyway -
+   reseal never actually rendered atrium. Nudge independently got swept into
+   the unrelated green "go" bucket by the trailing !important block further
+   down, despite that same block's own house style ("Nudge: ... gentle,
+   non-destructive... primary-but-quiet") describing exactly this tint look. */
+.dact .reseal,.dact .nudge,.cursig .nudge{
+  border:1px solid var(--color-atrium);border-radius:var(--radius-md);
+  background:var(--color-atrium-tint);color:var(--color-atrium);box-shadow:none;
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.dact .reseal:hover,.dact .nudge:hover:not(:disabled),.cursig .nudge:hover:not(:disabled){
+  background:var(--color-atrium);color:#fff;
+}
+.dact .reseal:active,.dact .nudge:active,.cursig .nudge:active{transform:scale(0.97)}
+.dact .nudge:disabled,.cursig .nudge:disabled{opacity:.5;cursor:default;background:var(--color-atrium-tint);color:var(--color-atrium)}
+
+/* ---- destructive (void): the one place solid red-fill is used, always -
+   folded in directly 2026-07-30, this used to be white/ink by default and
+   only forced red by the trailing !important block further down ---- */
+.dact .dvoid{
+  border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);
+  background:var(--color-red);color:#fff;
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.dact .dvoid:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+.dact .dvoid:active{transform:translate(2px,2px);box-shadow:none}
+
+/* ---- confirm strip (dac-cancel/dac-go): bold-bordered structural treatment,
+   unchanged from the 2026-07-19 Ive pass, just no longer bundled with the
+   buttons above since they now use a different family ---- */
+.dact-confirm .dac-cancel,.dact-confirm .dac-go{
   border-width:var(--bw);border-color:var(--color-ink);box-shadow:var(--shadow-card);
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
   transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
 }
-.dact .dvoid{
-  border-width:var(--bw);box-shadow:var(--shadow-card);
-  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
-  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out),color var(--dur-fast),border-color var(--dur-fast),background var(--dur-fast);
-}
-.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active,.cursig .nudge:active,.dact-confirm .dac-cancel:active,.dact-confirm .dac-go:active{transform:translate(2px,2px);box-shadow:none}
+.dact-confirm .dac-cancel:active,.dact-confirm .dac-go:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- create panel + drawer shells ---- */
 #panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-drawer)}
@@ -3016,6 +3074,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 /* ---- settings card ---- */
 .set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);background:#fff}
 .set-h{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
+/* #allowlist-save is the primary action in Settings but was inheriting plain
+   .btn (white/ink-border/gold-hover, same as a generic secondary button) -
+   ID specificity here beats .btn without touching that class for every other
+   generic button that still wants the quiet treatment. Added 2026-07-30. */
+#allowlist-save{background:var(--color-green);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
+#allowlist-save:hover{background:var(--color-green);transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+#allowlist-save:active{transform:translate(2px,2px);box-shadow:none}
 
 /* ---- sidebar collapse ---- */
 #side-collapse{border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.1em;font-weight:800;font-size:10px}
@@ -3027,12 +3092,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
 .dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .dlink .cp:hover{background:var(--color-gold)}
-.dact .reseal,.dact .nudge,.cursig .nudge,.dact .dvoid{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
-.dact .nudge,.cursig .nudge{background:var(--color-coral);color:#fff}
-.dact .reseal,.dact .dvoid{background:#fff;color:var(--color-ink)}
-.dact .reseal:hover,.dact .dvoid:hover,.dact .nudge:hover,.cursig .nudge:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-card)}
-.dact .reseal:active,.dact .dvoid:active,.dact .nudge:active,.cursig .nudge:active{transform:translate(2px,2px);box-shadow:none}
-.dact .dvoid:hover{background:var(--color-red-tint);border-color:var(--color-ink);color:var(--color-red)}
+/* .dact .reseal/.nudge/.dvoid: single definition now lives with the other
+   button-system rules above (search "drawer action buttons" in this file) -
+   this used to be a second, conflicting definition for the same selectors,
+   one of the two the "no single button system" audit finding traced to. */
 
 /* ---- W-8 chips ---- */
 .w8tag{border-radius:var(--radius-sm);border:1px solid var(--color-border-strong);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;font-size:10px}
@@ -3046,31 +3109,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .langtab + .langtab{border-left:var(--bw) solid var(--color-ink)}
 .langtab.on{background:var(--color-atrium);color:#fff}
 .mdetail input,.mdetail textarea{border:var(--bw) solid var(--color-ink)!important;border-radius:var(--radius-md)!important}
-.msgbtns .save{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:var(--color-coral);color:#fff;text-transform:uppercase;letter-spacing:0.06em;font-weight:800}
-.msgbtns .save:hover:not(:disabled){background:var(--color-coral);transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+.msgbtns .save{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:var(--color-green);color:#fff;text-transform:uppercase;letter-spacing:0.06em;font-weight:800}
+.msgbtns .save:hover:not(:disabled){background:var(--color-green);transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+.msgbtns .save:disabled{background:var(--color-neutral-bg);color:var(--color-ink-muted);box-shadow:none;cursor:not-allowed;opacity:1}
 .msgbtns .reset{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .preview{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md)}
 .ph-note{font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;color:var(--color-ink-muted);margin-left:6px}
 .mrcpt-line{font-weight:700;font-size:12px;letter-spacing:0.02em;color:var(--color-ink-sub)}
 .md-rcpts .mrcpt-line{font-size:13px}
 
-/* ---- RED = stop/fail, GREEN = success/go (Noa 2026-07-07) ----
-   Go / confirm / proceed actions and success states are green; stop /
-   destructive / failed states are red. Neutral in-progress stays navy/gold. */
-.cta,.cmd-btn,.dact .nudge,.cursig .nudge,.msgbtns .save{background:var(--color-green)!important;color:#fff!important;border-color:var(--color-ink)!important}
-/* disabled go-actions must not read as live green */
-.cta:disabled,.cmd-btn:disabled,.dact .nudge:disabled,.cursig .nudge:disabled,.msgbtns .save:disabled{background:var(--color-neutral-bg)!important;color:var(--color-ink-muted)!important;box-shadow:none!important;cursor:not-allowed;transform:none!important}
-.cta:hover,.cmd-btn:hover,.dact .nudge:hover,.cursig .nudge:hover,.msgbtns .save:hover:not(:disabled){background:var(--color-green)!important}
-.cmd-btn.open{background:var(--color-atrium)!important}          /* menu open = neutral, not "go" */
-.dact .dvoid{background:var(--color-red)!important;color:#fff!important}
-.dact .dvoid:hover{background:var(--color-red)!important;color:#fff!important;border-color:var(--color-ink)!important}
-/* status: completed steps green (success), attention/void red (stop) */
-.rail .seg.done{background:var(--color-green)!important}
-.rail.frozen .seg.current{background:var(--color-red)!important}
-.rail.dead .seg{background:var(--color-red-tint)!important}
-.w8tag.w8-expired{background:var(--color-red)!important;color:#fff!important}   /* expired = fail */
-/* row hover accent stays neutral (navy), never red = "stop" */
-.row:hover{box-shadow:inset 5px 0 0 0 var(--color-atrium)!important}
+/* RED = stop/fail, GREEN = success/go (Noa 2026-07-07): the rule this house
+   style established is unchanged, it's just no longer a trailing !important
+   patch fighting the rules above it - .cta/.cmd-btn/.msgbtns .save/#allowlist-save
+   (green), .dact .dvoid (red), .rail .seg.done/.frozen .seg.current/.dead
+   (green/red/red-tint), .w8tag.w8-expired (red), and .row:hover's accent
+   (atrium) are each defined once, at their own rule, above. Consolidated
+   2026-07-30 - see the "no single button system" / "three CSS eras" finding
+   in ~/.claude/plans/giggly-inventing-pixel.md for why this existed as three
+   separate, sometimes-contradictory layers before today. */
 
 </style></head>
 <body>
@@ -6152,11 +6208,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       </svg>
-      <span>כניסה באמצעות Google</span>
+      <span>Sign in with Google</span>
     </button>
     <div id="login-debug" style="margin-top: 12px;font-size:11px;color:#c00;font-family:monospace;min-height:16px"></div>
   </div>
-  <div class="lhint">Click anywhere to stamp a shape . the shapes follow your cursor</div>
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
@@ -6169,48 +6224,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     t.onclick=function(){switchView(t.getAttribute("data-view"));};
   });
 </script>
-<script id="login-bauhaus-init">
-/* Bauhaus login interaction: (1) the four composition shapes drift toward the
-   cursor (magnetic parallax); (2) clicking the field stamps a spinning primitive
-   (square / circle / triangle) in a primary colour that springs in and fades. */
-(function(){
-  function ready(){
-    var ls=document.getElementById('login-screen'), field=document.getElementById('login-field');
-    if(!ls||!field) return;
-    var shapes=Array.prototype.slice.call(field.querySelectorAll('.lsh'));
-    var baseRot=shapes.map(function(s){return s.classList.contains('sq')?-8:s.classList.contains('ci')?0:s.classList.contains('tr')?16:-5;});
-    ls.addEventListener('mousemove',function(e){
-      var r=ls.getBoundingClientRect(), mx=e.clientX-r.left-r.width/2, my=e.clientY-r.top-r.height/2;
-      shapes.forEach(function(s,i){
-        var p=parseFloat(s.getAttribute('data-p')||1);
-        s.style.transition='transform .5s cubic-bezier(.2,.9,.3,1)';
-        s.style.transform='translate('+(mx*0.03*p).toFixed(1)+'px,'+(my*0.03*p).toFixed(1)+'px) rotate('+baseRot[i]+'deg)';
-      });
-    });
-    var COL=['#143F7F','#D4A227','#D85E4C','#C0202E'];
-    ls.addEventListener('click',function(e){
-      if(e.target.closest('.lc')) return;                          // never stamp while using the sign-in card
-      var kind=Math.floor(Math.random()*3), c=COL[Math.floor(Math.random()*COL.length)];
-      var r=ls.getBoundingClientRect(), R=(Math.random()*40-20).toFixed(0);
-      var d=document.createElement('div'); d.className='lstamp';
-      d.style.left=(e.clientX-r.left)+'px'; d.style.top=(e.clientY-r.top)+'px';
-      if(kind===0){ d.style.width=d.style.height='34px'; d.style.background=c; d.style.border='3px solid #141414'; }
-      else if(kind===1){ d.style.width=d.style.height='34px'; d.style.borderRadius='50%'; d.style.background=c; d.style.border='3px solid #141414'; }
-      else { d.style.width='0'; d.style.height='0'; d.style.borderLeft='19px solid transparent'; d.style.borderRight='19px solid transparent'; d.style.borderBottom='34px solid '+c; d.style.filter='drop-shadow(2px 2px 0 #141414)'; }
-      d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(0.2)'; d.style.opacity='0';
-      ls.appendChild(d);
-      requestAnimationFrame(function(){
-        d.style.transition='transform .34s cubic-bezier(.2,1.6,.35,1), opacity .18s';
-        d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(1)'; d.style.opacity='1';
-      });
-      setTimeout(function(){
-        d.style.transition='transform .5s ease, opacity .5s ease';
-        d.style.transform='translate(-50%,-50%) rotate('+R+'deg) scale(.6)'; d.style.opacity='0';
-        setTimeout(function(){d.remove();},520);
-      },1900);
-    });
-  }
-  if(document.readyState!=='loading') ready(); else document.addEventListener('DOMContentLoaded',ready);
-})();
-</script>
+<!-- login-bauhaus-init script removed 2026-07-30: this drove a mouse-follow
+     parallax on the composition shapes and a click-to-stamp-a-random-shape
+     interaction, plus a "click anywhere to stamp a shape" caption (removed
+     above). Noa called the console "vibe coded slop" and this was the single
+     starkest first-impression finding in the design audit that led to this
+     pass - a cursor-chasing, click-to-play toy on the front door of a daily
+     production financial tool. The static Bauhaus composition (.lsh shapes,
+     still defined in CSS) is kept; it's on-brand per the 2026-07-07 comment
+     above #login-screen. Only the interactivity is gone. -->
 </body></html>
