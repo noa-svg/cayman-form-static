@@ -992,26 +992,6 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 }
 @media (max-width: 720px) { .ramt { display: none; } }
 
-/* Needs-a-look strip (2026-07-15 console wiring item 3): the ?api=attention
-   feed rendered at the top of the board. One quiet amber band per stuck row;
-   click opens the drawer. */
-.attn-strip { margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
-.attn-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--color-amber, #9A7410);
-  border-radius: var(--radius-md);
-  background: var(--color-gold-tint, #FBF3E2);
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  transition: background var(--dur-base);
-}
-.attn-row:hover { filter: brightness(0.98); }
-.attn-nm { font-weight: var(--weight-semi); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.attn-why { color: var(--color-ink-sub); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.attn-days { margin-left: auto; flex: 0 0 auto; color: var(--color-ink-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
-
 /* Sidebar in-flight money total (item 4): one row per currency. Hidden when
    the sidebar is collapsed to its icon rail (no room for a sum). */
 .ss-row.ss-total .ss-n { font-size: 13px; letter-spacing: 0.01em; }
@@ -2871,11 +2851,6 @@ body.side-coll .ss-lbl { display: none; }
 .crev-v{font-weight:600;word-break:break-word}
 .crev-btns{display:flex;gap:10px;margin-top:10px;align-items:center}
 .crev-cancel{background:transparent;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:8px 14px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;color:var(--color-ink)}
-/* C7 Needs-you queue additions */
-.attn-act-hint{color:var(--color-ink-muted);font-weight:500}
-.attn-nudge{margin-inline-start:8px;background:var(--color-atrium-tint);color:var(--color-atrium);border:1px solid var(--color-atrium);border-radius:var(--radius-md);padding:4px 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;flex-shrink:0}
-.attn-nudge:hover:not(:disabled){background:var(--color-atrium);color:#fff}
-.attn-nudge:disabled{opacity:.6;cursor:default}
 .lp-picked{display:flex;align-items:center;gap: 12px;padding: 12px 12px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
 .lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
@@ -3034,8 +3009,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .cta:disabled{background:var(--color-neutral-bg);color:var(--color-ink-muted);box-shadow:none;cursor:not-allowed;transform:none}
 
 /* ---- drawer action buttons: reseal/nudge share ONE secondary-tint language
-   with the board's own .attn-nudge (atrium-tint fill, solid atrium on hover) -
-   consolidated 2026-07-30. These are "gentle, supportive, re-trigger an
+   (atrium-tint fill, solid atrium on hover) - consolidated 2026-07-30. These
+   are "gentle, supportive, re-trigger an
    already-in-flight step" actions, not "go/submit" (that's cta/cmd-btn, green).
    Previously: reseal's own base rule (and its own governing comment, right
    above this one before today) said it should stay atrium-colored, but a
@@ -3222,7 +3197,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="listhead">
           <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off">
         </div>
-        <div class="attn-strip" id="attnStrip" hidden></div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
@@ -3547,17 +3521,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       r.investmentAmount=a?a[0]:null; r.investmentCurrency=a?a[1]:'';
     });
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
-    if(qs.indexOf('?api=attention')===0) return {ok:true,items:(L==='israel'
-      // failReasonHuman added 2026-07-31 (Noa: "needs a look is giving me
-      // anxiety these things shouldn't fail") - the demo fixture only ever
-      // set the raw failReason machine code, so local/demo testing always
-      // showed it (real production prefers failReasonHuman and only falls
-      // back to the raw code "if the server predates the field", per the
-      // S4 2026-07-19 comment on attnRowHtml - this fixture just never
-      // exercised that preferred path).
-      ?[{processId:'i5',displayName:'Yossi Barak',stage:'needs_attention',daysStuck:5,reason:'Process flagged an error',failReason:'fatca_status_out_of_scope',failReasonHuman:'FATCA status could not be auto-classified - needs a manual check'}]
-      :[{processId:'p4',displayName:'Helena Brandt',stage:'needs_attention',daysStuck:4,reason:'Process flagged an error',failReason:'passive_entity_manual_route',failReasonHuman:'Passive entity - routed for manual W-8BEN-E handling'},
-         {processId:'p5',displayName:'Yael Adler',stage:'link_sent',daysStuck:8,reason:'Invite sent but not opened',failReason:''}])};
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
       {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
       {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
@@ -4295,79 +4258,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
     el.hidden=false;
   }
-  // ---- Needs-a-look strip (wiring item 3): the ?api=attention feed ----------
-  function attnRowHtml(it){
-    // S4 (2026-07-19): prefer the server-humanized sentence; a raw machine code
-    // (fatca_status_out_of_scope) only appears if the server predates the field.
-    var frTxt=it.failReasonHuman||it.failReason;
-    var why=(it.reason||'')+(frTxt?(' - '+frTxt):'');
-    var days=(it.daysStuck!=null&&it.daysStuck!==999)?(it.daysStuck+'d'):'';
-    // C7 (2026-07-19): the strip is a "Needs you" queue - each row says what to
-    // DO, and the common action (nudge a stuck LP/signer) is one click right
-    // here instead of drawer -> find button -> click.
-    var canNudge=(it.stage==='link_sent'||it.stage==='opened'||it.stage==='signing');
-    return '<div class="attn-row" data-pid="'+esc2(it.processId||'')+'" tabindex="0" role="button">'
-      +'<span class="attn-nm">'+esc2(it.displayName||'?')+'</span>'
-      +'<span class="attn-why">'+esc2(why)+(it.action?'<span class="attn-act-hint"> · '+esc2(it.action)+'</span>':'')+'</span>'
-      +(days?'<span class="attn-days">'+esc2(days)+'</span>':'')
-      +(canNudge?'<button type="button" class="attn-nudge" data-pid="'+esc2(it.processId||'')+'" data-stage="'+esc2(it.stage||'')+'">Remind</button>':'')
-      +'</div>';
-  }
-  var ATTN_SEQ=0;
-  function loadAttention(){
-    var el=document.getElementById('attnStrip');
-    if(!el)return;
-    var rid=++ATTN_SEQ;
-    apiFetch('?api=attention&lane='+state.lane).then(function(d){
-      if(rid!==ATTN_SEQ)return;
-      var items=(d&&d.ok&&d.items)||[];
-      // C7 (2026-07-19): operator-owned rows only. Engineer-owned faults follow
-      // the same split the alert email uses (they live in the drawer + state
-      // log for the developer); a queue of things Noa cannot act on is noise.
-      // A server predating `owner` sends undefined -> keep the row (fail open).
-      items=items.filter(function(it){return it.owner!=='engineer';});
-      if(!items.length){el.hidden=true;el.innerHTML='';return;}
-      el.innerHTML=items.slice(0,8).map(attnRowHtml).join('');
-      el.hidden=false;
-      Array.prototype.forEach.call(el.querySelectorAll('.attn-row'),function(rw){
-        var go=function(){var p=rw.getAttribute('data-pid');if(p)openDrawer(p);};
-        rw.onclick=go;
-        rw.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
-      });
-      // One-click Remind straight from the queue. Stage-aware route (2026-07-19):
-      // a pre-submit process (link_sent/opened) has NO signing request, so
-      // ?admin=nudge can never succeed there - it resends the ORIGINAL invite
-      // via ?admin=resendInvite instead. Signing-stage rows nudge the current
-      // signer as before. The server's per-process cooldown makes a
-      // double-click safe on both routes.
-      Array.prototype.forEach.call(el.querySelectorAll('.attn-nudge'),function(nb){
-        nb.onclick=function(e){
-          e.stopPropagation();
-          if(nb.disabled)return;
-          nb.disabled=true;nb.textContent='Sending...';
-          var st=nb.getAttribute('data-stage')||'';
-          var route=(st==='signing')?'?admin=nudge&processId=':'?admin=resendInvite&processId=';
-          apiFetch(route+encodeURIComponent(nb.getAttribute('data-pid')||'')).then(function(r){
-            nb.textContent=(r&&r.ok)?'Sent':((r&&r.cooldown)?'Already sent':'Failed');
-            if(r&&!r.ok&&r.error)nb.title=r.error;
-            setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
-          }).catch(function(err){
-            nb.textContent='Failed';
-            if(err&&err.serverError)nb.title=err.serverError;
-            setTimeout(function(){if(nb.isConnected){nb.disabled=false;nb.textContent='Remind';}},4000);
-          });
-        };
-      });
-    }).catch(function(err){
-      // A failed needs-you load must not read as "nothing needs you" (silence
-      // is not health). Show an honest one-line failure; the next 45s board
-      // refresh retries it automatically.
-      if(rid!==ATTN_SEQ)return;
-      el.hidden=false;
-      el.innerHTML='<div class="attn-row"><span class="attn-why" style="color:var(--color-danger)">Needs-a-look list failed to load'
-        +((err&&err.serverError)?(': '+esc2(String(err.serverError).slice(0,100))):'')+'</span></div>';
-    });
-  }
   function render(rows){
     allRows=rows;
     setBoardBadge(allRows);
@@ -4426,8 +4316,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var br=document.getElementById('boardRetry');
       if(br)br.onclick=function(e){e.preventDefault();load();};
     }});
-    // Needs-a-look strip rides every board load (same 45s auto-refresh cadence).
-    loadAttention();
     // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
     // the operator must reload to see truth. Silent (no Loading flash, keeps the current
     // rows on a transient failure). LOAD_SEQ already guards against stale paints.

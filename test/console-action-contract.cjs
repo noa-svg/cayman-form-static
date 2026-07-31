@@ -16,8 +16,7 @@
 //       vacuous contract reads as "covered" (the exact lesson of the parity
 //       suites and the silent-monitor incident).
 //   A3  Stage-aware reminder routing: the drawer renders the pre-submit
-//       reminder as data-act="resendInvite" (nudge only at signing), and the
-//       needs-a-look strip picks the route off data-stage the same way. A
+//       reminder as data-act="resendInvite" (nudge only at signing). A
 //       pre-submit reminder pointed at ?admin=nudge is the exact dead button
 //       this file exists to prevent.
 //   A4  Honest errors: every reminder/action catch surfaces err.serverError
@@ -85,14 +84,10 @@ ok('A3 drawer renders the pre-submit reminder as resendInvite, nudge only otherw
   html.indexOf('data-act="\'+(preSubmit?\'resendInvite\':\'nudge\')+\'"') >= 0);
 ok('A3 drawer handler routes resendInvite to ?admin=resendInvite',
   /act==='resendInvite'\)\?'\?admin=resendInvite&processId=':'\?admin=nudge&processId='/.test(html));
-ok('A3 strip Remind picks the route off data-stage (signing -> nudge, else resendInvite)',
-  /st==='signing'\)\?'\?admin=nudge&processId=':'\?admin=resendInvite&processId='/.test(html));
-ok('A3 strip rows carry data-stage for the route pick', html.indexOf('data-stage="\'+esc2(it.stage') >= 0);
 
 // ---- A4: honest errors ----
 ok('A4 reminder catch surfaces err.serverError', /Could not send the reminder'\+\(\(err&&err\.serverError\)/.test(html));
 ok('A4 void/reseal catch passes serverError into dActError', /dActError\(act,\(err&&err\.serverError\)\?\{error:err\.serverError\}:null\)/.test(html));
-ok('A4 needs-a-look strip failure is VISIBLE (no silent hide on load error)', /Needs-a-look list failed to load/.test(html));
 
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

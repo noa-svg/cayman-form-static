@@ -13,8 +13,6 @@
 //   K4  signerTsLine / currentSignerHtml: per-signer invited/signed timestamps
 //       and the current-signer block carrying name, email, X of Y, the
 //       copyable link and the Remind (nudge) action (items 1+2).
-//   K5  attnRowHtml: the needs-a-look strip row carries reason + failReason +
-//       daysStuck and the processId for the drawer (item 3).
 //   K6  source-level wiring: the board fetch defaults includeDone to the
 //       toggle state (0 until a toggle asks), sends &lane=, renderDrawer has
 //       the d.people pre-submit branch (P1 #6), and the removed unauthenticated
@@ -153,27 +151,11 @@ function extractVarObj(name) {
   ok('K4 index-less reminder stays visible', reminderHistLine({ signerIndex: 2 }, [{ ts: '2026-07-14T08:00:00Z', kind: 'manual', signerIndex: null }]).includes('Reminded once.'));
 })();
 
-// ---- K5: needs-a-look strip row ----------------------------------------------
-(function () {
-  const src = extractFn('esc2') + ';' + extractFn('attnRowHtml') + '; return attnRowHtml;';
-  const attnRowHtml = new Function(src)();
-  const row = attnRowHtml({ processId: 'p8', displayName: 'Failed LP', reason: 'Process flagged an error', failReason: 'fatca_status_out_of_scope', daysStuck: 4 });
-  ok('K5 carries the name', row.includes('Failed LP'));
-  ok('K5 carries reason + failReason', row.includes('Process flagged an error - fatca_status_out_of_scope'));
-  ok('K5 carries daysStuck', row.includes('4d'));
-  ok('K5 carries the pid for the drawer', row.includes('data-pid="p8"'));
-  const noFail = attnRowHtml({ processId: 'p4', displayName: 'Stale LP', reason: 'Invite sent but not opened', failReason: '', daysStuck: 8 });
-  ok('K5 no failReason -> reason alone', noFail.includes('Invite sent but not opened') && !noFail.includes(' - </span>'));
-  const unknownDays = attnRowHtml({ processId: 'x', displayName: 'X', reason: 'r', daysStuck: 999 });
-  ok('K5 999 sentinel days hidden', !unknownDays.includes('999d'));
-})();
-
 // ---- K6: source-level wiring assertions ---------------------------------------
 (function () {
   const loadSrc = extractFn('load');
   ok('K6 board fetch keys includeDone off the toggles', loadSrc.includes("includeDone='+(wantDone?'1':'0')"));
   ok('K6 board fetch always sends the lane', loadSrc.includes("'?api=list&lane='+state.lane"));
-  ok('K6 attention strip rides the board load', loadSrc.includes('loadAttention()'));
   ok('K6 no unconditional includeDone=1 fetch left', !loadSrc.includes('includeDone=1'));
   const drawerSrc = extractFn('renderDrawer');
   ok('K6 drawer renders d.people pre-submit (P1 #6)', drawerSrc.includes('d.people&&d.people.length'));
@@ -302,8 +284,8 @@ function extractVarObj(name) {
 // ---- K11: per-row operator-private notes (2026-07-22, Noa: "each row to get
 // a little note I can edit, its just for me") -------------------------------
 (function () {
-  // rowHtml is pure (no document access), so it's testable directly like K5's
-  // attnRowHtml / K4's currentSignerHtml.
+  // rowHtml is pure (no document access), so it's testable directly like K4's
+  // currentSignerHtml.
   const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
     + extractVar('RAIL_MILESTONES') + ';' + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('fmtAmount') + ';'
