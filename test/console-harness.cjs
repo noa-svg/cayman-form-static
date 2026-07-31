@@ -255,12 +255,12 @@ function extractVarObj(name) {
 (function () {
   const src = extractFn('esc2') + ';' + extractFn('entityClassChipHtml') + '; return entityClassChipHtml;';
   const entityClassChipHtml = new Function(src)();
-  ok('K9 Active NFFE renders as Active NFFE',
-    entityClassChipHtml({ classification: { chapter4Status: 'Active NFFE (W-8BEN-E Part XXV)' } }).includes('>Active NFFE<'));
+  ok('K9 Active NFFE renders as "Entity, Active" (2026-07-31: "entities are active or passive" / "don\'t say NFFE, just active or passive")',
+    entityClassChipHtml({ classification: { chapter4Status: 'Active NFFE (W-8BEN-E Part XXV)' } }).includes('>Entity, Active<'));
   ok('K9 Active NFFE gets the active tone class',
     entityClassChipHtml({ classification: { chapter4Status: 'Active NFFE (W-8BEN-E Part XXV)' } }).includes('st-class-active'));
-  ok('K9 Passive NFFE renders as Passive NFFE',
-    entityClassChipHtml({ classification: { chapter4Status: 'Passive NFFE (W-8BEN-E Part XXVI + Part XXX)' } }).includes('>Passive NFFE<'));
+  ok('K9 Passive NFFE renders as "Entity, Passive"',
+    entityClassChipHtml({ classification: { chapter4Status: 'Passive NFFE (W-8BEN-E Part XXVI + Part XXX)' } }).includes('>Entity, Passive<'));
   ok('K9 Passive NFFE gets the amber-tone class (attention-worthy: manual CP legs)',
     entityClassChipHtml({ classification: { chapter4Status: 'Passive NFFE (W-8BEN-E Part XXVI + Part XXX)' } }).includes('st-class-passive'));
   ok('K9 individual classification renders nothing (chip is entity-only)',

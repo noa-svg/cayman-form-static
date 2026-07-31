@@ -4683,16 +4683,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // per-CP W-8BEN legs (ops guard), genuinely more operator-attention-worthy
   // than active, not decoration.
   function entityClassChipHtml(d){
+    // Merged 2026-07-31 (Noa: "entities are active or passive u know" / "don't
+    // say NFFE, just active or passive, the only thing I use"). Chip used to
+    // show raw tax jargon ("Active NFFE"), leaving it to say what it was
+    // classifying. It's entity-only (individuals return '' below), so every
+    // non-empty label here IS an entity - prefix "Entity", drop "NFFE" since
+    // active/passive is the only distinction that matters operationally.
     var lbl='',tone='';
     var c4=d.classification&&d.classification.chapter4Status;
     if(c4){
-      if(/Active NFFE/.test(c4)){lbl='Active NFFE';tone='active';}
-      else if(/Passive NFFE/.test(c4)){lbl='Passive NFFE';tone='passive';}
-      else if(/^US person/.test(c4)){lbl='US person';tone='';}
+      if(/Active NFFE/.test(c4)){lbl='Entity, Active';tone='active';}
+      else if(/Passive NFFE/.test(c4)){lbl='Entity, Passive';tone='passive';}
+      else if(/^US person/.test(c4)){lbl='Entity, US person';tone='';}
       else if(/individual/i.test(c4)){lbl='';}
-      else{lbl=c4.split('(')[0].trim();}
+      else{lbl='Entity, '+c4.split('(')[0].trim();}
     }else if(d.entityClassification){
-      lbl=(d.entityClassification==='passive')?'Passive (at mint)':'Active (at mint)';
+      lbl=(d.entityClassification==='passive')?'Entity, Passive (at mint)':'Entity, Active (at mint)';
       tone=(d.entityClassification==='passive')?'passive':'active';
     }
     if(!lbl)return '';
