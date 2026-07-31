@@ -3548,8 +3548,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
     if(qs.indexOf('?api=attention')===0) return {ok:true,items:(L==='israel'
-      ?[{processId:'i5',displayName:'Yossi Barak',stage:'needs_attention',daysStuck:5,reason:'Process flagged an error',failReason:'fatca_status_out_of_scope'}]
-      :[{processId:'p4',displayName:'Helena Brandt',stage:'needs_attention',daysStuck:4,reason:'Process flagged an error',failReason:'passive_entity_manual_route'},
+      // failReasonHuman added 2026-07-31 (Noa: "needs a look is giving me
+      // anxiety these things shouldn't fail") - the demo fixture only ever
+      // set the raw failReason machine code, so local/demo testing always
+      // showed it (real production prefers failReasonHuman and only falls
+      // back to the raw code "if the server predates the field", per the
+      // S4 2026-07-19 comment on attnRowHtml - this fixture just never
+      // exercised that preferred path).
+      ?[{processId:'i5',displayName:'Yossi Barak',stage:'needs_attention',daysStuck:5,reason:'Process flagged an error',failReason:'fatca_status_out_of_scope',failReasonHuman:'FATCA status could not be auto-classified - needs a manual check'}]
+      :[{processId:'p4',displayName:'Helena Brandt',stage:'needs_attention',daysStuck:4,reason:'Process flagged an error',failReason:'passive_entity_manual_route',failReasonHuman:'Passive entity - routed for manual W-8BEN-E handling'},
          {processId:'p5',displayName:'Yael Adler',stage:'link_sent',daysStuck:8,reason:'Invite sent but not opened',failReason:''}])};
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
       {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
