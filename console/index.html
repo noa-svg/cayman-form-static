@@ -67,7 +67,7 @@
   --color-info-bg:        #E4EAF3;
   --color-neutral:        #6D6657;
   --color-neutral-bg:     #E9E0CC;
-  --font-display:         'Fraunces', 'Assistant', Georgia, serif;
+  --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
   --text-2xs:   10px;  --text-xs:    12px; --text-sm:    13px;
@@ -522,21 +522,32 @@ body.side-coll .side-foot .foot-gear { display: none; }
   z-index: 2;
   background: var(--color-bg-card);
   border: var(--bw-heavy) solid var(--color-ink);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-panel);
+  border-radius: 0;
+  /* Stamped-ticket treatment, 2026-07-31 (Noa, live: "i love the login box
+     though" / "with the shadow its cool") - hard offset gold shadow + a
+     hair of rotation instead of a soft elevated-card shadow. */
+  box-shadow: 6px 6px 0 var(--color-gold);
+  transform: rotate(-0.6deg);
   width: 100%;
   max-width: 380px;
   padding: var(--space-10) var(--space-8) var(--space-8);
   text-align: center;
 }
+.lc::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 1px solid var(--color-border-subtle);
+  pointer-events: none;
+}
 .llogo { width: 54px; height: 54px; margin: 0 auto 14px; display: block; }
 .lc .lmark {
   font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 34px;
-  line-height: 0.86;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--color-ink);
 }
 .lc .lsub {
@@ -2914,12 +2925,14 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 /* ---- sidebar quick stats (fills the dead gap between nav and footer) ---- */
 .side-stats{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-sidebar-line);display:flex;flex-direction:column;gap:2px}
 .ss-row{display:flex;align-items:baseline;gap:9px;padding:5px 12px;color:var(--color-sidebar-ink-sub)}
-.ss-n{font-family:var(--font-display);font-weight:900;font-size:19px;color:#fff;min-width:20px}
+.ss-n{font-family:var(--font-mono);font-weight:500;font-size:14px;color:#fff;min-width:20px}
 .ss-lbl{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:11px}
 .ss-row.ss-attn .ss-n{color:var(--color-coral)}
 
-/* ---- VIEW HEADERS (Fraunces, editorial-black, uppercase) ---- */
-.top h1{font-family:var(--font-display);font-weight:900;font-size:46px;line-height:0.86;text-transform:uppercase;letter-spacing:-0.03em}
+/* ---- VIEW HEADERS. Dropped Fraunces serif + uppercase-shout 2026-07-31
+   (Noa, live: "hate this font", "donts use cursive serif") for a bold,
+   mixed-case sans matching the rest of the type system, one voice. ---- */
+.top h1{font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1.1;text-transform:none;letter-spacing:-0.02em}
 .top .sub{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:12px;color:var(--color-ink-sub)}
 /* Lane chip after every view H1 (2026-07-15, Noa: "not clear whether you're on
    israel or cayman"). body[data-lane] is already set on every fund switch
@@ -2973,6 +2986,10 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .row:hover{background:var(--color-bg-hover);margin:0;padding-left:12px;padding-right:6px;border-radius:0;border-bottom-color:var(--color-border-strong);box-shadow:inset 5px 0 0 0 var(--color-atrium)}
 .row:active{transform:none}
 .rn-name{font-weight:800;font-size:16px}
+/* Mono for raw data (amounts, ages, timestamps) vs sans for names/labels -
+   one system, added 2026-07-31, previously unstyled/inherited. */
+.ramt{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--color-ink-sub)}
+.frac{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .rhe{font-weight:600}
 /* rail segments: square, bordered, constructed */
 .rail{gap:4px}
@@ -3064,7 +3081,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 /* ---- create panel + drawer shells ---- */
 #panel,.panel{border-left:var(--bw-heavy) solid var(--color-ink);box-shadow:var(--shadow-drawer)}
 #drawer,.drawer{border-left:var(--bw-heavy) solid var(--color-ink)}
-#panelTitle,#panel h2,.panel h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
+#panelTitle,#panel h2,.panel h2{font-family:var(--font-display);font-weight:800;font-size:19px;text-transform:none;letter-spacing:-0.02em;line-height:1.1}
 .lead,#panelLead{text-transform:none;color:var(--color-ink-sub);font-weight:600}
 
 /* ---- LP picker ---- */
@@ -3073,7 +3090,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 
 /* ---- settings card ---- */
 .set-card{border:var(--bw-heavy) solid var(--color-ink);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);background:#fff}
-.set-h{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.01em}
+.set-h{font-family:var(--font-display);font-weight:700;font-size:14px;text-transform:none;letter-spacing:-0.01em}
 /* #allowlist-save is the primary action in Settings but was inheriting plain
    .btn (white/ink-border/gold-hover, same as a generic secondary button) -
    ID specificity here beats .btn without touching that class for every other
@@ -3087,7 +3104,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 #side-collapse:hover{border-color:#fff;background:rgba(255,255,255,0.10)}
 
 /* ---- DRAWER internals ---- */
-.dh h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.9}
+.dh h2{font-family:var(--font-display);font-weight:800;font-size:20px;text-transform:none;letter-spacing:-0.02em;line-height:1.1}
 .dh .st{border-radius:var(--radius-sm);border:1px solid var(--color-border-strong);text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:10px}
 .dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
 .dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
@@ -3103,7 +3120,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .w8tag.w8-expiring{background:var(--color-gold);color:var(--color-ink);border:1px solid var(--color-border-strong)}
 
 /* ---- MESSAGES editor ---- */
-.md-hd h2{font-family:var(--font-display);font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;line-height:0.92}
+.md-hd h2{font-family:var(--font-display);font-weight:800;font-size:16px;text-transform:none;letter-spacing:-0.02em;line-height:1.1}
 .langtabs{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);overflow:hidden;display:inline-flex}
 .langtab{border-radius:0;text-transform:uppercase;letter-spacing:0.05em;font-weight:800;color:var(--color-ink)}
 .langtab + .langtab{border-left:var(--bw) solid var(--color-ink)}
