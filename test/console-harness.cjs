@@ -272,7 +272,7 @@ function extractVarObj(name) {
   // currentSignerHtml.
   const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
     + extractVar('RAIL_MILESTONES') + ';' + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
-    + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('fmtAmount') + ';'
+    + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';'
     + extractFn('rowHtml') + '; return rowHtml;';

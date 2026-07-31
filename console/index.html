@@ -954,26 +954,6 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Lane badge: the board can show mixed Cayman/Israel rows (search, "Show
-   completed"), and the two flows are legally + operationally distinct - a
-   misread lane at a glance is exactly the kind of mistake that's expensive
-   here. Two-letter, low-key, doesn't compete with the name. */
-.rlane {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-body);
-  font-size: 9px;
-  font-weight: var(--weight-semi);
-  letter-spacing: 0.02em;
-  line-height: 1;
-  padding: 2px 5px;
-  border-radius: 4px;
-  width: fit-content;
-  margin-top: 1px;
-}
-.rlane.rlane-cayman { background: var(--color-gold-tint); color: var(--color-gold); border: 1px solid var(--color-gold); }
-.rlane.rlane-israeli { background: var(--color-blue-tint, #E4EEF7); color: var(--color-navy, #0D3F6A); border: 1px solid var(--color-navy, #0D3F6A); }
 
 /* Amount column (2026-07-15 console wiring item 4): the board rows now carry
    investmentAmount/investmentCurrency from the server. Quiet, tabular, blank
@@ -1063,11 +1043,6 @@ body.side-coll .ss-row.ss-total { display: none; }
 .rail-lbl.muted { color: var(--color-ink-muted); }
 .rail-lbl.warn { color: var(--color-danger); }
 .rail-lbl .frac { color: var(--color-ink-muted); }
-/* C2 (2026-07-19): board-level next-action subtitle so "what is this row waiting
-   on" never costs a drawer open. Muted, one line, truncated. */
-.rwait { display:block; font-size: 11px; font-weight: 500; color: var(--color-ink-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
-@media (max-width: 720px) { .rwait { max-width: 180px; } }
-
 /* Age column */
 .rage {
   flex: 0 0 auto;
@@ -3489,7 +3464,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Richer fixture set: processes spread across every stage incl. needs_attention,
     // voided and complete; ordered so last-activity recency is exercised.
     var cayman=[
-      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Signer 2 of 3','cayman_subscription','cayman','2026-06-30T08:40'),
+      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Waiting for controlling person 2 to sign (2 of 3)','cayman_subscription','cayman','2026-06-30T08:40'),
       P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Assemble pack','cayman_subscription','cayman','2026-06-30T09:15'),
       P('p6','Eitan Galor','איתן גלאור','all_signed',3,'Sealing pack','cayman_subscription','cayman','2026-06-29T17:05'),
       P('p7','Margaux Lefevre','מרגו לפבר','opened',1,'Opened, not started','cayman_subscription','cayman','2026-06-30T07:20'),
@@ -3500,7 +3475,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       P('p9','Rivka Sela','רבקה סלע','voided',15,'','cayman_subscription','cayman','2026-06-19T16:30')
     ];
     var israel=[
-      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Signer 1 of 2','israeli_increase','israeli','2026-06-30T08:00'),
+      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Waiting for subscriber to sign (1 of 2)','israeli_increase','israeli','2026-06-30T08:00'),
       P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Assemble pack','israeli_increase','israeli','2026-06-29T13:25'),
       P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israeli','2026-06-30T07:45'),
       P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'Awaiting figure from BDO','israeli_withdrawal','israeli','2026-06-27T09:00'),
@@ -3948,6 +3923,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var m=hay.match(/(\d+)\s*of\s*(\d+)/i);
     return m?(m[1]+' of '+m[2]):'';
   }
+  // Who's currently signing (2026-07-31, Noa: "I need to know exactly who's
+  // signing"). caymanConsoleNextAction_ (CaymanConsole.js) already renders this
+  // server-side into nextActionPhrase as "Waiting for {roleLabel} to sign (...)"
+  // - scrape the role phrase back out instead of re-deriving the role-label
+  // humanization client-side, so it stays byte-faithful to whatever the server
+  // says without a second copy of that logic to drift.
+  function signerRoleLabel(r){
+    var hay=(r.wait||'')+'';
+    var m=hay.match(/Waiting for (.+?) to sign/i);
+    return m?m[1]:'';
+  }
   // Build the 5-segment rail + micro-label for one row. Exactly one gold segment per
   // active row (the current milestone). Laterals stay quiet, never red.
   function railHtml(r){
@@ -3959,10 +3945,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // C6d (2026-07-19): the list feed never emits lastStage, so the old
       // STAGE_TO_MILESTONE[r.lastStage] read was dead code that always fell to
       // its default - the rail froze at "In progress" while LOOKING like it knew
-      // where the process stalled. Freeze honestly at one fixed beat; the row's
-      // wait subtitle (C2) carries the real why.
+      // where the process stalled. Freeze honestly at one fixed beat.
       railCls='frozen'; segs=['done','current','up','up'];
       lbl='Needs a look'; lblCls='muted';
+      // 2026-07-31: the why used to live in a separate .rwait line; folded onto
+      // the rail itself now that the rail is the row's only status signal.
+      if(r.wait)lbl='Needs a look <span class="frac">- '+esc2(String(r.wait))+'</span>';
     } else if(isCompletedStage(st)){
       // C1 (2026-07-19): a phantom-complete row (registry says complete, the
       // completion tail failed a records write; server sends stale:true) must
@@ -3977,7 +3965,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var mi=(STAGE_TO_MILESTONE[st]!=null)?STAGE_TO_MILESTONE[st]:0;
       segs=[]; for(var j=0;j<4;j++)segs.push(j<mi?'done':(j===mi?'current':'up'));
       lbl=RAIL_MILESTONES[mi];
-      if(st==='signing'){ var fr=signerFraction(r); if(fr)lbl='Signing <span class="frac">- '+esc2(fr)+'</span>'; }
+      if(st==='signing'){
+        var fr=signerFraction(r), role=signerRoleLabel(r);
+        var bits=[role,fr].filter(Boolean).map(esc2).join(' &middot; ');
+        if(bits)lbl='Signing <span class="frac">- '+bits+'</span>';
+      }
     }
     var segHtml=segs.map(function(s){
       var c=(s==='done')?'seg done':(s==='current')?'seg current':(s==='sealing')?'seg sealing':'seg';
@@ -4050,14 +4042,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // finished. Same exemption the renderRows filter applies.
     var done=(isTerminalStage(r.stage)&&!(isCompletedStage(r.stage)&&r.stale))?' done':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
-    // C2 (2026-07-19): surface the server's next-action phrase on the row itself.
-    // Suppressed on clean terminal rows (nothing is waited on) and when the rail
-    // label already says the same thing (the signing fraction case - the pixel
-    // pass caught that this comment used to CLAIM the suppression without doing it).
-    var wait=(!isTerminalStage(r.stage)||r.stale)?String(r.wait||''):'';
-    if(r.stage==='signing'&&wait&&signerFraction(r))wait='';
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+'</span>'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
