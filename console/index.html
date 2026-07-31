@@ -3929,10 +3929,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // - scrape the role phrase back out instead of re-deriving the role-label
   // humanization client-side, so it stays byte-faithful to whatever the server
   // says without a second copy of that logic to drift.
+  // Strip a trailing "N" (caymanConsoleRoleLabel_'s "controlling person 2" case
+  // only - subscriber/lawyer/second-signatory never carry a bare digit): next
+  // to the "2 of 3" sequence fraction, that slot number reads as a duplicate
+  // of a DIFFERENT number (Noa: "cp 2 | 2 of 3 is redundant isnt it") even
+  // though it isn't one - and it doesn't tell her WHO by name either way, only
+  // the drawer does. The role type + sequence position is the useful pair.
   function signerRoleLabel(r){
     var hay=(r.wait||'')+'';
     var m=hay.match(/Waiting for (.+?) to sign/i);
-    return m?m[1]:'';
+    return m?m[1].replace(/\s+\d+$/,''):'';
   }
   // Build the 5-segment rail + micro-label for one row. Exactly one gold segment per
   // active row (the current milestone). Laterals stay quiet, never red.
