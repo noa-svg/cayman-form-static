@@ -3954,9 +3954,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // where the process stalled. Freeze honestly at one fixed beat.
       railCls='frozen'; segs=['done','current','up','up'];
       lbl='Needs a look'; lblCls='muted';
-      // 2026-07-31: the why used to live in a separate .rwait line; folded onto
-      // the rail itself now that the rail is the row's only status signal.
-      if(r.wait)lbl='Needs a look <span class="frac">- '+esc2(String(r.wait))+'</span>';
     } else if(isCompletedStage(st)){
       // C1 (2026-07-19): a phantom-complete row (registry says complete, the
       // completion tail failed a records write; server sends stale:true) must
