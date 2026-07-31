@@ -256,24 +256,8 @@ function extractVarObj(name) {
     entityClassChipHtml({ entityClassification: 'active' }).includes('Active (at mint)'));
 })();
 
-// ---- K10: board-row reminder status + drawer comms extras (2026-07-20, Noa's
-// top priority: "I need to remind some people maybe") -------------------------
+// ---- K10: drawer comms extras (2026-07-20) -----------------------------------
 (function () {
-  // Source-level: the board fetch maps reminderCount/lastReminderAt off the
-  // server row, and rowHtml renders a chip for signing-stage rows only.
-  ok('K10 board row mapping carries reminderCount', html.includes('reminderCount:it.reminderCount||0'));
-  ok('K10 board row mapping carries lastReminderAt', html.includes('lastReminderAt:it.lastReminderAt||null'));
-  const rowSrc = extractFn('rowHtml');
-  ok('K10 rowHtml renders the never-reminded chip', rowSrc.includes('not reminded'));
-  ok('K10 rowHtml renders the reminded-N-times chip', rowSrc.includes(">reminded '+r.reminderCount+'x</span>"));
-  // 2026-07-21: assertion updated to the CURRENT deliberate behavior. The chip
-  // was signing-stage-only when K10 was written; the 2026-07-20 stage-routed
-  // reminders work (wiki tools/ju.md "Reminders are stage-routed") deliberately
-  // widened it to every chase-able stage (link_sent/opened/in_progress/signing,
-  // matching the two reminder routes ?admin=resendInvite / ?admin=nudge). The
-  // stale signing-only assertion was the only red in this harness and, via the
-  // pre-push gate, blocked deploys of unrelated fixes.
-  ok('K10 reminder chip covers every chase-able stage', /r\.stage===['"]link_sent['"]\|\|r\.stage===['"]opened['"]\|\|r\.stage===['"]in_progress['"]\|\|r\.stage===['"]signing['"]/.test(rowSrc));
   // Drawer: "Also cc'd" section carries the family-office + operator cc
   // extras WITHOUT re-listing named parties already shown in Signers/People
   // (Ive S1 - the server already dedupes; the client just renders what it's given).

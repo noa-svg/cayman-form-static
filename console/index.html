@@ -1067,12 +1067,6 @@ body.side-coll .ss-row.ss-total { display: none; }
    on" never costs a drawer open. Muted, one line, truncated. */
 .rwait { display:block; font-size: 11px; font-weight: 500; color: var(--color-ink-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
 @media (max-width: 720px) { .rwait { max-width: 180px; } }
-/* Row-level reminder status (2026-07-20): who needs a nudge, at a glance,
-   with no drawer click. Material carries the urgency - amber ink for
-   never-reminded, quiet muted ink once one has gone out - no icon. */
-.rrem { display:inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
-.rrem-none { color: var(--color-amber); }
-.rrem-sent { color: var(--color-ink-muted); font-weight: 500; text-transform: none; letter-spacing: normal; }
 
 /* Age column */
 .rage {
@@ -4062,25 +4056,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // pass caught that this comment used to CLAIM the suppression without doing it).
     var wait=(!isTerminalStage(r.stage)||r.stale)?String(r.wait||''):'';
     if(r.stage==='signing'&&wait&&signerFraction(r))wait='';
-    // Reminder status on the row itself (Noa 2026-07-20, top priority: "I need
-    // to remind some people maybe" - the board is where she scans for who,
-    // not a per-row drawer click). Covers both chase-able populations
-    // caymanReminderScan now owns: pre-submission (link_sent/opened/
-    // in_progress - LP has a link, hasn't finished the form) and signing.
-    // Terminal rows are done, submitted sits in the gap between the two
-    // (form in, signing run not live yet) with nothing pending from the LP
-    // side, so it's excluded same as the server-side chase is. Material-
-    // honest (E1): the never-reminded case gets the amber ink the rest of
-    // the app reserves for attention, not an icon on an otherwise-neutral row.
-    var remChip='';
-    var remChaseable=(r.stage==='link_sent'||r.stage==='opened'||r.stage==='in_progress'||r.stage==='signing');
-    if(remChaseable&&!isTerminalStage(r.stage)){
-      remChip=r.reminderCount
-        ?'<span class="rrem rrem-sent" title="Reminded '+r.reminderCount+'x, last '+esc2(fmtTs(r.lastReminderAt))+'">reminded '+r.reminderCount+'x</span>'
-        :'<span class="rrem rrem-none" title="No reminder sent yet">not reminded</span>';
-    }
     return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+remChip+'</span>'
+      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+(r.lane?'<span class="rlane rlane-'+esc2(r.lane)+'">'+(r.lane==='israeli'?'IL':'CAYMAN')+'</span>':'')+(wait?'<span class="rwait" dir="auto">'+esc2(wait)+'</span>':'')+'</span>'
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
@@ -4302,7 +4279,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var notes=(notesResp&&notesResp.notes)||{};
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',reminderCount:it.reminderCount||0,lastReminderAt:it.lastReminderAt||null,note:(n&&n.text)||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
