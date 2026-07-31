@@ -1028,8 +1028,8 @@ body.side-coll .ss-row.ss-total { display: none; }
 .cursig .cs-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cursig .cs-nm { font-weight: var(--weight-semi); color: var(--color-ink); }
 .cursig .cs-xy { color: var(--color-ink-muted); font-size: var(--text-xs); }
-.cursig .cs-em { color: var(--color-ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pts { font-size: 11px; color: var(--color-ink-muted); line-height: 1.3; }
+.cursig .cs-em { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pts { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); line-height: 1.3; }
 /* Reminder history line inside the current-signer card: the answer to "did we
    already remind him" lives right next to the button that reminds. */
 .cursig .cs-remhist { font-size: var(--text-xs); color: var(--color-ink-sub); }
@@ -2047,7 +2047,7 @@ input:focus {
 }
 
 .pe {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
 }
