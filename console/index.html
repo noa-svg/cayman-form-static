@@ -511,11 +511,19 @@ body.side-coll .side-foot .foot-gear { display: none; }
 #login-screen.off { display: none; }
 
 #login-field { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.lsh { position: absolute; border: var(--bw-heavy) solid var(--color-ink); will-change: transform; }
-.lsh.sq  { width: 190px; height: 190px; background: var(--color-atrium); left: calc(50% - 330px); top: calc(50% - 160px); transform: rotate(-8deg); }
-.lsh.ci  { width: 210px; height: 210px; border-radius: 50%; background: var(--color-gold); left: calc(50% - 250px); top: calc(50% + 6px); mix-blend-mode: multiply; }
-.lsh.tr  { border: none; width: 0; height: 0; filter: drop-shadow(4px 4px 0 var(--color-ink)); border-left: 110px solid transparent; border-right: 110px solid transparent; border-bottom: 185px solid var(--color-coral); left: calc(50% + 140px); top: calc(50% - 150px); transform: rotate(16deg); }
-.lsh.bar { width: 260px; height: 30px; background: var(--color-red); left: calc(50% + 60px); top: calc(50% + 150px); transform: rotate(-5deg); }
+/* Restrained cursor parallax (2026-08-01, "make console login art interactive
+   be creative"): each shape drifts a SMALL amount toward the cursor, depth
+   scaled by data-p, heavily eased so it reads as weighty/deliberate rather
+   than a toy following your mouse - the "10 yo boy room" note from the
+   earlier click-to-stamp version is exactly what this avoids. --px/--py are
+   set by JS; undefined = 0 = resting position. Same mechanism drives the
+   one-time settle-in on load (JS starts them offset, then eases to 0). */
+.lsh { position: absolute; border: var(--bw-heavy) solid var(--color-ink); will-change: transform; transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1); }
+.lsh.sq  { width: 190px; height: 190px; background: var(--color-atrium); left: calc(50% - 330px); top: calc(50% - 160px); transform: rotate(-8deg) translate(var(--px, 0px), var(--py, 0px)); }
+.lsh.ci  { width: 210px; height: 210px; border-radius: 50%; background: var(--color-gold); left: calc(50% - 250px); top: calc(50% + 6px); mix-blend-mode: multiply; transform: translate(var(--px, 0px), var(--py, 0px)); }
+.lsh.tr  { border: none; width: 0; height: 0; filter: drop-shadow(4px 4px 0 var(--color-ink)); border-left: 110px solid transparent; border-right: 110px solid transparent; border-bottom: 185px solid var(--color-coral); left: calc(50% + 140px); top: calc(50% - 150px); transform: rotate(16deg) translate(var(--px, 0px), var(--py, 0px)); }
+.lsh.bar { width: 260px; height: 30px; background: var(--color-red); left: calc(50% + 60px); top: calc(50% + 150px); transform: rotate(-5deg) translate(var(--px, 0px), var(--py, 0px)); }
+@media (prefers-reduced-motion: reduce) { .lsh { transition: none; } }
 
 .lc {
   position: relative;
@@ -2736,6 +2744,16 @@ body.side-coll .ss-lbl { display: none; }
   .seg button { min-height: 40px; }
   .btn { min-height: 40px; }
   .cta { min-height: 48px; }
+  /* 2026-08-01 (Noa: "make this very mobile compatible" re: New -> Increase/
+     Withdrawal -> search): the New-menu entry buttons and the search-result
+     rows they lead into were never in this list. */
+  .new-dd-item { min-height: 44px; padding: 11px 12px; }
+  .lp-row { min-height: 44px; }
+  .lp-inv-row { min-height: 40px; display: flex; align-items: center; }
+  /* .rcopy/.rnote default to opacity:0, shown only on .row:hover or keyboard
+     focus - meaningless on a touchscreen with no hover state, so a size bump
+     alone would still leave them invisible. Force-visible + bigger together. */
+  .rcopy, .rnote { width: 40px; height: 40px; opacity: 1; }
 
   /* iOS zoom prevention: inputs stay 16px (deliberate exception to the 11/13/15/18/24 scale; <16px triggers focus-zoom on iOS Safari) */
   input, select, textarea { font-size: 16px !important; }
@@ -2745,11 +2763,20 @@ body.side-coll .ss-lbl { display: none; }
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
 
-  /* Board rows: keep name + stage rail; drop the age column for room */
+  /* Board rows: keep name + stage rail; drop the age column for room.
+     2026-08-01 fix: .rail-lbl's white-space:nowrap (base rule) forces its full
+     unwrapped width even here, and .rstage{flex:0 0 auto} refuses to shrink -
+     for a long label (e.g. "Signing - Controlling person - 2 of 3") that
+     squeezed .rn's flex-basis all the way to 0, making the LP's name
+     disappear entirely (confirmed live at 375px, not just a theoretical
+     narrow case). Let the label wrap to 2 lines within the rail's own 132px
+     column instead of forcing single-line width, and give .rn a floor so it
+     can never fully vanish even in a worse case. */
   .row { gap: var(--space-4); }
-  .rn { width: auto; flex: 1 1 auto; min-width: 0; }
+  .rn { width: auto; flex: 1 1 auto; min-width: 80px; }
   .rage { display: none; }
   .rstage { flex: 0 0 auto; }
+  .rail-lbl { white-space: normal; max-width: 132px; text-align: right; }
 
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
@@ -6102,19 +6129,52 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true">🗂️</span><span class="tab-lbl">Board</span></button>
   <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true">✉️</span><span class="tab-lbl">Msgs</span></button>
   <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true">🕒</span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
+  <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true">⚙️</span><span class="tab-lbl">Settings</span></button>
 </nav>
 <script>
   Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
     t.onclick=function(){switchView(t.getAttribute("data-view"));};
   });
 </script>
-<!-- login-bauhaus-init script removed 2026-07-30: this drove a mouse-follow
-     parallax on the composition shapes and a click-to-stamp-a-random-shape
-     interaction, plus a "click anywhere to stamp a shape" caption (removed
-     above). Noa called the console "vibe coded slop" and this was the single
-     starkest first-impression finding in the design audit that led to this
-     pass - a cursor-chasing, click-to-play toy on the front door of a daily
-     production financial tool. The static Bauhaus composition (.lsh shapes,
-     still defined in CSS) is kept; it's on-brand per the 2026-07-07 comment
-     above #login-screen. Only the interactivity is gone. -->
+<!-- login-bauhaus-init (2026-07-30 removed a mouse-CHASE parallax + a
+     click-to-stamp-a-random-shape toy + a "click anywhere to stamp a shape"
+     caption - the single starkest "vibe coded slop" finding that started
+     this whole redesign pass, per the comment this replaces.
+     2026-08-01 ("make console login art interactive be creative") reopens
+     interactivity on the SAME 4 shapes with three deliberate differences
+     from what was cut: no click mechanic at all, no caption telling the
+     LP/operator to do anything, and motion capped small (max ~20px) with a
+     heavy 900ms ease so it reads as ambient depth, not cursor-chasing. Card
+     (.lc) - the loved, locked-in stamped-ticket element - is untouched. -->
+<script>
+(function(){
+  var field=document.getElementById('login-field');
+  var screenEl=document.getElementById('login-screen');
+  if(!field||!screenEl)return;
+  var reduceMotion=false;
+  try{reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  if(reduceMotion)return;
+  var shapes=Array.prototype.slice.call(field.querySelectorAll('.lsh')).map(function(el){
+    return {el:el,depth:parseFloat(el.getAttribute('data-p'))||1};
+  });
+  var AMP=14; // px, before per-shape depth scaling (data-p 0.5-1.4 -> ~7-20px)
+  function setOffset(nx,ny){
+    shapes.forEach(function(s){
+      s.el.style.setProperty('--px',(nx*AMP*s.depth).toFixed(1)+'px');
+      s.el.style.setProperty('--py',(ny*AMP*s.depth).toFixed(1)+'px');
+    });
+  }
+  screenEl.addEventListener('mousemove',function(e){
+    var r=screenEl.getBoundingClientRect();
+    var nx=((e.clientX-r.left)/r.width-0.5)*2;   // -1..1
+    var ny=((e.clientY-r.top)/r.height-0.5)*2;
+    setOffset(nx,ny);
+  });
+  screenEl.addEventListener('mouseleave',function(){ setOffset(0,0); });
+  // One-time settle-in: start offset (as if just stamped down), ease to rest.
+  // Same --px/--py mechanism as the parallax, so it's one system, not two.
+  setOffset(-0.6,-0.6);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ setOffset(0,0); }); });
+})();
+</script>
 </body></html>
