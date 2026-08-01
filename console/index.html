@@ -4507,7 +4507,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     h+='<div class="cs-editform" hidden>'
       +'<div class="cs-line"><input class="cs-ed-fn" type="text" placeholder="First name" value="'+esc2(fnGuess)+'"></div>'
       +'<div class="cs-line"><input class="cs-ed-ln" type="text" placeholder="Last name" value="'+esc2(lnGuess)+'"></div>'
-      +'<div class="cs-line"><input class="cs-ed-em" type="email" placeholder="Email" value="'+esc2(cs.email||'')+'"></div>'
+      +'<div class="cs-line"><input class="cs-ed-em" type="email" inputmode="email" autocomplete="email" placeholder="Email" value="'+esc2(cs.email||'')+'"></div>'
       +'<div class="cs-line"><button class="cs-ed-save" type="button">Save</button><button class="cs-ed-cancel" type="button">Cancel</button></div>'
       +'<div class="cs-ed-status" hidden></div>'
       +'</div>';
@@ -4550,9 +4550,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // controls; NOT the general sealed-doc editor (deliberately deferred).
       h+='<div class="cs-attach-toggle-wrap"><button class="cs-fixaddr-toggle" type="button">Fix 2nd signatory address</button></div>'
         +'<div class="cs-fixaddrform" hidden>'
-        +'<div class="cs-line"><input class="cs-fa-street" type="text" placeholder="Street (leave blank to keep unchanged)"></div>'
-        +'<div class="cs-line"><input class="cs-fa-house" type="text" placeholder="House number"></div>'
-        +'<div class="cs-line"><input class="cs-fa-city" type="text" placeholder="City"></div>'
+        +'<div class="cs-line"><input class="cs-fa-street" type="text" autocomplete="address-line1" placeholder="Street (leave blank to keep unchanged)"></div>'
+        +'<div class="cs-line"><input class="cs-fa-house" type="text" autocomplete="address-line2" placeholder="House number"></div>'
+        +'<div class="cs-line"><input class="cs-fa-city" type="text" autocomplete="address-level2" placeholder="City"></div>'
         +'<div class="cs-line"><input class="cs-fa-id" type="text" placeholder="ID number (leave blank to keep unchanged)"></div>'
         +'<div class="cs-line"><button class="cs-fa-save" type="button">Fix</button><button class="cs-fa-cancel" type="button">Cancel</button></div>'
         +'<div class="cs-fa-status" hidden></div>'
@@ -5458,7 +5458,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // hears the specific problem.
   function fieldErr(errEl,inputs,text){
     errEl.textContent=text||"";errEl.hidden=!text;
-    inputs.forEach(function(el){if(el)el.setAttribute("aria-invalid",text?"true":"false");});
+    inputs.forEach(function(el){
+      if(!el)return;
+      el.setAttribute("aria-invalid",text?"true":"false");
+      // Friedman finding #3 (2026-08-01): aria-describedby used to stay pinned to
+      // the static hint span forever, so a screen reader re-focusing an invalid
+      // field never heard the actual reason again, only the generic hint. role="alert"
+      // announces it once when it first appears, but that is a one-time live
+      // announcement, not a persistent description. Cache the original describedby
+      // once so repeated calls do not fold errEl.id into what counts as "base".
+      var base=el.getAttribute("data-desc-base");
+      if(base===null){base=el.getAttribute("aria-describedby")||"";el.setAttribute("data-desc-base",base);}
+      el.setAttribute("aria-describedby",text?(base?base+" "+errEl.id:errEl.id):base);
+    });
   }
   function validateNameField(){
     var name=document.getElementById("name"),nameHebrew=document.getElementById("nameHebrew"),err=document.getElementById("nameErr");
