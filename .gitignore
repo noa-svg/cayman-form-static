@@ -13,3 +13,4 @@ test/*
 !test/flow-double-submit-harness.cjs
 !test/resume-jump-harness.cjs
 !test/signer-vocab-harness.cjs
+!test/attribute-escaping-harness.cjs

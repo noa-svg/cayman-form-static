@@ -1588,7 +1588,11 @@
       function submitTopErr(msg) {
         var summary = document.getElementById('lvp-uploads-summary');
         if (summary) {
-          summary.innerHTML = '<p class="lvp-error-summary__title">' + msg + '</p>';
+          // CTO review finding #11: msg can be server-echoed (a validation
+          // string or res.error straight from the gateway response, see
+          // classifyReject above), unlike the per-field summary above which
+          // only ever carries static curated copy. Escape before innerHTML.
+          summary.innerHTML = '<p class="lvp-error-summary__title">' + escHtml(msg) + '</p>';
           summary.hidden = false;
         }
       }

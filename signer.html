@@ -456,7 +456,12 @@
       LANE = (l === 'israeli' || l === 'cayman') ? l : '';
     }
     function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
-    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]; }); }
+    // CTO review finding #11: esc() is used to build double-quoted HTML
+    // attributes (value="..."/data-field="..." etc, see controlMarkup below)
+    // as well as text content, but only escaped &/</> - a " in a value would
+    // break out of the attribute. Matches flow.html's escHtml, which already
+    // escapes all five.
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 
     function applyLang(lang) {
       // Lane gate: Hebrew only on the Israeli lane. Cayman (or an unresolved lane)
