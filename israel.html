@@ -2209,6 +2209,12 @@
       if (!holder) return;
       var isSeg = e.target.hasAttribute('data-dob-d') || e.target.hasAttribute('data-dob-m') || e.target.hasAttribute('data-dob-y');
       if (!isSeg) return;
+      // inputmode=numeric is a soft-keyboard hint only; it does not block a
+      // physical keyboard. Strip non-digits live, same discipline as maskDigits
+      // elsewhere in this file, instead of leaving stray letters visible until
+      // the next Continue-click sweep silently drops them from dobAssemble.
+      var digitsOnly = e.target.value.replace(/\D/g, '');
+      if (digitsOnly !== e.target.value) e.target.value = digitsOnly;
       dobAssemble(holder);
       if (e.target.hasAttribute('data-dob-d') && e.target.value.length >= 2) { var mm2 = holder.querySelector('[data-dob-m]'); if (mm2) mm2.focus(); }
       else if (e.target.hasAttribute('data-dob-m') && e.target.value.length >= 2) { var yy2 = holder.querySelector('[data-dob-y]'); if (yy2) yy2.focus(); }

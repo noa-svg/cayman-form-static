@@ -2611,6 +2611,11 @@
       if (!holder) return;
       var isSeg = e.target.hasAttribute('data-dob-d') || e.target.hasAttribute('data-dob-m') || e.target.hasAttribute('data-dob-y');
       if (!isSeg) return;
+      // inputmode=numeric is a soft-keyboard hint only; it does not block a
+      // physical keyboard. Strip non-digits live (2026-08-01, ported back from
+      // israel.html's port of this component - same discipline as maskDigits).
+      var digitsOnly = e.target.value.replace(/\D/g, '');
+      if (digitsOnly !== e.target.value) e.target.value = digitsOnly;
       dobAssemble(holder);
       // reward early: once the date is complete + valid, clear any error mark
       var dobIso2 = holder.querySelector('[data-dob-iso]');
