@@ -463,13 +463,21 @@
     // escapes all five.
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 
-    function applyLang(lang) {
+    function applyLang(lang, bypassLaneGate_) {
       // Lane gate: Hebrew only on the Israeli lane. Cayman (or an unresolved lane)
       // is forced to English regardless of the requested lang, so every existing
       // applyLang('he') callsite becomes Hebrew on Israeli and English on Cayman
       // without per-callsite branching. (Noa 2026-07-04, re-enable Hebrew for
       // lane=israeli only; Cayman stays English.)
-      if (lang === 'he' && !laneIsHebrew_()) lang = 'en';
+      // bypassLaneGate_ (CTO review finding, 2026-08-02): the pre-fetch
+      // applyLang('he') call below exists specifically so a signer never sees
+      // an English loading screen during a ~20s GAS cold start - but LANE is
+      // never resolved yet at that point (it only sets from the server
+      // response), so the lane gate above silently forced it to English too,
+      // defeating the whole reason that call exists. Only the pre-fetch call
+      // site passes this true; every other applyLang('he') call still gates
+      // normally once LANE has resolved.
+      if (lang === 'he' && !laneIsHebrew_() && !bypassLaneGate_) lang = 'en';
       curLang = lang;
       document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
@@ -538,10 +546,17 @@
 
     // Translate every static state to Hebrew BEFORE the API fetch. Without this, the
     // loading state shows "Loading your form..." in English/LTR for ~20s of GAS cold
-    // start on an otherwise Hebrew/RTL page. The signer page serves Israeli flows
-    // today; Cayman onboarding is not live. The EN/HE toggle (hidden by CSS) and the
-    // success/error handlers also call applyLang, so a toggle still works cleanly.
-    applyLang('he');
+    // start on an otherwise Hebrew/RTL page. LANE is not resolved yet at this point
+    // (it only ever sets from setLaneFromCtx_ once the fetch response lands, see
+    // renderSignerForm below), so bypassLaneGate_=true here: guessing Hebrew for the
+    // unresolved pre-fetch window costs a Cayman signer a brief flash before English
+    // takes over once ctx lands, versus costing an Israeli signer the full cold-start
+    // window in the wrong language if the lane gate silently overrode this call (the
+    // bug this bypass flag fixes, CTO review finding 2026-08-02). The EN/HE toggle
+    // (hidden by CSS) and the success/error handlers also call applyLang (without the
+    // bypass, so they gate normally once LANE is known), so a toggle still works
+    // cleanly.
+    applyLang('he', true);
 
     // Fetch signer form context (with 20s timeout for GAS cold starts). Silent
     // auto-retry on timeout/network error (CTO review finding #4, ported from

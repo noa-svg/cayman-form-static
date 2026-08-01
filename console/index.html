@@ -72,6 +72,17 @@
   --dur-fast: 140ms; --dur-base: 180ms; --dur-slow: 240ms; --dur-drawer: 200ms;
 }
 
+/* CTO review finding (2026-08-02): a bare `display:flex` on a class selector
+   (specificity 0,2,0+) beats the UA's built-in `[hidden]{display:none}`
+   (specificity 0,1,0), so any panel authored with an unconditional
+   `display:flex` renders permanently expanded regardless of the `hidden`
+   attribute. This exact bug was independently found and fixed 6 separate
+   times in this file (each a one-line `.selector[hidden]{display:none}`
+   override, same pattern, same comment) instead of once at the root. One
+   !important rule here makes [hidden] win against ANY component's
+   specificity, present or future, so this bug class cannot recur. */
+[hidden] { display: none !important; }
+
 /* ============================================================
    RESET + BASE
    ============================================================ */
@@ -2086,11 +2097,6 @@ input:focus {
   background: var(--color-neutral-bg);
   transition: opacity 180ms ease;
 }
-/* Same [hidden] specificity bug as .dact-confirm above: the author display:flex
-   beats the UA [hidden]{display:none}, so this rendered permanently expanded
-   on every drawer open regardless of the toggle JS. Fixed 2026-07-30, same
-   pattern as the .dact-confirm precedent (originally fixed 2026-07-16/before). */
-.cursig .cs-editform[hidden] { display: none; }
 .cursig .cs-editform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2150,8 +2156,6 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
-/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
-.cursig .cs-attachform[hidden] { display: none; }
 .cursig .cs-attachform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2211,8 +2215,6 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
-/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
-.cursig .cs-attach2form[hidden] { display: none; }
 .cursig .cs-attach2form input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2275,8 +2277,6 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
-/* [hidden] specificity fix, same as .dact-confirm/.cs-editform above. */
-.cursig .cs-fixaddrform[hidden] { display: none; }
 .cursig .cs-fixaddrform input {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -2343,10 +2343,6 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-neutral-bg);
 }
-/* [hidden] specificity fix, same as .dact-confirm above - this was the 5th and
-   last of the drawer sub-panels rendering permanently expanded regardless of
-   the toggle JS, confirmed 2026-07-30. */
-.doc-correct-confirm[hidden] { display: none; }
 .doc-correct-confirm span { font-size: var(--text-xs); color: var(--color-ink-muted); }
 .doc-correct-go {
   font-family: var(--font-body);
@@ -2387,9 +2383,6 @@ input:focus {
   border-radius: var(--radius-md);
   background: var(--color-bg-hover);
 }
-/* The author display:flex above beats the UA [hidden]{display:none}, so without
-   this the confirm strip renders (empty) on every drawer open. Restore hiding. */
-.dact-confirm[hidden] { display: none; }
 .dact-confirm .dac-msg {
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -4391,7 +4384,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     syncLabel();
   })();
   var currentPid=null;
-  function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  // CTO review finding (2026-08-02): esc2 is used to build double-quoted HTML
+  // attributes (value=/data-note=/data-c=/href= etc) as well as text content,
+  // but only escaped &/</> - a " in a name/email typed by an LP or
+  // counterparty on the public onboarding forms could break out of an
+  // attribute here. Now escapes all five chars, matching the fix already
+  // applied to signer.html/flow.html's esc() this same session.
+  function esc2(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
   function signerStateHtml(st){
     if(st==='done')return '<span class="pstate done"><span class="pdot"></span>signed</span>';
     if(st==='current')return '<span class="pstate cur"><span class="pdot"></span>current</span>';

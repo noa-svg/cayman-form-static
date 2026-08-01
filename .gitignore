@@ -1,4 +1,11 @@
 test/*
+!test/coupling-check.cjs
+!test/client-honesty-harness.cjs
+!test/index-honesty-harness.cjs
+!test/snap-ttl-harness.cjs
+!test/drawer-race-harness.cjs
+!test/sign-preview-race-harness.cjs
+!test/sign-stub-harness.cjs
 !test/console-action-contract.cjs
 !test/lvp-token-consistency.cjs
 !test/atrium-palette-sync.cjs
@@ -23,3 +30,7 @@ test/*
 !test/test-positive-submit.cjs
 !test/format-and-upload-cap-harness.cjs
 !test/resume-restore-and-fatca-harness.cjs
+!test/security-review-fixes-harness.cjs
+!test/index-config-retry-harness.cjs
+!test/popstate-navigation-harness.cjs
+!test/signer-lane-gate-bypass-harness.cjs

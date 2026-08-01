@@ -3716,12 +3716,20 @@
       window.scrollTo(0, 0);
     }
     prevBtn.addEventListener('click', function () { showPage(idx - 1); });
-    window.addEventListener('popstate', function () {
+    window.addEventListener('popstate', function (e) {
       // Mid-form back gesture steps the in-form pager back one page. On the
       // first page there is nothing to step back to; the browser handles it
       // (back = leave, as the LP expects). Never steps FORWARD (no validation
-      // bypass): popstate only ever lands on idx - 1.
-      if (idx > 0) showPage(idx - 1);
+      // bypass): CTO review finding (2026-08-02) - this previously ignored
+      // e.state and always stepped to idx - 1 regardless of how far back the
+      // browser's own history navigation actually went, which could under-
+      // or over-shoot on a multi-entry back jump. Read e.state.lvpIdx and
+      // only honor a target that is backward (or the same) relative to idx,
+      // matching flow.html's already-correct pattern.
+      if (idx <= 0) return;
+      var target = (e.state && typeof e.state.lvpIdx === 'number') ? e.state.lvpIdx : idx - 1;
+      if (target >= idx) target = idx - 1;
+      showPage(target);
     });
     nextBtn.addEventListener('click', function () {
       var page = currentPageEl();

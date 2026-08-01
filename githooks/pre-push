@@ -67,4 +67,19 @@ node test/test-positive-submit.cjs >/dev/null && echo "test-positive-submit OK"
 # resume restoration + the FATCA/CRS conditional reveal.
 node test/format-and-upload-cap-harness.cjs     >/dev/null && echo "format-and-upload-cap OK"
 node test/resume-restore-and-fatca-harness.cjs  >/dev/null && echo "resume-restore-and-fatca OK"
+# Fresh /cto-review pass (2026-08-02) on the already-shipped state: two real
+# security findings (console attribute-escaping gap, index.html CSS
+# injection), a reliability gap (index.html's config bootstrap had no
+# retry, unlike its three sibling forms), a popstate multi-step-jump bug in
+# index.html/israel.html, and a UX regression in signer.html's own
+# earlier-this-session retry fix (the pre-fetch Hebrew call was silently
+# defeated by the lane gate). Also: drawer-race-harness.cjs and
+# console-action-contract.cjs existed, passed, and caught real bug classes
+# but were never wired into this gate.
+node test/security-review-fixes-harness.cjs      >/dev/null && echo "security-review-fixes OK"
+node test/index-config-retry-harness.cjs         >/dev/null && echo "index-config-retry OK"
+node test/popstate-navigation-harness.cjs        >/dev/null && echo "popstate-navigation OK"
+node test/signer-lane-gate-bypass-harness.cjs    >/dev/null && echo "signer-lane-gate-bypass OK"
+node test/drawer-race-harness.cjs                >/dev/null && echo "drawer-race OK"
+node test/console-action-contract.cjs            >/dev/null && echo "console-action-contract OK"
 echo "pre-push: all green - deploying to Pages."

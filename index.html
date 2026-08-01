@@ -1422,8 +1422,17 @@
           if (logo) logo.src = cfg.brandLogoUrl;
         }
         if (cfg.brandBgUrl) {
+          // CTO review finding (2026-08-02): cfg.brandBgUrl comes straight off
+          // the ?api=config gateway response with zero escaping. A value
+          // containing a " or a CSS special char could break out of the
+          // url("...") string and inject arbitrary CSS (full-page overlays,
+          // attribute-selector exfiltration, defacement). CSS-string-escape
+          // it before interpolating (backslash first, then the quote that
+          // actually delimits this string; strip newlines, which a raw CSS
+          // string literal cannot contain unescaped).
+          var safeBg = String(cfg.brandBgUrl).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]/g, '');
           var s = document.createElement('style');
-          s.textContent = 'body::before{background-image:url("' + cfg.brandBgUrl + '")}';
+          s.textContent = 'body::before{background-image:url("' + safeBg + '")}';
           document.head.appendChild(s);
         }
       }
@@ -1478,33 +1487,53 @@
         + '&fixture='  + encodeURIComponent(fixtureParam)
         + '&screenshotMode=' + encodeURIComponent(screenshotMode)
         + '&lang='     + encodeURIComponent(p.get('lang') || '');
-      try {
-        fetch(url)
-          .then(function(r) { return r.json(); })
-          .then(function(cfg) {
-            window.CAYMAN_CFG = cfg;
-            applyCfgVisuals(cfg);
-            markDoneIfCompleted(cfg);
-            // Bad / expired / revoked token: the gateway returns a config with no usable
-            // flow (flowType '') exactly as caymanFormConfig_ documents. Route it to the
-            // broken-link gate instead of leaving the LP on a blank form that only fails at
-            // submit. Skip fixture/screenshot renders and already-completed links.
-            var tokenish = p.get('t') || p.get('token') || p.get('item') || p.get('sign');
-            if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
-              document.documentElement.classList.add('lvp-gate-mode');
-            }
-            if (cfg.language === 'en' || cfg.language === 'he') {
-              var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
-              if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
-            }
-            try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
-            // Re-route type + URLs if the main IIFE initialized before this fetch resolved.
-            if (typeof window.__caymanOnCfgUpdate === 'function') window.__caymanOnCfgUpdate(cfg);
-          })
-          .catch(function() {});
-      } catch(err) {
-        if (window.console) console.warn('[CaymanForm] CFG load failed:', err);
+      // Retry with backoff (CTO review finding, 2026-08-02): a single silent
+      // attempt against a cold GAS start left this form's LP with no config,
+      // no error, and a form that only fails at submit ("Form is still
+      // loading"). Ported from israel.html's fetchCfg(attempt) (2026-07-07) -
+      // the two sibling forms (israel.html, flow.html) and signer.html
+      // already had this; index.html, the primary Cayman onboarding entry
+      // point, was the outlier with a bare fetch + silent .catch.
+      function fetchCfg(attempt) {
+        try {
+          fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(cfg) {
+              window.CAYMAN_CFG = cfg;
+              applyCfgVisuals(cfg);
+              markDoneIfCompleted(cfg);
+              // Bad / expired / revoked token: the gateway returns a config with no usable
+              // flow (flowType '') exactly as caymanFormConfig_ documents. Route it to the
+              // broken-link gate instead of leaving the LP on a blank form that only fails at
+              // submit. Skip fixture/screenshot renders and already-completed links.
+              var tokenish = p.get('t') || p.get('token') || p.get('item') || p.get('sign');
+              if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
+                document.documentElement.classList.add('lvp-gate-mode');
+              }
+              if (cfg.language === 'en' || cfg.language === 'he') {
+                var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
+                if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
+              }
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
+              // Re-route type + URLs if the main IIFE initialized before this fetch resolved.
+              if (typeof window.__caymanOnCfgUpdate === 'function') window.__caymanOnCfgUpdate(cfg);
+            })
+            .catch(function() {
+              if (attempt < 3) { setTimeout(function () { fetchCfg(attempt + 1); }, attempt * 2500); return; }
+              if (window.console) console.warn('[CaymanForm] CFG load failed after retries');
+              // Retries exhausted: only gate if nothing was ever successfully
+              // applied (no cached CFG from a prior visit), so a transient
+              // blip after a real config already loaded doesn't yank a
+              // mid-fill LP onto the gate screen.
+              if (!window.CAYMAN_CFG || !window.CAYMAN_CFG.flowType) {
+                document.documentElement.classList.add('lvp-gate-mode');
+              }
+            });
+        } catch(err) {
+          if (window.console) console.warn('[CaymanForm] CFG load failed:', err);
+        }
       }
+      fetchCfg(1);
     })();
     
   (function () {
@@ -2876,12 +2905,20 @@
       try { history.pushState({ lvpIdx: idx + 1 }, '', location.href); } catch (eH) {}
       showPage(idx + 1); savePage().catch(function () { setStatus('Could not auto-save. Your progress may not be preserved.', true); });
     });
-    window.addEventListener('popstate', function () {
+    window.addEventListener('popstate', function (e) {
       // Mid-form back gesture steps the in-form pager back one page. On the
       // first page there is nothing to step back to; the browser handles it
       // (back = leave, as the LP expects). Never steps FORWARD (no validation
-      // bypass): popstate only ever lands on idx - 1.
-      if (idx > 0) showPage(idx - 1);
+      // bypass): CTO review finding (2026-08-02) - this previously ignored
+      // e.state and always stepped to idx - 1 regardless of direction, so a
+      // genuine forward gesture (after an earlier back) moved the LP
+      // backward AGAIN instead of forward. Read e.state.lvpIdx and only
+      // honor a target that is backward (or the same) relative to idx,
+      // matching flow.html's already-correct pattern.
+      if (idx <= 0) return;
+      var target = (e.state && typeof e.state.lvpIdx === 'number') ? e.state.lvpIdx : idx - 1;
+      if (target >= idx) target = idx - 1;
+      showPage(target);
     });
     submitBtn.addEventListener('click', function () {
       var page = currentPageEl();
