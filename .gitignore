@@ -21,3 +21,5 @@ test/*
 !test/email-amount-probe.cjs
 !test/test-adversarial.cjs
 !test/test-positive-submit.cjs
+!test/format-and-upload-cap-harness.cjs
+!test/resume-restore-and-fatca-harness.cjs

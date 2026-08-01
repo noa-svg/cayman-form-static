@@ -62,4 +62,9 @@ node test/drive-branch.cjs         >/dev/null && echo "drive-branch OK"
 node test/email-amount-probe.cjs   >/dev/null && echo "email-amount OK"
 node test/test-adversarial.cjs     >/dev/null && echo "test-adversarial OK"
 node test/test-positive-submit.cjs >/dev/null && echo "test-positive-submit OK"
+# New coverage for previously-untested areas (2026-08-02, CTO review finding
+# #13): SWIFT/BIC format validation + the 10MB upload cap, and prefill-based
+# resume restoration + the FATCA/CRS conditional reveal.
+node test/format-and-upload-cap-harness.cjs     >/dev/null && echo "format-and-upload-cap OK"
+node test/resume-restore-and-fatca-harness.cjs  >/dev/null && echo "resume-restore-and-fatca OK"
 echo "pre-push: all green - deploying to Pages."
