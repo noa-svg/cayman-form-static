@@ -1384,6 +1384,7 @@
        stays in this file's gateway() wrapper. Loaded before the app scripts so
        window.LVPGateway is defined when gateway() first runs. -->
   <script src="lvp-gateway.js"></script>
+  <script src="doc-sanitize.js"></script>
   <script>
     // Stale-page guard. Fetches this file with no-store (bypasses CDN + browser cache)
     // and reloads if the live copy has a different build token. Ensures LPs never see
@@ -3050,6 +3051,10 @@
         if (!a.parentNode) return;
         a.parentNode.replaceChild(document.createTextNode(a.textContent || ''), a);
       });
+      // Shared security pass (doc-sanitize.js, CTO review finding #2): strips
+      // event-handler attributes and javascript:/data: URLs the display logic
+      // above was never responsible for. Last step, after all display processing.
+      if (typeof lvpSanitizeDocHtml_ === 'function') lvpSanitizeDocHtml_(body);
       return body;
     }
 

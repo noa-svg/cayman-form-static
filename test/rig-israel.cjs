@@ -35,6 +35,7 @@ const HTML_PATH = path.join(__dirname, '..', 'israel.html');
 const RULES_PATH = path.join(__dirname, '..', 'validation-rules.js');
 const GATEWAY_PATH = path.join(__dirname, '..', 'lvp-gateway.js');
 const BANKS_PATH = path.join(__dirname, '..', 'bank-registry.json');
+const SANITIZE_PATH = path.join(__dirname, '..', 'doc-sanitize.js');
 
 // The genuine ?api=config success shape for a live israeli-lane resume token
 // (mirrors client-honesty-harness.cjs G5 and the mono gateway's config).
@@ -91,6 +92,16 @@ async function loadIsraelForm(opts) {
     throw new Error('rig-israel: lvp-gateway.js script tag not found in israel.html (boot contract changed)');
   }
   html = html.replace(GW_TAG, '<script>\n' + fs.readFileSync(GATEWAY_PATH, 'utf8') + '\n</script>');
+  // Same for the shared doc-preview sanitizer (window.lvpSanitizeDocHtml_,
+  // CTO review finding #2): without inlining this, the sign-preview code
+  // path's typeof-guarded call silently no-ops under jsdom, and this rig's
+  // F2 "sign-step doc preview" assertion would pass without ever actually
+  // exercising the sanitizer.
+  const SANITIZE_TAG = '<script src="doc-sanitize.js"></script>';
+  if (html.indexOf(SANITIZE_TAG) === -1) {
+    throw new Error('rig-israel: doc-sanitize.js script tag not found in israel.html (boot contract changed)');
+  }
+  html = html.replace(SANITIZE_TAG, '<script>\n' + fs.readFileSync(SANITIZE_PATH, 'utf8') + '\n</script>');
 
   const vc = new VirtualConsole();
   const errors = [];

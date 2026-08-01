@@ -314,6 +314,12 @@
     </div>
   </div>
 
+  <!-- Israeli-ID checksum (CTO review finding #3): validation-rules.js is the
+       verbatim client port of the server validator, same module israel.html/
+       flow.html already load. -->
+  <script src="validation-rules.js"></script>
+  <!-- Shared doc-preview security pass (CTO review finding #2). -->
+  <script src="doc-sanitize.js"></script>
   <script>
   (function () {
     'use strict';
@@ -415,6 +421,7 @@
       "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
       "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
       "Please enter a valid email address.": "יש להזין כתובת מייל תקינה.",
+      "That ID number is not valid.": "מספר תעודת הזהות אינו תקין.",
       "This field is required.": "שדה חובה.",
       "Please check at least one option.": "יש לסמן לפחות רובריקה אחת.",
       "Progress saved.": "ההתקדמות נשמרה.",
@@ -730,6 +737,12 @@
     // Read a chosen file into pendingIdUploads as base64 (post-comma), matching the
     // main form's FileReader pattern. Rejects >10MB visibly (reuses the shared
     // error element). A cleared input removes the slot so the required-gate is honest.
+    // reading:true is set the MOMENT a file is picked (2026-08-02, CTO review finding
+    // #1 - the same "photo errored for no reason" bug already fixed in flow.html):
+    // without this, a signer who taps Submit right after picking a file hits a false
+    // "please upload" error, since the KYC gate used to run before the async
+    // FileReader.onload had populated this slot. whenUploadsReady() below now waits
+    // out any in-flight read before the gate checks run.
     function handleIdUpload(slot, input, errEl) {
       var f = input.files && input.files[0];
       if (!f) { delete pendingIdUploads[slot]; return; }
@@ -739,10 +752,14 @@
         delete pendingIdUploads[slot];
         return;
       }
+      pendingIdUploads[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: '', reading: true };
       var reader = new FileReader();
       reader.onload = function () {
-        var b64 = String(reader.result).split(',')[1];
-        pendingIdUploads[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+        var b64 = String(reader.result || '').split(',')[1] || '';
+        var u = pendingIdUploads[slot];
+        if (!u) return; // slot cleared (signer removed the file) while the read was in flight
+        if (!b64) { delete pendingIdUploads[slot]; return; }
+        u.base64 = b64; u.reading = false;
       };
       reader.onerror = function () {
         if (errEl) errEl.textContent = tHe('We could not read that file. Please try again.');
@@ -808,10 +825,14 @@
         delete pendingLawyerStamp[slot];
         return;
       }
+      pendingLawyerStamp[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: '', reading: true };
       var reader = new FileReader();
       reader.onload = function () {
-        var b64 = String(reader.result).split(',')[1];
-        pendingLawyerStamp[slot] = { slot: slot, fileName: f.name, mimeType: f.type, fileSizeBytes: f.size, base64: b64 };
+        var b64 = String(reader.result || '').split(',')[1] || '';
+        var u = pendingLawyerStamp[slot];
+        if (!u) return;
+        if (!b64) { delete pendingLawyerStamp[slot]; return; }
+        u.base64 = b64; u.reading = false;
       };
       reader.onerror = function () {
         if (errEl) errEl.textContent = tHe('We could not read that file. Please try again.');
@@ -1148,6 +1169,10 @@
           while (next2 && (next2.tagName === 'STYLE' || next2.tagName === 'SCRIPT')) next2 = next2.nextElementSibling;
           firstVisible2 = next2;
         }
+        // Shared security pass (doc-sanitize.js, CTO review finding #2): strips
+        // event-handler attributes and javascript:/data: URLs. Highest-stakes
+        // instance of this fix - this is the actual signing page.
+        if (typeof lvpSanitizeDocHtml_ === 'function') lvpSanitizeDocHtml_(body);
         return body;
       }
 
@@ -1496,6 +1521,18 @@
         if (inp.type === 'email' && String(inp.value).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inp.value.trim())) {
           return tHe('Please enter a valid email address.');
         }
+        // Israeli-ID checksum (CTO review finding #3), gated on idType === 'National
+        // ID': idNumber is a shared field that also carries passport and company-
+        // registration numbers (letters allowed), which the checksum would wrongly
+        // reject. Only checked once the signer has told us which kind it is. Fails
+        // open (no LVPRules / no idType sibling) so a script-load hiccup never blocks
+        // a signer who was already passing today.
+        if (inp.name === 'idNumber' && String(inp.value).trim() && typeof LVPRules !== 'undefined' && LVPRules) {
+          var idTypeInp = inp.form ? inp.form.elements['idType'] : null;
+          if (idTypeInp && idTypeInp.value === 'National ID' && !LVPRules.validId(inp.value.trim())) {
+            return tHe('That ID number is not valid.');
+          }
+        }
         return '';
       }
       // Apply or clear the invalid state for one field: error class, aria-invalid,
@@ -1649,6 +1686,24 @@
         }
         doSignSubmit_();
       });
+      // True while an ID-upload or lawyer-stamp file is still being read to base64
+      // (ported from flow.html's uploadsReading/whenUploadsReady, CTO review finding
+      // #1). Checks both pending-upload maps since signer.html splits CP-ID slots
+      // and the lawyer stamp into two separate objects.
+      function uploadsReading() {
+        for (var k in pendingIdUploads) { if (pendingIdUploads[k] && pendingIdUploads[k].reading) return true; }
+        for (var k2 in pendingLawyerStamp) { if (pendingLawyerStamp[k2] && pendingLawyerStamp[k2].reading) return true; }
+        return false;
+      }
+      // Run cb once no upload read is in flight, or after a hard ceiling (a read
+      // that never finishes is scrubbed as failed by the caller, same as flow.html).
+      function whenUploadsReady(cb) {
+        var waited = 0, step = 120, ceil = 12000;
+        (function tick() {
+          if (!uploadsReading() || waited >= ceil) { cb(); return; }
+          waited += step; setTimeout(tick, step);
+        })();
+      }
       function doSignSubmit_() {
         // Server-declared field with no client renderer (F10 path). The unknown
         // field renders as a .field--error note but had no input bound, so a
@@ -1740,6 +1795,20 @@
           if (canvas.scrollIntoView) canvas.scrollIntoView({ block: 'center' });
           return;
         }
+
+        // Wait out any in-flight photo read before the KYC/stamp gates run (CTO
+        // review finding #1, same fix already live in flow.html): without this, a
+        // signer who taps Submit right after picking a file hit a false "please
+        // upload" error because pendingIdUploads/pendingLawyerStamp hadn't been
+        // populated by FileReader.onload yet. A read that's still stuck at the
+        // ceiling (or that failed) is scrubbed here so the gate below sees it
+        // honestly as "no file" rather than posting empty/partial bytes.
+        whenUploadsReady(function () {
+        [pendingIdUploads, pendingLawyerStamp].forEach(function (map) {
+          Object.keys(map).forEach(function (k) {
+            if (map[k] && (map[k].reading || !map[k].base64)) delete map[k];
+          });
+        });
 
         // KYC gate (controlling persons only): a CP must attach identification.
         // Require passport OR national-ID front before submitting; appendix/back
@@ -1881,6 +1950,7 @@
         p.ontimeout = onPostFail;
         p.onerror   = onPostFail;
         p.send(body);
+        }); // end whenUploadsReady
       }
 
       // Clear field-error state as soon as the value becomes valid (reward early).

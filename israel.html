@@ -1297,6 +1297,7 @@
        stays in this file's gateway() wrapper. Loaded before the app script so
        window.LVPGateway is defined when gateway() first runs. -->
   <script src="lvp-gateway.js"></script>
+  <script src="doc-sanitize.js"></script>
   <script>
     (function () {
       // Build tag for the stale-tab guard (2026-07-15, Bremington two-week-old
@@ -3919,6 +3920,11 @@
         signPreviewShownKey = key;
         if (titleEl) titleEl.textContent = doc.title || '';
         bodyEl.innerHTML = doc.html;
+        // Shared security pass (doc-sanitize.js, CTO review finding #2): this
+        // path previously did NO stripping at all, unlike index.html/signer.html's
+        // (partial) chrome removal. Strips event-handler attributes and
+        // javascript:/data: URLs before the preview goes on screen.
+        if (typeof lvpSanitizeDocHtml_ === 'function') lvpSanitizeDocHtml_(bodyEl);
         box.hidden = false;
         // Reset AFTER unhiding (scrollTop on a display:none element is a no-op)
         // and once more next frame: the pixel pass caught scroll anchoring landing

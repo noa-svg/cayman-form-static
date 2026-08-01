@@ -5,3 +5,7 @@ test/*
 !test/israel-flow.cjs
 !test/console-harness.cjs
 !test/rig-israel.cjs
+!test/rig.cjs
+!test/upload-race-harness.cjs
+!test/doc-sanitize-harness.cjs
+!test/id-checksum-harness.cjs
