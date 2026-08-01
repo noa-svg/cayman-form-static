@@ -10,3 +10,4 @@ test/*
 !test/doc-sanitize-harness.cjs
 !test/id-checksum-harness.cjs
 !test/signer-config-retry-harness.cjs
+!test/flow-double-submit-harness.cjs

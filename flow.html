@@ -415,6 +415,13 @@
       var flowType = '';
       var applicantType = 'individual';
       var pendingUploads = {};
+      // Double-submit belt (CTO review finding #5, ported from signer.html's
+      // 2026-07-15 fix): the submit button disables synchronously inside
+      // runSubmitFlow_, but signer.html's own comment on that pattern is the
+      // reason this exists too - relying on disabled-state alone is not
+      // considered bulletproof by this codebase (double-tap event dispatch,
+      // assistive-tech synthetic clicks). This flag is the redundant belt.
+      var submitting = false;
       // Lifted to the top of the IIFE so the mock-mode bootstrap path (which fires
       // before later var declarations execute) can use them.
       var CURRENCIES = [
@@ -1613,10 +1620,15 @@
         })();
       }
       document.getElementById('lvp-submit-btn').addEventListener('click', function () {
+        // Double-submit belt (CTO review finding #5): refuses re-entry the
+        // moment a submit is actually underway, same shape as signer.html.
+        if (submitting) return;
         // Stale-tab gate (b): a tab open >24h re-verifies the build tag BEFORE
         // validating/posting, so an ancient client never submits with outdated
         // JS. Stale: save + reload (the LP resumes on current code, re-attaches
         // files, and submits fresh). Fresh or undetermined: proceed unchanged.
+        // (The re-entrant-stale-check gap this leaves is covered separately by
+        // staleCheckBusy_ inside staleReloadIfNewer_ itself.)
         if (Date.now() - pageOpenedAt_ > STALE_OPEN_MS_) {
           staleReloadIfNewer_(runSubmitFlow_);
           return;
@@ -1631,11 +1643,13 @@
         // submittedAt set. Server-side caymanHandleSavePage_ also rejects this
         // case (defence in depth) but the client cancel is the cheaper guard.
         if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        submitting = true; // suppress re-entry from here through the POST settling
         var btn = document.getElementById('lvp-submit-btn');
         btn.disabled = true; btn.textContent = 'שולח...';
         document.getElementById('lvp-busy').classList.add('is-active');
         submitStatus('שולחים את הטופס, נא לא לסגור את החלון.');
         function restoreSubmitBtn() {
+          submitting = false; // allow a genuine retry after validation/network failure
           btn.disabled = false; btn.textContent = 'סיום ושליחה';
           document.getElementById('lvp-busy').classList.remove('is-active');
         }
