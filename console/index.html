@@ -3081,6 +3081,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
       <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
       <button class="nav" data-view="w8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
+      <button class="nav" data-view="wireletter"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Wire Letter</span></button>
     </nav>
     <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
          of data we need to see"). Filled from the SAME allRows the board already
@@ -3165,6 +3166,79 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="content">
         <div class="w8readout" id="w8readout"></div>
         <div id="w8list" class="w8list"></div>
+      </div>
+    </div>
+    <div class="view" id="v-wireletter" hidden>
+      <div class="top"><div><h1>Wire Letter</h1><div class="sub">Monthly bank wire-instruction letter, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
+      <div class="content">
+        <div class="set-card" style="max-width:640px">
+          <h3 class="set-h">Generate</h3>
+          <p class="set-p">Month/year of the tracker tab (MM/YYYY) and currency.</p>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:8px">
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
+              <input id="wlMonth" type="text" placeholder="08/2026" pattern="\d{2}/\d{4}" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:110px">
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
+              <select id="wlCurrency" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+                <option value="NIS">NIS</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+            <button id="wlReviewBtn" class="btn">Review</button>
+          </div>
+          <div id="wlFindings" style="margin-top:16px"></div>
+          <div style="margin-top:14px">
+            <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
+            <label style="margin-left:12px;font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also create a Gmail draft (to Noa, review only)</label>
+          </div>
+          <div id="wlResult" style="margin-top:14px"></div>
+        </div>
+
+        <div class="set-card" style="max-width:640px;margin-top:20px">
+          <h3 class="set-h">Add a manual row</h3>
+          <p class="set-p">For money events that never went through Ju's own flow (an estate redemption, a foreign-entity case). Amount defaults to the fund's real NAV-pending placeholder, never a guess - fill it in once a real figure exists.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+            <div style="grid-column:1/-1">
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Name</label>
+              <input id="mrName" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Type</label>
+              <select id="mrType" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+                <option value="Redemption">Redemption</option>
+                <option value="Join">Join</option>
+                <option value="Increase">Increase</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
+              <select id="mrCurrency" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+                <option value="NIS">NIS</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Amount (optional)</label>
+              <input id="mrAmount" type="text" placeholder="להשלים מהנאב if left blank" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Bank details (optional)</label>
+              <input id="mrBank" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Notes</label>
+              <input id="mrNotes" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <button id="mrAddBtn" class="btn">Add row</button>
+          </div>
+          <div id="mrResult" style="margin-top:12px"></div>
+        </div>
       </div>
     </div>
     <div class="view" id="v-settings" hidden>
@@ -5644,7 +5718,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var nv=document.querySelector('.nav[data-view="'+v+'"]');if(nv){nv.classList.add("on");nv.setAttribute("aria-current","page");}
     Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab"),function(x){x.classList.remove("on");});
     var tv=document.querySelector('#tab-bar .tab[data-view="'+v+'"]');if(tv)tv.classList.add("on");
-    ["board","messages","w8","settings"].forEach(function(id){
+    ["board","messages","w8","wireletter","settings"].forEach(function(id){
       var el=document.getElementById("v-"+id);if(!el)return;
       el.hidden=(id!==v);
       if(id===v){
@@ -5758,6 +5832,105 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(wr)wr.onclick=function(e){e.preventDefault();loadW8();};
     });
   }
+
+  // Wire Letter (2026-08-01, dazzling-seeking-dahl.md). Two independent
+  // actions on one tab: monthly batch generation (review -> generate) and
+  // manual off-pipeline row insertion. Both call ju-cayman's own routes only
+  // - this console never reaches across to the transfer-forms app.
+  function wlFindingsHtml(blocking,warnings){
+    var h='';
+    if(blocking&&blocking.length){
+      h+='<div style="margin-top:8px;padding:10px 12px;border-radius:var(--radius-md);background:var(--color-danger-bg);color:var(--color-danger)"><strong>Blocking ('+blocking.length+'):</strong><ul style="margin:6px 0 0 18px;padding:0">'
+        +blocking.map(function(f){return '<li>'+esc2(f.detail||f.flag)+'</li>';}).join('')+'</ul></div>';
+    }
+    if(warnings&&warnings.length){
+      h+='<div style="margin-top:8px;padding:10px 12px;border-radius:var(--radius-md);background:var(--color-warning-bg);color:var(--color-warning)"><strong>Warnings ('+warnings.length+'), read before signing:</strong><ul style="margin:6px 0 0 18px;padding:0">'
+        +warnings.map(function(f){return '<li>'+esc2(f.detail||f.flag)+'</li>';}).join('')+'</ul></div>';
+    }
+    if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
+    return h;
+  }
+  (function(){
+    var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
+        reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
+        draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
+        resEl=document.getElementById('wlResult');
+    if(!reviewBtn)return;
+    var lastGo=false;
+    function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
+    reviewBtn.onclick=function(){
+      var month=(monthEl.value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('Month must be MM/YYYY.','');return;}
+      reviewBtn.disabled=true;genBtn.disabled=true;lastGo=false;
+      findEl.innerHTML='<div style="color:var(--color-ink-muted)">Reviewing...</div>';
+      setResult('','');
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&dryRun=true').then(function(r){
+        reviewBtn.disabled=false;
+        if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
+        if(r.ok===false&&r.blocking){
+          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
+          lastGo=false;genBtn.disabled=true;
+          return;
+        }
+        if(!r.ok){findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(r.error||'Review failed.')+'</div>';return;}
+        findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
+        lastGo=true;genBtn.disabled=false;
+      }).catch(function(err){
+        reviewBtn.disabled=false;
+        findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+      });
+    };
+    genBtn.onclick=function(){
+      if(!lastGo)return;
+      var month=(monthEl.value||'').trim();
+      genBtn.disabled=true;reviewBtn.disabled=true;
+      setResult('<div style="color:var(--color-ink-muted)">Generating...</div>','');
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&createDraft='+(draftEl.checked?'true':'false')).then(function(r){
+        genBtn.disabled=false;reviewBtn.disabled=false;
+        if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
+        var h='<div style="color:var(--color-green)">Candidate doc generated (labeled "not for sending" until the parallel diff is verified).</div>'
+          +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
+        if(r.draftId)h+='<div style="margin-top:4px">Draft created in Gmail (id '+esc2(r.draftId)+').</div>';
+        if(r.missingBankDetailsMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.missingBankDetailsMessage)+'</div>';
+        if(r.overflowMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.overflowMessage)+'</div>';
+        setResult(h,'');
+      }).catch(function(err){
+        genBtn.disabled=false;reviewBtn.disabled=false;
+        setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
+      });
+    };
+  })();
+  (function(){
+    var addBtn=document.getElementById('mrAddBtn'),resEl=document.getElementById('mrResult');
+    if(!addBtn)return;
+    addBtn.onclick=function(){
+      var month=(document.getElementById('wlMonth').value||'').trim();
+      var name=(document.getElementById('mrName').value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){resEl.innerHTML='<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>';return;}
+      if(!name){resEl.innerHTML='<div style="color:var(--color-danger)">Name is required.</div>';return;}
+      addBtn.disabled=true;
+      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Adding...</div>';
+      var qs='?api=opAddManualTransferRow&monthTab='+encodeURIComponent(month)
+        +'&name='+encodeURIComponent(name)
+        +'&type='+encodeURIComponent(document.getElementById('mrType').value)
+        +'&currency='+encodeURIComponent(document.getElementById('mrCurrency').value)
+        +'&amount='+encodeURIComponent((document.getElementById('mrAmount').value||'').trim())
+        +'&bank='+encodeURIComponent((document.getElementById('mrBank').value||'').trim())
+        +'&notes='+encodeURIComponent((document.getElementById('mrNotes').value||'').trim());
+      apiFetch(qs).then(function(r){
+        addBtn.disabled=false;
+        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
+        resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
+        document.getElementById('mrName').value='';
+        document.getElementById('mrAmount').value='';
+        document.getElementById('mrBank').value='';
+        document.getElementById('mrNotes').value='';
+      }).catch(function(err){
+        addBtn.disabled=false;
+        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+      });
+    };
+  })();
 
   // Settings
   // Guard against the allowlist-wipe hazard: if the current allowlist never
@@ -6142,6 +6315,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true">🗂️</span><span class="tab-lbl">Board</span></button>
   <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true">✉️</span><span class="tab-lbl">Msgs</span></button>
   <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true">🕒</span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
+  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true">🏦</span><span class="tab-lbl">Wire Letter</span></button>
   <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true">⚙️</span><span class="tab-lbl">Settings</span></button>
 </nav>
 <script>
