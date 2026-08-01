@@ -14,3 +14,10 @@ test/*
 !test/resume-jump-harness.cjs
 !test/signer-vocab-harness.cjs
 !test/attribute-escaping-harness.cjs
+!test/select-default-probe.cjs
+!test/joint-probe.cjs
+!test/conditional-probe.cjs
+!test/drive-branch.cjs
+!test/email-amount-probe.cjs
+!test/test-adversarial.cjs
+!test/test-positive-submit.cjs

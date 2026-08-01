@@ -48,4 +48,18 @@ node test/signer-config-retry-harness.cjs >/dev/null && echo "signer-config-retr
 node test/flow-double-submit-harness.cjs >/dev/null && echo "flow-double-submit OK"
 node test/resume-jump-harness.cjs        >/dev/null && echo "resume-jump OK"
 node test/signer-vocab-harness.cjs       >/dev/null && echo "signer-vocab OK"
+node test/attribute-escaping-harness.cjs >/dev/null && echo "attribute-escaping OK"
+# Converted from exploratory console.log probes to real assertions
+# (2026-08-02, CTO review finding #12) - these walk index.html end to end
+# (drive-branch.cjs alone runs both applicant lanes through every page), so
+# they take longer than the other harnesses above but they are this repo's
+# only automated coverage of the actual multi-page conditional-reveal /
+# required-field / submit-gating behavior an LP experiences.
+node test/select-default-probe.cjs >/dev/null && echo "select-default OK"
+node test/joint-probe.cjs          >/dev/null && echo "joint OK"
+node test/conditional-probe.cjs    >/dev/null && echo "conditional OK"
+node test/drive-branch.cjs         >/dev/null && echo "drive-branch OK"
+node test/email-amount-probe.cjs   >/dev/null && echo "email-amount OK"
+node test/test-adversarial.cjs     >/dev/null && echo "test-adversarial OK"
+node test/test-positive-submit.cjs >/dev/null && echo "test-positive-submit OK"
 echo "pre-push: all green - deploying to Pages."
