@@ -79,14 +79,17 @@ try {
   process.exit(1);
 }
 
-// console/index.html has TWO :root blocks (base, inactive for color purposes,
-// and :root[data-theme="light"], the one that actually renders per CSS
-// specificity -- see the retint commit). Only the light-theme block's
-// occurrence (the 2nd one in file order) is checked here.
+// console/index.html previously carried these color vars in TWO :root blocks
+// (a stale pre-retint base, unconditionally overridden by
+// :root[data-theme="light"] per CSS specificity). The base duplicates were
+// removed 2026-08-02 (CTO review finding #10, dead weight - see the retint
+// commit and the removal commit) since this file has no second theme, so
+// every var checked here now has exactly one definition, in the
+// light-theme block.
 const consoleHtml = fs.readFileSync(CONSOLE_FILE, 'utf8');
 
 for (const [consoleVar, atriumVar] of Object.entries(ROLE_MAP)) {
-  const consoleValue = extractVar(consoleHtml, consoleVar, 1);
+  const consoleValue = extractVar(consoleHtml, consoleVar, 0);
   const atriumValue = extractVar(atriumCss, atriumVar, 0);
   if (atriumValue === null) {
     ok(consoleVar + ': Atrium source defines ' + atriumVar, false, 'not found in tokens.css, role map may be stale');
@@ -104,7 +107,7 @@ for (const [consoleVar, atriumVar] of Object.entries(ROLE_MAP)) {
 }
 
 for (const [consoleVar, expected] of Object.entries(LITERAL_MAP)) {
-  const consoleValue = extractVar(consoleHtml, consoleVar, 1);
+  const consoleValue = extractVar(consoleHtml, consoleVar, 0);
   ok(
     consoleVar + ' matches its documented derived value',
     consoleValue === normalizeHex(expected),

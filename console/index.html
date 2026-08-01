@@ -14,59 +14,18 @@
    ============================================================ */
 
 :root {
-  /* LIGHT EDITORIAL PALETTE - warm cream ground, factsheet blue + gold signature */
-  /* Bauhaus x LVP Atrium (Noa 2026-07-07): Bauhaus construction on the real
-     brand palette. Navy #143F7F, gold #D4A227, coral/red on paper #F2EDE0,
-     ink #141414. Borders are near-black rules; radii go binary; shadows go
-     hard-offset (see below). Token NAMES are unchanged so all component CSS
-     inherits the new look. */
-  --color-bg-page:        #F2EDE0;
-  --color-bg-sidebar:     #143F7F;
-  --color-bg-card:        #FFFFFF;
-  --color-bg-panel:       #FFFFFF;
-  --color-bg-input:       #FFFFFF;
-  --color-bg-hover:       #E9E0CC;
-  --color-bg-strip:       #FFFFFF;
-  --color-bg-drawer:      #FFFFFF;
-  --color-bg-overlay:     rgba(20,20,20,0.45);
-  --color-atrium:         #143F7F;
-  --color-atrium-deep:    #0E2E5C;
-  --color-atrium-tint:    #E4EAF3;
-  --color-atrium-tint-md: #C9D6E8;
-  --color-atrium-muted:   rgba(20,63,127,0.12);
-  --color-ink:            #141414;
-  --color-ink-sub:        #4A4438;
-  --color-ink-muted:      #6D6657;
-  --color-ink-disabled:   #A8A08C;
-  --color-ink-inverse:    #FFFFFF;
-  --color-border:         #141414;
-  --color-border-subtle:  #B6AE99;
-  --color-border-strong:  #141414;
-  --color-border-focus:   #143F7F;
-  --color-gold:           #D4A227;
-  --color-gold-tint:      #F6E8C6;
-  --color-coral:          #D85E4C;
-  --color-coral-tint:     #F7E0DA;
-  --color-green:          #2E8540;
-  --color-green-tint:     #DCEBDF;
-  --color-amber:          #D4A227;
-  --color-amber-tint:     #F6E8C6;
-  --color-red:            #C0202E;
-  --color-red-tint:       #F5D9DC;
-  --color-dim:            #B6AE99;
+  /* Color tokens are defined ONCE, in :root[data-theme="light"] below - this
+     file bakes data-theme="light" onto <html> statically (no toggle, no
+     second theme, see line 1), so that block always wins unconditionally.
+     A stale pre-retint "Bauhaus" palette used to be duplicated here too
+     (removed 2026-08-02, CTO review finding #10): 44 of 53 base color vars
+     were dead weight, silently overridden 400+ lines down, and had drifted
+     to describe a palette this console no longer renders - a reader editing
+     a color here was editing the wrong copy. --color-slate/plum/plum-tint
+     have no light-theme override (genuinely single-definition) and stay. */
   --color-slate:          #5C7585;
   --color-plum:           #5C2C82;
   --color-plum-tint:      #E7DDF0;
-  --color-success:        #2E8540;
-  --color-success-bg:     #DCEBDF;
-  --color-warning:        #D4A227;
-  --color-warning-bg:     #F6E8C6;
-  --color-danger:         #C0202E;
-  --color-danger-bg:      #F5D9DC;
-  --color-info:           #143F7F;
-  --color-info-bg:        #E4EAF3;
-  --color-neutral:        #6D6657;
-  --color-neutral-bg:     #E9E0CC;
   --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
