@@ -538,7 +538,13 @@
     // success/error handlers also call applyLang, so a toggle still works cleanly.
     applyLang('he');
 
-    // Fetch signer form context (with 20s timeout for GAS cold starts)
+    // Fetch signer form context (with 20s timeout for GAS cold starts). Silent
+    // auto-retry on timeout/network error (CTO review finding #4, ported from
+    // israel.html's fetchCfg(attempt) backoff): a single attempt against a cold
+    // GAS start previously left a signer on the "Link unavailable" retry screen
+    // for a transient blip the manual retry-btn would have cleared on its own.
+    // GET is naturally safe to retry (no side effect on the server).
+    var signerformRetriesLeft_ = 2;
     function loadSignerForm() {
       show('loading');
       var x = new XMLHttpRequest();
@@ -592,8 +598,17 @@
         }
         renderSignerForm(ctx);
       };
-      x.ontimeout = function () { if (window.console) console.log('signer: signerform timeout'); applyLang('he'); show('timeout'); };
-      x.onerror   = function () { if (window.console) console.log('signer: signerform network error'); applyLang('he'); show('timeout'); };
+      function retryOrGiveUp_(why) {
+        if (window.console) { try { console.log('signer: signerform ' + why); } catch (eT) {} }
+        if (signerformRetriesLeft_ > 0) {
+          signerformRetriesLeft_--;
+          setTimeout(loadSignerForm, 2500);
+          return;
+        }
+        applyLang('he'); show('timeout');
+      }
+      x.ontimeout = function () { retryOrGiveUp_('timeout'); };
+      x.onerror   = function () { retryOrGiveUp_('network error'); };
       x.send(null);
     }
     document.getElementById('retry-btn').onclick = loadSignerForm;
@@ -1910,10 +1925,7 @@
           payload: payloadObj
         });
 
-        var p = new XMLHttpRequest();
-        p.open('POST', GW + '?source=lp', true);
-        p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-        p.timeout = 70000; // 70s. A cold GAS start plus the signature PNG upload and seal can exceed 40s; a too-short timeout surfaced an in-progress submit as a false "could not record" failure. Retry stays safe (the gateway dedupes by processId).
+        var p;
         function onPostFail() {
           // Failure visibility (2026-07-15): log the envelope (or the network
           // status) on every failure path; the signer sees the existing retry
@@ -1926,30 +1938,54 @@
           doneBtn.disabled = false; clearBtn.disabled = false;
           submitting = false; // allow autosave again on retry
         }
-        p.onreadystatechange = function () {
-          if (p.readyState !== 4) return;
-          var res = {};
-          try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
-          // Proof-of-progress gate (2026-07-15, Bremington parity): ok:true
-          // alone, including an ok-less JSON body or the engine's evidence-free
-          // replay collapse, never paints the done screen. Require an
-          // allowlisted stage AND concrete progress evidence
-          // (submitShowsProgress_ above). A gated-out response routes to the
-          // existing retry surface with the full envelope on the console (a
-          // retry is safe: the engine is locked + idempotent).
-          if (submitShowsProgress_(res)) {
-            // EasySend shows the SAME post-sign splash after every signer (the
-            // email/signed-copy promise lives on the welcome splash, not here), so
-            // the message does not branch on stage.
-            document.getElementById('done-msg').textContent = tHe('Thank you for your cooperation');
-            show('done');
-          } else {
+        // Timeout-only auto-retry (CTO review finding #4, ported from israel.html/
+        // flow.html's window.LVPGateway.retryOnTimeout: retries:2, backoffMs:5000).
+        // A generic network error (onerror) is NOT retried - that can mean the
+        // request never reached the server at all, a case retryOnTimeout also
+        // treats as terminal. Retry stays safe on a timeout specifically because
+        // the gateway dedupes by processId (a cold GAS start plus the signature
+        // PNG upload and seal can exceed 40s, which is why the timeout itself is
+        // 70s), so a silent second attempt can never double-record a signature.
+        var submitRetriesLeft_ = 2;
+        function attemptSubmit_() {
+          p = new XMLHttpRequest();
+          p.open('POST', GW + '?source=lp', true);
+          p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+          p.timeout = 70000;
+          p.onreadystatechange = function () {
+            if (p.readyState !== 4) return;
+            var res = {};
+            try { res = JSON.parse(p.responseText); } catch (e) { res = { ok: false }; }
+            // Proof-of-progress gate (2026-07-15, Bremington parity): ok:true
+            // alone, including an ok-less JSON body or the engine's evidence-free
+            // replay collapse, never paints the done screen. Require an
+            // allowlisted stage AND concrete progress evidence
+            // (submitShowsProgress_ above). A gated-out response routes to the
+            // existing retry surface with the full envelope on the console (a
+            // retry is safe: the engine is locked + idempotent).
+            if (submitShowsProgress_(res)) {
+              // EasySend shows the SAME post-sign splash after every signer (the
+              // email/signed-copy promise lives on the welcome splash, not here), so
+              // the message does not branch on stage.
+              document.getElementById('done-msg').textContent = tHe('Thank you for your cooperation');
+              show('done');
+            } else {
+              onPostFail();
+            }
+          };
+          p.ontimeout = function () {
+            if (submitRetriesLeft_ > 0) {
+              if (window.console) { try { console.log('signer: record_signature timeout; retrying (' + submitRetriesLeft_ + ' left)'); } catch (eT) {} }
+              submitRetriesLeft_--;
+              setTimeout(attemptSubmit_, 5000);
+              return;
+            }
             onPostFail();
-          }
-        };
-        p.ontimeout = onPostFail;
-        p.onerror   = onPostFail;
-        p.send(body);
+          };
+          p.onerror = onPostFail;
+          p.send(body);
+        }
+        attemptSubmit_();
         }); // end whenUploadsReady
       }
 

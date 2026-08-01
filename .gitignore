@@ -9,3 +9,4 @@ test/*
 !test/upload-race-harness.cjs
 !test/doc-sanitize-harness.cjs
 !test/id-checksum-harness.cjs
+!test/signer-config-retry-harness.cjs
