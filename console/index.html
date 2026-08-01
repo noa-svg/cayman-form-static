@@ -4635,6 +4635,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(docsExist&&!isTerminal){
       dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
     }
+    // "Mark money received" (2026-08-01): Noa confirms, from her own FIBI login,
+    // that this LP's money landed. Only meaningful once the process is complete
+    // (sealed). Shown for every complete process rather than gated on a fetched
+    // wire-status field, the server side is idempotent and reports plainly when
+    // there is nothing to advance (already past Pending, or no tracker row for
+    // this flow type), so a second click or an inapplicable flow never misfires.
+    if(isComplete){
+      dactBtns+='<button class="markreceived" data-act="markMoneyReceived">Mark money received</button>';
+    }
     if(!isTerminal){
       dactBtns+='<button class="dvoid" data-act="void">Void</button>';
     }
@@ -5035,7 +5044,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // the status line with real context, never a bare native alert('Error').
     var ACT_CONFIRM={
       void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
-      reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'}
+      reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'},
+      markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'}
     };
     var confEl=document.getElementById('dactConfirm'),msgEl=document.getElementById('dacMsg'),
         goEl=document.getElementById('dacGo'),cancelEl=document.getElementById('dacCancel'),
@@ -5109,6 +5119,25 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       };
     });
     if(cancelEl)cancelEl.onclick=function(){dHideConfirm();};
+    // "Mark money received" result rendering: unlike void/reseal (plain ok/fail,
+    // then reload), this action returns real content Noa needs to read (which
+    // drafts already exist, whether the tracker/Monday writes actually moved
+    // anything). Rendered into dactStatus as a small list rather than a bare
+    // sentence; still never a native alert.
+    function dMoneyReceivedSummary(r){
+      var t=r.tracker||{};
+      var trackerLine=t.alreadyAdvanced
+        ? ('Wire status already: '+esc2(t.currentStatus||'advanced')+'.')
+        : ('Wire status: Pending -> '+esc2(t.newStatus||'Received in transit')+'.');
+      var mondayLine=(r.monday&&r.monday.ok)?' Mirrored to Monday.':'';
+      var drafts=r.drafts||[];
+      var draftsHtml=drafts.length
+        ? ('<div style="margin-top:6px">Draft(s) already waiting in Gmail:<ul style="margin:4px 0 0 18px;padding:0">'
+            +drafts.map(function(d){return '<li>'+esc2(d.label)+'</li>';}).join('')
+            +'</ul><a href="'+esc2(r.draftsFolderUrl||'https://mail.google.com/mail/u/0/#drafts')+'" target="_blank" rel="noopener">Open Gmail Drafts</a></div>')
+        : '<div style="margin-top:6px;color:var(--color-ink-muted)">No draft ids on record for this process (it may predate this feature, or already been sent). Check Gmail Drafts manually.</div>';
+      return trackerLine+mondayLine+draftsHtml;
+    }
     if(goEl)goEl.onclick=function(){
       var act=pendingAct;if(!act)return;
       if(dactBusy)return; // guard a double-tap on Go itself
@@ -5116,6 +5145,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       dactBusy=true;
       goEl.disabled=true;cancelEl.disabled=true;
       dStatus(c.working,'');
+      if(act==='markMoneyReceived'){
+        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid)).then(function(r){
+          dactBusy=false;dHideConfirm();
+          if(r&&r.ok){
+            if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
+          }else{
+            dStatus('Could not mark money received'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
+          }
+        }).catch(function(err){
+          dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;
+          dStatus('Could not mark money received'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection and try again.'),'error');
+        });
+        return;
+      }
       apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
         if(r&&r.ok){
           // F1: void closes the drawer; live-looking actions on a dead process are a misfire hazard.
