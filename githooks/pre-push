@@ -15,11 +15,12 @@
 # static site), so unlike legacy-tools-mono this can't self-wire on
 # install; run the config command by hand once per clone.
 #
-# Known pre-existing gap, not fixed by this pass: israel-flow.cjs and
-# console-harness.cjs (both invoked below) are themselves untracked. A
-# fresh clone with only this hook wired and no test/ restored will
-# correctly fail closed at the `[ ! -d test ]` check, but restoring test/
-# itself is still a manual step today.
+# israel-flow.cjs and console-harness.cjs (both invoked below) ARE tracked
+# (test/*  gitignored, both individually un-ignored by name), so a fresh
+# clone with core.hooksPath wired gets a working gate with no manual test/
+# restore step. (This comment previously claimed the opposite - stale as
+# of 2026-08-02; test/rig.cjs and several new harnesses had the same
+# gitignore-allowlist gap, since fixed.)
 #
 # Bypass (emergencies only): git push --no-verify
 set -e
@@ -37,4 +38,14 @@ node test/israel-flow.cjs             >/dev/null && echo "israel-flow OK"
 node test/console-harness.cjs         >/dev/null && echo "console-harness OK"
 node test/lvp-token-consistency.cjs   >/dev/null && echo "lvp-token-consistency OK"
 node test/atrium-palette-sync.cjs     >/dev/null && echo "atrium-palette-sync OK"
+# CTO review remediation (2026-08-02): real extraction-based tests for the
+# fixes shipped this pass, added to the gate as they were written rather
+# than left sitting unused in test/.
+node test/upload-race-harness.cjs        >/dev/null && echo "upload-race OK"
+node test/doc-sanitize-harness.cjs       >/dev/null && echo "doc-sanitize OK"
+node test/id-checksum-harness.cjs        >/dev/null && echo "id-checksum OK"
+node test/signer-config-retry-harness.cjs >/dev/null && echo "signer-config-retry OK"
+node test/flow-double-submit-harness.cjs >/dev/null && echo "flow-double-submit OK"
+node test/resume-jump-harness.cjs        >/dev/null && echo "resume-jump OK"
+node test/signer-vocab-harness.cjs       >/dev/null && echo "signer-vocab OK"
 echo "pre-push: all green - deploying to Pages."
