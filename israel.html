@@ -119,6 +119,15 @@
     /* Visible keyboard focus for everyone (WCAG 2.4.7). Mouse focus stays clean via :focus-visible. */
     .lvp-card :focus-visible, #lvp-gate :focus-visible, .lvp-lang :focus-visible { outline: 3px solid var(--lvp-navy); outline-offset: 2px; }
 
+    /* Segmented date-of-birth (Friedman 2026-07-31, ported from index.html's
+       .lvp-dob): three numeric boxes (Day/Month/Year) instead of one free-text
+       "dd/mm/yyyy" field, no day/month order ambiguity, inputmode=numeric gives
+       a number pad, no native far-past-date picker. */
+    .lvp-dob__row { display: flex; align-items: baseline; gap: 8px; max-width: 280px; }
+    .lvp-dob__seg { width: 3.2em; text-align: center; }
+    .lvp-dob__seg--y { width: 4.6em; }
+    .lvp-dob__sep { color: var(--lvp-text-muted); font-size: 18px; }
+
     /* CFG-fetch failure gate (2026-07-12): ported byte-for-byte from index.html's
        #lvp-gate, which already handles this on the English form. israel.html had
        no equivalent, a bad/expired/revoked token or an unreachable gateway left
@@ -479,8 +488,8 @@
           <div class="lvp-en-group">
             <p class="lvp-page__hint lvp-hint--en">יש להזין את הפרטים באנגלית כפי שהם מופיעים בתעודה המזהה.</p>
             <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.firstName"></label>
-              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.lastName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.firstName" autocomplete="given-name"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="investorsArray[0].englishDetails.lastName" autocomplete="family-name"></label>
             </div>
           </div>
 
@@ -493,7 +502,7 @@
           <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="investorsArray[0].idNumber" data-validate="il-id" data-help="כולל ספרת ביקורת" inputmode="numeric"></label>
 
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="investorsArray[0].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+            <div class="lvp-field lvp-dob"><span class="lvp-field__label">תאריך לידה</span><div class="lvp-dob__row" dir="ltr" role="group" aria-label="תאריך לידה"><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="יום" data-dob-d autocomplete="bday-day"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="חודש" data-dob-m autocomplete="bday-month"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg lvp-dob__seg--y" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="שנה" data-dob-y autocomplete="bday-year"></div><input type="hidden" name="investorsArray[0].birthDate" data-validate="date-past" data-min-age="18" data-dob-real></div>
             <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="investorsArray[0].birthCountry" data-country data-show-when-trigger="investorsArray[0].birthCountry"></select></label>
           </div>
           <label class="lvp-field" data-show-when="__bornAbroad.investorsArray[0]=true"><span class="lvp-field__label">תאריך עליה</span><input class="lvp-input" type="text" name="investorsArray[0].aliyaDate" data-validate="date-past" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
@@ -585,7 +594,7 @@
           <p class="lvp-page__hint">יש להזין את שם התאגיד וכתובתו בעברית ובאנגלית כפי שהם מופיעים בתעודת ההתאגדות.</p>
 
           <label class="lvp-field"><span class="lvp-field__label">שם התאגיד</span><input class="lvp-input" type="text" data-script="he" name="corporationDetails.corporationName"></label>
-          <label class="lvp-field"><span class="lvp-field__label">שם התאגיד באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.corporationName"></label>
+          <label class="lvp-field"><span class="lvp-field__label">שם התאגיד באנגלית</span><input class="lvp-input" type="text" data-script="en" name="corporationDetails.englishDetails.corporationName" autocomplete="organization"></label>
           <!-- Entity is ALWAYS a חברה (Noa 2026-07-08: the operator only mints a link
                for a company entity). No user choice, so no fiscally-transparent
                partnership/עמותה wrong-form path can seal a regarded-entity W-8BEN-E. -->
@@ -650,8 +659,8 @@
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="firstAuthorized.lastName" autocomplete="family-name"></label>
           </div>
           <div class="lvp-grid-2">
-            <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.firstName"></label>
-            <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.lastName"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.firstName" autocomplete="given-name"></label>
+            <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="firstAuthorized.englishDetails.lastName" autocomplete="family-name"></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="firstAuthorized.idNumber" data-validate="il-id" inputmode="numeric"></label>
           <!-- EasySend production model: representative Israeli address. Labels + legend cloned
@@ -682,8 +691,8 @@
               <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="secondAuthorized.lastName"></label>
             </div>
             <div class="lvp-grid-2">
-              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.firstName"></label>
-              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.lastName"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.firstName" autocomplete="given-name"></label>
+              <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="secondAuthorized.englishDetails.lastName" autocomplete="family-name"></label>
             </div>
             <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="secondAuthorized.idNumber" data-validate="il-id" inputmode="numeric"></label>
             <!-- EasySend production model: representative Israeli address. Labels + legend cloned
@@ -873,8 +882,8 @@
                 <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].lastName"></label>
               </div>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.firstName"></label>
-                <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.lastName"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם פרטי באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.firstName" autocomplete="off"></label>
+                <label class="lvp-field"><span class="lvp-field__label">שם משפחה באנגלית</span><input class="lvp-input" type="text" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.lastName" autocomplete="off"></label>
               </div>
               <fieldset class="lvp-fieldset">
                 <legend class="lvp-fieldset__legend">מין</legend>
@@ -883,7 +892,7 @@
               </fieldset>
               <label class="lvp-field"><span class="lvp-field__label">מספר תעודת זהות</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].idNumber" data-validate="il-id" inputmode="numeric"></label>
               <div class="lvp-grid-2">
-                <label class="lvp-field"><span class="lvp-field__label">תאריך לידה</span><input class="lvp-input" type="text" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthDate" data-validate="date-past" data-min-age="18" inputmode="numeric" placeholder="dd/mm/yyyy"></label>
+                <div class="lvp-field lvp-dob"><span class="lvp-field__label">תאריך לידה</span><div class="lvp-dob__row" dir="ltr" role="group" aria-label="תאריך לידה"><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="יום" data-dob-d autocomplete="off"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="חודש" data-dob-m autocomplete="off"><span class="lvp-dob__sep">/</span><input class="lvp-input lvp-dob__seg lvp-dob__seg--y" inputmode="numeric" maxlength="4" placeholder="YYYY" aria-label="שנה" data-dob-y autocomplete="off"></div><input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthDate" data-validate="date-past" data-min-age="18" data-dob-real></div>
                 <label class="lvp-field"><span class="lvp-field__label">ארץ לידה</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].birthCountry" data-country></select></label>
               </div>
               <label class="lvp-field"><span class="lvp-field__label">מדינת אזרחות</span><select class="lvp-input--select" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].citizenship" data-country></select></label>
@@ -2163,6 +2172,47 @@
       var d = String(el.value).replace(/\D/g, '');
       if (d !== el.value) el.value = d;
     }
+    // Segmented date-of-birth (Friedman 2026-07-31): three numeric boxes
+    // (data-dob-d/m/y) instead of one free-text dd/mm/yyyy field, ported from
+    // index.html's .lvp-dob. Deliberately does NOT touch the server contract:
+    // the segments reassemble into the SAME dd/mm/yyyy string on the SAME
+    // original named input (now hidden, data-dob-real), which still carries
+    // data-validate="date-past" / data-min-age="18" untouched, so LVPRules
+    // (the verbatim server-validator mirror, proven by validation-parity-
+    // harness.cjs) never sees a different shape. Matches index.html's own
+    // precedent (line 2546 comment there): validated as a unit at Continue,
+    // not live - only the CLEAR-on-fix is live, using the real validator so a
+    // date that's syntactically complete but calendar-invalid or under 18
+    // correctly stays flagged until actually fixed.
+    function dobAssemble(holder) {
+      var real = holder.querySelector('[data-dob-real]');
+      if (!real) return;
+      var d = holder.querySelector('[data-dob-d]'), m = holder.querySelector('[data-dob-m]'), y = holder.querySelector('[data-dob-y]');
+      var dd = (d.value || '').replace(/\D/g, ''), mm = (m.value || '').replace(/\D/g, ''), yy = (y.value || '').replace(/\D/g, '');
+      real.value = (dd && mm && yy.length === 4) ? (('0' + dd).slice(-2) + '/' + ('0' + mm).slice(-2) + '/' + yy) : '';
+      if (holder.classList.contains('lvp-field--error') && typeof validateField === 'function' && !validateField(real)) {
+        clearFieldError_(holder);
+      }
+    }
+    function dobSplit(holder) {
+      var real = holder.querySelector('[data-dob-real]');
+      if (!real || !real.value) return;
+      var mt = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(real.value);
+      if (!mt) return;
+      holder.querySelector('[data-dob-d]').value = mt[1];
+      holder.querySelector('[data-dob-m]').value = mt[2];
+      holder.querySelector('[data-dob-y]').value = mt[3];
+    }
+    function dobInitAll(scope) { Array.prototype.slice.call((scope || form).querySelectorAll('.lvp-dob')).forEach(dobSplit); }
+    form.addEventListener('input', function (e) {
+      var holder = e.target.closest ? e.target.closest('.lvp-dob') : null;
+      if (!holder) return;
+      var isSeg = e.target.hasAttribute('data-dob-d') || e.target.hasAttribute('data-dob-m') || e.target.hasAttribute('data-dob-y');
+      if (!isSeg) return;
+      dobAssemble(holder);
+      if (e.target.hasAttribute('data-dob-d') && e.target.value.length >= 2) { var mm2 = holder.querySelector('[data-dob-m]'); if (mm2) mm2.focus(); }
+      else if (e.target.hasAttribute('data-dob-m') && e.target.value.length >= 2) { var yy2 = holder.querySelector('[data-dob-y]'); if (yy2) yy2.focus(); }
+    });
     form.addEventListener('input', function (e) {
       var el = e.target;
       if (!el || !el.getAttribute) return;
@@ -3259,6 +3309,9 @@
       enforceQualMutex();
       var amt = form.querySelector('[data-amount]');
       if (amt && amt.value) { var n = String(amt.value).replace(/[^0-9]/g, ''); amt.value = n ? Number(n).toLocaleString('en-US') : ''; }
+      // Step 2 restored the hidden dd/mm/yyyy value by name; split it back into
+      // the visible Day/Month/Year segments for display.
+      dobInitAll();
     }
 
     // ---- the files payload the gateway persists (per-investor + entity + lawyer) ----
