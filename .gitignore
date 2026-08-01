@@ -11,3 +11,5 @@ test/*
 !test/id-checksum-harness.cjs
 !test/signer-config-retry-harness.cjs
 !test/flow-double-submit-harness.cjs
+!test/resume-jump-harness.cjs
+!test/signer-vocab-harness.cjs
