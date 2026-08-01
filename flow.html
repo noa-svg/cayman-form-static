@@ -438,13 +438,6 @@
       function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
       function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
 
-      // Flow-type predicates. The IL lane gateway may report a flow under either
-      // its cayman_* identifier or the israeli_* one (see console FLOW_LABEL map).
-      // Both name the same form, so branch on these helpers rather than a single
-      // literal — the raw flowType is still echoed back to the gateway verbatim.
-      function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
-      function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
-
       var $loading = document.getElementById('lvp-loading');
       var $form = document.getElementById('lvp-form');
 
