@@ -5865,6 +5865,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
     return h;
   }
+  function wlTransfersHtml(transfers){
+    if(!transfers||!transfers.length)return '<div style="margin-top:8px;color:var(--color-ink-muted)">No transfers on this tab.</div>';
+    var rows=transfers.map(function(t){
+      return '<tr><td style="padding:4px 8px">'+esc2(t.name)+'</td><td style="padding:4px 8px">'+esc2(t.type)+'</td>'
+        +'<td style="padding:4px 8px;text-align:right">'+esc2(String(t.amount))+'</td><td style="padding:4px 8px">'+esc2(t.currency)+'</td></tr>';
+    }).join('');
+    return '<div style="margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+      +'<thead><tr style="color:var(--color-ink-muted);text-align:left"><th style="padding:4px 8px">Name</th><th style="padding:4px 8px">Type</th>'
+      +'<th style="padding:4px 8px;text-align:right">Amount</th><th style="padding:4px 8px">Currency</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -5883,12 +5894,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
         if(r.go===false){
-          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
+          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings)+wlTransfersHtml(r.transfers);
           lastGo=false;genBtn.disabled=true;
           return;
         }
         if(!r.ok){findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(r.error||'Review failed.')+'</div>';return;}
-        findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
+        findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>'+wlTransfersHtml(r.transfers);
         lastGo=true;genBtn.disabled=false;
       }).catch(function(err){
         reviewBtn.disabled=false;
