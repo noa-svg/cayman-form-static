@@ -2790,6 +2790,18 @@ body.side-coll .ss-lbl { display: none; }
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
 .lp-empty-detail{margin-top:4px;font-size:11px;color:var(--color-ink-muted);word-break:break-word}
+/* Transfer Form rows peek (2026-08-02): same bordered-card + row shell as
+   .board-lp-results below, so the always-on rows table reads as part of the
+   same design language instead of a bare unstyled <table>. */
+.wl-rows{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-top:14px}
+.wl-rows-hdr{padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.wl-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
+.wl-row:last-child{border-bottom:none}
+.wl-row-nm{flex:1;min-width:0;font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-row-type{width:110px;flex-shrink:0;color:var(--color-ink-muted);font-size:12px}
+.wl-row-amt{width:150px;flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink)}
+.wl-row-ccy{color:var(--color-ink-muted);font-size:11px}
+.wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
 /* Board-search LP directory results (2026-08-02): Increase/Withdrawal
    reachable straight from the board's own search box, not buried behind
    the NEW menu. Same row shell as .lp-row; adds two action pills per row
@@ -3419,7 +3431,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-02-1';
+  window.__BUILD_TAG = 'console-2026-08-02-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5935,15 +5947,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return h;
   }
   function wlTransfersHtml(transfers){
-    if(!transfers||!transfers.length)return '<div style="margin-top:8px;color:var(--color-ink-muted)">No transfers on this tab.</div>';
+    if(!transfers||!transfers.length)return '<div class="wl-rows"><div class="wl-rows-hdr">Transfers</div><div class="wl-row-empty">No transfers on this tab.</div></div>';
     var rows=transfers.map(function(t){
-      return '<tr><td style="padding:4px 8px">'+esc2(t.name)+'</td><td style="padding:4px 8px">'+esc2(t.type)+'</td>'
-        +'<td style="padding:4px 8px;text-align:right">'+esc2(String(t.amount))+'</td><td style="padding:4px 8px">'+esc2(t.currency)+'</td></tr>';
+      return '<div class="wl-row"><div class="wl-row-nm">'+esc2(t.name)+'</div><div class="wl-row-type">'+esc2(t.type)+'</div>'
+        +'<div class="wl-row-amt">'+esc2(String(t.amount))+' <span class="wl-row-ccy">'+esc2(t.currency)+'</span></div></div>';
     }).join('');
-    return '<div style="margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:13px">'
-      +'<thead><tr style="color:var(--color-ink-muted);text-align:left"><th style="padding:4px 8px">Name</th><th style="padding:4px 8px">Type</th>'
-      +'<th style="padding:4px 8px;text-align:right">Amount</th><th style="padding:4px 8px">Currency</th></tr></thead>'
-      +'<tbody>'+rows+'</tbody></table></div>';
+    return '<div class="wl-rows"><div class="wl-rows-hdr">Transfers ('+transfers.length+')</div>'+rows+'</div>';
   }
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
