@@ -4391,7 +4391,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           box.innerHTML='<button type="button" class="board-lp-new-row" id="boardLpNewRow">Start onboarding for <b>'+esc2(q)+'</b></button>';
           box.hidden=false;
           if(emptyDiv)emptyDiv.hidden=true;
-          document.getElementById('boardLpNewRow').onclick=function(){
+          document.getElementById('boardLpNewRow').onclick=function(e){
+            // Without stopPropagation this click bubbles to the document-level
+            // "click outside NEW closes it" listener (this button lives outside
+            // newWrap), which fires on the SAME click right after toggleNewDd()
+            // opens it - immediately closing it again in the same event. The
+            // real New button guards against this exact thing the same way.
+            e.stopPropagation();
             window.__pendingOnboardingEmail=q;
             box.hidden=true;box.innerHTML='';
             toggleNewDd();

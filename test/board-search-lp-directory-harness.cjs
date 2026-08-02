@@ -43,7 +43,7 @@ if (iifeSrc.indexOf("data-proc=\"increase\"") === -1 || iifeSrc.indexOf("data-pr
 }
 
 function build() {
-  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div><div id="list"><div class="empty">No processes match "x".</div></div><div id="newDd"><div class="dd-onboarding"><button class="new-dd-item" data-kind="new">Individual</button></div></div></body>');
+  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div><div id="list"><div class="empty">No processes match "x".</div></div><div id="newWrap"><div id="newDd"><div class="dd-onboarding"><button class="new-dd-item" data-kind="new">Individual</button></div></div></div></body>');
   const document = dom.window.document;
   const calls = { apiFetch: [], setPick: [], setToggleSilent: [], closeNewDd: 0, open: 0, toggleNewDd: 0 };
   const state = { lane: 'israel', process: '', type: '' };
@@ -58,6 +58,13 @@ function build() {
   function open() { calls.open++; }
   function toggleNewDd() { calls.toggleNewDd++; }
   const newDd = document.getElementById('newDd');
+  // Mirrors the REAL app's own outside-click-closes-NEW listener
+  // (document.addEventListener("click", ...) near toggleNewDd's definition) -
+  // without this, block 8 below cannot catch the exact 2026-08-02 regression
+  // where the onboarding-shortcut button, living outside newWrap, opened NEW
+  // and then immediately re-closed it via this same listener on the same click.
+  const newWrap = document.getElementById('newWrap');
+  document.addEventListener('click', (e) => { if (newWrap && !newWrap.contains(e.target)) closeNewDd(); });
   const fn = new dom.window.Function(
     'document', 'apiFetch', 'state', 'setToggleSilent', 'closeNewDd', 'open', 'esc2', 'window', 'setTimeout', 'clearTimeout', 'toggleNewDd', 'newDd',
     iifeSrc
@@ -188,6 +195,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('the row names the exact typed email, not a generic label', row.textContent.indexOf('newlp@example.com') !== -1);
     row.click();
     ok('clicking it opens the NEW dropdown via the real toggleNewDd, not a re-implementation', t.calls.toggleNewDd === 1);
+    // 2026-08-02 regression: this button lives OUTSIDE newWrap, so its click bubbles
+    // to the app's own document-level "click outside NEW closes it" listener - without
+    // e.stopPropagation() that listener fires on the SAME click right after toggleNewDd()
+    // opens it, immediately closing it again (confirmed live: newDd never visibly opened).
+    ok('the click does not also trigger the outside-click-closes-NEW listener on itself', t.calls.closeNewDd === 0);
     ok('the typed email is stashed for quickPick to consume on the Onboarding pick', t.window_.__pendingOnboardingEmail === 'newlp@example.com');
     ok('the popover closes itself once the shortcut is taken', t.document.getElementById('boardLpResults').hidden === true);
   }
