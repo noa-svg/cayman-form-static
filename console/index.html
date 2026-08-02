@@ -2663,11 +2663,15 @@ body.side-coll .ss-lbl { display: none; }
   #login-screen { padding: 16px; }
   .lc { padding: var(--space-6) var(--space-4) var(--space-4); }
 
-  /* Topbar: tighter */
-  .top { padding: 12px var(--grid-gutter); gap: 8px; }
+  /* Topbar: tighter. 2026-08-02: search moved into .top-right (replacing the
+     New button) overflowed off-screen on one crammed row with the fund
+     switcher + title - wrap the row and give search its own full-width line,
+     the same shape .listhead used to give it before New was removed. */
+  .top { padding: 12px var(--grid-gutter); gap: 8px; flex-wrap: wrap; }
+  .top-right { width: 100%; order: 3; }
 
   /* Persistent create affordance on mobile (tiles scroll out of view here) */
-  .new-wrap { display: inline-flex; }
+  .new-wrap { display: inline-flex; width: 100%; }
 
   /* Mobile fund switcher in topbar */
   #mob-fund {
@@ -2721,7 +2725,8 @@ body.side-coll .ss-lbl { display: none; }
   input, select, textarea { font-size: 16px !important; }
   .board-search { font-size: 16px; width: 100%; }
 
-  /* Search goes full-width; the top-bar "New" split is the create affordance. */
+  /* .listhead is dead markup (search moved into .top-right, 2026-08-02) -
+     these two rules are now unused; left as-is, safe cleanup for a later pass. */
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
 
@@ -2816,13 +2821,15 @@ body.side-coll .ss-lbl { display: none; }
 /* Board-search LP directory results (2026-08-02, redesigned as a floating
    popover after Noa: "why would a user think the search is a shortcut to
    a new process"). Increase/Withdrawal reachable straight from the board's
-   own search box, not buried behind the NEW menu - but the results float
-   ABOVE the board (anchored to .listhead, which is position:relative) so
-   typing never shoves the pipeline list down. Ive S1: transient UI stays
-   transient, it does not permanently alter page layout. Same row shell as
-   .lp-row; adds two action pills per row since type comes from the match
-   record, no Individual/Entity prompt. */
-.board-lp-results{position:absolute;top:calc(100% + 6px);left:0;width:360px;max-width:calc(100vw - 48px);z-index:30;border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);box-shadow:var(--shadow-card);max-height:min(60vh,420px);overflow-y:auto}
+   own search box, not buried behind a NEW menu (the standalone New button
+   itself was later removed as fully redundant with this search - see the
+   .new-wrap markup comment) - the results float ABOVE the board (anchored
+   to .new-wrap, which is position:relative) so typing never shoves the
+   pipeline list down. Ive S1: transient UI stays transient, it does not
+   permanently alter page layout. Same row shell as .lp-row; adds two action
+   pills per row since type comes from the match record, no Individual/
+   Entity prompt. */
+.board-lp-results{position:absolute;top:calc(100% + 6px);right:0;width:360px;max-width:calc(100vw - 48px);z-index:30;border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);box-shadow:var(--shadow-card);max-height:min(60vh,420px);overflow-y:auto}
 .board-lp-results .board-lp-hdr{padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
 .board-lp-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle)}
 .board-lp-row:last-child{border-bottom:none}
@@ -3172,12 +3179,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div id="mob-fund"><button class="mob-fb" data-v="cayman">CY</button><button class="mob-fb on" data-v="israel">IL</button></div>
         <div><h1>Board</h1></div>
         <div class="top-right">
+          <!-- 2026-08-02, Noa: "the new button is redundant" - search now covers
+               every path New used to gate (Increase/Withdrawal with type auto-
+               derived from Monday, Onboarding for a pending contact or a brand
+               new one via the footer below), and New's own Increase/Withdrawal
+               rows were actually the WORSE path (forced a manual Individual/
+               Entity pick on an existing LP, which should never be asked). The
+               standalone button is gone; search is the one entry point. #newDd
+               stays as the Onboarding-only mechanism search itself opens
+               (openOnboarding() in the board-search IIFE below) - never
+               reachable independently anymore. -->
           <div class="new-wrap" id="newWrap">
-            <button class="cmd-btn" id="newBtn" aria-haspopup="menu" aria-expanded="false">New <span class="cmd-caret" aria-hidden="true">&#9662;</span></button>
-            <!-- One convention: FLOW primary, TYPE secondary. Language is chosen once,
-                 in the panel (#segLang), defaulted by fund; no he/en here. The sep
-                 lives inside .dd-onboarding so hiding that group on Israel hides the
-                 divider too, leaving the existing-LP items clean. -->
+            <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off" aria-haspopup="menu" aria-expanded="false">
+            <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
+                 search behind the NEW menu; redesigned as a floating popover so it
+                 never shoves the board below it - .new-wrap is already
+                 position:relative, same anchor #newDd already used. -->
+            <div id="boardLpResults" class="board-lp-results" role="status" aria-live="polite" aria-atomic="true" hidden></div>
             <div class="new-dd" id="newDd" role="menu">
               <div class="dd-onboarding">
                 <div class="new-dd-row">
@@ -3187,36 +3205,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                     <button class="new-dd-item" data-proc="subscription" data-type="entity" data-kind="new" role="menuitem">Entity</button>
                   </div>
                 </div>
-                <div class="new-dd-sep"></div>
-              </div>
-              <div class="new-dd-row">
-                <span class="ndl">Increase</span>
-                <div class="ndg">
-                  <button class="new-dd-item" data-proc="increase" data-type="individual" data-kind="existing" role="menuitem">Individual</button>
-                  <button class="new-dd-item" data-proc="increase" data-type="entity" data-kind="existing" role="menuitem">Entity</button>
-                </div>
-              </div>
-              <div class="new-dd-row">
-                <span class="ndl">Withdrawal</span>
-                <div class="ndg">
-                  <button class="new-dd-item" data-proc="withdrawal" data-type="individual" data-kind="existing" role="menuitem">Individual</button>
-                  <button class="new-dd-item" data-proc="withdrawal" data-type="entity" data-kind="existing" role="menuitem">Entity</button>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div class="content">
-        <div class="listhead">
-          <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off">
-          <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
-               search behind the NEW menu; redesigned as a floating popover so it
-               never shoves the board below it - must be a CHILD of .listhead
-               (not a sibling) for .listhead's position:relative to actually be
-               its containing block. -->
-          <div id="boardLpResults" class="board-lp-results" role="status" aria-live="polite" aria-atomic="true" hidden></div>
-        </div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
@@ -4609,16 +4603,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
   }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
-  // "New" opens the lane-aware menu (Israel: Increase/Withdrawal; Cayman: + Onboarding),
-  // never a fixed subscription panel - so the Israel operator always picks a valid flow.
-  document.getElementById("newBtn").onclick=function(e){e.stopPropagation();toggleNewDd();};
   document.getElementById("closeBtn").onclick=close;
   scrim.onclick=close;
-  // quick-pick dropdown
-  var newDd=document.getElementById("newDd"),newWrap=document.getElementById("newWrap"),newBtn=document.getElementById("newBtn");
-  // Single "New" button: one control, one behavior. Toggle keeps the caret + aria in sync.
-  function closeNewDd(){newDd.classList.remove("on");newBtn.classList.remove("open");newBtn.setAttribute("aria-expanded","false");}
-  function toggleNewDd(){var on=newDd.classList.toggle("on");newBtn.classList.toggle("open",on);newBtn.setAttribute("aria-expanded",on?"true":"false");}
+  // Onboarding menu (2026-08-02: the standalone "New" button that used to open
+  // this directly is gone - board search is the one entry point now, see the
+  // .new-wrap markup comment. #newDd is opened only by openOnboarding() in the
+  // board-search IIFE below. aria-expanded moved onto #boardSearch itself,
+  // the de facto combobox trigger now that there is no dedicated button.
+  var newDd=document.getElementById("newDd"),newWrap=document.getElementById("newWrap"),boardSearchEl=document.getElementById("boardSearch");
+  function closeNewDd(){newDd.classList.remove("on");if(boardSearchEl)boardSearchEl.setAttribute("aria-expanded","false");}
+  function toggleNewDd(){var on=newDd.classList.toggle("on");if(boardSearchEl)boardSearchEl.setAttribute("aria-expanded",on?"true":"false");}
   document.addEventListener("click",function(e){if(newWrap&&!newWrap.contains(e.target)){closeNewDd();}});
   function setToggleSilent(id,key,val){var s=document.getElementById(id);if(!s)return;Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");});var b=s.querySelector('[data-v="'+val+'"]');if(b){b.classList.add("on");state[key]=val;}}
   function quickPick(btn){
