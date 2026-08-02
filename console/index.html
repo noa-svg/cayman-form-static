@@ -3081,7 +3081,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
       <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
       <button class="nav" data-view="w8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
-      <button class="nav" data-view="wireletter"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Wire Letter</span></button>
+      <button class="nav" data-view="wireletter"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Transfer Form</span></button>
     </nav>
     <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
          of data we need to see"). Filled from the SAME allRows the board already
@@ -3169,7 +3169,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
     </div>
     <div class="view" id="v-wireletter" hidden>
-      <div class="top"><div><h1>Wire Letter</h1><div class="sub">Monthly bank wire-instruction letter, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
+      <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
       <div class="content">
         <div class="set-card" style="max-width:640px">
           <h3 class="set-h">Generate</h3>
@@ -5833,7 +5833,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
   }
 
-  // Wire Letter (2026-08-01, dazzling-seeking-dahl.md). Two independent
+  // Transfer Form (2026-08-01, dazzling-seeking-dahl.md). Two independent
   // actions on one tab: monthly batch generation (review -> generate) and
   // manual off-pipeline row insertion. Both call ju-cayman's own routes only
   // - this console never reaches across to the transfer-forms app.
@@ -6315,7 +6315,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true">🗂️</span><span class="tab-lbl">Board</span></button>
   <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true">✉️</span><span class="tab-lbl">Msgs</span></button>
   <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true">🕒</span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
-  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true">🏦</span><span class="tab-lbl">Wire Letter</span></button>
+  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true">🏦</span><span class="tab-lbl">Transfer Form</span></button>
   <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true">⚙️</span><span class="tab-lbl">Settings</span></button>
 </nav>
 <script>
