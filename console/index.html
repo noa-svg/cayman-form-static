@@ -742,6 +742,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
    ============================================================ */
 
 .listhead {
+  position: relative; /* anchors .board-lp-results as a floating popover, not a block in flow */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2803,11 +2804,16 @@ body.side-coll .ss-lbl { display: none; }
 .wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
 .wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
 .wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
-/* Board-search LP directory results (2026-08-02): Increase/Withdrawal
-   reachable straight from the board's own search box, not buried behind
-   the NEW menu. Same row shell as .lp-row; adds two action pills per row
-   since type comes from the match record, no Individual/Entity prompt. */
-.board-lp-results{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);margin-bottom:var(--space-3);background:var(--color-bg-card)}
+/* Board-search LP directory results (2026-08-02, redesigned as a floating
+   popover after Noa: "why would a user think the search is a shortcut to
+   a new process"). Increase/Withdrawal reachable straight from the board's
+   own search box, not buried behind the NEW menu - but the results float
+   ABOVE the board (anchored to .listhead, which is position:relative) so
+   typing never shoves the pipeline list down. Ive S1: transient UI stays
+   transient, it does not permanently alter page layout. Same row shell as
+   .lp-row; adds two action pills per row since type comes from the match
+   record, no Individual/Entity prompt. */
+.board-lp-results{position:absolute;top:calc(100% + 6px);left:0;width:360px;max-width:calc(100vw - 48px);z-index:30;border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);box-shadow:var(--shadow-card);max-height:min(60vh,420px);overflow-y:auto}
 .board-lp-results .board-lp-hdr{padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
 .board-lp-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle)}
 .board-lp-row:last-child{border-bottom:none}
@@ -2815,6 +2821,16 @@ body.side-coll .ss-lbl { display: none; }
 .board-lp-actions{display:flex;gap:6px;flex-shrink:0}
 .board-lp-actions button{border:var(--bw) solid var(--color-border-strong);border-radius:var(--radius-sm);background:#fff;color:var(--color-ink);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;padding:6px 10px;cursor:pointer}
 .board-lp-actions button:hover{background:var(--color-atrium-tint);border-color:var(--color-atrium);color:var(--color-atrium-deep)}
+/* New-onboarding-from-search affordance (2026-08-02, Noa: "type in a new
+   email in the search and have that trigger the new"). Shown only when
+   neither the pipeline nor the LP directory found anything AND the typed
+   text is email-shaped - a plain row, not a button-pair, since it launches
+   the NEW menu rather than a specific process (Individual/Entity is
+   genuinely unknown for an LP that does not exist yet, so it cannot be
+   auto-derived the way an existing LP's type is). */
+.board-lp-new-row{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:none;font-size:13px;color:var(--color-atrium-deep);font-weight:600;cursor:pointer}
+.board-lp-new-row:hover{background:var(--color-atrium-tint)}
+.board-lp-new-row b{font-weight:700}
 /* Investments-deal disambiguation (2026-07-30): shown ONLY when a picked LP
    resolves to 2+ linked Investments-board deals, so the operator picks the
    right one instead of the mint silently guessing. Single-match resolves
@@ -3185,12 +3201,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="content">
         <div class="listhead">
           <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off">
+          <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
+               search behind the NEW menu; redesigned as a floating popover so it
+               never shoves the board below it - must be a CHILD of .listhead
+               (not a sibling) for .listhead's position:relative to actually be
+               its containing block. -->
+          <div id="boardLpResults" class="board-lp-results" hidden></div>
         </div>
-        <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
-             search behind the NEW menu). Only shows when boardSearch's local
-             filter over the visible pipeline comes up empty, so it never
-             duplicates a row already on screen. -->
-        <div id="boardLpResults" class="board-lp-results" hidden></div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
@@ -4351,6 +4368,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var si=document.getElementById("boardSearch"),box=document.getElementById("boardLpResults");
     if(!si||!box)return;
     var T=null,seq=0;
+    var EMAIL_RE=/^\S+@\S+\.\S+$/;
     function subline(m){var en=m.nameEn||m.name;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email].filter(Boolean).join('  ·  ');}
     function render(matches){
       // The pipeline's own "No processes match X" empty state (renderRows,
@@ -4365,6 +4383,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // visibility, never touches its content).
       var emptyDiv=document.querySelector('#list .empty');
       if(!matches.length){
+        // Nothing found anywhere. If the query is itself a plausible email,
+        // this reads as "start something new" rather than "find someone" -
+        // offer the NEW->Onboarding shortcut instead of a bare empty box.
+        var q=si.value.trim();
+        if(EMAIL_RE.test(q)){
+          box.innerHTML='<button type="button" class="board-lp-new-row" id="boardLpNewRow">Start onboarding for <b>'+esc2(q)+'</b></button>';
+          box.hidden=false;
+          if(emptyDiv)emptyDiv.hidden=true;
+          document.getElementById('boardLpNewRow').onclick=function(){
+            window.__pendingOnboardingEmail=q;
+            box.hidden=true;box.innerHTML='';
+            toggleNewDd();
+            var first=newDd.querySelector('.dd-onboarding .new-dd-item');
+            if(first)first.focus();
+          };
+          return;
+        }
         box.hidden=true;box.innerHTML='';
         if(emptyDiv)emptyDiv.hidden=false;
         return;
@@ -4547,7 +4582,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
     closeNewDd();
     open();
-    setTimeout(function(){var f=document.getElementById("email");if(f)f.focus();},160);
+    // 2026-08-02, Noa: typing an email in board search that matches nobody can
+    // jump straight into Onboarding with it pre-filled - but only for an
+    // actual onboarding pick (data-kind="new"); Increase/Withdrawal already
+    // has a real LP attached and must never inherit a stray typed string.
+    var pendingEmail=(btn.getAttribute("data-kind")==="new")?window.__pendingOnboardingEmail:null;
+    window.__pendingOnboardingEmail=null;
+    setTimeout(function(){var f=document.getElementById("email");if(f){if(pendingEmail)f.value=pendingEmail;f.focus();}},160);
   }
   Array.prototype.forEach.call(document.querySelectorAll(".new-dd-item"),function(btn){
     btn.onclick=function(){quickPick(btn);};

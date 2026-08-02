@@ -43,9 +43,9 @@ if (iifeSrc.indexOf("data-proc=\"increase\"") === -1 || iifeSrc.indexOf("data-pr
 }
 
 function build() {
-  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div><div id="list"><div class="empty">No processes match "x".</div></div></body>');
+  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div><div id="list"><div class="empty">No processes match "x".</div></div><div id="newDd"><div class="dd-onboarding"><button class="new-dd-item" data-kind="new">Individual</button></div></div></body>');
   const document = dom.window.document;
-  const calls = { apiFetch: [], setPick: [], setToggleSilent: [], closeNewDd: 0, open: 0 };
+  const calls = { apiFetch: [], setPick: [], setToggleSilent: [], closeNewDd: 0, open: 0, toggleNewDd: 0 };
   const state = { lane: 'israel', process: '', type: '' };
   let apiFetchImpl = () => Promise.resolve({ ok: true, matches: [] });
   const window_ = {
@@ -56,12 +56,14 @@ function build() {
   function setToggleSilent(id, key, val) { calls.setToggleSilent.push({ id, key, val }); }
   function closeNewDd() { calls.closeNewDd++; }
   function open() { calls.open++; }
+  function toggleNewDd() { calls.toggleNewDd++; }
+  const newDd = document.getElementById('newDd');
   const fn = new dom.window.Function(
-    'document', 'apiFetch', 'state', 'setToggleSilent', 'closeNewDd', 'open', 'esc2', 'window', 'setTimeout', 'clearTimeout',
+    'document', 'apiFetch', 'state', 'setToggleSilent', 'closeNewDd', 'open', 'esc2', 'window', 'setTimeout', 'clearTimeout', 'toggleNewDd', 'newDd',
     iifeSrc
   );
-  fn(document, apiFetch, state, setToggleSilent, closeNewDd, open, esc2, window_, dom.window.setTimeout, dom.window.clearTimeout);
-  return { dom, document, calls, state, setApiFetchImpl: (f) => { apiFetchImpl = f; } };
+  fn(document, apiFetch, state, setToggleSilent, closeNewDd, open, esc2, window_, dom.window.setTimeout, dom.window.clearTimeout, toggleNewDd, newDd);
+  return { dom, document, calls, state, window_, setApiFetchImpl: (f) => { apiFetchImpl = f; } };
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -167,6 +169,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     si.value = 'Err'; si.dispatchEvent(new t.dom.window.Event('input'));
     await sleep(260);
     ok('a fetch rejection hides the block instead of throwing', t.document.getElementById('boardLpResults').hidden === true);
+  }
+
+  // 8. Zero matches + an email-shaped query offers the NEW->Onboarding shortcut
+  // (2026-08-02, Noa: "type in a new email in the search and have that trigger
+  // the new"). A non-email zero-match query must NOT show this (block 6 already
+  // covers that path staying a plain empty state).
+  {
+    const t = build();
+    t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [] }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'newlp@example.com'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const box = t.document.getElementById('boardLpResults');
+    ok('the box unhides to offer the onboarding shortcut', box.hidden === false);
+    const row = t.document.getElementById('boardLpNewRow');
+    ok('an onboarding-shortcut row renders', !!row);
+    ok('the row names the exact typed email, not a generic label', row.textContent.indexOf('newlp@example.com') !== -1);
+    row.click();
+    ok('clicking it opens the NEW dropdown via the real toggleNewDd, not a re-implementation', t.calls.toggleNewDd === 1);
+    ok('the typed email is stashed for quickPick to consume on the Onboarding pick', t.window_.__pendingOnboardingEmail === 'newlp@example.com');
+    ok('the popover closes itself once the shortcut is taken', t.document.getElementById('boardLpResults').hidden === true);
   }
 
   console.log(pass + ' pass, ' + fail + ' fail');
