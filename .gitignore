@@ -34,3 +34,4 @@ test/*
 !test/index-config-retry-harness.cjs
 !test/popstate-navigation-harness.cjs
 !test/signer-lane-gate-bypass-harness.cjs
+!test/board-search-lp-directory-harness.cjs

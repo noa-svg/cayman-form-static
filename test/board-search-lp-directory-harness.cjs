@@ -1,0 +1,169 @@
+// board-search-lp-directory-harness.cjs (2026-08-02).
+//
+// Proves console/index.html's board-search LP-directory feature (Noa: "search
+// flow being buried in a menu, i dont want that menu"). The SAME board search
+// box that filters the visible pipeline now also queries the full (server-
+// filtered, LP-only, type-tagged) LP directory and offers Increase/Withdrawal
+// directly per match - no NEW-menu detour, no separate Individual/Entity
+// prompt.
+//
+// Extracts the REAL IIFE from the live file (brace-counting) and drives it
+// against a real jsdom DOM with stubbed externals (apiFetch/state/open/etc),
+// so this fails if a future edit breaks the wiring - not just if someone
+// breaks a hand-written copy. The server-side LP-only + type filter itself is
+// proven separately in ju-cayman/test/console-search-lps-lp-only-harness.cjs;
+// this test's job is the CLIENT wiring on top of that server contract.
+//
+// Run: node test/board-search-lp-directory-harness.cjs
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { JSDOM } = require('jsdom');
+const html = fs.readFileSync(path.join(__dirname, '..', 'console', 'index.html'), 'utf8');
+
+let pass = 0, fail = 0;
+function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : JSON.stringify(extra)); } }
+
+function extractIife() {
+  const anchor = '(function(){\n    var si=document.getElementById("boardSearch"),box=document.getElementById("boardLpResults");';
+  const start = html.indexOf(anchor);
+  if (start < 0) throw new Error('board-search IIFE anchor not found (boot contract changed)');
+  let i = html.indexOf('{', start), depth = 0, end = -1;
+  for (; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    else if (html[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+  }
+  // The IIFE is invoked immediately in the file ("})();"); capture through the "()".
+  const closeParen = html.indexOf('()', end);
+  return html.slice(start, closeParen + 2);
+}
+const iifeSrc = extractIife();
+if (iifeSrc.indexOf("data-proc=\"increase\"") === -1 || iifeSrc.indexOf("data-proc=\"withdrawal\"") === -1) {
+  throw new Error('extracted block missing the expected action buttons (boot contract changed)');
+}
+
+function build() {
+  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div></body>');
+  const document = dom.window.document;
+  const calls = { apiFetch: [], setPick: [], setToggleSilent: [], closeNewDd: 0, open: 0 };
+  const state = { lane: 'israel', process: '', type: '' };
+  let apiFetchImpl = () => Promise.resolve({ ok: true, matches: [] });
+  const window_ = {
+    __lpSetPick: (m) => { calls.setPick.push(m); },
+  };
+  function esc2(s) { return String(s == null ? '' : s); } // real escaping already covered by attribute-escaping-harness.cjs; identity here keeps assertions readable
+  function apiFetch(url) { calls.apiFetch.push(url); return apiFetchImpl(url); }
+  function setToggleSilent(id, key, val) { calls.setToggleSilent.push({ id, key, val }); }
+  function closeNewDd() { calls.closeNewDd++; }
+  function open() { calls.open++; }
+  const fn = new dom.window.Function(
+    'document', 'apiFetch', 'state', 'setToggleSilent', 'closeNewDd', 'open', 'esc2', 'window', 'setTimeout', 'clearTimeout',
+    iifeSrc
+  );
+  fn(document, apiFetch, state, setToggleSilent, closeNewDd, open, esc2, window_, dom.window.setTimeout, dom.window.clearTimeout);
+  return { dom, document, calls, state, setApiFetchImpl: (f) => { apiFetchImpl = f; } };
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+(async () => {
+  // 1. Query too short: no fetch fires, results hidden.
+  {
+    const t = build();
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'D';
+    si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    ok('a 1-char query never fetches', t.calls.apiFetch.length === 0);
+    ok('results box stays hidden for a too-short query', t.document.getElementById('boardLpResults').hidden === true);
+  }
+
+  // 2. A real query renders LP-only, type-tagged results with two actions each.
+  {
+    const t = build();
+    t.setApiFetchImpl((url) => {
+      ok('the fetch hits searchLps with the typed query', url.indexOf('?admin=searchLps&q=Dan') === 0, url);
+      return Promise.resolve({ ok: true, matches: [
+        { itemId: '1', name: 'Dana Levi', nameHe: '', nameEn: 'Dana Levi', email: 'dana@example.com', type: 'individual' },
+        { itemId: '2', name: 'Danco Holdings', nameHe: '', nameEn: 'Danco Holdings', email: '', type: 'entity' },
+      ] });
+    });
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Dan';
+    si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const box = t.document.getElementById('boardLpResults');
+    ok('results box unhides once matches arrive', box.hidden === false);
+    const rows = box.querySelectorAll('.board-lp-row');
+    ok('exactly the 2 server-filtered LP matches render, no more no less', rows.length === 2, rows.length);
+    const buttons = box.querySelectorAll('.board-lp-actions button');
+    ok('each row gets exactly 2 action buttons (Increase, Withdrawal) - no Individual/Entity prompt', buttons.length === 4, buttons.length);
+
+    // 3. Clicking Increase on the INDIVIDUAL match sets state correctly and picks the LP.
+    buttons[0].click(); // row 0 (Dana Levi, individual) -> Increase
+    ok('clicking Increase sets state.process=increase', t.state.process === 'increase');
+    ok('type is taken from the match (individual), never asked', t.state.type === 'individual');
+    ok('the LP is picked via the shared window.__lpSetPick, not a re-implementation', t.calls.setPick.length === 1 && t.calls.setPick[0].itemId === '1');
+    ok('the panel opens', t.calls.open === 1);
+    ok('language toggle syncs for the israel lane', t.calls.setToggleSilent.length === 1 && t.calls.setToggleSilent[0].val === 'he');
+  }
+
+  // 4. Withdrawal on the ENTITY match: type correctly comes out as entity.
+  {
+    const t = build();
+    t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [
+      { itemId: '2', name: 'Danco Holdings', nameHe: '', nameEn: 'Danco Holdings', email: '', type: 'entity' },
+    ] }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Danco';
+    si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const buttons = t.document.getElementById('boardLpResults').querySelectorAll('.board-lp-actions button');
+    buttons[1].click(); // Withdrawal on the only row
+    ok('clicking Withdrawal sets state.process=withdrawal', t.state.process === 'withdrawal');
+    ok('entity-group match yields state.type=entity', t.state.type === 'entity');
+  }
+
+  // 5. A stale in-flight response (query changed before it resolved) is dropped.
+  {
+    const t = build();
+    let resolveFirst;
+    let call = 0;
+    t.setApiFetchImpl(() => {
+      call++;
+      if (call === 1) return new Promise((r) => { resolveFirst = r; });
+      return Promise.resolve({ ok: true, matches: [{ itemId: '9', name: 'Second', nameHe: '', nameEn: 'Second', email: '', type: 'individual' }] });
+    });
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Fi'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260); // first debounce fires, fetch #1 now pending (never resolved yet)
+    si.value = 'Se'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260); // second debounce fires, fetch #2 resolves immediately
+    resolveFirst({ ok: true, matches: [{ itemId: '1', name: 'First (stale)', nameHe: '', nameEn: 'First (stale)', email: '', type: 'individual' }] });
+    await sleep(20);
+    const rows = t.document.getElementById('boardLpResults').querySelectorAll('.board-lp-row');
+    ok('a stale, late-resolving response never overwrites the newer result', rows.length === 1 && rows[0].textContent.indexOf('First (stale)') === -1, rows.length ? rows[0].textContent : '(empty)');
+  }
+
+  // 6. No matches: results box hides cleanly (not an error state).
+  {
+    const t = build();
+    t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [] }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Nobody'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    ok('zero matches hides the box rather than showing an empty panel', t.document.getElementById('boardLpResults').hidden === true);
+  }
+
+  // 7. A search error fails soft (hides the block, does not throw / break the local board filter).
+  {
+    const t = build();
+    t.setApiFetchImpl(() => Promise.reject(new Error('network')));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Err'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    ok('a fetch rejection hides the block instead of throwing', t.document.getElementById('boardLpResults').hidden === true);
+  }
+
+  console.log(pass + ' pass, ' + fail + ' fail');
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error('ERR', e.stack || e); process.exit(1); });

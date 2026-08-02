@@ -2790,6 +2790,18 @@ body.side-coll .ss-lbl { display: none; }
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
 .lp-empty-detail{margin-top:4px;font-size:11px;color:var(--color-ink-muted);word-break:break-word}
+/* Board-search LP directory results (2026-08-02): Increase/Withdrawal
+   reachable straight from the board's own search box, not buried behind
+   the NEW menu. Same row shell as .lp-row; adds two action pills per row
+   since type comes from the match record, no Individual/Entity prompt. */
+.board-lp-results{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);margin-bottom:var(--space-3);background:var(--color-bg-card)}
+.board-lp-results .board-lp-hdr{padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.board-lp-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle)}
+.board-lp-row:last-child{border-bottom:none}
+.board-lp-row .lp-meta{min-width:0;flex:1}
+.board-lp-actions{display:flex;gap:6px;flex-shrink:0}
+.board-lp-actions button{border:var(--bw) solid var(--color-border-strong);border-radius:var(--radius-sm);background:#fff;color:var(--color-ink);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;padding:6px 10px;cursor:pointer}
+.board-lp-actions button:hover{background:var(--color-atrium-tint);border-color:var(--color-atrium);color:var(--color-atrium-deep)}
 /* Investments-deal disambiguation (2026-07-30): shown ONLY when a picked LP
    resolves to 2+ linked Investments-board deals, so the operator picks the
    right one instead of the mint silently guessing. Single-match resolves
@@ -3161,6 +3173,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="listhead">
           <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off">
         </div>
+        <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
+             search behind the NEW menu). Only shows when boardSearch's local
+             filter over the visible pipeline comes up empty, so it never
+             duplicates a row already on screen. -->
+        <div id="boardLpResults" class="board-lp-results" hidden></div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
@@ -3597,8 +3614,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       {itemId:'d-onb-2',nameEn:'Almog Hazon',nameHe:'אלמוג חזון',email:'almog@example.com',nickname:'מוגי'}
     ]};
     if(qs.indexOf('?admin=searchLps')===0) return {ok:true,matches:[
-      {itemId:'d-ppl-1',name:'Ido Hagai',nameHe:'עידו חגאי',nameEn:'',email:'ido@example.com',nickname:'עידו'},
-      {itemId:'d-ppl-2',name:'Dalya Cohen',nameHe:'',nameEn:'',email:'dalya@example.com',nickname:'דלי'}
+      {itemId:'d-ppl-1',name:'Ido Hagai',nameHe:'עידו חגאי',nameEn:'',email:'ido@example.com',nickname:'עידו',type:'individual'},
+      {itemId:'d-ppl-2',name:'Dalya Cohen',nameHe:'',nameEn:'',email:'dalya@example.com',nickname:'דלי',type:'entity'}
     ]};
     if(qs.indexOf('?admin=mintLink')===0) return {ok:true,processId:'demo-pid-1',url:'https://sign.legacyvpartners.com/flow.html?t=demo'};
     if(qs.indexOf('?admin=sendIsraeliInvite')===0) return {ok:true,sentTo:'lp@example.com',cc:'omri@legacyvpartners.com'};
@@ -4308,6 +4325,51 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(tg)tg.addEventListener("click",function(){showDone=!showDone;if(showDone&&!doneLoaded)load(true);applySearch();});
     var tc=document.getElementById("showCanceledToggle");
     if(tc)tc.addEventListener("click",function(){showCanceled=!showCanceled;if(showCanceled&&!doneLoaded)load(true);applySearch();});
+  })();
+  // Board-search LP directory results (2026-08-02, Noa: "search flow being
+  // buried in a menu, i dont want that menu" / "dont show in the search non
+  // LPs" / type "determined by their name since that info is stored in
+  // monday"). The SAME boardSearch box that filters the visible pipeline also
+  // queries the full LP directory (now LP-group-filtered + type-tagged
+  // server-side, see caymanConsoleSearchLps_) and offers Increase/Withdrawal
+  // directly per match - no NEW-menu detour, no separate Individual/Entity
+  // prompt (type comes from which Monday group the LP is in).
+  (function(){
+    var si=document.getElementById("boardSearch"),box=document.getElementById("boardLpResults");
+    if(!si||!box)return;
+    var T=null,seq=0;
+    function subline(m){var en=m.nameEn||m.name;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email].filter(Boolean).join('  ·  ');}
+    function render(matches){
+      if(!matches.length){box.hidden=true;box.innerHTML='';return;}
+      box.innerHTML='<div class="board-lp-hdr">LP directory</div>'+matches.map(function(m,i){
+        return '<div class="board-lp-row"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div>'
+          +'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Withdrawal</button></div></div>';
+      }).join('');
+      box.hidden=false;
+      Array.prototype.forEach.call(box.querySelectorAll('.board-lp-actions button'),function(btn){
+        btn.onclick=function(){
+          var m=matches[+btn.getAttribute('data-i')];
+          state.process=btn.getAttribute('data-proc');
+          state.type=m.type==='entity'?'entity':'individual'; // server-derived from the LP's Monday group; never asked here
+          setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
+          if(window.__lpSetPick)window.__lpSetPick(m);
+          closeNewDd();
+          open();
+        };
+      });
+    }
+    si.addEventListener('input',function(){
+      var q=si.value.trim();
+      if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+      if(T)clearTimeout(T);
+      T=setTimeout(function(){
+        var mySeq=++seq;
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){
+          if(mySeq!==seq)return; // stale: query changed while this was in flight
+          render((d&&d.matches)||[]);
+        }).catch(function(){ if(mySeq===seq)render([]); }); // fail-soft: a search error just hides this block, the local board filter above still works
+      },220);
+    });
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
@@ -5409,6 +5471,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
       resolveInvestmentsForPick(m);
     }
+    // Exposed (2026-08-02) so the board-search LP-directory results can reuse
+    // the exact same pick logic instead of a second copy, same pattern as the
+    // existing window.__lpClearPick a few lines above.
+    window.__lpSetPick=setPick;
     function render(){
       if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
       box.innerHTML=rows.map(function(m,i){

@@ -82,4 +82,5 @@ node test/popstate-navigation-harness.cjs        >/dev/null && echo "popstate-na
 node test/signer-lane-gate-bypass-harness.cjs    >/dev/null && echo "signer-lane-gate-bypass OK"
 node test/drawer-race-harness.cjs                >/dev/null && echo "drawer-race OK"
 node test/console-action-contract.cjs            >/dev/null && echo "console-action-contract OK"
+node test/board-search-lp-directory-harness.cjs  >/dev/null && echo "board-search-lp-directory OK"
 echo "pre-push: all green - deploying to Pages."
