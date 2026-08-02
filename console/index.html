@@ -228,7 +228,6 @@ body {
 
 /* --- Nav --- */
 nav {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -285,10 +284,18 @@ nav {
   align-items: center;
 }
 
+/* Ive pass (2026-08-02): the light-theme block below already forces every
+   .nav .badge to coral/white regardless of active state (its own rule has
+   no .on qualifier), which made the separate .nav.on .badge override here
+   fully dead weight - same values, never actually the deciding rule. Base
+   values brought in line with what was actually rendering (coral, this
+   file's established attention color, matching .ss-row.ss-attn .ss-n) so
+   this rule is the honest source of truth instead of relying on a later
+   override to correct it; the dead .nav.on .badge duplicate is removed. */
 .nav .badge {
   margin-left: auto;
-  background: var(--color-gold);
-  color: #2B2410;
+  background: var(--color-coral);
+  color: #fff;
   font-size: var(--text-2xs);
   font-weight: var(--weight-semi);
   min-width: 16px;
@@ -299,14 +306,16 @@ nav {
   text-align: center;
 }
 
-/* On the active (gold) pill, invert the badge so it stays legible */
-.nav.on .badge {
-  background: #2B2410;
-  color: var(--color-gold);
-}
-
 /* --- Sidebar footer / auth --- */
 .side-foot {
+  /* Ive pass (2026-08-02): nav used to carry flex:1, which claimed all the
+     sidebar's leftover height and left a visible dead gap above .side-stats
+     even after the 2026-07-15 stats block was added specifically to close
+     that gap - the gap was a layout problem, not a missing-content problem,
+     so adding content there didn't fix it. margin-top:auto here (instead of
+     flex:1 on nav) pins only the account footer to the bottom; nav and
+     .side-stats now sit naturally grouped together right under Board/etc. */
+  margin-top: auto;
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-sidebar-line);
   display: flex;
@@ -2839,17 +2848,23 @@ input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-
 .fundsw button.on:hover{background:var(--color-atrium);color:#fff}
 .nav{border-radius:var(--radius-md);padding:11px 12px;margin:0 0 2px;text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:13px;border:var(--bw) solid transparent;background:transparent;color:#fff}
 .nav:hover{background:rgba(255,255,255,0.12)}
-.nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);border:var(--bw) solid var(--color-ink);box-shadow:var(--shadow-hover)}
+/* Ive pass (2026-08-02, Y4): dropped the hard ink border - the white fill
+   already reads as a clear paper-inversion against the navy sidebar, the
+   border on top of that plus the shadow was doing the same "lift" job twice. */
+.nav.on,.nav.on:hover{background:#fff;color:var(--color-ink);box-shadow:var(--shadow-hover)}
 .nav .nav-ic{font-size:16px}
 .nav .badge{background:var(--color-coral);color:#fff;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-pill);font-weight:800}
-.nav.on .badge{background:var(--color-coral);color:#fff}
 .side-foot .foot-gear{border-radius:0}
 .side-foot{border-top:var(--bw) solid rgba(255,255,255,0.22)}
 /* ---- sidebar quick stats (fills the dead gap between nav and footer) ---- */
 .side-stats{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-sidebar-line);display:flex;flex-direction:column;gap:2px}
 .ss-row{display:flex;align-items:baseline;gap:9px;padding:5px 12px;color:var(--color-sidebar-ink-sub)}
 .ss-n{font-family:var(--font-mono);font-weight:500;font-size:14px;color:#fff;min-width:20px}
-.ss-lbl{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:11px}
+/* Ive pass (2026-08-02, Y1): tracking/weight now match .brand .sub exactly -
+   both are the same "eyebrow micro-label" role in this sidebar, previously
+   tuned as two close-but-different variants (0.06em/700 vs 0.18em/800).
+   Font-size stays smaller here; that's normal hierarchy, not inconsistency. */
+.ss-lbl{text-transform:uppercase;letter-spacing:0.18em;font-weight:800;font-size:11px}
 .ss-row.ss-attn .ss-n{color:var(--color-coral)}
 
 /* ---- VIEW HEADERS. Dropped Fraunces serif + uppercase-shout 2026-07-31
