@@ -3192,7 +3192,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:8px">
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
-              <input id="wlMonth" type="text" placeholder="08/2026" pattern="\d{2}/\d{4}" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:110px">
+              <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
+                <option value="">Loading...</option>
+              </select>
             </div>
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
@@ -3204,6 +3206,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             </div>
             <button id="wlReviewBtn" class="btn">Review</button>
           </div>
+          <div id="wlRows" style="margin-top:14px"></div>
           <div id="wlFindings" style="margin-top:16px"></div>
           <div style="margin-top:14px">
             <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
@@ -5880,10 +5883,40 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
         draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
-        resEl=document.getElementById('wlResult');
+        rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult');
     if(!reviewBtn)return;
-    var lastGo=false;
+    var lastGo=false,peekSeq=0;
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
+    // Always-on rows peek (Noa, 2026-08-02: "i need to see the rows at all
+    // times") - fast, gate-free, runs on load and on every month/currency
+    // change, independent of the slower Review click.
+    function peekRows(){
+      var month=(monthEl.value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){rowsEl.innerHTML='';return;}
+      var rid=++peekSeq;
+      rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
+      apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)).then(function(r){
+        if(rid!==peekSeq)return;
+        if(!r||!r.ok){rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        rowsEl.innerHTML=wlTransfersHtml(r.transfers);
+      }).catch(function(err){
+        if(rid!==peekSeq)return;
+        rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+      });
+    }
+    // Month dropdown (Noa, 2026-08-02: "it should have a dropdown for the
+    // month i want to see") - populated from the tracker's real month tabs,
+    // newest first. Defaults to the newest month, then peeks immediately.
+    apiFetch('?api=listTrackerMonthTabs').then(function(r){
+      var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
+      if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
+      monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
+      peekRows();
+    }).catch(function(){
+      monthEl.innerHTML='<option value="">Could not load months</option>';
+    });
+    monthEl.onchange=peekRows;
+    ccyEl.onchange=peekRows;
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('Month must be MM/YYYY.','');return;}
@@ -5894,12 +5927,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
         if(r.go===false){
-          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings)+wlTransfersHtml(r.transfers);
+          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
           lastGo=false;genBtn.disabled=true;
           return;
         }
         if(!r.ok){findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(r.error||'Review failed.')+'</div>';return;}
-        findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>'+wlTransfersHtml(r.transfers);
+        findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=true;genBtn.disabled=false;
       }).catch(function(err){
         reviewBtn.disabled=false;
