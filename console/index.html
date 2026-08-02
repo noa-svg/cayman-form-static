@@ -5867,7 +5867,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&dryRun=true').then(function(r){
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
-        if(r.ok===false&&r.blocking){
+        if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
           lastGo=false;genBtn.disabled=true;
           return;
