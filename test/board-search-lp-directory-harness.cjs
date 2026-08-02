@@ -244,6 +244,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('no prefill is stashed for a blank add-new-contact start', t.window_.__pendingOnboardingPick == null);
   }
 
+  // 11. A loading state shows the instant the debounce fires, before the fetch
+  // resolves (2026-08-02, live incident: Noa typed a real name, saw nothing for
+  // ~20s on an uncached Monday query, and reasonably concluded search was
+  // broken - it was just silent. The box must never sit hidden/empty while a
+  // request is genuinely in flight).
+  {
+    const t = build();
+    let resolveFetch;
+    t.setApiFetchImpl(() => new Promise((r) => { resolveFetch = r; }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Slow'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260); // debounce has fired; the fetch is deliberately left unresolved
+    const box = t.document.getElementById('boardLpResults');
+    ok('the box unhides immediately once the debounced fetch starts, not only once it resolves', box.hidden === false);
+    ok('it shows a loading state, not an empty/blank box that reads as "nothing found"', box.textContent.indexOf('Searching') !== -1);
+    resolveFetch({ ok: true, matches: [] });
+    await sleep(20);
+  }
+
   console.log(pass + ' pass, ' + fail + ' fail');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('ERR', e.stack || e); process.exit(1); });

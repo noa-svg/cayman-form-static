@@ -4471,6 +4471,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(T)clearTimeout(T);
       T=setTimeout(function(){
         var mySeq=++seq;
+        // 2026-08-02 (Noa, live: "ITS NOT SEARCHING MONDAY" - it was, just slow with
+        // zero feedback, so a 15-20s uncached Monday query read as broken/empty).
+        // Same skeleton-bar language boardSkeleton() already uses for the pipeline
+        // list, not a spinner or literal "Loading" text.
+        box.innerHTML='<div class="board-lp-hdr">Searching…</div><div class="skel-row" style="padding:8px 12px"><span class="skel-bar sk-name" style="width:60%"></span></div>';
+        box.hidden=false;
+        var emptyDivNow=document.querySelector('#list .empty');
+        if(emptyDivNow)emptyDivNow.hidden=true;
         apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){
           if(mySeq!==seq)return; // stale: query changed while this was in flight
           render((d&&d.matches)||[]);
