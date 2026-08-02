@@ -43,7 +43,7 @@ if (iifeSrc.indexOf("data-proc=\"increase\"") === -1 || iifeSrc.indexOf("data-pr
 }
 
 function build() {
-  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div></body>');
+  const dom = new JSDOM('<!doctype html><body><input id="boardSearch"><div id="boardLpResults" hidden></div><div id="list"><div class="empty">No processes match "x".</div></div></body>');
   const document = dom.window.document;
   const calls = { apiFetch: [], setPick: [], setToggleSilent: [], closeNewDd: 0, open: 0 };
   const state = { lane: 'israel', process: '', type: '' };
@@ -97,6 +97,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('exactly the 2 server-filtered LP matches render, no more no less', rows.length === 2, rows.length);
     const buttons = box.querySelectorAll('.board-lp-actions button');
     ok('each row gets exactly 2 action buttons (Increase, Withdrawal) - no Individual/Entity prompt', buttons.length === 4, buttons.length);
+    ok('2026-08-02: the pipeline\'s own "No processes match" empty state hides once the LP directory has results, so the two never read as contradictory', t.document.querySelector('#list .empty').hidden === true);
 
     // 3. Clicking Increase on the INDIVIDUAL match sets state correctly and picks the LP.
     buttons[0].click(); // row 0 (Dana Levi, individual) -> Increase
@@ -144,14 +145,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('a stale, late-resolving response never overwrites the newer result', rows.length === 1 && rows[0].textContent.indexOf('First (stale)') === -1, rows.length ? rows[0].textContent : '(empty)');
   }
 
-  // 6. No matches: results box hides cleanly (not an error state).
+  // 6. No matches: results box hides cleanly (not an error state), and the
+  // pipeline's own empty-state div (suppressed while matches were showing,
+  // see assertion in block 2) comes back once there is nothing to conflict with.
   {
     const t = build();
+    t.document.querySelector('#list .empty').hidden = true; // simulate: it was suppressed by an earlier populated search
     t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [] }));
     const si = t.document.getElementById('boardSearch');
     si.value = 'Nobody'; si.dispatchEvent(new t.dom.window.Event('input'));
     await sleep(260);
     ok('zero matches hides the box rather than showing an empty panel', t.document.getElementById('boardLpResults').hidden === true);
+    ok('the pipeline empty-state div is restored once the LP directory has nothing to show', t.document.querySelector('#list .empty').hidden === false);
   }
 
   // 7. A search error fails soft (hides the block, does not throw / break the local board filter).

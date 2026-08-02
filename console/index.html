@@ -2793,14 +2793,15 @@ body.side-coll .ss-lbl { display: none; }
 /* Transfer Form rows peek (2026-08-02): same bordered-card + row shell as
    .board-lp-results below, so the always-on rows table reads as part of the
    same design language instead of a bare unstyled <table>. */
-.wl-rows{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-top:14px}
-.wl-rows-hdr{padding:8px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
-.wl-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
+.wl-rows{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card)}
+.wl-rows-hdr{display:grid;grid-template-columns:1fr 90px 130px;gap:12px;padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.wl-rows-hdr span:last-child{text-align:right}
+.wl-row{display:grid;grid-template-columns:1fr 90px 130px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
 .wl-row:last-child{border-bottom:none}
-.wl-row-nm{flex:1;min-width:0;font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wl-row-type{width:110px;flex-shrink:0;color:var(--color-ink-muted);font-size:12px}
-.wl-row-amt{width:150px;flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink)}
-.wl-row-ccy{color:var(--color-ink-muted);font-size:11px}
+.wl-row-nm{min-width:0;font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-row-type{color:var(--color-ink-muted);font-size:12px}
+.wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
+.wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
 .wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
 /* Board-search LP directory results (2026-08-02): Increase/Withdrawal
    reachable straight from the board's own search box, not buried behind
@@ -3217,8 +3218,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="content">
         <div class="set-card" style="max-width:640px">
           <h3 class="set-h">Generate</h3>
-          <p class="set-p">Month/year of the tracker tab (MM/YYYY) and currency.</p>
-          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:8px">
+          <p class="set-p">Month/year of the tracker tab and currency.</p>
+          <div style="display:flex;gap:12px;margin-top:8px">
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
               <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
@@ -3233,15 +3234,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                 <option value="EUR">EUR</option>
               </select>
             </div>
+          </div>
+          <div id="wlRows" style="margin-top:16px"></div>
+          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button id="wlReviewBtn" class="btn">Review</button>
-          </div>
-          <div id="wlRows" style="margin-top:14px"></div>
-          <div id="wlFindings" style="margin-top:16px"></div>
-          <div style="margin-top:14px">
             <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
-            <label style="margin-left:12px;font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also create a Gmail draft (to Noa, review only)</label>
+            <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also create a Gmail draft (to Noa, review only)</label>
           </div>
-          <div id="wlResult" style="margin-top:14px"></div>
+          <div id="wlFindings" style="margin-top:12px"></div>
+          <div id="wlResult" style="margin-top:12px"></div>
         </div>
 
         <div class="set-card" style="max-width:640px;margin-top:20px">
@@ -4352,12 +4353,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var T=null,seq=0;
     function subline(m){var en=m.nameEn||m.name;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email].filter(Boolean).join('  ·  ');}
     function render(matches){
-      if(!matches.length){box.hidden=true;box.innerHTML='';return;}
+      // The pipeline's own "No processes match X" empty state (renderRows,
+      // ~line 4243) renders independently of this box and knows nothing about
+      // it - showing both at once read as contradictory (Noa: "why would a
+      // user think the search is a shortcut to a new process" / "this isn't
+      // making sense"): "no processes match" directly above a populated LP
+      // directory looks like the search failed when it actually succeeded.
+      // Suppress that specific empty-state div whenever this box has results;
+      // un-hide it again the moment it doesn't (renderRows already regenerated
+      // it with the right text for the current query, so this only toggles
+      // visibility, never touches its content).
+      var emptyDiv=document.querySelector('#list .empty');
+      if(!matches.length){
+        box.hidden=true;box.innerHTML='';
+        if(emptyDiv)emptyDiv.hidden=false;
+        return;
+      }
       box.innerHTML='<div class="board-lp-hdr">LP directory</div>'+matches.map(function(m,i){
         return '<div class="board-lp-row"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div>'
           +'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Withdrawal</button></div></div>';
       }).join('');
       box.hidden=false;
+      if(emptyDiv)emptyDiv.hidden=true;
       Array.prototype.forEach.call(box.querySelectorAll('.board-lp-actions button'),function(btn){
         btn.onclick=function(){
           var m=matches[+btn.getAttribute('data-i')];
@@ -5946,13 +5963,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
     return h;
   }
+  function wlAmountText(amount){
+    var n=typeof amount==='number'?amount:parseFloat(amount);
+    return isFinite(n)?n.toLocaleString('en-US'):String(amount);
+  }
   function wlTransfersHtml(transfers){
-    if(!transfers||!transfers.length)return '<div class="wl-rows"><div class="wl-rows-hdr">Transfers</div><div class="wl-row-empty">No transfers on this tab.</div></div>';
+    var hdr='<div class="wl-rows-hdr"><span>Name</span><span>Type</span><span>Amount</span></div>';
+    if(!transfers||!transfers.length)return '<div class="wl-rows">'+hdr+'<div class="wl-row-empty">No transfers on this tab.</div></div>';
     var rows=transfers.map(function(t){
-      return '<div class="wl-row"><div class="wl-row-nm">'+esc2(t.name)+'</div><div class="wl-row-type">'+esc2(t.type)+'</div>'
-        +'<div class="wl-row-amt">'+esc2(String(t.amount))+' <span class="wl-row-ccy">'+esc2(t.currency)+'</span></div></div>';
+      return '<div class="wl-row"><div class="wl-row-nm" dir="auto">'+esc2(t.name)+'</div><div class="wl-row-type">'+esc2(t.type)+'</div>'
+        +'<div class="wl-row-amt">'+wlAmountText(t.amount)+'<span class="wl-row-ccy">'+esc2(t.currency)+'</span></div></div>';
     }).join('');
-    return '<div class="wl-rows"><div class="wl-rows-hdr">Transfers ('+transfers.length+')</div>'+rows+'</div>';
+    return '<div class="wl-rows">'+hdr+rows+'</div>';
   }
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
