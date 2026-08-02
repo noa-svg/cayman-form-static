@@ -2795,12 +2795,21 @@ body.side-coll .ss-lbl { display: none; }
    .board-lp-results below, so the always-on rows table reads as part of the
    same design language instead of a bare unstyled <table>. */
 .wl-rows{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card)}
-.wl-rows-hdr{display:grid;grid-template-columns:1fr 90px 130px;gap:12px;padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.wl-rows-hdr{display:grid;grid-template-columns:1fr 110px 130px;gap:12px;padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
 .wl-rows-hdr span:last-child{text-align:right}
-.wl-row{display:grid;grid-template-columns:1fr 90px 130px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
+.wl-rows-hdr button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font:inherit;text-transform:inherit;letter-spacing:inherit;color:inherit}
+.wl-rows-hdr button:hover{color:var(--color-ink)}
+.wl-rows-hdr span:last-child button{flex-direction:row-reverse}
+.wl-sort-arrow{font-size:9px;opacity:0.5}
+.wl-sort-arrow.active{opacity:1;color:var(--color-atrium)}
+.wl-row{display:grid;grid-template-columns:1fr 110px 130px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
 .wl-row:last-child{border-bottom:none}
-.wl-row-nm{min-width:0;font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wl-row-type{color:var(--color-ink-muted);font-size:12px}
+.wl-row-nm{min-width:0;text-align:left}
+.wl-row-nm-he{font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wl-row-nm-en{font-weight:400;color:var(--color-ink-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;direction:ltr;text-align:left}
+.wl-type-badge{display:inline-block;padding:2px 8px;border-radius:var(--radius-pill);font-size:11px;font-weight:700}
+.wl-type-in{background:rgba(46,133,64,0.12);color:var(--color-green)}
+.wl-type-out{background:rgba(216,94,76,0.14);color:var(--color-coral)}
 .wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
 .wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
 .wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
@@ -3206,7 +3215,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                never shoves the board below it - must be a CHILD of .listhead
                (not a sibling) for .listhead's position:relative to actually be
                its containing block. -->
-          <div id="boardLpResults" class="board-lp-results" hidden></div>
+          <div id="boardLpResults" class="board-lp-results" role="status" aria-live="polite" aria-atomic="true" hidden></div>
         </div>
         <div id="list"></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
@@ -3449,7 +3458,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-02-3';
+  window.__BUILD_TAG = 'console-2026-08-02-4';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -6014,11 +6023,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var n=typeof amount==='number'?amount:parseFloat(amount);
     return isFinite(n)?n.toLocaleString('en-US'):String(amount);
   }
+  // Redemption is the fund's own single outgoing type (see the "Add a manual
+  // row" Type options); Join/Increase are the only incoming types. Material
+  // (fill color), not a symbol, carries the meaning - ive-pass E1.
+  function wlTypeBadge(type){
+    var out=/redemption/i.test(type||'');
+    return '<span class="wl-type-badge '+(out?'wl-type-out':'wl-type-in')+'">'+esc2(type)+'</span>';
+  }
+  var wlSortState={key:'name',dir:1};
+  function wlSortIcon(key){
+    if(wlSortState.key!==key)return '<span class="wl-sort-arrow">↕</span>';
+    return '<span class="wl-sort-arrow active">'+(wlSortState.dir>0?'↑':'↓')+'</span>';
+  }
+  function wlSortRows(transfers){
+    var key=wlSortState.key,dir=wlSortState.dir;
+    return transfers.slice().sort(function(a,b){
+      var av=key==='amount'?(typeof a.amount==='number'?a.amount:parseFloat(a.amount)||0):String(a[key]||'').toLowerCase();
+      var bv=key==='amount'?(typeof b.amount==='number'?b.amount:parseFloat(b.amount)||0):String(b[key]||'').toLowerCase();
+      if(av<bv)return -1*dir;
+      if(av>bv)return 1*dir;
+      return 0;
+    });
+  }
   function wlTransfersHtml(transfers){
-    var hdr='<div class="wl-rows-hdr"><span>Name</span><span>Type</span><span>Amount</span></div>';
+    var hdr='<div class="wl-rows-hdr">'
+      +'<span><button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button></span>'
+      +'<span><button type="button" data-sort="type">Type '+wlSortIcon('type')+'</button></span>'
+      +'<span><button type="button" data-sort="amount">Amount '+wlSortIcon('amount')+'</button></span>'
+      +'</div>';
     if(!transfers||!transfers.length)return '<div class="wl-rows">'+hdr+'<div class="wl-row-empty">No transfers on this tab.</div></div>';
-    var rows=transfers.map(function(t){
-      return '<div class="wl-row"><div class="wl-row-nm" dir="auto">'+esc2(t.name)+'</div><div class="wl-row-type">'+esc2(t.type)+'</div>'
+    var rows=wlSortRows(transfers).map(function(t){
+      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(t.name)+'</span>'
+        +(t.nameEn?'<span class="wl-row-nm-en">'+esc2(t.nameEn)+'</span>':'');
+      return '<div class="wl-row"><div class="wl-row-nm">'+nmHtml+'</div><div class="wl-row-type">'+wlTypeBadge(t.type)+'</div>'
         +'<div class="wl-row-amt">'+wlAmountText(t.amount)+'<span class="wl-row-ccy">'+esc2(t.currency)+'</span></div></div>';
     }).join('');
     return '<div class="wl-rows">'+hdr+rows+'</div>';
@@ -6029,22 +6066,35 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
         rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult');
     if(!reviewBtn)return;
-    var lastGo=false,peekSeq=0;
+    var lastGo=false,peekSeq=0,wlLastTransfers=null;
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
+    function renderWlRows(){rowsEl.innerHTML=wlTransfersHtml(wlLastTransfers);}
+    // Click-to-sort headers (Noa, 2026-08-02: "make the columns sort on click
+    // on header"). Re-sorts the already-fetched rows client-side, no refetch.
+    rowsEl.addEventListener('click',function(e){
+      var btn=e.target.closest('[data-sort]');
+      if(!btn||!wlLastTransfers)return;
+      var key=btn.getAttribute('data-sort');
+      wlSortState.dir=(wlSortState.key===key)?-wlSortState.dir:1;
+      wlSortState.key=key;
+      renderWlRows();
+    });
     // Always-on rows peek (Noa, 2026-08-02: "i need to see the rows at all
     // times") - fast, gate-free, runs on load and on every month/currency
     // change, independent of the slower Review click.
     function peekRows(){
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){rowsEl.innerHTML='';return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
       var rid=++peekSeq;
       rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
-        rowsEl.innerHTML=wlTransfersHtml(r.transfers);
+        if(!r||!r.ok){wlLastTransfers=null;rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        wlLastTransfers=r.transfers;
+        renderWlRows();
       }).catch(function(err){
         if(rid!==peekSeq)return;
+        wlLastTransfers=null;
         rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     }
