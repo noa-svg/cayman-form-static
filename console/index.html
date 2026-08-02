@@ -4378,7 +4378,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!si||!box)return;
     var T=null,seq=0;
     var EMAIL_RE=/^\S+@\S+\.\S+$/;
-    function subline(m){var en=m.nameEn||m.name;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email].filter(Boolean).join('  ·  ');}
+    function typeLabel(m){
+      if(m.type==='pending')return 'Monday contact, not yet an LP';
+      return 'Existing LP, '+(m.type==='entity'?'Entity':'Individual');
+    }
+    // Shared by both onboarding entry points below (a 'pending' match, and the
+    // persistent "add as a new contact" escape hatch): opens the real NEW menu
+    // scoped to Onboarding and hands it a prefill function to run once open.
+    // Individual vs Entity still has to be asked here - unlike an existing LP,
+    // a raw Monday contact or a brand-new name has no group to derive it from.
+    function openOnboarding(e,prefill){
+      // Without stopPropagation this click bubbles to the document-level
+      // "click outside NEW closes it" listener (this button lives outside
+      // newWrap), which fires on the SAME click right after toggleNewDd()
+      // opens it - immediately closing it again in the same event. The
+      // real New button guards against this exact thing the same way.
+      e.stopPropagation();
+      box.hidden=true;box.innerHTML='';
+      toggleNewDd();
+      // Always overwrite, never leave a stale pick from an earlier abandoned
+      // attempt sitting there - a blank "add as a new contact" start (prefill
+      // null) must land genuinely blank, not silently inherit whatever the
+      // operator picked and then backed out of a moment before.
+      window.__pendingOnboardingPick=prefill||null;
+      var first=newDd.querySelector('.dd-onboarding .new-dd-item');
+      if(first)first.focus();
+    }
+    function footer(){
+      return '<button type="button" class="board-lp-new-row" id="boardLpAddNew">Not finding them? <b>Add as a new contact</b></button>';
+    }
+    function wireFooter(){
+      var f=document.getElementById('boardLpAddNew');
+      if(f)f.onclick=function(e){openOnboarding(e,null);};
+    }
     function render(matches){
       // The pipeline's own "No processes match X" empty state (renderRows,
       // ~line 4243) renders independently of this box and knows nothing about
@@ -4392,27 +4424,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // visibility, never touches its content).
       var emptyDiv=document.querySelector('#list .empty');
       if(!matches.length){
-        // Nothing found anywhere. If the query is itself a plausible email,
-        // this reads as "start something new" rather than "find someone" -
-        // offer the NEW->Onboarding shortcut instead of a bare empty box.
+        // Nothing found anywhere - not even a pending Monday contact. If the
+        // query is itself a plausible email, this reads as "start something
+        // brand new" rather than "find someone" - offer the shortcut with the
+        // typed email pre-filled instead of a bare empty box.
         var q=si.value.trim();
         if(EMAIL_RE.test(q)){
           box.innerHTML='<button type="button" class="board-lp-new-row" id="boardLpNewRow">Start onboarding for <b>'+esc2(q)+'</b></button>';
           box.hidden=false;
           if(emptyDiv)emptyDiv.hidden=true;
-          document.getElementById('boardLpNewRow').onclick=function(e){
-            // Without stopPropagation this click bubbles to the document-level
-            // "click outside NEW closes it" listener (this button lives outside
-            // newWrap), which fires on the SAME click right after toggleNewDd()
-            // opens it - immediately closing it again in the same event. The
-            // real New button guards against this exact thing the same way.
-            e.stopPropagation();
-            window.__pendingOnboardingEmail=q;
-            box.hidden=true;box.innerHTML='';
-            toggleNewDd();
-            var first=newDd.querySelector('.dd-onboarding .new-dd-item');
-            if(first)first.focus();
-          };
+          document.getElementById('boardLpNewRow').onclick=function(e){openOnboarding(e,{email:q});};
           return;
         }
         box.hidden=true;box.innerHTML='';
@@ -4420,14 +4441,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         return;
       }
       box.innerHTML='<div class="board-lp-hdr">LP directory</div>'+matches.map(function(m,i){
-        return '<div class="board-lp-row"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div>'
-          +'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Withdrawal</button></div></div>';
-      }).join('');
+        var actions=(m.type==='pending')
+          ?'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="onboard">Start onboarding</button></div>'
+          :'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Withdrawal</button></div>';
+        return '<div class="board-lp-row"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(typeLabel(m))+'</div></div>'+actions+'</div>';
+      }).join('')+footer();
       box.hidden=false;
       if(emptyDiv)emptyDiv.hidden=true;
+      wireFooter();
       Array.prototype.forEach.call(box.querySelectorAll('.board-lp-actions button'),function(btn){
-        btn.onclick=function(){
+        btn.onclick=function(e){
           var m=matches[+btn.getAttribute('data-i')];
+          if(btn.getAttribute('data-proc')==='onboard'){
+            openOnboarding(e,m); // full Monday record (name/nameHe/nickname/email) -> window.__onbPick
+            return;
+          }
           state.process=btn.getAttribute('data-proc');
           state.type=m.type==='entity'?'entity':'individual'; // server-derived from the LP's Monday group; never asked here
           setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
@@ -4597,13 +4625,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
     closeNewDd();
     open();
-    // 2026-08-02, Noa: typing an email in board search that matches nobody can
-    // jump straight into Onboarding with it pre-filled - but only for an
-    // actual onboarding pick (data-kind="new"); Increase/Withdrawal already
-    // has a real LP attached and must never inherit a stray typed string.
-    var pendingEmail=(btn.getAttribute("data-kind")==="new")?window.__pendingOnboardingEmail:null;
-    window.__pendingOnboardingEmail=null;
-    setTimeout(function(){var f=document.getElementById("email");if(f){if(pendingEmail)f.value=pendingEmail;f.focus();}},160);
+    // 2026-08-02, Noa: board search can hand Onboarding a pending pick - either
+    // a real Monday contact's full record (from the widened search) or just a
+    // typed email (the zero-match shortcut) - but only for an actual onboarding
+    // pick (data-kind="new"); Increase/Withdrawal already has a real LP attached
+    // and must never inherit a stray search-box leftover. Reuses the exact same
+    // pick() autofill the onboarding-submission picker already uses (fires real
+    // 'input' events so draft-save/validation react like a typed entry, not
+    // just a bare .value= assignment).
+    var pendingPick=(btn.getAttribute("data-kind")==="new")?window.__pendingOnboardingPick:null;
+    window.__pendingOnboardingPick=null;
+    setTimeout(function(){
+      if(pendingPick&&window.__onbPick)window.__onbPick(pendingPick);
+      var f=document.getElementById("email");if(f)f.focus();
+    },160);
   }
   Array.prototype.forEach.call(document.querySelectorAll(".new-dd-item"),function(btn){
     btn.onclick=function(){quickPick(btn);};
@@ -5634,6 +5669,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       picked.hidden=false;
       var x=document.getElementById('onbClear');if(x)x.onclick=clearPick;
     }
+    // Exposed (2026-08-02) so the board-search popover can hand a 'pending'
+    // Monday-contact match straight to this exact autofill - same field shape
+    // as an onboarding-submission pick, no second implementation.
+    window.__onbPick=pick;
     function render(){
       if(!subs.length){box.innerHTML='<div class="lp-empty">No pending submissions.</div>';box.hidden=false;return;}
       box.innerHTML=subs.map(function(s,i){return '<div class="lp-row" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(s.nameHe||s.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(s))+'</div></div></div>';}).join('');

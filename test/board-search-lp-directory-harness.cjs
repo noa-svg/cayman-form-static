@@ -200,8 +200,48 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // e.stopPropagation() that listener fires on the SAME click right after toggleNewDd()
     // opens it, immediately closing it again (confirmed live: newDd never visibly opened).
     ok('the click does not also trigger the outside-click-closes-NEW listener on itself', t.calls.closeNewDd === 0);
-    ok('the typed email is stashed for quickPick to consume on the Onboarding pick', t.window_.__pendingOnboardingEmail === 'newlp@example.com');
+    ok('the typed email is stashed as a pick for quickPick to consume on the Onboarding pick', t.window_.__pendingOnboardingPick && t.window_.__pendingOnboardingPick.email === 'newlp@example.com');
     ok('the popover closes itself once the shortcut is taken', t.document.getElementById('boardLpResults').hidden === true);
+  }
+
+  // 9. A 'pending' match (2026-08-02 widen: real Monday contacts, not yet an
+  // LP, now surface too - Noa's mockup: "Monday contact, not yet an LP" +
+  // a single Start onboarding action, never Increase/Withdrawal).
+  {
+    const t = build();
+    const pendingMatch = { itemId: '7', name: 'Nora Cohen', nameHe: 'נורה כהן', nameEn: 'Nora Cohen', email: 'nora@example.com', nickname: 'Nora', type: 'pending' };
+    t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [pendingMatch] }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Nora'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const box = t.document.getElementById('boardLpResults');
+    const row = box.querySelector('.board-lp-row');
+    ok('a pending match renders its status instead of an Existing-LP label', row.querySelector('.lp-sub').textContent === 'Monday contact, not yet an LP');
+    const buttons = row.querySelectorAll('.board-lp-actions button');
+    ok('a pending match gets exactly ONE action (Start onboarding), never Increase/Withdrawal', buttons.length === 1 && buttons[0].textContent === 'Start onboarding');
+    buttons[0].click();
+    ok('clicking it opens NEW via the real toggleNewDd', t.calls.toggleNewDd === 1);
+    ok('it does not self-close via the outside-click listener either', t.calls.closeNewDd === 0);
+    ok('the FULL Monday record is stashed (name/nameHe/nickname/email), not just an email string', t.window_.__pendingOnboardingPick && t.window_.__pendingOnboardingPick.itemId === '7' && t.window_.__pendingOnboardingPick.nameHe === 'נורה כהן');
+  }
+
+  // 10. The persistent "Add as a new contact" footer (2026-08-02: shown even
+  // when real matches exist, per Noa's mockup - the operator can always bail
+  // to a blank Onboarding start, not only when the search comes up empty).
+  {
+    const t = build();
+    t.setApiFetchImpl(() => Promise.resolve({ ok: true, matches: [
+      { itemId: '1', name: 'Dana Levi', nameHe: '', nameEn: 'Dana Levi', email: 'dana@example.com', type: 'individual' },
+    ] }));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Dana'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const footerBtn = t.document.getElementById('boardLpAddNew');
+    ok('the add-new-contact footer renders alongside real matches', !!footerBtn);
+    footerBtn.click();
+    ok('clicking it opens NEW too', t.calls.toggleNewDd === 1);
+    ok('it does not self-close either', t.calls.closeNewDd === 0);
+    ok('no prefill is stashed for a blank add-new-contact start', t.window_.__pendingOnboardingPick == null);
   }
 
   console.log(pass + ' pass, ' + fail + ' fail');
