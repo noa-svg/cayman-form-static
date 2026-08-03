@@ -293,6 +293,10 @@ nav {
    this rule is the honest source of truth instead of relying on a later
    override to correct it; the dead .nav.on .badge duplicate is removed. */
 .nav .badge {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: auto;
   background: var(--color-coral);
   color: #fff;
@@ -300,8 +304,7 @@ nav {
   font-weight: var(--weight-semi);
   min-width: 16px;
   height: 16px;
-  line-height: 16px;
-  padding: 0 var(--space-1);
+  padding: 0 3px;
   border-radius: var(--radius-sm);
   text-align: center;
 }
@@ -760,7 +763,7 @@ body.side-coll .side-foot .foot-gear { display: none; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 6px 14px;
-  width: 180px;
+  width: 220px;
   outline: none;
   transition: border-color var(--dur-base);
 }
@@ -3190,7 +3193,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                (openOnboarding() in the board-search IIFE below) - never
                reachable independently anymore. -->
           <div class="new-wrap" id="newWrap">
-            <input class="board-search" id="boardSearch" type="search" placeholder="Search by name, stage, or type" autocomplete="off" aria-haspopup="menu" aria-expanded="false">
+            <input class="board-search" id="boardSearch" type="search" placeholder="Search by name" autocomplete="off" aria-haspopup="menu" aria-expanded="false">
             <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
                  search behind the NEW menu; redesigned as a floating popover so it
                  never shoves the board below it - .new-wrap is already
