@@ -2897,8 +2897,14 @@ body.side-coll .ss-lbl { display: none; }
 .crev-line{display:flex;gap:8px;padding:2px 0}
 .crev-k{font-weight:800;min-width:64px;text-transform:uppercase;font-size:10px;letter-spacing:0.06em;align-self:center}
 .crev-v{font-weight:600;word-break:break-word}
-.crev-btns{display:flex;gap:10px;margin-top:10px;align-items:center}
-.crev-cancel{background:transparent;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:8px 14px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;color:var(--color-ink)}
+/* 2026-08-04, Noa: "the buttons look bad, they aren't right on the grid" -
+   stacked full-width instead of a side-by-side row, one shared left/right
+   edge (matching the outer .cta that opened this card), Go and Cancel the
+   same height by sharing .cta's own vertical padding token, not a one-off
+   pixel value (ATELIER: no new sizes). */
+.crev-btns{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.crev-go{margin-top:0}
+.crev-cancel{background:transparent;border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);padding:var(--space-3) 0;width:100%;font-family:var(--font-body);font-size:var(--text-md);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;color:var(--color-ink)}
 .lp-picked{display:flex;align-items:center;gap: 12px;padding: 12px 12px;background:var(--color-atrium-tint);border:1px solid var(--color-border-strong);border-radius:var(--radius-md)}
 .lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
@@ -3490,7 +3496,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-3';
+  window.__BUILD_TAG = 'console-2026-08-04-4';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4650,7 +4656,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // leak through (display:none, reset by the onboarding branch below).
       el=document.getElementById("panelLead");if(el)el.style.display="none";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
-      el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
+      // 2026-08-04: closing the panel (X/scrim/Esc) while the confirm card is open
+      // leaves this button hidden (the card-open handler sets display:none and only
+      // Cancel/Go restore it) - syncPanelFields runs on every open(), so reset it here
+      // too, or the NEXT panel open (any process) inherits a permanently invisible CTA.
+      el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
       return;
     }
     // Onboarding is necessarily a NEW LP (the menu row that opened this panel already fixed
@@ -4666,7 +4676,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     loadFoShareLabels();
     el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Creates the Monday item, emails the investor, and notifies the team.";}
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
-    el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
+    el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
   }
   // Title-cased investor type for the panel heading (#3): "Individual" / "Entity".
   function _typeLabel(){return state.type==="entity"?"Entity":"Individual";}
@@ -5883,15 +5893,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // native confirm() (unstyled, blocking, clumsy one-thumbed) and covering the
   // money path, which auto-sent with NO confirm at all. Shows what is about to
   // happen (who, which flow, where the email goes) with explicit Send / Cancel.
-  function createReviewConfirm(lines,goLabel,onGo){
+  // 2026-08-04, Noa (live, on Withdrawal · Individual): "the buttons look bad,
+  // they aren't right on the grid" - the outer CTA that opens this card is
+  // full-bleed to the panel width, but crevGo/crevNo sat inset by #msg's own
+  // padding with a horizontal gap between them, so the panel showed three
+  // different button edges (outer CTA's, crevGo's, crevNo's) and Cancel was a
+  // different height than its sibling. Fix: both confirm-card actions now
+  // stack full-width (one shared left/right edge, .crev-btns below) and share
+  // the SAME vertical padding token .cta already uses, so they are the same
+  // height by construction, not by coincidence. Go stays the sole primary
+  // (solid green .cta); Cancel stays visually secondary (outline, no fill) -
+  // that contrast IS the "only the final action reads as primary" fix, not a
+  // removal of the two-step confirm itself (kept exactly as designed 2026-07-19).
+  function createReviewConfirm(lines,goLabel,onGo,onCancel){
     var msg=document.getElementById("msg");
     msg.style.display='block';msg.style.background='var(--color-neutral-bg)';msg.style.color='var(--color-ink)';msg.style.border='2px solid var(--color-ink)';
     msg.setAttribute('role','status');msg.setAttribute('aria-live','polite');
     msg.innerHTML='<div class="crev">'
       +lines.map(function(l){return '<div class="crev-line"><span class="crev-k">'+esc2(l[0])+'</span><span class="crev-v" dir="auto">'+esc2(l[1])+'</span></div>';}).join('')
-      +'<div class="crev-btns"><button type="button" id="crevGo" class="cta" style="width:auto;padding:8px 18px">'+esc2(goLabel)+'</button>'
+      +'<div class="crev-btns"><button type="button" id="crevGo" class="cta crev-go">'+esc2(goLabel)+'</button>'
       +'<button type="button" id="crevNo" class="crev-cancel">Cancel</button></div></div>';
-    document.getElementById('crevNo').onclick=function(){msg.innerHTML='';msg.style.display='none';};
+    document.getElementById('crevNo').onclick=function(){msg.innerHTML='';msg.style.display='none';if(onCancel)onCancel();};
     document.getElementById('crevGo').onclick=function(){msg.innerHTML='';msg.style.display='none';onGo();};
     document.getElementById('crevGo').focus();
   }
@@ -5908,6 +5930,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // review card: who, which flow, where the invite goes. No amount exists at
       // mint time (the LP enters it in the form), so the card shows what CAN be
       // wrong here: the person and the flow.
+      // 2026-08-04, Noa: "the buttons look bad" traced to TWO green CTAs on
+      // screen at once - this button stayed visible behind the confirm card
+      // it had just opened. Hidden for as long as the card is open; restored
+      // by onCancel below, and as the first line of the Go callback (which
+      // reuses this exact button to show "Creating...").
+      btn.style.display='none';
       createReviewConfirm([
         ['LP',(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name))||('Monday item '+state.selectedPeopleId)],
         // 2026-08-04, Noa: "Redemption" here vs "Withdrawal" on the panel title
@@ -5922,6 +5950,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         // "the LP by email" told the operator nothing they could verify.
         ['Invite goes to',(state.selectedLp&&state.selectedLp.email)?(state.selectedLp.email+', cc Omri'):'the LP by email, cc Omri']
       ],'Create + send invite',function(){
+      btn.style.display='';
       btn.disabled=true;btn.textContent="Creating...";
       document.getElementById("res").classList.remove("on");
       showMsg("Creating the request and sending the invite...",false);
@@ -5950,7 +5979,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           load();
         });
       }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&(e.serverError||e.message))||"unknown"),true);});
-  });
+  },function(){btn.style.display='';}); // onCancel: restore the button the confirm card had hidden
       return;
     }
     var name=document.getElementById("name").value.trim(),nameHebrew=document.getElementById("nameHebrew").value.trim(),nickname=document.getElementById("nickname").value.trim(),email=document.getElementById("email").value.trim();
@@ -5963,11 +5992,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!emailOk){showMsg("Enter a valid investor email.",true);document.getElementById("email").focus();return}
     // C3 (2026-07-19): the native confirm() showed only the email - right email +
     // wrong LP/lane sailed through. Same inline review card as the money path.
+    // 2026-08-04, Noa: same "two stacked green CTAs" fix as the increase/
+    // withdrawal path above - hide the outer Send-invite button while the
+    // confirm card is open, restore it on Cancel or at the start of Go.
+    btn.style.display='none';
     createReviewConfirm([
       ['Name',name||nameHebrew],
       ['Email',email],
-      ['Flow','Onboarding · '+(state.type||'')+' · '+(state.lane==='israel'?'Israel':'Cayman')]
-    ],'Send invite',function(){doCreateOnboarding();});
+      ['Flow','Onboarding · '+_typeLabel()+' · '+(state.lane==='israel'?'Israel':'Cayman')]
+    ],'Send invite',function(){btn.style.display='';doCreateOnboarding();},function(){btn.style.display='';});
     function doCreateOnboarding(force){
     btn.disabled=true;btn.textContent="Sending...";
     document.getElementById("res").classList.remove("on");
