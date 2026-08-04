@@ -3496,7 +3496,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-5';
+  window.__BUILD_TAG = 'console-2026-08-04-6';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4075,8 +4075,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     bdo_draft:'BDO deposit cover', bank_draft:'Bank new-investor cover',
     invite_increase:'Increase invite', completion_internal_increase:'Increase complete (internal)',
     completion_lp_increase:'Increase received (LP)', notify_increase:'Increase deposit notice',
-    invite_redemption:'Redemption invite', completion_internal_withdrawal:'Withdrawal complete (internal)',
-    completion_lp_withdrawal:'Withdrawal received (LP)', notify_redemption:'Redemption notice',
+    // 2026-08-04 /ux-review: these two said "Redemption" while their two
+    // siblings in the same Withdrawal group said "Withdrawal" - same
+    // vocabulary-drift class as the New-process confirm card fixed earlier
+    // today, just not swept here too. Only the display label changes; the
+    // invite_redemption/notify_redemption KEYS stay as-is (they're stable
+    // identifiers consumed by the template registry at line ~3606 and the
+    // phase map at ~4057, both already say phase:'Withdrawal').
+    invite_redemption:'Withdrawal invite', completion_internal_withdrawal:'Withdrawal complete (internal)',
+    completion_lp_withdrawal:'Withdrawal received (LP)', notify_redemption:'Withdrawal notice',
     w8_renewal:'W-8 renewal'
   };
   // THE STAGE RAIL. Five milestones the eye reads as a position on a journey.
