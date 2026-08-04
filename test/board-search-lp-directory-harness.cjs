@@ -168,14 +168,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('the pipeline empty-state div is restored once the LP directory has nothing to show', t.document.querySelector('#list .empty').hidden === false);
   }
 
-  // 7. A search error fails soft (hides the block, does not throw / break the local board filter).
+  // 7. A search error is REPORTED, never rendered as "no match" (2026-08-04).
+  // This block used to assert the opposite - that a rejection hid the box - which
+  // is what let a server error read as "this LP does not exist". A failed read
+  // rules nobody out, so it must never look like a completed search.
+  {
+    const t = build();
+    const err = new Error('server_error'); err.serverError = 'monday query failed';
+    t.setApiFetchImpl(() => Promise.reject(err));
+    const si = t.document.getElementById('boardSearch');
+    si.value = 'Err'; si.dispatchEvent(new t.dom.window.Event('input'));
+    await sleep(260);
+    const box = t.document.getElementById('boardLpResults');
+    ok('a fetch rejection shows an honest error state, not a hidden/empty box', box.hidden === false);
+    ok('the error state says it is an error and not "no matches"', /server error/i.test(box.textContent) && /not "no matches"/i.test(box.textContent));
+    ok('the error state surfaces the server detail', box.textContent.indexOf('monday query failed') !== -1);
+    ok('the error state offers a retry', !!t.document.getElementById('boardLpRetry'));
+    ok('a failed search never offers to start an onboarding', !t.document.getElementById('boardLpNewRow'));
+  }
+
+  // 7b. THE REGRESSION THAT PROMPTED 7: an EMAIL-shaped query whose search errors
+  // must not offer "Start onboarding for <address>". Before the fix the catch fell
+  // into render([]), and block 8's email shortcut then fired on an LP who is
+  // already on the board - a duplicate-onboarding invitation caused by a failed read.
   {
     const t = build();
     t.setApiFetchImpl(() => Promise.reject(new Error('network')));
     const si = t.document.getElementById('boardSearch');
-    si.value = 'Err'; si.dispatchEvent(new t.dom.window.Event('input'));
+    si.value = 'fmaxim@gmail.com'; si.dispatchEvent(new t.dom.window.Event('input'));
     await sleep(260);
-    ok('a fetch rejection hides the block instead of throwing', t.document.getElementById('boardLpResults').hidden === true);
+    ok('an errored email query does NOT offer the onboarding shortcut', !t.document.getElementById('boardLpNewRow'));
+    ok('an errored email query shows the error state instead', /server error/i.test(t.document.getElementById('boardLpResults').textContent));
   }
 
   // 8. Zero matches + an email-shaped query offers the NEW->Onboarding shortcut

@@ -3472,7 +3472,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-1';
+  window.__BUILD_TAG = 'console-2026-08-04-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4425,6 +4425,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var f=document.getElementById('boardLpAddNew');
       if(f)f.onclick=function(e){openOnboarding(e,null);};
     }
+    // A search that FAILED is not a search that found nothing (2026-08-04, Noa:
+    // "why can't I find fmaxim@gmail.com in the board search"). This block used to
+    // .catch into render([]), so a server error painted the identical empty state
+    // as a genuine miss - and because the typed query was an email, it went one
+    // worse and offered "Start onboarding for <that address>", i.e. it invited a
+    // DUPLICATE onboarding for an LP who is already on the board. Same
+    // false-all-clear class the 2026-07-17 review fixed in apiFetch and in the
+    // New-panel LP picker (which has reported this honestly since C5); the board
+    // search was the one caller left swallowing it. Wording is deliberately
+    // identical to that picker's, so the two search boxes fail the same way.
+    function renderError(err){
+      var emptyDiv=document.querySelector('#list .empty');
+      box.innerHTML='<div class="lp-empty">Search hit a server error (not "no matches"). '
+        +'<a href="#" id="boardLpRetry">Retry</a>'
+        +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+        +'<div class="lp-empty-detail">Nobody was ruled out by this - the directory was never read. If it keeps failing, the system may be down; check your inbox for an URGENT alert.</div></div>';
+      box.hidden=false;
+      if(emptyDiv)emptyDiv.hidden=true;
+      var rl=document.getElementById('boardLpRetry');
+      if(rl)rl.onclick=function(e){e.preventDefault();si.dispatchEvent(new Event('input'));};
+    }
     function render(matches){
       // The pipeline's own "No processes match X" empty state (renderRows,
       // ~line 4243) renders independently of this box and knows nothing about
@@ -4496,7 +4517,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){
           if(mySeq!==seq)return; // stale: query changed while this was in flight
           render((d&&d.matches)||[]);
-        }).catch(function(){ if(mySeq===seq)render([]); }); // fail-soft: a search error just hides this block, the local board filter above still works
+        }).catch(function(err){ if(mySeq===seq)renderError(err); });
       },220);
     });
   })();
