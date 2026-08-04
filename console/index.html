@@ -2829,14 +2829,29 @@ body.side-coll .ss-lbl { display: none; }
    forward-only, Tier-1 auth) - no cell editing needed. */
 .wl-await{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-bottom:12px}
 .wl-await-hdr{padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
-.wl-await-row{display:grid;grid-template-columns:1fr 90px 110px 110px 120px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
+.wl-await-cols{display:grid;grid-template-columns:minmax(140px,1fr) 90px 130px 150px 120px;gap:14px;padding:6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.wl-await-cols span:nth-child(3){text-align:right}
+.wl-await-row{display:grid;grid-template-columns:minmax(140px,1fr) 90px 130px 150px 120px;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
 .wl-await-row:last-child{border-bottom:none}
-.wl-await-exec{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wl-await-exec.wl-await-invalid{color:var(--color-coral);font-weight:600}
-.wl-await-btn{padding:5px 10px;font-size:12px;font-weight:700;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer}
+/* Material chip, not text color (Ive E1) - this column is the whole reason
+   the list exists, so it earns the same fill treatment the Type badge gets,
+   not a weaker one. */
+.wl-await-exec{display:inline-block;padding:3px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;background:var(--color-bg-hover);color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wl-await-exec.wl-await-invalid{background:rgba(216,94,76,0.14);color:var(--color-coral)}
+.wl-await-btn{padding:5px 10px;font-size:12px;font-weight:700;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
 .wl-await-btn:hover{background:var(--color-bg-hover)}
 .wl-await-btn:disabled{opacity:0.55;cursor:default}
-.wl-await-btn.wl-await-done{border-color:var(--color-green);color:var(--color-green);cursor:default}
+.wl-await-btn.wl-await-done{border-color:var(--color-green);background:var(--color-green);color:#fff;cursor:default}
+/* Manual-row form (2026-08-04 redesign): grouped sections instead of one
+   flat grid, so Name/Type/Currency (required) read as a different KIND of
+   information than Amount/Bank details/Notes (optional, transaction-level).
+   Optional fields get a dashed border (Ive E1: material, not a text label
+   suffix, carries "not required"). */
+.mr-section-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);margin:18px 0 8px}
+.mr-section-lbl:first-child{margin-top:0}
+.mr-field label{display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px}
+.mr-field input,.mr-field select{width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none}
+.mr-field.mr-optional input{border-style:dashed;border-color:var(--color-border)}
 /* Board-search LP directory results (2026-08-02, redesigned as a floating
    popover after Noa: "why would a user think the search is a shortcut to
    a new process"). Increase/Withdrawal reachable straight from the board's
@@ -3255,7 +3270,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="view" id="v-wireletter" hidden>
       <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
       <div class="content">
-        <div class="set-card" style="max-width:640px">
+        <div class="set-card" style="max-width:900px">
           <h3 class="set-h">Generate</h3>
           <p class="set-p">Month/year of the tracker tab and currency.</p>
           <div style="display:flex;gap:12px;margin-top:8px">
@@ -3285,42 +3300,46 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div id="wlResult" style="margin-top:12px"></div>
         </div>
 
-        <div class="set-card" style="max-width:640px;margin-top:20px">
+        <div class="set-card" style="max-width:900px;margin-top:20px">
           <h3 class="set-h">Add a manual row</h3>
           <p class="set-p">For money events that never went through Ju's own flow (an estate redemption, a foreign-entity case). Amount defaults to the fund's real NAV-pending placeholder, never a guess - fill it in once a real figure exists.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
-            <div style="grid-column:1/-1">
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Name</label>
-              <input id="mrName" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
-            </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Type</label>
-              <select id="mrType" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+          <div class="mr-section-lbl">Who</div>
+          <div class="mr-field">
+            <label>Name</label>
+            <input id="mrName" type="text">
+          </div>
+          <div class="mr-section-lbl">Classification</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="mr-field">
+              <label>Type</label>
+              <select id="mrType">
                 <option value="Redemption">Redemption</option>
                 <option value="Join">Join</option>
                 <option value="Increase">Increase</option>
               </select>
             </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
-              <select id="mrCurrency" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+            <div class="mr-field">
+              <label>Currency</label>
+              <select id="mrCurrency">
                 <option value="NIS">NIS</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
             </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Amount (optional)</label>
-              <input id="mrAmount" type="text" placeholder="להשלים מהנאב if left blank" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
-            </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Bank details (optional)</label>
-              <input id="mrBank" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
-            </div>
-            <div style="grid-column:1/-1">
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Notes</label>
-              <input id="mrNotes" type="text" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
-            </div>
+          </div>
+          <div class="mr-section-lbl">Transaction</div>
+          <div class="mr-field mr-optional">
+            <label>Amount (optional)</label>
+            <input id="mrAmount" type="text" placeholder="להשלים מהנאב">
+          </div>
+          <div class="mr-field mr-optional" style="margin-top:12px">
+            <label>Bank details (optional)</label>
+            <input id="mrBank" type="text">
+          </div>
+          <div class="mr-section-lbl">Reference</div>
+          <div class="mr-field mr-optional">
+            <label>Notes (optional)</label>
+            <input id="mrNotes" type="text">
           </div>
           <div style="margin-top:14px">
             <button id="mrAddBtn" class="btn">Add row</button>
@@ -3472,7 +3491,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-2';
+  window.__BUILD_TAG = 'console-2026-08-04-3';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -6134,8 +6153,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Board drawer's own button calls, keyed on this row's masterRid - no
   // dependency on the LP having a Ju processId/registry entry, so this also
   // covers rows onboarded the old way (docs exchanged by email).
+  // Only Join/Increase rows ever reach this list now (Redemption is excluded
+  // server-side - "received in transit" is not a concept that applies to
+  // money going out), and the server only sends a row here when it is
+  // Pending or garbage - never a genuinely-progressed status, since
+  // caymanOpPeekAwaitingMoney_ excludes Received in transit. So "valid" here
+  // means exactly Pending; anything else is, by construction, wrong data.
   function wlAwaitingHtml(rows){
     if(!rows||!rows.length)return '';
+    var hdr='<div class="wl-await-cols"><span>Name</span><span>Type</span><span>Amount</span><span>Status</span><span></span></div>';
     var body=rows.map(function(r){
       var validExec=/^(Pending|טרם הועבר)$/.test(r.execStatus||'');
       var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
@@ -6144,11 +6170,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'<div class="wl-row-nm">'+nmHtml+'</div>'
         +'<div>'+wlTypeBadge(r.type)+'</div>'
         +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
-        +'<div class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</div>'
+        +'<div><span class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</span></div>'
         +'<div><button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button></div>'
         +'</div>';
     }).join('');
-    return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+body+'</div>';
+    return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+hdr+body+'</div>';
   }
   function wlTransfersHtml(transfers){
     var hdr='<div class="wl-rows-hdr">'
