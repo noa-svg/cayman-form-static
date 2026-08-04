@@ -1306,9 +1306,15 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-07-18-2';
+      window.__BUILD_TAG = 'israel-2026-08-05-1';
       var p = new URLSearchParams(location.search);
-      var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
+      // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
+      // /exec URL; the 5-constant duplication is the rollback design (revert
+      // this one commit to roll back). URL composition tolerates the bare
+      // origin: both consumers concatenate '?...' directly (lvp-gateway.js
+      // opts.url + '?source=lp', and the ?api=config fetch below).
+      var gasUrl = 'https://ju-api.legacyvpartners.com';
       // Dev override: only honored when the page itself is served from localhost.
       var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
       if (isLocal && p.get('gas')) gasUrl = p.get('gas');
