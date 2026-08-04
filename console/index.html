@@ -2821,6 +2821,22 @@ body.side-coll .ss-lbl { display: none; }
 .wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
 .wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
 .wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
+/* Awaiting-money list (2026-08-03/04, Noa: "can i edit it in console? itll
+   be easier" - after a direct sheet edit didn't persist and once wrote the
+   wrong value). Every signed real-amount row not yet at a terminal exec
+   status, with a one-click "Mark received" that calls the same
+   ?api=opMarkMoneyReceived route the Board drawer already uses (idempotent,
+   forward-only, Tier-1 auth) - no cell editing needed. */
+.wl-await{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-bottom:12px}
+.wl-await-hdr{padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
+.wl-await-row{display:grid;grid-template-columns:1fr 90px 110px 110px 120px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
+.wl-await-row:last-child{border-bottom:none}
+.wl-await-exec{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-await-exec.wl-await-invalid{color:var(--color-coral);font-weight:600}
+.wl-await-btn{padding:5px 10px;font-size:12px;font-weight:700;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer}
+.wl-await-btn:hover{background:var(--color-bg-hover)}
+.wl-await-btn:disabled{opacity:0.55;cursor:default}
+.wl-await-btn.wl-await-done{border-color:var(--color-green);color:var(--color-green);cursor:default}
 /* Board-search LP directory results (2026-08-02, redesigned as a floating
    popover after Noa: "why would a user think the search is a shortcut to
    a new process"). Increase/Withdrawal reachable straight from the board's
@@ -3258,6 +3274,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
               </select>
             </div>
           </div>
+          <div id="wlAwaiting" style="margin-top:16px"></div>
           <div id="wlRows" style="margin-top:16px"></div>
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button id="wlReviewBtn" class="btn">Review</button>
@@ -3455,7 +3472,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-02-4';
+  window.__BUILD_TAG = 'console-2026-08-04-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -6089,6 +6106,29 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return 0;
     });
   }
+  // Awaiting-money list: rows signed + real-amount but not yet at a terminal
+  // exec status (Pending, OR an invalid/mistyped value like the STATUS word
+  // "Completed" landing here by mistake - flagged red so it reads as wrong,
+  // not just unfinished). "Mark received" reuses the exact route/action the
+  // Board drawer's own button calls, keyed on this row's masterRid - no
+  // dependency on the LP having a Ju processId/registry entry, so this also
+  // covers rows onboarded the old way (docs exchanged by email).
+  function wlAwaitingHtml(rows){
+    if(!rows||!rows.length)return '';
+    var body=rows.map(function(r){
+      var validExec=/^(Pending|טרם הועבר)$/.test(r.execStatus||'');
+      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
+        +(r.nameEn?'<span class="wl-row-nm-en">'+esc2(r.nameEn)+'</span>':'');
+      return '<div class="wl-await-row">'
+        +'<div class="wl-row-nm">'+nmHtml+'</div>'
+        +'<div>'+wlTypeBadge(r.type)+'</div>'
+        +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
+        +'<div class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</div>'
+        +'<div><button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button></div>'
+        +'</div>';
+    }).join('');
+    return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+body+'</div>';
+  }
   function wlTransfersHtml(transfers){
     var hdr='<div class="wl-rows-hdr">'
       +'<span><button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button></span>'
@@ -6108,9 +6148,38 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
         draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
-        rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult');
+        rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult'),
+        awaitEl=document.getElementById('wlAwaiting');
     if(!reviewBtn)return;
-    var lastGo=false,peekSeq=0,wlLastTransfers=null;
+    var lastGo=false,peekSeq=0,wlLastTransfers=null,awaitSeq=0;
+    function peekAwaiting(){
+      var month=(monthEl.value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){awaitEl.innerHTML='';return;}
+      var rid=++awaitSeq;
+      apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month)).then(function(r){
+        if(rid!==awaitSeq)return;
+        awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
+      }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
+    }
+    // "Mark received" (2026-08-03/04, Noa: "can i edit it in console? itll be
+    // easier") - same route the Board drawer's own button calls
+    // (?api=opMarkMoneyReceived), keyed on masterRid instead of processId so
+    // it also covers rows with no Ju registry entry. Idempotent + forward-
+    // only server-side, so no confirm step here - a stray second click just
+    // reports "already advanced".
+    awaitEl.addEventListener('click',function(e){
+      var btn=e.target.closest('[data-act="markMoneyReceived"]');
+      if(!btn||btn.disabled)return;
+      var rid=btn.getAttribute('data-rid');
+      btn.disabled=true;btn.textContent='Marking...';
+      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid)).then(function(r){
+        if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
+        btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
+        setTimeout(function(){ peekAwaiting(); peekRows(); },600);
+      }).catch(function(err){
+        btn.disabled=false;btn.textContent='Mark received';btn.title=(err&&err.serverError)||'Could not reach the server';
+      });
+    });
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
     function renderWlRows(){rowsEl.innerHTML=wlTransfersHtml(wlLastTransfers);}
     // Click-to-sort headers (Noa, 2026-08-02: "make the columns sort on click
@@ -6149,11 +6218,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
       if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
       monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
-      peekRows();
+      peekRows();peekAwaiting();
     }).catch(function(){
       monthEl.innerHTML='<option value="">Could not load months</option>';
     });
-    monthEl.onchange=peekRows;
+    monthEl.onchange=function(){peekRows();peekAwaiting();};
     ccyEl.onchange=peekRows;
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
