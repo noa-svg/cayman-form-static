@@ -35,3 +35,4 @@ test/*
 !test/popstate-navigation-harness.cjs
 !test/signer-lane-gate-bypass-harness.cjs
 !test/board-search-lp-directory-harness.cjs
+!test/api-fetch-nonjson-harness.cjs

@@ -3375,7 +3375,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <h2 id="panelTitle">New process</h2>
     <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
     <div id="lpPickerWrap">
-      <label for="lpSearch">Existing LP <span class="tag">required</span></label>
       <div class="lp-search">
         <input id="lpSearch" type="search" autocomplete="off" aria-describedby="lpSearchHint" placeholder="Search by name (Hebrew or English)">
         <div id="lpResults" class="lp-results" hidden></div>
@@ -3693,13 +3692,51 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(qs.indexOf('?admin=sendIsraeliInvite')===0) return {ok:true,sentTo:'lp@example.com',cc:'omri@legacyvpartners.com'};
     return {ok:true};
   }
-  function apiFetch(qs){
+  // 2026-08-04, a bug Noa hit herself: "Server error: Unexpected token '<',
+  // "<!DOCTYPE "... is not valid JSON". That is r.json() choking on an HTML page.
+  // Neither Ju backend returns JSON unconditionally: the GAS deployment
+  // intermittently serves Google's own HTML (a Drive "cannot open the file"
+  // page - observed 8+ times on this deployment, always clearing on one retry -
+  // a 302 interstitial, or a login page), and ju-service behind Cloud Run can
+  // serve an HTML 502/503 or an IAM redirect. So this is written for BOTH
+  // architects rather than for the Google-specific strings: classify ANY
+  // non-JSON body, retry once, and only then report - in words that say what to
+  // do instead of quoting a parser.
+  function apiClassifyNonJson_(status, text){
+    var t=String(text||'');
+    var head=t.slice(0,400).toLowerCase();
+    if(head.indexOf('accounts.google.com')!==-1||head.indexOf('sign in')!==-1&&head.indexOf('<!doctype')!==-1)
+      return {kind:'auth', msg:'Your Google session expired. Sign out and back in.'};
+    if(head.indexOf('לא ניתן לפתוח את הקובץ')!==-1||head.indexOf('cannot open the file')!==-1||head.indexOf('הדף לא נמצא')!==-1)
+      return {kind:'transient', msg:'Google briefly refused to serve Ju (its own error page, not a Ju fault). It usually clears immediately.'};
+    if(status===502||status===503||status===504||head.indexOf('nginx')!==-1)
+      return {kind:'transient', msg:'The Ju service was unreachable for a moment (HTTP '+status+').'};
+    if(head.indexOf('<!doctype')!==-1||head.indexOf('<html')!==-1)
+      return {kind:'html', msg:'Ju returned a web page instead of data (HTTP '+status+'). That is a server-side hiccup, not something you typed.'};
+    return {kind:'unknown', msg:'Ju returned something that is not data (HTTP '+status+').'};
+  }
+  function apiFetch(qs, _retried){
     if(DEMO){return new Promise(function(res){setTimeout(function(){res(demoResolve_(qs));},60);});}
     // F20: POST so the id_token + params ride in the body, not the URL. The
     // server (?source=op) rebuilds the param map and delegates to the same router.
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
-    return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(d){
+    return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
+      // Read as TEXT first. r.json() throws a parser message the operator cannot
+      // act on and, worse, destroys the body that says what actually happened.
+      return r.text().then(function(txt){
+        try { return JSON.parse(txt); }
+        catch(_){
+          var info=apiClassifyNonJson_(r.status, txt);
+          // One automatic retry for the shapes that are known to clear on one.
+          // Never retry an auth page: that just loops on a dead session.
+          if(!_retried && info.kind!=='auth') return apiFetch(qs, true);
+          var ne=new Error('non_json'); ne.serverError=info.msg; ne.nonJson=info.kind;
+          if(info.kind==='auth') clearAuth('session_expired');
+          throw ne;
+        }
+      });
+    }).then(function(d){
       // Only a DEFINITIVE rejection of this token clears the session. A transient
       // failure to reach Google's tokeninfo endpoint (network blip, non-200,
       // parse error - server prefixes these 'tokeninfo_') must NOT log the
@@ -4607,7 +4644,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
       ["classRow","manualLpFields","foRow","langRow","foShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
-      el=document.getElementById("panelLead");if(el)el.textContent="Creates the request and emails the invite to the existing LP.";
+      // 2026-08-04, Noa: the lead line only restated the panel title ("Creates
+      // the request and emails the invite to the existing LP.") - deleted, not
+      // just emptied, so a stale value from a prior Onboarding open can never
+      // leak through (display:none, reset by the onboarding branch below).
+      el=document.getElementById("panelLead");if(el)el.style.display="none";
       el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
       el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
       return;
@@ -4623,7 +4664,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // FO share is a NEW-subscription field, same reasoning as classRow/langRow above.
     el=document.getElementById("foShareSection");if(el)el.style.display="";
     loadFoShareLabels();
-    el=document.getElementById("panelLead");if(el)el.textContent="Creates the Monday item, emails the investor, and notifies the team.";
+    el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Creates the Monday item, emails the investor, and notifies the team.";}
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el)el.textContent="Send invite";
   }
@@ -5861,7 +5902,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // auto-send; the operator tests the link then sends it (withdrawal is always manual,
     // increase has a Send-to-LP action server-side).
     if(state.process==="increase"||state.process==="withdrawal"){
-      if(!state.selectedPeopleId){showMsg("Pick the existing LP filing the request.",true);return;}
+      if(!state.selectedPeopleId){showMsg("Pick the LP filing the request.",true);return;}
       // C3 (2026-07-19): this money path used to mint AND auto-send with no
       // confirmation at all - the weakest guard on the highest-stakes send. One
       // review card: who, which flow, where the invite goes. No amount exists at
@@ -5869,8 +5910,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // wrong here: the person and the flow.
       createReviewConfirm([
         ['LP',(state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name))||('Monday item '+state.selectedPeopleId)],
-        ['Flow',(state.process==='withdrawal'?'Redemption':'Increase')+' · '+(state.type||'')],
-        ['Invite goes to','the LP by email, cc Omri']
+        // 2026-08-04, Noa: "Redemption" here vs "Withdrawal" on the panel title
+        // two lines up was the same event under two words in one panel - the
+        // console UI says Withdrawal everywhere else (this button, the New
+        // menu, board search), so that's the word that stays; the
+        // transfer-forms tracker write itself is untouched, still Redemption
+        // (see tests/tracker-contract-parity.test.mjs). _typeLabel() instead
+        // of raw state.type also fixes "individual" vs the title's "Individual".
+        ['Flow',(state.process==='increase'?'Increase':'Withdrawal')+' · '+_typeLabel()],
+        // On a send confirmation the address is the one thing worth checking -
+        // "the LP by email" told the operator nothing they could verify.
+        ['Invite goes to',(state.selectedLp&&state.selectedLp.email)?(state.selectedLp.email+', cc Omri'):'the LP by email, cc Omri']
       ],'Create + send invite',function(){
       btn.disabled=true;btn.textContent="Creating...";
       document.getElementById("res").classList.remove("on");
