@@ -3496,7 +3496,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-4';
+  window.__BUILD_TAG = 'console-2026-08-04-5';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4835,7 +4835,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +(xy?'<span class="cs-xy">'+esc2(xy)+'</span>':'')+'</div>'
       +(cs.email?'<div class="cs-line"><span class="cs-em">'+esc2(cs.email)+'</span></div>':'');
     if(cs.link){
-      h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">Signing link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
+      // 2026-08-04 /ux-review: this card's link and the generic "Links" section
+      // below it (line ~5099, server-labeled) can both say some variant of
+      // "Signer link" in the same drawer - under time pressure an operator
+      // grabbing "the link" could send the wrong one. This one is scoped to
+      // THIS signer's current turn, so the label says that, not a name that
+      // differs from the other section's by one word.
+      h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">This signer\'s link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
     }
     h+=reminderHistLine(cs,rems);
     h+='<div class="cs-line"><button class="nudge" data-act="nudge">'+(signerReminders(cs,rems).length?'Remind again':'Remind signer')+'</button>'
