@@ -83,4 +83,8 @@ node test/signer-lane-gate-bypass-harness.cjs    >/dev/null && echo "signer-lane
 node test/drawer-race-harness.cjs                >/dev/null && echo "drawer-race OK"
 node test/console-action-contract.cjs            >/dev/null && echo "console-action-contract OK"
 node test/board-search-lp-directory-harness.cjs  >/dev/null && echo "board-search-lp-directory OK"
+# Phase 4 pilot flip (2026-08-05): israel.html's in-flight-session legacy-
+# gateway fallback (old-token boots retry the pre-flip GAS deployment and
+# stick; fresh sessions and primary outages never reroute).
+node test/pilot-fallback-harness.cjs             >/dev/null && echo "pilot-fallback OK"
 echo "pre-push: all green - deploying to Pages."

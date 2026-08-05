@@ -6,6 +6,15 @@
 //       served files resolves to ONE distinct deployment id (and each live
 //       gateway consumer actually carries it -- sign.html is a redirect stub
 //       and is allowed zero occurrences);
+//   C1p PILOT EXCEPTION (2026-08-05, Phase 4 pilot flip): israel.html's
+//       PRIMARY gateway is ju-api.legacyvpartners.com (ju-service), so it
+//       leaves C1's ">=1 /exec" presence assertion and instead gets POSITIVE
+//       assertions of its own: exactly one ju-api primary URL, plus exactly
+//       one legacy /exec URL (the in-flight-session fallback for sessions
+//       minted before the flip) carrying the SAME deployment id the other
+//       four pages carry. Drift protection preserved, not weakened: a stray
+//       second copy of either URL, a missing fallback, or a diverged id all
+//       fail here.
 //   C2  index/israel/signer/flow each bake window.__BUILD_TAG exactly once,
 //       the tag prefix matches the file name, and every tag is unique;
 //   C3  console/index.html carries a build tag too (console- prefix,
@@ -17,8 +26,12 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const FILES = ['index.html', 'israel.html', 'signer.html', 'flow.html', 'console/index.html', 'sign.html'];
-// Files that MUST carry the gateway URL (sign.html is a redirect stub: zero is correct).
-const GATEWAY_REQUIRED = ['index.html', 'israel.html', 'signer.html', 'flow.html', 'console/index.html'];
+// Files that MUST carry the gateway URL (sign.html is a redirect stub: zero is
+// correct; israel.html is the Phase 4 pilot page and is asserted separately in
+// C1p below, see the header note).
+const GATEWAY_REQUIRED = ['index.html', 'signer.html', 'flow.html', 'console/index.html'];
+// israel.html's pilot PRIMARY gateway (ju-service behind ju-api).
+const PILOT_PRIMARY_URL = 'https://ju-api.legacyvpartners.com';
 // Files that MUST bake a filename-prefixed build tag.
 const TAGGED = { 'index.html': 'index-', 'israel.html': 'israel-', 'signer.html': 'signer-', 'flow.html': 'flow-', 'console/index.html': 'console-' };
 
@@ -45,6 +58,24 @@ for (const f of GATEWAY_REQUIRED) {
   ok('C1 ' + f + ' carries the gateway /exec URL', idsByFile[f].length >= 1, 'found ' + idsByFile[f].length + ' occurrences');
 }
 ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
+// ---- C1p: pilot exception, israel.html (2026-08-05 flip) -------------------
+// Positive replacement for israel.html's former C1 presence check: the ju-api
+// primary constant appears exactly once, and exactly one legacy /exec URL (the
+// pre-flip in-flight-session fallback) rides along, same id as the rest of the
+// fleet (the id-match leg also feeds the global single-id assertion below,
+// since israel.html's occurrence is in allIds).
+{
+  const primaryCount = html['israel.html'].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1p israel.html carries the ju-api primary URL exactly once', primaryCount === 1,
+    'found ' + primaryCount + ' occurrences of ' + PILOT_PRIMARY_URL);
+  ok('C1p israel.html carries exactly ONE legacy /exec URL (pre-flip fallback)',
+    idsByFile['israel.html'].length === 1, 'found ' + idsByFile['israel.html'].length + ' occurrences');
+  ok('C1p israel.html legacy fallback id matches the id the other pages carry',
+    idsByFile['israel.html'].length === 1 && idsByFile['index.html'].length >= 1
+      && idsByFile['israel.html'][0] === idsByFile['index.html'][0],
+    'israel: ' + JSON.stringify(idsByFile['israel.html'].map(id => id.slice(0, 12) + '...'))
+      + ' index: ' + JSON.stringify(idsByFile['index.html'].map(id => id.slice(0, 12) + '...')));
+}
 ok('C1 exactly ONE distinct deployment id across all files', allIds.size === 1,
   'distinct ids: ' + JSON.stringify([...allIds].map(id => id.slice(0, 12) + '...')) + ' per-file counts: ' +
   JSON.stringify(Object.fromEntries(FILES.map(f => [f, idsByFile[f].length]))));

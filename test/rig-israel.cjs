@@ -108,6 +108,7 @@ async function loadIsraelForm(opts) {
   vc.on('jsdomError', (e) => errors.push(String((e && e.message) || e)));
 
   const gatewayCalls = [];   // every ?source=lp POST: { url, body (parsed) }
+  const configCalls = [];    // every ?api=config fetch URL, in boot order
 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
@@ -122,7 +123,18 @@ async function loadIsraelForm(opts) {
           json: () => Promise.resolve(obj),
           text: () => Promise.resolve(JSON.stringify(obj))
         });
-        if (url.indexOf('api=config') !== -1) return jsonResp(cfg);
+        if (url.indexOf('api=config') !== -1) {
+          configCalls.push(url);
+          // Pilot-fallback tests (2026-08-05): opts.configFetch(url, jsonResp)
+          // lets a test answer the config boot PER GATEWAY HOST (primary vs
+          // legacy), including non-2xx / rejected responses. Return a falsy
+          // value to fall through to the default single-cfg answer.
+          if (typeof opts.configFetch === 'function') {
+            const custom = opts.configFetch(url, jsonResp);
+            if (custom) return custom;
+          }
+          return jsonResp(cfg);
+        }
         if (url.indexOf('source=lp') !== -1) {
           let body = null;
           try { body = JSON.parse(init && init.body || 'null'); } catch (e) {}
@@ -201,7 +213,7 @@ async function loadIsraelForm(opts) {
   });
   // Settle the async ?api=config fetch + the deferred __israelOnCfgUpdate chain.
   await new Promise((r) => setTimeout(r, 250));
-  return { dom, window, document: window.document, errors, gatewayCalls, cfg };
+  return { dom, window, document: window.document, errors, gatewayCalls, configCalls, cfg };
 }
 
 // ---- scripted-user helpers (drive the REAL rendered state) -------------------
