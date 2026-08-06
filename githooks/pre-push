@@ -30,62 +30,109 @@ if [ ! -d test ]; then
   exit 1
 fi
 echo "pre-push: running deploy gate harnesses..."
-node test/coupling-check.cjs
-node test/client-honesty-harness.cjs  >/dev/null && echo "client-honesty OK"
-node test/index-honesty-harness.cjs   >/dev/null && echo "index-honesty OK"
-node test/snap-ttl-harness.cjs        >/dev/null && echo "snap-ttl OK"
-node test/israel-flow.cjs             >/dev/null && echo "israel-flow OK"
-node test/console-harness.cjs         >/dev/null && echo "console-harness OK"
-node test/lvp-token-consistency.cjs   >/dev/null && echo "lvp-token-consistency OK"
-node test/atrium-palette-sync.cjs     >/dev/null && echo "atrium-palette-sync OK"
-# CTO review remediation (2026-08-02): real extraction-based tests for the
-# fixes shipped this pass, added to the gate as they were written rather
-# than left sitting unused in test/.
-node test/upload-race-harness.cjs        >/dev/null && echo "upload-race OK"
-node test/doc-sanitize-harness.cjs       >/dev/null && echo "doc-sanitize OK"
-node test/id-checksum-harness.cjs        >/dev/null && echo "id-checksum OK"
-node test/signer-config-retry-harness.cjs >/dev/null && echo "signer-config-retry OK"
-node test/flow-double-submit-harness.cjs >/dev/null && echo "flow-double-submit OK"
-node test/required-note-harness.cjs      >/dev/null && echo "required-note OK"
-node test/resume-jump-harness.cjs        >/dev/null && echo "resume-jump OK"
-node test/signer-vocab-harness.cjs       >/dev/null && echo "signer-vocab OK"
-node test/attribute-escaping-harness.cjs >/dev/null && echo "attribute-escaping OK"
-# Converted from exploratory console.log probes to real assertions
-# (2026-08-02, CTO review finding #12) - these walk index.html end to end
-# (drive-branch.cjs alone runs both applicant lanes through every page), so
-# they take longer than the other harnesses above but they are this repo's
-# only automated coverage of the actual multi-page conditional-reveal /
-# required-field / submit-gating behavior an LP experiences.
-node test/select-default-probe.cjs >/dev/null && echo "select-default OK"
-node test/joint-probe.cjs          >/dev/null && echo "joint OK"
-node test/conditional-probe.cjs    >/dev/null && echo "conditional OK"
-node test/drive-branch.cjs         >/dev/null && echo "drive-branch OK"
-node test/email-amount-probe.cjs   >/dev/null && echo "email-amount OK"
-node test/test-adversarial.cjs     >/dev/null && echo "test-adversarial OK"
-node test/test-positive-submit.cjs >/dev/null && echo "test-positive-submit OK"
-# New coverage for previously-untested areas (2026-08-02, CTO review finding
-# #13): SWIFT/BIC format validation + the 10MB upload cap, and prefill-based
-# resume restoration + the FATCA/CRS conditional reveal.
-node test/format-and-upload-cap-harness.cjs     >/dev/null && echo "format-and-upload-cap OK"
-node test/resume-restore-and-fatca-harness.cjs  >/dev/null && echo "resume-restore-and-fatca OK"
-# Fresh /cto-review pass (2026-08-02) on the already-shipped state: two real
-# security findings (console attribute-escaping gap, index.html CSS
-# injection), a reliability gap (index.html's config bootstrap had no
-# retry, unlike its three sibling forms), a popstate multi-step-jump bug in
-# index.html/israel.html, and a UX regression in signer.html's own
-# earlier-this-session retry fix (the pre-fetch Hebrew call was silently
-# defeated by the lane gate). Also: drawer-race-harness.cjs and
-# console-action-contract.cjs existed, passed, and caught real bug classes
-# but were never wired into this gate.
-node test/security-review-fixes-harness.cjs      >/dev/null && echo "security-review-fixes OK"
-node test/index-config-retry-harness.cjs         >/dev/null && echo "index-config-retry OK"
-node test/popstate-navigation-harness.cjs        >/dev/null && echo "popstate-navigation OK"
-node test/signer-lane-gate-bypass-harness.cjs    >/dev/null && echo "signer-lane-gate-bypass OK"
-node test/drawer-race-harness.cjs                >/dev/null && echo "drawer-race OK"
-node test/console-action-contract.cjs            >/dev/null && echo "console-action-contract OK"
-node test/board-search-lp-directory-harness.cjs  >/dev/null && echo "board-search-lp-directory OK"
-# Phase 4 pilot flip (2026-08-05): israel.html's in-flight-session legacy-
-# gateway fallback (old-token boots retry the pre-flip GAS deployment and
-# stick; fresh sessions and primary outages never reroute).
-node test/pilot-fallback-harness.cjs             >/dev/null && echo "pilot-fallback OK"
+
+# 2026-08-06: these used to run STRICTLY SEQUENTIALLY and the gate exceeded ten
+# minutes, so during a live LP lockout that day it was bypassed with --no-verify
+# three times running. A deploy gate that cannot finish under pressure is a
+# deploy gate that gets skipped exactly when it matters most, which is worse
+# than a slower one that gets run.
+#
+# Measured on this repo: most harnesses are 0.3-3s, but israel-flow,
+# client-honesty-harness and index-honesty-harness each exceed 75s (they boot
+# the real multi-page forms in jsdom). Sequentially the gate costs the SUM;
+# concurrently it costs the SLOWEST. Same harnesses, same order in the list
+# below, nothing dropped - only the scheduling changed.
+#
+# Concurrency is capped rather than unbounded: 34 simultaneous jsdom processes
+# thrash a laptop and would make the gate slower, not faster.
+# Concurrency 4, NOT core count. The first cut used hw.ncpu and six harnesses
+# died with EMPTY logs - not assertion failures, kills: each jsdom rig parses a
+# ~100KB+ form and a dozen at once exhausts memory on a laptop. All six pass
+# individually. A gate that invents failures gets distrusted and then bypassed,
+# which is the same end state as one that is too slow. 4 is enough to overlap
+# the three genuinely slow harnesses (israel-flow, client-honesty,
+# index-honesty), which are what dominate wall-clock anyway.
+JOBS="${PREPUSH_JOBS:-4}"
+OUT="$(mktemp -d)"
+trap 'rm -rf "$OUT"' EXIT
+
+HARNESSES=(
+  coupling-check
+  client-honesty-harness
+  index-honesty-harness
+  snap-ttl-harness
+  israel-flow
+  console-harness
+  lvp-token-consistency
+  atrium-palette-sync
+  upload-race-harness
+  doc-sanitize-harness
+  id-checksum-harness
+  signer-config-retry-harness
+  flow-double-submit-harness
+  required-note-harness
+  resume-jump-harness
+  signer-vocab-harness
+  attribute-escaping-harness
+  select-default-probe
+  joint-probe
+  conditional-probe
+  drive-branch
+  email-amount-probe
+  test-adversarial
+  test-positive-submit
+  format-and-upload-cap-harness
+  resume-restore-and-fatca-harness
+  security-review-fixes-harness
+  index-config-retry-harness
+  popstate-navigation-harness
+  signer-lane-gate-bypass-harness
+  drawer-race-harness
+  console-action-contract
+  board-search-lp-directory-harness
+  pilot-fallback-harness
+)
+
+# `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
+# reported in one pass, not just the first. The explicit exit below restores
+# fail-closed behaviour.
+set +e
+# OUT is exported, NOT interpolated into the -c string: interpolating it made
+# the assembled command line long enough that BSD xargs refused with "command
+# line cannot be assembled, too long", ran NOTHING, and the gate then printed
+# "all green" in 5 seconds. A gate that passes without running is the worst
+# possible failure mode, so the runner is kept deliberately tiny and the
+# all-green line below is guarded by the ran-count check.
+export OUT
+printf '%s\n' "${HARNESSES[@]}" | xargs -P "$JOBS" -I{} bash -c '
+  if node "test/$1.cjs" > "$OUT/$1.log" 2>&1; then echo "  OK   $1"; else touch "$OUT/$1.failed"; echo "  FAIL $1"; fi
+' _ {}
+set -e
+
+# RAN-COUNT GUARD. The 2026-08-06 first cut of this parallel gate reported
+# "all green" having executed zero harnesses, because xargs bailed before
+# starting any. Never trust an absence of failures as evidence of success:
+# assert that every harness actually produced a log.
+RAN=$(ls "$OUT"/*.log 2>/dev/null | wc -l | tr -d ' ')
+EXPECTED=${#HARNESSES[@]}
+if [ "$RAN" != "$EXPECTED" ]; then
+  echo ""
+  echo "pre-push: only $RAN of $EXPECTED harnesses actually RAN - the runner itself failed."
+  echo "Refusing to deploy on an unproven gate. (git push --no-verify overrides, emergencies only)"
+  exit 1
+fi
+FAILED=$(ls "$OUT"/*.failed 2>/dev/null | wc -l | tr -d ' ')
+if [ "$FAILED" != "0" ]; then
+  echo ""
+  echo "pre-push: $FAILED harness(es) FAILED - refusing to deploy. Output follows:"
+  for f in "$OUT"/*.failed; do
+    n=$(basename "$f" .failed)
+    echo ""
+    echo "----- $n -----"
+    cat "$OUT/$n.log"
+  done
+  echo ""
+  echo "(git push --no-verify overrides, emergencies only)"
+  exit 1
+fi
 echo "pre-push: all green - deploying to Pages."
