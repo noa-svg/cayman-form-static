@@ -1306,7 +1306,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-05-2';
+      window.__BUILD_TAG = 'israel-2026-08-06-1';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1360,8 +1360,40 @@
       }
       window.ISRAEL_CFG = { gatewayUrl: activeGatewayUrl_(), token: urlToken, role: urlRole };
       var cacheKey = 'lvp_il_cfg_v1_' + urlToken;
+      // WRONG-FORM SELF-HEAL (2026-08-06). This page renders ONBOARDING ONLY: its
+      // FLOW_TYPE is derived purely from applicant type
+      // ((APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual')
+      // and cfg.flowType is never consulted by any page logic below, only by the
+      // broken-link gate. Three of the four server-side resume-link builders used to
+      // choose the static page by LANE alone, so an Israeli increase or redemption LP
+      // could be emailed an israel.html link and dropped into a full new-investor
+      // sequence with no way to file the request they actually made. Found 2026-08-06
+      // while triaging a stranded redemption LP; the server side is fixed in the same
+      // change (caymanFormPathFor_).
+      //
+      // This guard exists because fixing the builders does NOT fix the links already
+      // sitting in LP inboxes, and because a page that silently renders the wrong flow
+      // is exactly the failure that hid for days. The resume token is the same token
+      // family on both pages, so send the LP where they were always meant to go and
+      // carry the query string verbatim. Runs inside applyCfg so EVERY path is covered
+      // by one check (sessionStorage cache, fresh ?api=config, and the pilot legacy
+      // probe all land here). Loop-safe: flow.html has no reciprocal redirect, and the
+      // token-scoped stamp makes a second bounce impossible even if that ever changed.
+      var MONEY_FLOW_PAGES_ = { cayman_increase: 1, cayman_withdrawal: 1 };
+      var flowRedirectKey = 'lvp_il_flow_redirect_v1_' + urlToken;
+      function redirectIfMoneyFlow_(cfg) {
+        if (!cfg || !MONEY_FLOW_PAGES_[String(cfg.flowType || '')]) return false;
+        try {
+          if (sessionStorage.getItem(flowRedirectKey) === '1') return false;
+          sessionStorage.setItem(flowRedirectKey, '1');
+        } catch (e) { /* private mode: the one-shot below still applies */ }
+        try { location.replace('/flow.html' + location.search); } catch (e) { return false; }
+        return true;
+      }
       function applyCfg(cfg) {
         if (!cfg) return;
+        // Wrong-form guard first: never paint an onboarding page for a money flow.
+        if (redirectIfMoneyFlow_(cfg)) return;
         // Completed-link terminal screen (index.html markDoneIfCompleted parity,
         // 2026-06-28 pattern): a reopened FINISHED link (cfg.completed = the
         // session has submittedAt; the gateway freezes it server-side) renders
