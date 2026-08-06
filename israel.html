@@ -1462,6 +1462,37 @@
         if (cfg && !cfg.completed && !cfg.flowType) {
           document.documentElement.classList.add('lvp-gate-mode');
         }
+        // 2026-08-06 WRONG-FORM GUARD. This page is ONBOARDING only: FLOW_TYPE
+        // is derived from applicant type alone (see 'var FLOW_TYPE =' below)
+        // and cfg.flowType is read nowhere else, so if a money process ever
+        // reaches this page it renders a full new-investor sequence and the LP
+        // has no way to file their increase or redemption. That happened via
+        // caymanConsoleSendInviteResend_, which built '/israel.html' for every
+        // Israeli-lane process regardless of flow (fixed server-side the same
+        // day; this is the belt to that braces).
+        //
+        // Refuse loudly instead of rendering the wrong thing. Reuses the
+        // existing broken-link screen rather than introducing new LP copy: from
+        // the LP's side the link genuinely is not usable, and a wrong form that
+        // looks right is far worse than a link that says it is broken. The
+        // operator sees the real reason in the console.
+        // DENYLIST, deliberately, not an allowlist. Onboarding arrives under at
+        // least four identifiers (cayman_subscription, israeli_subscription,
+        // israeli_subscription_individual, israeli_subscription_entity) and the
+        // set has grown before, so an allowlist of "known onboarding" would gate
+        // real LPs into the broken-link screen the moment a fifth appeared. The
+        // MONEY set is small, closed, and the only thing this page genuinely
+        // cannot render. An unrecognised flowType therefore renders as it always
+        // did: this guard fails OPEN, never shut.
+        if (cfg && !cfg.completed && /_(increase|withdrawal)$/.test(String(cfg.flowType || ''))) {
+          if (window.console) {
+            try {
+              console.error('israel.html: refusing to render flowType "' + cfg.flowType
+                + '" - this page renders ONBOARDING only. A money flow belongs on flow.html.');
+            } catch (eLog) {}
+          }
+          document.documentElement.classList.add('lvp-gate-mode');
+        }
       }
       // One-shot legacy probe: the primary answered "token unknown" for a real
       // token, so ask the OLD backend whether it owns this session. Only a

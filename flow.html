@@ -405,7 +405,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-07-18-4';
+      window.__BUILD_TAG = 'flow-2026-08-06-1';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -494,6 +494,57 @@
         // stalled connection hung on the loading screen forever, and any blip
         // showed the permanent broken-link message. Distinguish transient
         // (retry, then fall back) from terminal (4xx / bad token / no flowType).
+        // Client error telemetry (2026-08-06). Server side is the token-gated,
+        // lock-free `client_error` branch in caymanHandleLpAction_; it writes a
+        // structured Cloud Logging line and never touches process state.
+        //
+        // Fire-and-forget by design: this is a diagnostic, so it must never
+        // block the LP, never surface its own failure, and never retry. Capped
+        // at CLIENT_ERROR_MAX_ per page load so a render loop cannot turn one
+        // broken form into a flood against a gateway that is, by hypothesis,
+        // already struggling.
+        var CLIENT_ERROR_MAX_ = 3;
+        var clientErrorsSent_ = 0;
+        function reportClientError_(message, where) {
+          try {
+            if (!token) return;                       // nothing to attribute it to
+            if (clientErrorsSent_ >= CLIENT_ERROR_MAX_) return;
+            clientErrorsSent_++;
+            var payload = JSON.stringify({
+              action: 'client_error',
+              token: token,
+              lane: 'israeli',
+              payload: {
+                message: String(message || '').slice(0, 500),
+                where: String(where || '').slice(0, 120),
+                buildTag: window.__BUILD_TAG || '',
+                ua: (navigator && navigator.userAgent) || ''
+              }
+            });
+            // sendBeacon survives the LP closing the tab, which is exactly when
+            // a give-up happens. text/plain keeps it a CORS-simple request, the
+            // same shape every other call from this page uses.
+            if (navigator && typeof navigator.sendBeacon === 'function') {
+              navigator.sendBeacon(GW + '?source=lp', new Blob([payload], { type: 'text/plain;charset=utf-8' }));
+              return;
+            }
+            var b = new XMLHttpRequest();
+            b.open('POST', GW + '?source=lp', true);
+            b.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+            b.timeout = 15000;
+            b.send(payload);
+          } catch (eRep) { /* a telemetry failure must never become a second error */ }
+        }
+        // Uncaught page errors: the class the server can never see on its own.
+        window.addEventListener('error', function (ev) {
+          reportClientError_((ev && ev.message ? ev.message : 'error')
+            + ' @' + ((ev && ev.filename) || '?') + ':' + ((ev && ev.lineno) || '?'), 'window.onerror');
+        });
+        window.addEventListener('unhandledrejection', function (ev) {
+          var r = ev && ev.reason;
+          reportClientError_(String((r && (r.stack || r.message)) || r || 'rejection'), 'unhandledrejection');
+        });
+
         var cfgAttempts = 0;
         var CFG_MAX_ATTEMPTS = 3;
         function loadConfig() {
@@ -514,12 +565,19 @@
           // exec leg alone hit 117s, which 90s would still have failed. Bounded, so
           // a genuinely dead gateway still surfaces an error instead of hanging.
           x.timeout = 180000;
-          function transientFail() {
+          function transientFail(why) {
             if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
             $loading.textContent = NETWORK_FAIL_MSG;
+            // 2026-08-06: report the give-up, do not just show it. This exact
+            // branch is what a real LP hit for two days while the server side
+            // stamped him `opened` and every console read as if he had simply
+            // not got round to it. Fires ONLY after the retries are exhausted,
+            // so a single slow attempt is never reported.
+            reportClientError_('config_load_failed:' + (why || 'unknown')
+              + ' attempts=' + cfgAttempts + ' budgetMs=' + x.timeout, 'loadConfig');
           }
-          x.ontimeout = transientFail;
-          x.onerror = transientFail;
+          x.ontimeout = function () { transientFail('timeout'); };
+          x.onerror = function () { transientFail('network'); };
           x.onreadystatechange = function () {
             if (x.readyState !== 4) return;
             if (x.status === 0 || x.status >= 500) { transientFail(); return; }
@@ -800,6 +858,9 @@
 
         $loading.hidden = true;
         $form.hidden = false;
+        // Prefill locking above may have stripped `required` from everything
+        // on the landing page; sync the note to what the page actually asks.
+        updateRequiredNote();
       }
 
       // ---- multi-page nav ---------------------------------------------------
@@ -821,6 +882,28 @@
           if (!title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1');
           try { title.focus({ preventScroll: true }); } catch (e) { title.focus(); }
         }
+        updateRequiredNote();
+      }
+      // "All fields are required" is only true on a page that still ASKS for
+      // something. On a fully prefilled-and-locked page (a withdrawal's
+      // identity page for an existing LP: every field readOnly, `required`
+      // dropped by prefillRO) the note is pure noise (Noa, 2026-08-06). So it
+      // follows the ACTIVE page: visible only when that page still has at
+      // least one visible, editable, required field.
+      function updateRequiredNote() {
+        var note = document.querySelector('.lvp-required-note');
+        var act = document.querySelector('.lvp-page.is-active');
+        if (!note || !act) return;
+        var els = act.querySelectorAll('input[required], select[required], textarea[required]');
+        var any = false;
+        for (var i = 0; i < els.length; i++) {
+          var el = els[i];
+          if (el.disabled || el.readOnly) continue;
+          if (el.closest('[hidden]')) continue;
+          any = true;
+          break;
+        }
+        note.hidden = !any;
       }
       document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-go]');
