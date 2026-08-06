@@ -510,9 +510,10 @@
           // 18-23s, i.e. straddling the old budget, so 20s would still fail
           // intermittently. The remaining cost is a 5.4MB Code.js parsed per cold
           // execution; until that is split, the client must be patient rather
-          // than wrong. 90s is well clear of observed p100 and still bounded, so
+          // than wrong. 180s, not the 90s first shipped: a later measurement of the
+          // exec leg alone hit 117s, which 90s would still have failed. Bounded, so
           // a genuinely dead gateway still surfaces an error instead of hanging.
-          x.timeout = 90000;
+          x.timeout = 180000;
           function transientFail() {
             if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
             $loading.textContent = NETWORK_FAIL_MSG;

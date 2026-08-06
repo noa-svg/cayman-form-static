@@ -574,9 +574,10 @@
       // every request behind five 30s script-global locks, and even after that
       // fix a cold execution parses a 5.4MB Code.js. A signer who cannot load
       // the form is blocked exactly like an LP who cannot load the flow, so the
-      // two entry budgets are kept in step deliberately. Retries here are safe
+      // two entry budgets are kept in step deliberately (both 180s after a 117s
+      // exec leg was measured; 90s was the first, insufficient attempt). Retries are safe
       // (GET, no server side effect) but three fast aborts just fail faster.
-      x.timeout = 90000;
+      x.timeout = 180000;
       x.onreadystatechange = function () {
         if (x.readyState !== 4) return;
         var ctx = {};
