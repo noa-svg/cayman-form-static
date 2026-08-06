@@ -79,6 +79,37 @@ test file that should ship, add a matching `!test/<name>.cjs` line to
   brace-counting (`extractFn`) and drive them directly. Prefer that pattern
   over reimplementing logic by hand when adding a new test.
 
+## This repo is vendored into legacy-tools-mono. Refresh after ANY form change
+
+`legacy-tools-mono/apps/ju-cayman/tests/form-snapshots/` holds committed copies
+of files from THIS repo, because the mono CI never checks this repo out and a
+test that cannot find its input would silently skip instead of failing. Vendored:
+
+- `israel.html`, `index.html`, `console/index.html`
+- `validation-rules.js`, `lvp-gateway.js`, `doc-sanitize.js`, `bank-registry.json`
+  (the boot assets, added 2026-08-06)
+
+Three mono suites read them. Two parse the markup
+(`israeli-form-validator-parity`, `cayman-form-validator-parity`); the third,
+`israeli-form-validator-differential`, BOOTS israel.html in jsdom and runs its
+JavaScript, which is why the boot assets have to be vendored too and why its
+freshness check is byte-level rather than registry-level. A script-only change
+here (a predicate fix, a build-tag bump) does not move the parsed field registry,
+so the two parser suites stay green on a stale snapshot. The differential one
+will not.
+
+After any change to a vendored file, from `legacy-tools-mono/apps/ju-cayman`:
+
+```bash
+node scripts/refresh-form-snapshots.mjs
+node --test tests/israeli-form-validator-differential.test.mjs
+```
+
+and commit the refreshed snapshots in mono together with the change here. The
+practical failure mode this prevents: the snapshot sat 3 weeks stale
+(`israel-2026-07-18-2` against a live `israel-2026-08-05-2`) and nothing caught
+it, because the only freshness check at the time compared parsed registries.
+
 ## The gateway URL is duplicated 5 times
 
 The same `/exec` deployment URL is hardcoded independently in index.html,
