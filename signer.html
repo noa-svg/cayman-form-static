@@ -569,7 +569,14 @@
       show('loading');
       var x = new XMLHttpRequest();
       x.open('GET', GW + '?api=signerform&t=' + encodeURIComponent(TOKEN), true);
-      x.timeout = 20000;
+      // Raised from 20000 alongside flow.html's config budget, 2026-08-06, same
+      // cause and same measurements: the gateway's doGet preamble was serialising
+      // every request behind five 30s script-global locks, and even after that
+      // fix a cold execution parses a 5.4MB Code.js. A signer who cannot load
+      // the form is blocked exactly like an LP who cannot load the flow, so the
+      // two entry budgets are kept in step deliberately. Retries here are safe
+      // (GET, no server side effect) but three fast aborts just fail faster.
+      x.timeout = 90000;
       x.onreadystatechange = function () {
         if (x.readyState !== 4) return;
         var ctx = {};

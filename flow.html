@@ -500,7 +500,19 @@
           cfgAttempts++;
           var x = new XMLHttpRequest();
           x.open('GET', GW + '?api=config&t=' + encodeURIComponent(token), true);
-          x.timeout = 20000;
+          // 20000 until 2026-08-06, when it locked a real LP out of a redemption.
+          // The gateway's own doGet preamble was taking five 30s script-global
+          // locks per request (fixed same day in CaymanGateway.ts @828), which
+          // pushed ?api=config to 26-47s by curl and past 180s in a real browser.
+          // Every attempt aborted at 20s, all three retries burned in ~62s, and
+          // the LP got NETWORK_FAIL_MSG - which blames HIS connection for a
+          // server-side stall. Even with the lock fix deployed, config measures
+          // 18-23s, i.e. straddling the old budget, so 20s would still fail
+          // intermittently. The remaining cost is a 5.4MB Code.js parsed per cold
+          // execution; until that is split, the client must be patient rather
+          // than wrong. 90s is well clear of observed p100 and still bounded, so
+          // a genuinely dead gateway still surfaces an error instead of hanging.
+          x.timeout = 90000;
           function transientFail() {
             if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
             $loading.textContent = NETWORK_FAIL_MSG;
