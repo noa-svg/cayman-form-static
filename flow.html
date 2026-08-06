@@ -1709,7 +1709,25 @@
             return window.LVPGateway.post({
               url: GW,
               body: body,
-              timeoutMs: 60000,
+              // 60000 until 2026-08-06. The 60s ceiling was sized against the
+              // Drive render alone (10-25s cold, per the note above) and assumed
+              // the gateway itself was ~free. It is not: measured the same day,
+              // a bare POST to ?source=lp took 39.1s of pure gateway overhead
+              // before any submit work began, so a real submit landed at 49-64s
+              // and straddled the ceiling.
+              //
+              // A straddled ceiling is worse here than a slow one. This
+              // transport retries twice on timeout, and a redemption that
+              // SUCCEEDED server-side while the client gave up is exactly how a
+              // duplicate money event gets created. Raising the budget is
+              // therefore the SAFER change, not just the more patient one: it
+              // makes the retry path rare instead of likely.
+              //
+              // 180s covers 39s gateway + a cold ~25s Drive render with room to
+              // spare, and still bounds a genuinely dead /exec so the spinner
+              // cannot hang forever. Revisit once the 5.4MB Code.js is split and
+              // the gateway overhead goes back to single digits.
+              timeoutMs: 180000,
               classifyReject: function (res) {
                 // ok !== true (tightened 2026-07-15): a JSON body WITHOUT ok
                 // (an HTTP 500 page that parses, a truncated proxy response)

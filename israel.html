@@ -4268,8 +4268,17 @@
       // it runs inside the global caymanWithLock_ (up to a 20s waitLock) plus a stamp/ID
       // Drive upload, which can exceed the 30s default and falsely time out -> the LP
       // retried and it "worked the 3rd time" (Noa 2026-07-08). 120s covers the lock wait.
-      var timeoutMs = timeoutOverrideMs
-        || ((action === 'submit' || action === 'record_signature') ? 120000 : 30000);
+      // 2026-08-06: the non-submit default was 30000 and that is now BELOW the
+      // gateway's own floor. A bare POST to ?source=lp measured 39.1s of pure
+      // overhead that day, before any action work, so every "snappy" action
+      // (save_page and friends) was aborting on a server that was still
+      // answering. Raised to 120000 so it clears the same bar the submit budget
+      // already did. submit / record_signature keep their 120s, which still
+      // covers 39s of gateway plus their own work.
+      // The gateway overhead is the 5.4MB Code.js reparsed per cold execution
+      // (ju-cayman @828 removed the lock storm that made it far worse). When
+      // that bundle is split, both numbers should come back down together.
+      var timeoutMs = timeoutOverrideMs || 120000;
       return window.LVPGateway.post({
         url: CFG.gatewayUrl,
         body: { action: action, token: CFG.token, lane: 'israeli', payload: payload || {} },

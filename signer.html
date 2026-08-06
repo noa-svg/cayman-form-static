@@ -1971,14 +1971,22 @@
         // request never reached the server at all, a case retryOnTimeout also
         // treats as terminal. Retry stays safe on a timeout specifically because
         // the gateway dedupes by processId (a cold GAS start plus the signature
-        // PNG upload and seal can exceed 40s, which is why the timeout itself is
-        // 70s), so a silent second attempt can never double-record a signature.
+        // PNG upload and seal can exceed 40s, which is why the timeout itself
+        // was 70s), so a silent second attempt can never double-record a
+        // signature.
+        // 2026-08-06: 70000 raised to 180000. The 70s figure budgeted for the
+        // signature work on the assumption the gateway itself was cheap. A bare
+        // POST to ?source=lp measured 39.1s of pure overhead that day, so 39s +
+        // a 40s+ upload-and-seal already exceeded 70s and the retry path was
+        // being taken routinely rather than exceptionally. The processId dedupe
+        // makes that safe, not free: each retry pays the full cost again. Same
+        // reasoning and same number as flow.html's submit.
         var submitRetriesLeft_ = 2;
         function attemptSubmit_() {
           p = new XMLHttpRequest();
           p.open('POST', GW + '?source=lp', true);
           p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-          p.timeout = 70000;
+          p.timeout = 180000;
           p.onreadystatechange = function () {
             if (p.readyState !== 4) return;
             var res = {};
