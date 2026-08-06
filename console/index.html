@@ -3496,7 +3496,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-6';
+  window.__BUILD_TAG = 'console-2026-08-06-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3662,7 +3662,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       {name:'Tomer Shapira',variant:'W-8BEN',status:'expiring',expiry:'2026-08-15'},
       {name:'Aurelie Marchand',variant:'W-9',status:'expiring',expiry:'2026-09-04'}
     ]};
-    if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
+    if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',flowType:'cayman_subscription',
       signers:[
         {name:'Daniel Rosen',email:'daniel@example.com',role:'subscriber',roleLabel:'Subscriber',state:'done',sentAt:'2026-06-25T09:00:00Z',signedAt:'2026-06-26T14:20:00Z'},
         {name:'Sarah Rosen',email:'sarah@example.com',role:'cp1',roleLabel:'Controlling person',state:'current',sentAt:'2026-06-26T14:21:00Z',signedAt:null}],
@@ -4125,6 +4125,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       .replace(/\s+/g,' ').trim()
       .replace(/\b\w/g,function(c){return c.toUpperCase();});
   }
+  // flowType -> operator-facing flow labels (Noa 2026-08-06: every resume link
+  // was captioned "Onboarding link" even on an increase/redemption, and the
+  // drawer never named the flow at all). Two surfaces, one source each:
+  //   flowLinkLabel: the Quick-links caption + row copy-button tooltip.
+  //   flowHumanLabel: the Details row (rendered next to Lane).
+  // "Redemption", never "withdrawal", for cayman_withdrawal (standing operator
+  // vocabulary; the tracker write is already Redemption). israeli_* values only
+  // exist on legacy registry rows and map the same as their cayman twins.
+  // Unknown/missing NEVER falls back to "Onboarding": the honest generic is
+  // "Form link" (a wrong "Onboarding link" is the exact bug this fixes).
+  var FLOW_LINK_LABEL={cayman_subscription:'Onboarding link',cayman_increase:'Increase link',cayman_withdrawal:'Redemption link',cayman_transfer:'Transfer link',israeli_increase:'Increase link',israeli_withdrawal:'Redemption link'};
+  var FLOW_HUMAN_LABEL={cayman_subscription:'Join',cayman_increase:'Increase',cayman_withdrawal:'Redemption',cayman_transfer:'Transfer',israeli_increase:'Increase',israeli_withdrawal:'Redemption'};
+  function flowLinkLabel(ft){return FLOW_LINK_LABEL[String(ft==null?'':ft)]||'Form link';}
+  function flowHumanLabel(ft){ft=String(ft==null?'':ft);return FLOW_HUMAN_LABEL[ft]||(ft?humanKey(ft):'');}
   // Pull "N of M" from an explicit signer index/count, else scrape "Signer 2 of 3"
   // (or "2 of 3") from the next-action / wait string. Returns "" if neither present.
   function signerFraction(r){
@@ -4259,7 +4273,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="ramt">'+esc2(amt)+'</span>'
       +railHtml(r)
-      +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
+      +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="'+esc2('Copy '+flowLinkLabel(r.type).toLowerCase())+'" aria-label="'+esc2('Copy '+flowLinkLabel(r.type).toLowerCase())+'">'+RCOPY_ICON+'</button>'
       +'<button type="button" class="rnote'+(r.note?' has-note':'')+'" data-pid="'+(r.pid||'')+'" data-note="'+esc2(r.note||'')+'" title="'+(r.note?esc2(r.note):'Add a note')+'" aria-label="Operator note">'+RNOTE_ICON+(r.note?'<span class="rnote-dot"></span>':'')+'</button>'
       +'</div>';
   }
@@ -4619,7 +4633,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       doneLoaded=wantDone;
       var notes=(notesResp&&notesResp.notes)||{};
       var src=(d&&d.processes)||(d&&d.items)||[];
-      var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
+      // typeLabel feeds the search haystack only (rowHay). "redemption" is the
+      // operator word (2026-08-06); typing "withdrawal" STILL matches because
+      // rowHay also carries the raw flowType (cayman_withdrawal / israeli_withdrawal).
+      var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'redemption',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'redemption'};
       var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
@@ -5029,7 +5046,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
-    if(d.onboardingLink)qlinks.push({label:'Onboarding link',url:d.onboardingLink,copy:true});
+    // Label by flow, not a hardcoded "Onboarding link" (Noa 2026-08-06: an
+    // increase/redemption process must not caption its resume link as
+    // onboarding). Payload field name stays onboardingLink (frozen contract).
+    if(d.onboardingLink)qlinks.push({label:flowLinkLabel(d.flowType),url:d.onboardingLink,copy:true});
     if(qlinks.length){
       h+='<div class="dsec"><h3>Quick links</h3>';
       qlinks.forEach(function(l){
@@ -5110,8 +5130,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       h+='</div>';
     }
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
-    if(d.fields||d.createdAt||d.updatedAt){
+    if(d.flowType||d.fields||d.createdAt||d.updatedAt){
       h+='<div class="dsec"><h3>Details</h3>';
+      // Flow named first, next to Lane (Noa 2026-08-06: the drawer never said
+      // whether this is a Join / Increase / Redemption / Transfer).
+      if(d.flowType){h+='<div class="kv"><span class="k">Flow</span><span class="v">'+esc2(flowHumanLabel(d.flowType))+'</span></div>';}
       if(d.fields){
         // 2026-07-19: investmentAmount/investmentCurrency used to dump as two
         // bare raw fields ("Investment Amount: 250000", "Investment Currency:
@@ -5533,7 +5556,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!hr||!hr.ok||!hr.processes||!hr.processes.length){el.remove();return;}
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
         if(!others.length){el.remove();return;}
-        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
+        // "Redemption", not "Withdrawal" (standing operator vocabulary,
+        // aligned 2026-08-06 with the drawer's new Flow row + link labels so
+        // one drawer never shows the same event under two words).
+        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Redemption',cayman_transfer:'Transfer',israeli_increase:'Increase',israeli_withdrawal:'Redemption'};
         // Dot color from the design-system CSS vars (not raw hex), matching the board.
         var STAGE_DOT={complete:'var(--color-green)',sealed:'var(--color-green)',voided:'var(--color-ink-muted)',void:'var(--color-ink-muted)',needs_attention:'var(--color-red)'};
         var rows='';
