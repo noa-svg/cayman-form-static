@@ -3690,13 +3690,37 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-06-1';
+  window.__BUILD_TAG = 'console-2026-08-07-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
   // palette is the only one. No toggle, no localStorage theme state.
 
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+  // ---- PER-LANE GATEWAY SEAM (2026-08-07, Israeli pilot reroute) ----------
+  // GW_JU is ju-service (Cloud Run) behind the same ?source=op POST tunnel +
+  // Google-idToken console auth contract as the GAS gateway (ju-service
+  // routes/consoledispatch.ts mirrors caymanDoPost_'s body-to-param rebuild
+  // and the 3-tier auth verbatim; CORS allows this page's own
+  // sign.legacyvpartners.com origin, and the console lives under it, so the
+  // calls are same-origin anyway).
+  //
+  // THE SEAM: Israel-lane ONBOARDING mints (doCreateOnboarding below,
+  // state.lane==='israel') are BORN on ju-service via juApiFetch, so the
+  // minted token lives in ju-service's registry and israel.html's
+  // ?api=config probe resolves lane/flowType there - the Phase 4 pilot
+  // actually carries the new traffic instead of session-sticking every
+  // console-minted process back to GAS (the 2026-08-07 pilot-idle finding).
+  // EVERYTHING ELSE - the Cayman lane, the increase/withdrawal money flows,
+  // board reads, drawer actions, messages/W-8/settings - stays on GW (GAS)
+  // unchanged; those processes still live in GAS's registry.
+  //
+  // FAILURE HONESTY: a ju-api mint failure surfaces its real error and NEVER
+  // falls back to minting on GAS - a silent GAS fallback would quietly
+  // re-idle the pilot (the exact bug this seam fixes). Test coverage:
+  // test/coupling-check.cjs C1j pins this constant; the mono-side contract is
+  // apps/ju-service/tests/adminmintlink.test.mjs's PILOT REROUTE test.
+  var GW_JU = 'https://ju-api.legacyvpartners.com';
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var TOKEN_KEY='lvp_op_token_v1';
   var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
@@ -3943,13 +3967,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return {kind:'html', msg:'Ju returned a web page instead of data (HTTP '+status+'). That is a server-side hiccup, not something you typed.'};
     return {kind:'unknown', msg:'Ju returned something that is not data (HTTP '+status+').'};
   }
-  function apiFetch(qs, _retried){
+  function apiFetch(qs, _retried, _gw){
     if(DEMO){return new Promise(function(res){setTimeout(function(){res(demoResolve_(qs));},60);});}
     // F20: POST so the id_token + params ride in the body, not the URL. The
     // server (?source=op) rebuilds the param map and delegates to the same router.
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
+    // _gw: per-lane gateway override (the Israeli-onboarding mint seam, see
+    // GW_JU above). Default stays GW (GAS) for every existing call site; the
+    // override rides through the retry recursion so a retried ju-api call can
+    // never silently land on GAS.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
-    return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
+    return fetch((_gw||GW)+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
       // Read as TEXT first. r.json() throws a parser message the operator cannot
       // act on and, worse, destroys the body that says what actually happened.
       return r.text().then(function(txt){
@@ -3958,7 +3986,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           var info=apiClassifyNonJson_(r.status, txt);
           // One automatic retry for the shapes that are known to clear on one.
           // Never retry an auth page: that just loops on a dead session.
-          if(!_retried && info.kind!=='auth') return apiFetch(qs, true);
+          if(!_retried && info.kind!=='auth') return apiFetch(qs, true, _gw);
           var ne=new Error('non_json'); ne.serverError=info.msg; ne.nonJson=info.kind;
           if(info.kind==='auth') clearAuth('session_expired');
           throw ne;
@@ -3991,6 +4019,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return d;
     });
   }
+  // The Israeli-onboarding mint seam's transport (see GW_JU above): identical
+  // envelope/auth/retry to apiFetch, aimed at ju-service. Deliberately a
+  // separate named function so a grep for juApiFetch enumerates EXACTLY the
+  // actions that leave GAS - the lane split stays explicit at every call site.
+  function juApiFetch(qs){ return apiFetch(qs, false, GW_JU); }
   // FO share picker (compact multi-select since 2026-08-06; Noa: the full
   // chip-wall catalog "is taking up too much space and its not the right
   // uui"). The LIVE Monday FO Share label catalog is fetched once into
@@ -6524,7 +6557,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(state.lpKind==='new'){
       foShare=foShareSelectedTokens().join(',');
     }
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
+    // PER-LANE GATEWAY SEAM (2026-08-07, see GW_JU): Israel-lane ONBOARDING
+    // mints are born on ju-service so the pilot owns the new session end to
+    // end; Cayman-lane mints stay on GAS. This is the ONLY branch point -
+    // a ju-api failure below surfaces as-is (res.error / the catch), it is
+    // NEVER retried against GAS (a silent GAS fallback would quietly re-idle
+    // the pilot). One known edge, accepted: the duplicate-mint "Open
+    // existing" button drives the GAS-fed drawer, which cannot resolve a
+    // ju-born pid - "Re-mint anyway" (force) is the working resolution there.
+    var mintViaJu=(state.lane==='israel');
+    (mintViaJu?juApiFetch:apiFetch)('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
@@ -6542,7 +6584,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           document.getElementById('dupForce').onclick=function(){m2.innerHTML='';m2.style.display='none';doCreateOnboarding(true);};
           return;
         }
-        showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return}
+        // Failure honesty (pilot requirement): show the real server error and
+        // name the backend that refused - a ju-api refusal must never read as
+        // a generic GAS hiccup, and there is NO fallback mint on the other
+        // engine in either direction.
+        showMsg((res&&res.error)||(mintViaJu?"Could not create. ju-api refused the mint (no GAS fallback on the Israeli lane).":"Could not create. Check GAS logs."),true);return}
       showMsg("",false);
       document.getElementById("res").classList.add("on");
       document.getElementById("lk").textContent=res.url||"";
@@ -6550,7 +6596,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       document.getElementById('resSub').textContent='Copy the link to share manually.';
       caymanClearCreateForm();
       load();
-    }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg("Server error: "+((e&&(e.serverError||e.message))||"unknown"),true);});
+    }).catch(function(e){btn.disabled=false;btn.textContent="Send invite";showMsg((mintViaJu?"ju-api error: ":"Server error: ")+((e&&(e.serverError||e.message))||"unknown"),true);});
     }
   };
   document.getElementById("copyLinkBtn").onclick=function(){

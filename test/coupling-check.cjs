@@ -15,6 +15,14 @@
 //       four pages carry. Drift protection preserved, not weakened: a stray
 //       second copy of either URL, a missing fallback, or a diverged id all
 //       fail here.
+//   C1j CONSOLE SEAM EXCEPTION (2026-08-07, Israeli-onboarding mint reroute):
+//       console/index.html carries the ju-api base (GW_JU) exactly once, ON
+//       TOP OF its unchanged C1 obligations (it still carries the one GAS
+//       /exec id for everything that is not an Israel-lane onboarding mint).
+//       This is a deliberate carve-out, not a weakening: the GAS id must
+//       still be consistent fleet-wide INCLUDING the console, AND the ju-api
+//       base must be the exact expected constant - a second copy of either
+//       URL, a typo'd ju-api host, or the seam vanishing all fail here.
 //   C2  index/israel/signer/flow each bake window.__BUILD_TAG exactly once,
 //       the tag prefix matches the file name, and every tag is unique;
 //   C3  console/index.html carries a build tag too (console- prefix,
@@ -75,6 +83,23 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
       && idsByFile['israel.html'][0] === idsByFile['index.html'][0],
     'israel: ' + JSON.stringify(idsByFile['israel.html'].map(id => id.slice(0, 12) + '...'))
       + ' index: ' + JSON.stringify(idsByFile['index.html'].map(id => id.slice(0, 12) + '...')));
+}
+// ---- C1j: console per-lane gateway seam (2026-08-07 Israeli mint reroute) --
+// The console's Israeli-onboarding mints are born on ju-service (juApiFetch /
+// GW_JU in console/index.html); everything else on the console still rides
+// the GAS /exec gateway, whose C1 assertions above remain fully in force for
+// this file. Assert the ju-api base is the EXACT expected constant and
+// appears exactly once (the single GW_JU definition) - drift protection for
+// the seam itself.
+{
+  const juCount = html['console/index.html'].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1j console/index.html carries the ju-api base constant exactly once', juCount === 1,
+    'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
+  ok('C1j console seam is the named juApiFetch wrapper (explicit lane split, greppable)',
+    html['console/index.html'].indexOf('function juApiFetch(') !== -1
+      && html['console/index.html'].indexOf("var GW_JU = '" + PILOT_PRIMARY_URL + "'") !== -1);
+  ok('C1j console still carries the GAS /exec gateway for everything else (C1 not weakened)',
+    idsByFile['console/index.html'].length >= 1);
 }
 ok('C1 exactly ONE distinct deployment id across all files', allIds.size === 1,
   'distinct ids: ' + JSON.stringify([...allIds].map(id => id.slice(0, 12) + '...')) + ' per-file counts: ' +
