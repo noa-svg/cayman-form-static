@@ -3503,6 +3503,64 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // palette is the only one. No toggle, no localStorage theme state.
 
   var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+  // ju-service (Phase 4). israel.html already runs this as its PRIMARY gateway;
+  // the console does not yet, and that is the whole reason the pilot carries no
+  // traffic (see below).
+  var JU_API = 'https://ju-api.legacyvpartners.com';
+
+  // ---- ISRAEL-LANE MINT SEAM (2026-08-07) -----------------------------------
+  // THE FINDING THIS EXISTS FOR: the Israeli pilot has zero new traffic, and
+  // this constant is why. The console mints on GAS, so every new Israeli
+  // process is born in GAS's registry. ju-api then answers ?api=config for that
+  // token with empty lane/flowType (token-unknown), israel.html's
+  // session-sticky fallback routes the whole session back to the legacy
+  // gateway, and ju-service's own initiateIsraeliFlow / mintLink routes sit
+  // tested and called by nothing. "ju-service owns every NEW Israeli session"
+  // was true only for sessions minted on ju-service, of which there were none.
+  //
+  // Flipping this to true moves the BIRTH of new Israeli processes to
+  // ju-service. Verified compatible before shipping the flag:
+  //   - ju-service's optunnel.ts accepts POST /?source=op with the same
+  //     {q, idToken, op} envelope apiFetch already sends (rebuildOpTunnelParams)
+  //   - dispatchApi routes params.admin -> dispatchAdmin (consoledispatch.ts:225)
+  //   - mintLink / initiateIsraeliFlow / sendIsraeliInvite are all present there
+  //   - console auth is the SAME Google idToken (consoleAuthorized, Tier-1)
+  // So this is a URL change, not a protocol change.
+  //
+  // DEFAULT false, DELIBERATELY. This is the money front door: flipping it means
+  // real LPs are BORN on a path that has never carried a process end to end. The
+  // omry segal live test (pid 503c5d00-6abb-407c-8a19-8b6ce95d4e1f) is still
+  // waiting on the lawyer leg, so nothing has yet been watched through to a
+  // sealed document on ju-service.
+  //
+  // GATE, do not flip before all of these hold:
+  //   1. one process minted on ju-service completes: submit -> seal -> tracker
+  //      row -> Monday update -> completion email, verified against live state
+  //   2. israel.html's legacy fallback is confirmed NOT to trigger for a
+  //      ju-service-minted token (otherwise the session bounces straight back)
+  //   3. a rollback is one flip of this flag with no data migration, i.e. no
+  //      in-flight ju-service-minted process is mid-flow when it is flipped back
+  var ISRAEL_MINT_ON_JU_API = false;
+  // Which base a console call should go to. ONBOARDING mints only; every other
+  // console action stays on GAS, because that is where existing processes and
+  // their registry live.
+  //
+  // The MONEY mint (increase / withdrawal) deliberately does NOT use this, even
+  // though it is also Israel-lane. Two hard blockers, both verified in source:
+  //   - money links land on flow.html, whose gateway is a hardcoded GAS /exec
+  //     with NO ju-api primary and NO fallback (flow.html GATEWAY_URL). A
+  //     ju-service-minted money token would hit a page that only ever asks GAS.
+  //   - the money mint is immediately followed by ?admin=sendIsraeliInvite with
+  //     no base override, so the invite would be sent from GAS for a process
+  //     that exists only in ju-service's Postgres, and fail.
+  // Moving the money lane needs flow.html taught the same primary+fallback
+  // israel.html already has, and the invite call threaded. Until then this
+  // helper must stay onboarding-only or flipping the flag strands real money
+  // events.
+  function mintBaseForLane_(lane) {
+    var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
+    return (ISRAEL_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
+  }
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var TOKEN_KEY='lvp_op_token_v1';
   var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
@@ -3721,13 +3779,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return {kind:'html', msg:'Ju returned a web page instead of data (HTTP '+status+'). That is a server-side hiccup, not something you typed.'};
     return {kind:'unknown', msg:'Ju returned something that is not data (HTTP '+status+').'};
   }
-  function apiFetch(qs, _retried){
+  // `base` (optional) overrides the gateway for a single call. Only the
+  // Israel-lane mint uses it today, via mintBaseForLane_; everything else omits
+  // it and stays on GAS. Threaded as an explicit argument rather than read from
+  // a global so a call site can never silently inherit the wrong gateway.
+  function apiFetch(qs, _retried, base){
     if(DEMO){return new Promise(function(res){setTimeout(function(){res(demoResolve_(qs));},60);});}
     // F20: POST so the id_token + params ride in the body, not the URL. The
     // server (?source=op) rebuilds the param map and delegates to the same router.
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
-    return fetch(GW+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
+    return fetch((base||GW)+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
       // Read as TEXT first. r.json() throws a parser message the operator cannot
       // act on and, worse, destroys the body that says what actually happened.
       return r.text().then(function(txt){
@@ -3736,7 +3798,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           var info=apiClassifyNonJson_(r.status, txt);
           // One automatic retry for the shapes that are known to clear on one.
           // Never retry an auth page: that just loops on a dead session.
-          if(!_retried && info.kind!=='auth') return apiFetch(qs, true);
+          if(!_retried && info.kind!=='auth') return apiFetch(qs, true, base);  // carry the base: a retry must never silently fall back to the other gateway
           var ne=new Error('non_json'); ne.serverError=info.msg; ne.nonJson=info.kind;
           if(info.kind==='auth') clearAuth('session_expired');
           throw ne;
@@ -6031,7 +6093,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(_fscustom&&_fscustom.style.display!=='none'&&_fscustom.value.trim())_fstoks.push(_fscustom.value.trim());
       foShare=_fstoks.join(',');
     }
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':''), false, mintBaseForLane_(state.lane)).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click

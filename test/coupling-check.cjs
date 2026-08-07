@@ -44,6 +44,36 @@ function ok(label, cond, extra) {
 const html = {};
 for (const f of FILES) html[f] = fs.readFileSync(path.join(ROOT, f), 'utf8');
 
+// ---- C1c: the console's Israel-lane mint seam (2026-08-07) -----------------
+// The console gained a SECOND gateway constant (JU_API) so the Israel-lane mint
+// can be pointed at ju-service. It is behind a flag defaulting to false, because
+// flipping it moves the BIRTH of new Israeli money processes onto a path that
+// has not yet carried one end to end.
+// These assertions exist so the seam cannot drift silently:
+//   - exactly one ju-api URL in the console (a stray second copy is drift)
+//   - the flag is still present and still defaults to FALSE, so nobody flips
+//     the money front door as a side effect of an unrelated edit. When the gate
+//     in the console's own comment is genuinely met, this assertion is the
+//     thing you deliberately update, which is the point.
+{
+  const c = html['console/index.html'];
+  const juApiHits = (c.match(/https:\/\/ju-api\.legacyvpartners\.com/g) || []).length;
+  ok('C1c console carries exactly one ju-api base', juApiHits === 1, 'found ' + juApiHits);
+  ok('C1c console still carries exactly one /exec gateway',
+    (c.match(/script\.google\.com\/macros\/s\/[^/]+\/exec/g) || []).length === 1);
+  ok('C1c Israel-lane mint flag exists and defaults to FALSE (flipping it is a deliberate money-path cutover)',
+    /var ISRAEL_MINT_ON_JU_API\s*=\s*false\s*;/.test(c));
+  // ONBOARDING mint only, exactly one call site. The MONEY mint must NOT move:
+  // flow.html is hardcoded GAS with no fallback, and the money mint's follow-up
+  // ?admin=sendIsraeliInvite carries no base override, so a ju-service-minted
+  // money event would be stranded on both counts. If this ever reads 2, someone
+  // has wired the money lane in without fixing those.
+  ok('C1c exactly ONE mint call site routes through mintBaseForLane_ (onboarding; money stays on GAS)',
+    (c.match(/mintBaseForLane_\(state\.lane\)/g) || []).length === 1);
+  ok('C1c apiFetch retry carries the base (a retry must not fall back to the other gateway)',
+    /apiFetch\(qs, true, base\)/.test(c));
+}
+
 // ---- C1: single deployment id across the fleet -----------------------------
 const EXEC_RE = /script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)\/exec/g;
 const idsByFile = {};
