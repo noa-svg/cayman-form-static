@@ -3050,6 +3050,14 @@ body.side-coll .ss-lbl { display: none; }
 .fo-picker-wrap{position:relative}
 .fo-open{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed var(--color-border-strong);border-radius:var(--radius-md);background:transparent;color:var(--color-ink-sub);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:border-color var(--dur-fast),color var(--dur-fast)}
 .fo-open:hover{border-color:var(--color-atrium);color:var(--color-atrium-deep)}
+/* Demoted email-language disclosure (2026-08-07): summary reads like the
+   fo-open affordance, content indents like a normal field group. */
+.lang-more{margin:14px 0 4px}
+.lang-more summary{display:inline-flex;align-items:center;padding:6px 0;color:var(--color-ink-sub);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;list-style:none}
+.lang-more summary::before{content:'\25B8';margin-left:0;margin-right:6px;transition:transform var(--dur-fast)}
+.lang-more[open] summary::before{transform:rotate(90deg)}
+.lang-more summary:hover{color:var(--color-atrium-deep)}
+.lang-more[open]{padding-bottom:6px}
 /* Popover, never in-flow: opening it must not push the Send button. */
 .fo-picker{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:70;background:var(--color-bg-card);border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-panel);padding:8px}
 .fo-picker[hidden]{display:none}
@@ -3613,15 +3621,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 
     </div><!-- /manualLpFields -->
 
-    <div id="langRow">
-    <div class="pstep-h"><span class="pstep-n">3</span>Language</div>
-    <label id="segLangLbl">Email language <span class="tag">required</span></label>
-    <div class="seg" id="segLang" style="max-width:240px" role="radiogroup" aria-labelledby="segLangLbl"><button class="on" data-v="he" role="radio" aria-checked="true">Hebrew</button><button data-v="en" role="radio" aria-checked="false">English</button></div>
-    <div class="hint">Sets the language of every email to this investor.</div>
-    </div>
-
+    <!-- Email language DEMOTED from a numbered required step to a collapsed
+         disclosure (Noa 2026-08-07: "is this necessary?"). It defaults by
+         lane (Israel Hebrew, Cayman English, setToggleSilent below) so the
+         common case never asks; the rare foreign-LP flip lives one click
+         away. Both language variants remain fully functional. -->
     <div id="emailsStep">
-    <div class="pstep-h"><span class="pstep-n">4</span>Emails</div>
+    <div class="pstep-h"><span class="pstep-n">3</span>Emails</div>
     <label for="email">Investor email <span class="tag">required</span></label>
     <input id="email" type="email" inputmode="email" autocomplete="email" required aria-required="true" placeholder="investor@example.com">
     <div class="field-err" id="emailErr" role="alert" hidden></div>
@@ -3670,6 +3676,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     </div>
     </div><!-- /emailsStep -->
 
+    <details id="langRow" class="lang-more">
+    <summary>More options</summary>
+    <label id="segLangLbl" style="margin-top:10px">Email language</label>
+    <div class="seg" id="segLang" style="max-width:240px" role="radiogroup" aria-labelledby="segLangLbl"><button class="on" data-v="he" role="radio" aria-checked="true">Hebrew</button><button data-v="en" role="radio" aria-checked="false">English</button></div>
+    <div class="hint">Sets the language of every email to this investor. Defaults to the lane's language; change it only for a foreign investor on the Israel lane.</div>
+    </details>
+
     <div id="ctaExplain" class="cta-explain" aria-live="polite"></div>
     <button class="cta" id="createBtn">Send invite</button>
     <div id="msg" role="status" aria-live="polite" style="margin-top: 16px;padding: 12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
@@ -3690,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-07-1';
+  window.__BUILD_TAG = 'console-2026-08-07-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5137,7 +5150,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // FO share is a NEW-subscription field, same reasoning as classRow/langRow above.
     el=document.getElementById("foShareSection");if(el)el.style.display="";
     loadFoShareLabels();
-    el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Four steps, one send at the end. Nothing happens before you press Send invite.";}
+    el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Three steps, one send at the end. Nothing happens before you press Send invite.";}
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
     updateCreateCta();
