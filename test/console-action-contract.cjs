@@ -35,7 +35,12 @@ let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : extra); } }
 
 // ---- A2: the gateway source must be readable, or this whole contract is vacuous.
-const GATEWAY = path.join(os.homedir(), 'Desktop', 'legacy-tools-mono', 'apps', 'ju-cayman', 'src', 'server', 'CaymanGateway.ts');
+// JU_MONO_ROOT overrides the mono repo root (used while a paired console+gateway
+// change is still on two feature branches: point it at the mono worktree that
+// carries the matching route so the contract checks the pair that will actually
+// ship together, instead of failing against the not-yet-merged shared checkout).
+const MONO_ROOT = process.env.JU_MONO_ROOT || path.join(os.homedir(), 'Desktop', 'legacy-tools-mono');
+const GATEWAY = path.join(MONO_ROOT, 'apps', 'ju-cayman', 'src', 'server', 'CaymanGateway.ts');
 let gw = '';
 try { gw = fs.readFileSync(GATEWAY, 'utf8'); } catch (e) { gw = ''; }
 ok('A2 mono gateway source present (absent = vacuous contract, hard fail)', gw.length > 0, GATEWAY);

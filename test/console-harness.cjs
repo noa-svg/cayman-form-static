@@ -57,7 +57,7 @@ function extractVarObj(name) {
 
 // ---- K1: sortRows attention-first -------------------------------------------
 (function () {
-  const sortRows = new Function(extractFn('sortRows') + '; return sortRows;')();
+  const sortRows = new Function(extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';' + extractFn('sortRows') + '; return sortRows;')();
   const rows = [
     { pid: 'new', stage: 'signing', lastActivityTs: '2026-07-15T09:00:00Z' },
     { pid: 'attn-old', stage: 'needs_attention', lastActivityTs: '2026-07-01T09:00:00Z' },
@@ -269,14 +269,54 @@ function extractVarObj(name) {
 // a little note I can edit, its just for me") -------------------------------
 (function () {
   // rowHtml is pure (no document access), so it's testable directly like K4's
-  // currentSignerHtml.
+  // currentSignerHtml. 2026-08-06 board redesign: the row is a grid of
+  // who / flow chip / amount / status(word + rail + waiting-on or attention
+  // badge) / age / actions - the extraction list carries the new helpers.
   const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
-    + extractVar('RAIL_MILESTONES') + ';' + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
+    + extractVar('RAIL_MILESTONES') + ';' + extractVarObj('STAGE_WORD') + ';' + extractVarObj('FLOW_CHIP_WORD') + ';'
+    + extractFn('humanKey') + ';' + extractFn('stageWord') + ';' + extractFn('sinceDur') + ';'
+    + extractFn('isAttnStage') + ';' + extractFn('isCanceledStage') + ';'
+    + extractFn('flowChipHtml') + ';' + extractFn('waitLineHtml') + ';' + extractFn('attnBadgeHtml') + ';'
+    + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';'
     + extractFn('rowHtml') + '; return rowHtml;';
   const rowHtml = new Function(src)();
+
+  // ---- K12: redesigned row content (2026-08-06) -----------------------------
+  const signingRow = rowHtml({ pid: 's1', name: 'Daniel Rosen', he: 'דניאל רוזן', stage: 'signing',
+    typeLabel: 'onboarding', amountNum: 250000, ccy: 'USD', age: '4d',
+    waitName: 'Sarah Rosen', waitIndex: 2, waitCount: 3, waitSince: new Date(Date.now() - 2 * 86400000).toISOString() });
+  ok('K12 row carries the Hebrew name RTL-safe (dir=auto)', signingRow.includes('dir="auto">דניאל רוזן'));
+  ok('K12 row carries the flow chip word', signingRow.includes('>Join</span>'));
+  ok('K12 row carries the amount', signingRow.includes('$250,000'));
+  ok('K12 row carries the plain stage word', signingRow.includes('>Signing</span>'));
+  ok('K12 signing row names WHO it waits on', signingRow.includes('Waiting on') && signingRow.includes('Sarah Rosen'));
+  ok('K12 signing row carries signer X of Y', signingRow.includes('2 of 3'));
+  ok('K12 signing row carries the waiting duration', /rw-dur/.test(signingRow) && /2d/.test(signingRow));
+
+  const lpRow = rowHtml({ pid: 's2', name: 'Yael Adler', stage: 'link_sent', typeLabel: 'increase' });
+  ok('K12 pre-submit row waits on the LP', lpRow.includes('Waiting on <b>the LP</b>'));
+  ok('K12 no amount renders a quiet dash, not blank', lpRow.includes('ramt-none'));
+
+  const attnRow = rowHtml({ pid: 's3', name: 'Helena Brandt', stage: 'needs_attention',
+    wait: 'The wire / money row did not reach the transfer-forms tracker' });
+  ok('K12 attention row gets the attn class', attnRow.includes('class="row attn"'));
+  ok('K12 attention badge carries the ACTUAL reason', attnRow.includes('Needs you') && attnRow.includes('did not reach the transfer-forms tracker'));
+
+  const sealQ = rowHtml({ pid: 's4', name: 'Liora Katz', stage: 'seal_quarantined', wait: 'Seal failed repeatedly' });
+  ok('K12 seal_quarantined is attention-class with its reason', sealQ.includes(' attn"') && sealQ.includes('Seal failed repeatedly'));
+
+  const deadRow = rowHtml({ pid: 's5', name: 'Rivka Sela', stage: 'voided' });
+  ok('K12 voided row looks dead (done+dead classes)', deadRow.includes('class="row done dead"'));
+  ok('K12 voided row says Canceled in plain words', deadRow.includes('>Canceled</span>'));
+  const revokedRow = rowHtml({ pid: 's6', name: 'Ronen Alon', stage: 'token_revoked' });
+  ok('K12 token_revoked reads as Link revoked, dead class', revokedRow.includes('Link revoked') && revokedRow.includes(' dead"'));
+
+  const staleRow = rowHtml({ pid: 's7', name: 'Jonathan Pearl', stage: 'complete', stale: true, wait: 'Sealed, but a records write failed. Needs review' });
+  ok('K12 stale-complete row is attention-class, never quietly faded as done', /class="row attn"/.test(staleRow));
+  ok('K12 stale-complete badge carries the needs-review reason', staleRow.includes('records write failed'));
 
   const withNote = rowHtml({ pid: 'p1', name: 'Test LP', stage: 'signing', note: 'told Omri he is joining Sept 1' });
   ok('K11 row with a note gets the has-note class', withNote.includes('class="rnote has-note"'));

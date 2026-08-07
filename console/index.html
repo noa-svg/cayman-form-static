@@ -107,10 +107,9 @@ body {
   line-height: var(--leading-normal);
   color: var(--color-ink);
   background-color: var(--color-bg-page);
-  /* Bauhaus dot-grid ground */
-  background-image: radial-gradient(rgba(20,20,20,0.10) 1.1px, transparent 1.1px);
-  background-size: 22px 22px;
-  background-position: -11px -11px;
+  /* Board redesign 2026-08-06 (Noa: "its ugly"): the Bauhaus dot-grid ground is
+     gone from the working surface - it fought legibility at data density. The
+     login screen keeps its own dot ground (scoped in #login-screen). */
   min-height: 100vh;
   display: flex;
 }
@@ -798,32 +797,77 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .show-done:hover { color: var(--color-ink-sub); }
 .show-done.on { color: var(--color-ink-sub); }
 
+/* ============================================================
+   BOARD TABLE (redesigned 2026-08-06. Noa: "its ugly" / "i asked for more
+   details" / "the console needs to show me what the lp fucking has").
+   A real dense operator table on a white card: fixed columns with a header
+   row, one process per row - who (EN + Hebrew), which flow and how much,
+   where it stands in plain words, WHO it is waiting on and for how long,
+   and an attention badge carrying the actual reason. Same palette
+   (atrium-palette-sync.cjs enforced), new information hierarchy. */
+:root { --board-cols: minmax(190px, 1.4fr) 92px 116px minmax(250px, 2fr) 52px 76px; }
+#board-card {
+  border: var(--bw) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+  overflow: visible;
+}
 #list { display: block; }
+.bhead {
+  display: grid;
+  grid-template-columns: var(--board-cols);
+  gap: 16px;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+.bhead .h-amt { text-align: right; }
+.bhead .h-age { text-align: right; }
+/* Group divider between the in-flight block and the completed/canceled tails. */
+.bgroup {
+  padding: 7px 14px 5px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  background: var(--color-bg-strip);
+}
 
-/* Rows */
+/* Rows: one grid, aligned under .bhead's columns. */
 .row {
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--color-border-subtle);
-  padding: 14px 4px;
+  padding: 10px 14px;
   cursor: pointer;
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--board-cols);
   align-items: center;
-  gap: var(--space-6);
+  gap: 16px;
   font-family: var(--font-body);
   transition: background var(--dur-base);
 }
-.row:hover {
-  background: var(--color-bg-hover);
-  margin: 0 -12px;
-  padding-left: 12px;
-  padding-right: 12px;
-  border-radius: var(--radius-lg);
-  border-bottom-color: transparent;
-}
-.row:active { transform: scale(0.994); }
-.row.done { opacity: 0.5; }
-.row.done:hover { opacity: 0.72; }
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--color-bg-hover); }
+.row:active { transform: scale(0.997); }
+.row.done { opacity: 0.55; }
+.row.done:hover { opacity: 0.8; }
+/* Dead states look dead: greyed, name struck through, quiet state chip. */
+.row.dead { opacity: 0.5; }
+.row.dead .rn-name { text-decoration: line-through; text-decoration-color: var(--color-ink-faint, rgba(20,20,20,0.4)); text-decoration-thickness: 1px; }
+.row.dead:hover { opacity: 0.72; }
+/* Attention rows: coral edge + tinted ground, full opacity always. */
+.row.attn { box-shadow: inset 3px 0 0 0 var(--color-coral); background: var(--color-coral-tint); }
+.row.attn:hover { background: var(--color-coral-tint); }
 
 /* Per-row copy-link icon (2026-07-14, Noa: quick-copy without opening the drawer).
    Quiet by default, surfaces on row hover/focus so the dense list stays calm. */
@@ -918,10 +962,8 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 }
 .rnote-pop-actions .rnote-save { background: var(--color-coral); color: #fff; }
 
-/* Name column */
+/* Who cell: EN name over Hebrew name (RTL-safe via dir=auto). */
 .rn {
-  flex: 0 0 auto;
-  width: 30%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -950,18 +992,90 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    investmentAmount/investmentCurrency from the server. Quiet, tabular, blank
    pre-submit. Hidden on narrow screens (the rail wins the space fight). */
 .ramt {
-  flex: 0 0 auto;
-  width: 104px;
+  min-width: 0;
   text-align: right;
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semi);
   font-variant-numeric: tabular-nums;
-  color: var(--color-ink-sub);
+  color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-@media (max-width: 720px) { .ramt { display: none; } }
+.ramt .ramt-none { color: var(--color-ink-faint, var(--color-ink-muted)); font-weight: var(--weight-normal); }
+/* Flow-type cell: the money-event word, tinted by direction (in vs out). */
+.rflow { min-width: 0; }
+.flowchip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.flowchip.f-in  { background: rgba(46,133,64,0.12); color: var(--color-green); }
+.flowchip.f-out { background: rgba(216,94,76,0.14); color: var(--color-coral); }
+.flowchip.f-neutral { background: var(--color-bg-hover); color: var(--color-ink-sub); }
+/* Status cell: plain-words stage + mini rail on line 1, waiting-on line 2. */
+.rstat { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rstat-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rword {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.rword.warn { color: var(--color-coral); }
+.rword.muted { color: var(--color-ink-muted); font-weight: 600; }
+.rwait {
+  font-size: var(--text-xs);
+  color: var(--color-ink-sub);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rwait b { font-weight: 700; color: var(--color-ink); }
+.rwait .rw-dur { color: var(--color-ink-muted); font-family: var(--font-mono); font-size: 11px; }
+/* Attention badge: the actual reason, not a bare flag. */
+.battn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 100%;
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  min-width: 0;
+}
+.battn .battn-tag {
+  flex: 0 0 auto;
+  background: var(--color-coral);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+}
+.battn .battn-why { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+/* Dead-state chip (canceled / expired / revoked / abandoned). */
+.rdeadchip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* Actions cell wraps the copy + note icons. */
+.ract { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 
 /* Sidebar in-flight money total (item 4): one row per currency. Hidden when
    the sidebar is collapsed to its icon rail (no room for a sum). */
@@ -994,19 +1108,20 @@ body.side-coll .ss-row.ss-total { display: none; }
 .dtl-line { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-body); font-size: var(--text-xs); color: var(--color-ink-muted); padding: 2px 0; }
 .dtl-line .dtl-st { color: var(--color-ink-sub); }
 
-/* THE STAGE RAIL (dominant per-row element) */
+/* The mini stage rail: a compact 4-beat progress read next to the stage word
+   (demoted 2026-08-06 from the row's dominant element to a supporting one -
+   the words lead now). */
 .rstage {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 5px;
   min-width: 0;
 }
 .rail {
   display: flex;
   gap: 3px;
-  width: 132px;
+  width: 64px;
 }
 .rail .seg {
   flex: 1;
@@ -1023,8 +1138,10 @@ body.side-coll .ss-row.ss-total { display: none; }
 .rail.frozen .seg.current { background: var(--color-amber); box-shadow: none; }
 /* voided / expired: entire rail ghost */
 .rail.dead .seg { background: var(--color-border); box-shadow: none; }
+/* .rail-lbl retired 2026-08-06: the stage reads as words in .rword now; the
+   class stays styled only so any residual consumer degrades gracefully. */
 .rail-lbl {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: var(--weight-medium);
   letter-spacing: 0.01em;
   color: var(--color-ink-sub);
@@ -1034,13 +1151,14 @@ body.side-coll .ss-row.ss-total { display: none; }
 .rail-lbl.muted { color: var(--color-ink-muted); }
 .rail-lbl.warn { color: var(--color-danger); }
 .rail-lbl .frac { color: var(--color-ink-muted); }
-/* Age column */
+/* Age column (total process age; the per-wait duration lives in .rwait). */
 .rage {
-  flex: 0 0 auto;
   font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-ink-muted);
   text-align: right;
-  min-width: 36px;
+  white-space: nowrap;
 }
 
 /* Quiet sync line under the board */
@@ -2577,6 +2695,12 @@ body.side-coll .side-stats { padding: 0; }
 body.side-coll .ss-row { justify-content: center; padding: 6px 0; }
 body.side-coll .ss-lbl { display: none; }
 
+/* Tablet-width board: drop the flow column first, keep money + status. */
+@media (max-width: 980px) and (min-width: 601px) {
+  :root { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
+  .rflow, .bhead .h-flow { display: none; }
+}
+
 /* ============================================================
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
    ============================================================ */
@@ -2733,20 +2857,15 @@ body.side-coll .ss-lbl { display: none; }
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
 
-  /* Board rows: keep name + stage rail; drop the age column for room.
-     2026-08-01 fix: .rail-lbl's white-space:nowrap (base rule) forces its full
-     unwrapped width even here, and .rstage{flex:0 0 auto} refuses to shrink -
-     for a long label (e.g. "Signing - Controlling person - 2 of 3") that
-     squeezed .rn's flex-basis all the way to 0, making the LP's name
-     disappear entirely (confirmed live at 375px, not just a theoretical
-     narrow case). Let the label wrap to 2 lines within the rail's own 132px
-     column instead of forcing single-line width, and give .rn a floor so it
-     can never fully vanish even in a worse case. */
-  .row { gap: var(--space-4); }
-  .rn { width: auto; flex: 1 1 auto; min-width: 80px; }
-  .rage { display: none; }
-  .rstage { flex: 0 0 auto; }
-  .rail-lbl { white-space: normal; max-width: 132px; text-align: right; }
+  /* Board table at phone width (2026-08-06 grid era): collapse to the two
+     columns that matter on a phone - who, and where it stands - and let the
+     waiting-on line wrap. Type folds into the status cell visually via the
+     stage word; amount/age/actions rejoin on wider screens. */
+  :root { --board-cols: minmax(110px, 1fr) minmax(150px, 1.6fr) 60px; }
+  .rflow, .ramt, .rage, .bhead .h-flow, .bhead .h-amt, .bhead .h-age { display: none; }
+  .rwait { white-space: normal; }
+  .row { gap: 10px; padding: 10px; }
+  .bhead { gap: 10px; padding: 8px 10px; }
 
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
@@ -2909,6 +3028,40 @@ body.side-coll .ss-lbl { display: none; }
 .lp-picked[hidden],.lp-results[hidden]{display:none}
 .lp-picked .lp-x{margin-left: auto;cursor:pointer;color:var(--color-ink-muted);font-size:18px;line-height:1;padding: 0 4px}
 .lp-picked .lp-x:hover{color:var(--color-coral)}
+/* ---- Guided create panel (2026-08-06): numbered steps + process chooser ---- */
+.pstep-h{display:flex;align-items:center;gap:10px;margin:22px 0 4px;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-ink)}
+#procStep .pstep-h:first-child{margin-top:6px}
+.pstep-n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:var(--bw) solid var(--color-ink);background:#fff;font-size:11px;font-weight:800;color:var(--color-ink);flex:0 0 auto}
+.proc-grid{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.proc-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 14px;border:var(--bw) solid var(--color-border-strong);border-radius:var(--radius-md);background:var(--color-bg-card);cursor:pointer;font-family:var(--font-body);transition:border-color var(--dur-fast),background var(--dur-fast)}
+.proc-grid button:hover{border-color:var(--color-atrium);background:var(--color-atrium-tint)}
+.proc-grid button.on{border-color:var(--color-atrium);background:var(--color-atrium);color:#fff}
+.proc-grid .pg-t{font-size:14px;font-weight:800;letter-spacing:0.02em}
+.proc-grid .pg-s{font-size:12px;color:var(--color-ink-muted)}
+.proc-grid button.on .pg-s{color:rgba(255,255,255,0.85)}
+#procTypeRow{margin-top:4px}
+.cta-explain{margin-top:22px;font-size:12px;line-height:1.55;color:var(--color-ink-sub);font-weight:600}
+/* ---- FO share compact multi-select (2026-08-06) ---- */
+.fo-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.fo-sel[hidden]{display:none}
+.fo-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border:var(--bw) solid var(--color-atrium);border-radius:var(--radius-pill);background:var(--color-atrium-tint);color:var(--color-atrium-deep);font-size:12px;font-weight:700}
+.fo-chip button{border:none;background:transparent;color:inherit;font-size:14px;line-height:1;cursor:pointer;padding:0 3px;font-weight:800}
+.fo-chip button:hover{color:var(--color-red)}
+.fo-picker-wrap{position:relative}
+.fo-open{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed var(--color-border-strong);border-radius:var(--radius-md);background:transparent;color:var(--color-ink-sub);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:border-color var(--dur-fast),color var(--dur-fast)}
+.fo-open:hover{border-color:var(--color-atrium);color:var(--color-atrium-deep)}
+/* Popover, never in-flow: opening it must not push the Send button. */
+.fo-picker{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:70;background:var(--color-bg-card);border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-panel);padding:8px}
+.fo-picker[hidden]{display:none}
+#foShareSearch{width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)}
+.fo-list{max-height:210px;overflow-y:auto;margin-top:6px}
+.fo-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:7px 10px;border:none;background:transparent;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;color:var(--color-ink);cursor:pointer}
+.fo-row:hover{background:var(--color-bg-hover)}
+.fo-row.sel{background:var(--color-atrium-tint);color:var(--color-atrium-deep);font-weight:700}
+.fo-row .fo-row-sub{font-size:11px;color:var(--color-ink-muted);flex:0 0 auto}
+.fo-row.fo-add{color:var(--color-atrium-deep);font-weight:700}
+.fo-empty{padding:8px 10px;font-size:12px;color:var(--color-ink-muted)}
+
 /* ============================================================
    BAUHAUS LAYER (Noa 2026-07-07)
    Bauhaus construction folded onto the LVP Atrium palette. This block is
@@ -3013,22 +3166,18 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .board-search{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;font-weight:600;padding:11px 14px}
 .board-search::placeholder{text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:13px;color:var(--color-ink-muted)}
 
-/* ---- BOARD ROWS (hairline rule matching drawer/W-8's divider weight -
-   consolidated 2026-07-30, this used to be a 2px ink rule that only board rows
-   had, one screen out of step with the rest of the app; snappy left-accent on
-   hover) ---- */
-.row{border-bottom:1px solid var(--color-border-subtle);padding:15px 6px}
-.row:hover{background:var(--color-bg-hover);margin:0;padding-left:12px;padding-right:6px;border-radius:0;border-bottom-color:var(--color-border-strong);box-shadow:inset 5px 0 0 0 var(--color-atrium)}
+/* ---- BOARD ROWS (2026-08-06 redesign: grid table on a white card; the
+   left accent is reserved for attention rows now, so hover stays a plain
+   ground shift and never fights the coral edge) ---- */
 .row:active{transform:none}
-.rn-name{font-weight:800;font-size:16px}
-/* Mono for raw data (amounts, ages, timestamps) vs sans for names/labels -
-   one system, added 2026-07-31, previously unstyled/inherited. */
-.ramt{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--color-ink-sub)}
+.rn-name{font-weight:800;font-size:15px}
+/* Mono for raw data (amounts, ages, timestamps) vs sans for names/labels. */
+.ramt{font-family:var(--font-mono)}
 .frac{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .rhe{font-weight:600}
 /* rail segments: square, bordered, constructed */
-.rail{gap:4px}
-.rail .seg{height:9px;border-radius:var(--radius-sm);border:1px solid var(--color-border-subtle);background:#fff}
+.rail{gap:3px}
+.rail .seg{height:7px;border-radius:2px;border:1px solid var(--color-border-subtle);background:#fff}
 .rail .seg.done{background:var(--color-green)}
 .rail .seg.current{background:var(--color-gold);box-shadow:none}
 /* Sealing: the last beat fills as motion (transient seconds-long arrive-at-Done). */
@@ -3229,6 +3378,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                stays as the Onboarding-only mechanism search itself opens
                (openOnboarding() in the board-search IIFE below) - never
                reachable independently anymore. -->
+          <!-- 2026-08-06 (Noa: "the new process initiation isnt intuitive"):
+               an obvious primary New process button is back in the header. It
+               opens the guided create panel with a process chooser as step 1.
+               Search stays the fast path for EXISTING LPs (increase/withdrawal
+               and pending-contact onboarding); both roads land in the same
+               panel. -->
+          <button class="cmd-btn" id="newProcBtn" type="button">+ New process</button>
           <div class="new-wrap" id="newWrap">
             <input class="board-search" id="boardSearch" type="search" placeholder="Search by name" autocomplete="off" aria-haspopup="menu" aria-expanded="false">
             <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
@@ -3251,7 +3407,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         </div>
       </div>
       <div class="content">
-        <div id="list"></div>
+        <div id="board-card"><div id="list"></div></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
@@ -3380,7 +3536,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <button class="x" id="closeBtn" aria-label="Close">&times;</button>
     <h2 id="panelTitle">New process</h2>
     <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
+    <!-- 2026-08-06 guided create (Noa: "the new process initiation isnt
+         intuitive"): the panel now opens with an explicit process chooser as
+         step 1, then walks Who / Language / Emails as numbered steps. Every
+         field and behavior below is the pre-existing one; this is
+         re-presentation, not feature change. Entries that already know the
+         process (board search, LP-directory actions) land here with step 1
+         pre-selected and can still change it. -->
+    <div id="procStep">
+      <div class="pstep-h"><span class="pstep-n">1</span>What is happening?</div>
+      <div class="proc-grid" id="procGrid" role="radiogroup" aria-label="Process kind">
+        <button type="button" data-proc="subscription" role="radio" aria-checked="false"><span class="pg-t">Onboarding</span><span class="pg-s">New investor joins</span></button>
+        <button type="button" data-proc="increase" role="radio" aria-checked="false"><span class="pg-t">Increase</span><span class="pg-s">Existing LP adds money</span></button>
+        <button type="button" data-proc="withdrawal" role="radio" aria-checked="false"><span class="pg-t">Withdrawal</span><span class="pg-s">Existing LP redeems</span></button>
+      </div>
+      <div id="procTypeRow">
+        <label id="procTypeLbl">Applicant</label>
+        <div class="seg" id="segProcType" style="max-width:240px" role="radiogroup" aria-labelledby="procTypeLbl"><button data-v="individual" role="radio" aria-checked="true" class="on">Individual</button><button data-v="entity" role="radio" aria-checked="false">Entity</button></div>
+      </div>
+    </div>
     <div id="lpPickerWrap">
+      <div class="pstep-h"><span class="pstep-n">2</span>Who is it?</div>
       <div class="lp-search">
         <input id="lpSearch" type="search" autocomplete="off" aria-describedby="lpSearchHint" placeholder="Search by name (Hebrew or English)">
         <div id="lpResults" class="lp-results" hidden></div>
@@ -3407,13 +3583,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button data-v="active" role="radio" aria-checked="false">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div>
       <div class="hint">Leave unset if you're not sure - the LP's own form answer decides for real. Click a selected option again to clear it.</div>
     </div>
-    <div id="langRow">
-    <label id="segLangLbl">Email language <span class="tag">required</span></label>
-    <div class="seg" id="segLang" style="max-width:240px" role="radiogroup" aria-labelledby="segLangLbl"><button class="on" data-v="he" role="radio" aria-checked="true">Hebrew</button><button data-v="en" role="radio" aria-checked="false">English</button></div>
-    <div class="hint">Sets the language of every email to this investor.</div>
-    </div>
 
     <div id="manualLpFields">
+    <div class="pstep-h"><span class="pstep-n">2</span>Who is it?</div>
     <div id="onbPickerWrap" style="margin-bottom: 16px">
       <label>Pending onboarding submission <span class="opt">optional</span></label>
       <div style="display:flex;align-items:center;gap: 12px;flex-wrap:wrap">
@@ -3439,10 +3611,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="hint" id="nicknameHint">First name or nickname for email greetings. Not the full legal name.</div>
     </div>
 
+    </div><!-- /manualLpFields -->
+
+    <div id="langRow">
+    <div class="pstep-h"><span class="pstep-n">3</span>Language</div>
+    <label id="segLangLbl">Email language <span class="tag">required</span></label>
+    <div class="seg" id="segLang" style="max-width:240px" role="radiogroup" aria-labelledby="segLangLbl"><button class="on" data-v="he" role="radio" aria-checked="true">Hebrew</button><button data-v="en" role="radio" aria-checked="false">English</button></div>
+    <div class="hint">Sets the language of every email to this investor.</div>
+    </div>
+
+    <div id="emailsStep">
+    <div class="pstep-h"><span class="pstep-n">4</span>Emails</div>
     <label for="email">Investor email <span class="tag">required</span></label>
     <input id="email" type="email" inputmode="email" autocomplete="email" required aria-required="true" placeholder="investor@example.com">
     <div class="field-err" id="emailErr" role="alert" hidden></div>
-    </div><!-- /manualLpFields -->
 
     <div id="foRow">
     <label for="foEmail">FO email <span class="opt">optional</span></label>
@@ -3468,15 +3650,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
          "truly optional" pattern as the entity-classification toggle. -->
     <div id="foShareSection">
     <label id="foShareLbl">FO share <span class="opt">optional</span></label>
-    <div class="seg wrap" id="foShareSeg" role="group" aria-labelledby="foShareLbl"></div>
-    <div id="foShareCustomWrap" style="margin-top: 8px">
-      <button type="button" id="foShareCustomToggle" class="linklike" style="background:none;border:none;padding:0;font:inherit;color:var(--color-atrium);cursor:pointer;font-size:13px">+ Add a tag not listed above</button>
-      <input id="foShareCustom" type="text" placeholder="e.g. Ashri25%" style="display:none;width:100%;margin-top:8px;padding: 12px 12px;font-size: 15px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg-input);color:var(--color-ink)">
+    <!-- Compact multi-select (2026-08-06, replacing the full-catalog chip
+         wall). Collapsed by default: the common no-FO case never shows the
+         catalog, and the async label load can never shift the layout under
+         the Send button. The dropdown is a POPOVER (absolute), so even open
+         it does not push the CTA. Known fixed combos pin first; mutual
+         exclusion by FO prefix is unchanged (foShareTokenPrefixes); a typed
+         tag that matches nothing offers itself as a new tag (the old
+         "+ Add a tag" escape hatch, folded into the same search box). -->
+    <div id="foShareSel" class="fo-sel" hidden></div>
+    <div class="fo-picker-wrap" id="foSharePickerWrap">
+      <button type="button" id="foShareOpenBtn" class="fo-open" aria-haspopup="listbox" aria-expanded="false">None &middot; add FO share</button>
+      <div id="foSharePicker" class="fo-picker" hidden>
+        <input id="foShareSearch" type="text" placeholder="Type to filter, e.g. Ashri" autocomplete="off" aria-label="Filter FO share tags">
+        <div id="foShareList" class="fo-list" role="listbox" aria-labelledby="foShareLbl"></div>
+      </div>
     </div>
-    <div class="hint" id="foShareHint">Only for new subscriptions. Select every FO in this deal (e.g. Gilad + Ashri + Eitan). Creates a tag on Monday if it does not exist yet.</div>
+    <div class="hint" id="foShareHint">Only for new subscriptions. Pick every FO in this deal; picking one tier of an FO replaces its other tiers.</div>
     </div>
+    </div><!-- /emailsStep -->
 
-
+    <div id="ctaExplain" class="cta-explain" aria-live="polite"></div>
     <button class="cta" id="createBtn">Send invite</button>
     <div id="msg" role="status" aria-live="polite" style="margin-top: 16px;padding: 12px 16px;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;display:none"></div>
     <div class="res" id="res">
@@ -3496,7 +3690,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-04-6';
+  window.__BUILD_TAG = 'console-2026-08-06-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3684,35 +3878,63 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     function P(processId,displayName,nameHebrew,currentStage,ageDays,nextActionPhrase,flowType,lane,lastActivityTs){
       return {processId:processId,displayName:displayName,nameHebrew:nameHebrew,currentStage:currentStage,ageDays:ageDays,nextActionPhrase:nextActionPhrase,flowType:flowType,lane:lane,lastActivityTs:lastActivityTs};
     }
-    // Richer fixture set: processes spread across every stage incl. needs_attention,
-    // voided and complete; ordered so last-activity recency is exercised.
+    // Fixture set (2026-08-06 redesign): EVERY stage the board can render,
+    // exercised in one place - in_progress, submitted, preview_rendered,
+    // invited (link_sent), opened, signing mid-roster, all_signed,
+    // needs_attention with a REAL reason string, seal_stuck_retrying,
+    // seal_quarantined, token_revoked, complete, voided, expired - plus
+    // Hebrew and English names. Generic fixture names, never real LPs.
     var cayman=[
-      P('p1','Daniel Rosen','דניאל רוזן','signing',2,'Waiting for controlling person 2 to sign (2 of 3)','cayman_subscription','cayman','2026-06-30T08:40'),
-      P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Assemble pack','cayman_subscription','cayman','2026-06-30T09:15'),
-      P('p6','Eitan Galor','איתן גלאור','all_signed',3,'Sealing pack','cayman_subscription','cayman','2026-06-29T17:05'),
-      P('p7','Margaux Lefevre','מרגו לפבר','opened',1,'Opened, not started','cayman_subscription','cayman','2026-06-30T07:20'),
-      P('p4','Helena Brandt','הלנה ברנדט','needs_attention',4,'Needs counsel','cayman_subscription','cayman','2026-06-28T11:30'),
-      P('p5','Yael Adler','יעל אדלר','link_sent',0,'Not opened','cayman_subscription','cayman','2026-06-30T06:00'),
-      P('p3','Tomer Shapira','תומר שפירא','complete',9,'','cayman_increase','cayman','2026-06-25T14:10'),
-      P('p8','Jonathan Pearl','יונתן פרל','complete',12,'','cayman_subscription','cayman','2026-06-22T10:00'),
-      P('p9','Rivka Sela','רבקה סלע','voided',15,'','cayman_subscription','cayman','2026-06-19T16:30')
+      P('p1','Daniel Rosen','דניאל רוזן','signing',4,'Waiting for controlling person 2 to sign (2 of 3)','cayman_subscription','cayman','2026-08-03T08:40'),
+      P('p2','Aurelie Marchand','אורלי מרשאן','submitted',1,'Preparing their documents','cayman_subscription','cayman','2026-08-05T09:15'),
+      P('p6','Eitan Galor','איתן גלאור','all_signed',3,'Everyone signed. Finishing up the file','cayman_subscription','cayman','2026-08-05T17:05'),
+      P('p7','Margaux Lefevre','מרגו לפבר','opened',1,'Filling out the form','cayman_subscription','cayman','2026-08-05T07:20'),
+      P('p15','Amit Peled','עמית פלד','in_progress',2,'Filling out the form','cayman_subscription','cayman','2026-08-04T11:00'),
+      P('p4','Helena Brandt','הלנה ברנדט','needs_attention',6,'The wire / money row did not reach the transfer-forms tracker','cayman_subscription','cayman','2026-07-31T11:30'),
+      P('p5','Yael Adler','יעל אדלר','link_sent',0,'Invited, waiting for them to start','cayman_subscription','cayman','2026-08-06T06:00'),
+      P('p10','Gabriel Weiss','גבריאל וייס','seal_stuck_retrying',2,'Everyone signed; the seal is being retried automatically','cayman_subscription','cayman','2026-08-04T09:30'),
+      P('p11','Liora Katz','ליאורה כץ','seal_quarantined',3,'The seal failed repeatedly and was quarantined. Needs an engineer look','cayman_subscription','cayman','2026-08-03T14:00'),
+      P('p12','Ronen Alon','רונן אלון','token_revoked',7,'','cayman_subscription','cayman','2026-07-30T10:00'),
+      P('p3','Tomer Shapira','תומר שפירא','complete',9,'','cayman_increase','cayman','2026-07-28T14:10'),
+      P('p8','Jonathan Pearl','יונתן פרל','complete',12,'','cayman_subscription','cayman','2026-07-25T10:00'),
+      P('p9','Rivka Sela','רבקה סלע','voided',15,'','cayman_subscription','cayman','2026-07-22T16:30'),
+      P('p13','Nadav Oren','נדב אורן','expired',31,'','cayman_withdrawal','cayman','2026-07-06T09:00')
     ];
     var israel=[
-      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Waiting for subscriber to sign (1 of 2)','israeli_increase','israeli','2026-06-30T08:00'),
-      P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Assemble pack','israeli_increase','israeli','2026-06-29T13:25'),
-      P('i3','David Cohen','דוד כהן','link_sent',0,'Test, then send','israeli_increase','israeli','2026-06-30T07:45'),
-      P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'Awaiting figure from BDO','israeli_withdrawal','israeli','2026-06-27T09:00'),
-      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israeli','2026-06-24T15:40')
+      P('i1','Michael Stern','מיכאל שטרן','signing',1,'Waiting for subscriber to sign (1 of 2)','israeli_increase','israeli','2026-08-05T08:00'),
+      P('i4','Avigail Doron','אביגיל דורון','submitted',2,'Preparing their documents','israeli_increase','israeli','2026-08-04T13:25'),
+      P('i6','Shira Golan','שירה גולן','preview_rendered',1,'Reviewing the filled forms before signing','israeli_increase','israeli','2026-08-05T10:10'),
+      P('i3','David Cohen','דוד כהן','link_sent',0,'Invited, waiting for them to start','israeli_increase','israeli','2026-08-06T07:45'),
+      P('i5','Yossi Barak','יוסי ברק','needs_attention',5,'The wire / money row did not reach the transfer-forms tracker','israeli_withdrawal','israeli','2026-08-01T09:00'),
+      P('i2','Noa Friedman','נועה פרידמן','complete',6,'','israeli_withdrawal','israeli','2026-07-31T15:40')
     ];
     var L=state.lane;
-    // Demo amounts (wiring item 4): a representative spread, some rows pre-submit (no amount).
+    // Demo amounts: a representative spread, some rows pre-submit (no amount).
     var DEMO_AMTS={p1:[250000,'USD'],p2:[1000000,'USD'],p6:[500000,'USD'],p3:[150000,'USD'],
-                   i1:[350000,'ILS'],i4:[1200000,'ILS'],i5:[400000,'ILS'],i2:[250000,'ILS']};
+                   p10:[750000,'USD'],p11:[2000000,'USD'],p13:[300000,'USD'],
+                   i1:[350000,'ILS'],i4:[1200000,'ILS'],i5:[400000,'ILS'],i2:[250000,'ILS'],i6:[600000,'ILS']};
     [].concat(cayman,israel).forEach(function(r){
       var a=DEMO_AMTS[r.processId];
       r.investmentAmount=a?a[0]:null; r.investmentCurrency=a?a[1]:'';
     });
-    if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-06-30T09:30',version:441};
+    // One phantom-complete row (registry complete, records write failed).
+    cayman.forEach(function(r){if(r.processId==='p8'){r.stale=true;r.nextActionPhrase='Sealed, but a records write failed. Needs review';}});
+    if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-08-06T09:30',version:441};
+    if(qs.indexOf('?api=opBoardDetail')===0){
+      var det={
+        p1:{nameHebrew:'דניאל רוזן',waitKind:'signer',signerName:'Sarah Rosen',signerRole:'cp1',signerIndex:2,signerCount:3,waitSince:'2026-08-03T08:40:00Z'},
+        p2:{waitKind:'lp'},
+        p7:{waitKind:'lp',waitSince:'2026-08-05T07:20:00Z'},
+        p15:{waitKind:'lp',waitSince:'2026-08-04T11:00:00Z'},
+        p5:{waitKind:'lp',waitSince:'2026-08-06T06:00:00Z'},
+        p4:{attentionReason:'tracker_write_failed',attentionReasonHuman:'The wire / money row did not reach the transfer-forms tracker'},
+        p11:{attentionReason:'seal_quarantined',attentionReasonHuman:'The seal failed repeatedly and was quarantined'},
+        i1:{waitKind:'signer',signerName:'Michael Stern',signerRole:'subscriber',signerIndex:1,signerCount:2,waitSince:'2026-08-05T08:00:00Z'},
+        i3:{waitKind:'lp',waitSince:'2026-08-06T07:45:00Z'},
+        i5:{attentionReason:'tracker_write_failed',attentionReasonHuman:'The wire / money row did not reach the transfer-forms tracker'}
+      };
+      return {ok:true,rows:det};
+    }
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
       {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
       {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
@@ -3831,16 +4053,25 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return d;
     });
   }
-  // FO share picker: fetch the LIVE Monday FO Share label catalog once,
-  // cache it, and render one toggle chip per label into #foShareSeg (the
-  // literal "None" label is skipped - an empty selection already means
-  // None, same convention as the entity-classification toggle). Fail-soft:
-  // a fetch failure leaves the chip row empty - the operator can still add
-  // a tag via "+ Add a tag not listed above", never blocks the New-process
-  // panel. Called on every panel open but only fetches once (foShareLoaded
-  // guards re-fetching a static-for-the-session catalog on every
-  // "+ New process" click).
+  // FO share picker (compact multi-select since 2026-08-06; Noa: the full
+  // chip-wall catalog "is taking up too much space and its not the right
+  // uui"). The LIVE Monday FO Share label catalog is fetched once into
+  // foShareCatalog (the literal "None" label skipped - an empty selection
+  // already means None). The control is COLLAPSED by default and the list is
+  // an absolute popover, so the async catalog load can never shift layout
+  // under the Send button (Noa hit exactly that mid-click). Fail-soft: a
+  // fetch failure leaves the catalog empty - the operator can still type a
+  // brand-new tag in the same search box, never blocks the panel.
   var foShareLoaded=false;
+  // Selection MODEL (2026-08-06 compact picker): [{label, tokens}] entries.
+  // tokens is the comma-joined real Monday token list (a combo carries several).
+  var foShareCatalog=[];
+  var foShareSelected=[];
+  function foShareSelectedTokens(){
+    var t=[];
+    foShareSelected.forEach(function(c){String(c.tokens||'').split(',').forEach(function(x){x=x.trim();if(x&&t.indexOf(x)<0)t.push(x);});});
+    return t;
+  }
   // Known FIXED combined-FO deals (Noa 2026-07-30: "gilad is always in the
   // 3 way share with ashri and eitan... easier to just have on[e]
   // selection") - one click writes all N real Monday tokens at once instead
@@ -3861,47 +4092,110 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // for one of ITS OWN FOs, and vice versa.
   function foShareTokenPrefixes(dataV){return String(dataV||'').split(',').map(function(t){var m=/^[A-Za-z]+/.exec(t.trim());return m?m[0]:t.trim();});}
   function foShareSetsIntersect(a,b){return a.some(function(x){return b.indexOf(x)>=0;});}
-  function foShareToggleChip(btn){
-    var seg=document.getElementById('foShareSeg');
-    if(!seg)return;
-    if(btn.classList.contains('on')){
-      btn.classList.remove('on');btn.setAttribute('aria-pressed','false');
+  // Toggle one catalog entry in the selection model. Same mutual-exclusion
+  // rule as the old chip wall: entries sharing an FO prefix are the SAME FO
+  // at different tiers, so selecting one clears the others (a combo clears -
+  // and is cleared by - any atomic entry for one of its own FOs).
+  function foShareToggleEntry(entry){
+    var idx=-1;
+    foShareSelected.forEach(function(c,i){if(c.tokens===entry.tokens&&c.label===entry.label)idx=i;});
+    if(idx>=0){foShareSelected.splice(idx,1);}
+    else{
+      var prefixes=foShareTokenPrefixes(entry.tokens);
+      foShareSelected=foShareSelected.filter(function(c){return !foShareSetsIntersect(foShareTokenPrefixes(c.tokens),prefixes);});
+      foShareSelected.push(entry);
+    }
+    foShareRenderSel();foShareRenderList();
+  }
+  function foShareRenderSel(){
+    var sel=document.getElementById('foShareSel'),open=document.getElementById('foShareOpenBtn');
+    if(!sel||!open)return;
+    if(!foShareSelected.length){
+      sel.hidden=true;sel.innerHTML='';
+      open.innerHTML='None &middot; add FO share';
       return;
     }
-    var prefixes=foShareTokenPrefixes(btn.getAttribute('data-v'));
-    Array.prototype.forEach.call(seg.children,function(other){
-      if(other!==btn&&other.classList.contains('on')&&foShareSetsIntersect(foShareTokenPrefixes(other.getAttribute('data-v')),prefixes)){
-        other.classList.remove('on');other.setAttribute('aria-pressed','false');
-      }
+    sel.hidden=false;
+    sel.innerHTML=foShareSelected.map(function(c,i){
+      return '<span class="fo-chip"><span>'+esc2(c.label)+'</span><button type="button" data-i="'+i+'" aria-label="Remove '+esc2(c.label)+'">&times;</button></span>';
+    }).join('');
+    Array.prototype.forEach.call(sel.querySelectorAll('button[data-i]'),function(b){
+      b.onclick=function(e){e.stopPropagation();foShareSelected.splice(+b.getAttribute('data-i'),1);foShareRenderSel();foShareRenderList();};
     });
-    btn.classList.add('on');btn.setAttribute('aria-pressed','true');
+    open.innerHTML='Change FO share';
   }
-  function foShareMakeChip(label,dataV){
-    var seg=document.getElementById('foShareSeg');
-    var btn=document.createElement('button');
-    btn.type='button';btn.textContent=label;
-    btn.setAttribute('data-v',dataV);btn.setAttribute('aria-pressed','false');
-    btn.onclick=function(){foShareToggleChip(btn);};
-    seg.appendChild(btn);
+  function foShareIsSelected(entry){
+    return foShareSelected.some(function(c){return c.tokens===entry.tokens&&c.label===entry.label;});
+  }
+  function foShareRenderList(){
+    var list=document.getElementById('foShareList'),inp=document.getElementById('foShareSearch');
+    if(!list)return;
+    var q=(inp&&inp.value||'').trim().toLowerCase();
+    var shown=foShareCatalog.filter(function(c){return !q||c.label.toLowerCase().indexOf(q)>=0||String(c.tokens).toLowerCase().indexOf(q)>=0;});
+    var h=shown.map(function(c){
+      var sub=(c.tokens.indexOf(',')>=0)?'<span class="fo-row-sub">'+esc2(c.tokens.split(',').length+' tags')+'</span>':'';
+      return '<button type="button" class="fo-row'+(foShareIsSelected(c)?' sel':'')+'" data-tokens="'+esc2(c.tokens)+'" data-label="'+esc2(c.label)+'" role="option" aria-selected="'+(foShareIsSelected(c)?'true':'false')+'">'
+        +'<span>'+esc2(c.label)+'</span>'+sub+'</button>';
+    }).join('');
+    // Free-text escape hatch (the old "+ Add a tag not listed above"): a typed
+    // value matching no catalog label offers itself as a brand-new tag.
+    var exact=foShareCatalog.some(function(c){return c.label.toLowerCase()===q;});
+    if(q&&!exact){
+      h+='<button type="button" class="fo-row fo-add" data-tokens="'+esc2((inp&&inp.value||'').trim())+'" data-label="'+esc2((inp&&inp.value||'').trim())+'"><span>Add tag &quot;'+esc2((inp&&inp.value||'').trim())+'&quot;</span></button>';
+    }
+    list.innerHTML=h||'<div class="fo-empty">'+(foShareCatalog.length?'No tag matches.':'Loading the tag catalog...')+'</div>';
+    Array.prototype.forEach.call(list.querySelectorAll('.fo-row'),function(b){
+      b.onclick=function(e){
+        e.stopPropagation();
+        foShareToggleEntry({label:b.getAttribute('data-label'),tokens:b.getAttribute('data-tokens')});
+        var si=document.getElementById('foShareSearch');
+        if(si&&b.classList.contains('fo-add')){si.value='';}
+        if(si)si.focus();
+      };
+    });
   }
   function loadFoShareLabels(){
-    if(foShareLoaded||DEMO)return;
+    if(foShareLoaded)return;
     foShareLoaded=true;
-    FO_SHARE_KNOWN_COMBOS.forEach(function(c){foShareMakeChip(c.label,c.tokens);});
+    FO_SHARE_KNOWN_COMBOS.forEach(function(c){foShareCatalog.push({label:c.label,tokens:c.tokens});});
+    if(DEMO){
+      // Render fixtures only, generic FO names (never real tags in fixtures).
+      ['Alon15%','Barak20%','Barak25%','Carmel20%','Dekel15%','Harel20%'].forEach(function(n){foShareCatalog.push({label:n,tokens:n});});
+      foShareRenderList();
+      return;
+    }
     apiFetch('?api=foShareLabels').then(function(d){
-      var seg=document.getElementById('foShareSeg');
-      if(!seg||!d||!d.ok||!Array.isArray(d.labels))return;
+      if(!d||!d.ok||!Array.isArray(d.labels))return;
       // Skip a raw atomic label already fully absorbed into a known combo
-      // above (Gilad15% never appears outside the Gilad+Ashri+Eitan deal) -
-      // avoids offering a redundant, easy-to-misclick standalone chip.
+      // (Gilad15% never appears outside the Gilad+Ashri+Eitan deal).
       var absorbed={};
       FO_SHARE_KNOWN_COMBOS.forEach(function(c){c.tokens.split(',').forEach(function(t){if(/^Gilad/.test(t))absorbed[t]=true;});});
       d.labels.forEach(function(name){
         if(name==='None'||absorbed[name])return;
-        foShareMakeChip(name,name);
+        foShareCatalog.push({label:name,tokens:name});
       });
-    }).catch(function(){/* fail-soft: empty chip row, Custom still works, never block the panel */});
+      // The picker is a closed popover by default, so this late-arriving
+      // catalog re-render can never shift the panel layout under the CTA.
+      foShareRenderList();
+    }).catch(function(){/* fail-soft: the Add-tag free-text row still works, never block the panel */});
   }
+  // Picker open/close wiring (popover; outside click closes).
+  (function(){
+    var open=document.getElementById('foShareOpenBtn'),pick=document.getElementById('foSharePicker'),
+        wrap=document.getElementById('foSharePickerWrap'),inp=document.getElementById('foShareSearch');
+    if(!open||!pick||!wrap)return;
+    open.onclick=function(e){
+      e.stopPropagation();
+      var opening=pick.hidden;
+      pick.hidden=!opening;
+      open.setAttribute('aria-expanded',opening?'true':'false');
+      if(opening){foShareRenderList();if(inp){inp.value='';inp.focus();}}
+    };
+    if(inp)inp.addEventListener('input',foShareRenderList);
+    document.addEventListener('click',function(e){
+      if(!wrap.contains(e.target)&&!pick.hidden){pick.hidden=true;open.setAttribute('aria-expanded','false');}
+    });
+  })();
   function clearAuth(reason){
     // A rejection message is only honest when there WAS a session to reject:
     // on a fresh never-signed-in visit a boot fetch can come back unauthorized
@@ -4056,7 +4350,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       try{
         var dq=new URLSearchParams(location.search);
         var dv=dq.get('view'); if(dv)setTimeout(function(){switchView(dv);},120);
-        if(dq.get('panel')==='1')setTimeout(function(){open();},200);
+        // Panel variants for headless screenshots: panel=1 (onboarding),
+        // panel=increase / panel=withdrawal (existing-LP paths),
+        // fo=1 additionally opens the FO share picker popover.
+        var dp=dq.get('panel');
+        if(dp){setTimeout(function(){
+          if(dp==='increase'||dp==='withdrawal'){state.process=dp;}
+          else{state.process='subscription';state.type=(dp==='entity')?'entity':'individual';}
+          setToggleSilent('segLang','language',(state.lane==='israel')?'he':'en');
+          open();
+          if(dq.get('fo')==='1')setTimeout(function(){var ob=document.getElementById('foShareOpenBtn');if(ob)ob.click();},250);
+        },200);}
+        // all=1 pre-expands the completed + canceled tails (terminal fixtures visible).
+        if(dq.get('all')==='1'){showDone=true;showCanceled=true;doneLoaded=false;setTimeout(function(){load(true);},150);}
         var dm=dq.get('msg'); if(dm)setTimeout(function(){try{openMsg(dm);}catch(e){}},400);
         var dd=dq.get('drawer'); if(dd)setTimeout(function(){try{openDrawer(dd);}catch(e){}},300);
       }catch(e){}
@@ -4159,14 +4465,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // expired) and the sealing states are handled separately in railHtml.
   var STAGE_TO_MILESTONE={
     link_sent:0, opened:0,
-    in_progress:1, submitted:1,
+    in_progress:1, submitted:1, preview_rendered:1,
     signing:2,
     all_signed:3, docs_assembled:3, dispatched:3,
     complete:3, sealed:3
   };
-  function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired';}
+  function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
   function isCompletedStage(st){return st==='complete'||st==='sealed';}
-  function isCanceledStage(st){return st==='voided'||st==='void'||st==='expired';}
+  function isCanceledStage(st){return st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
+  // Attention-class states: the operator (or the seal engine) owes this row a
+  // look right now. seal_* are the stuck/quarantined seal laterals (2026-08-06).
+  function isAttnStage(st){return st==='needs_attention'||st==='seal_quarantined'||st==='seal_stuck_retrying';}
   // Human milestone label for any canonical stage. Reuses the board rail's map so the
   // drawer + activity read the SAME words the board shows; laterals get their own words.
   // Unknown stages fall back to a humanized key rather than a raw machine string.
@@ -4174,10 +4483,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     st=String(st==null?'':st);
     if(st==='voided'||st==='void')return 'Canceled';
     if(st==='expired')return 'Expired';
+    if(st==='abandoned')return 'Abandoned';
+    if(st==='token_revoked')return 'Link revoked';
     if(st==='needs_attention')return 'Needs a look';
+    if(st==='seal_stuck_retrying')return 'Seal retrying';
+    if(st==='seal_quarantined')return 'Seal failed';
     if(SEALING_STAGES[st])return 'Sealing';
     var mi=STAGE_TO_MILESTONE[st];
     return (mi!=null)?RAIL_MILESTONES[mi]:(st?humanKey(st):'');
+  }
+  // Plain-words stage vocabulary for the board's status column (2026-08-06
+  // redesign; Noa: "i asked for more details"). Operator words, never enums.
+  var STAGE_WORD={
+    link_sent:'Invited, not opened', opened:'Opened the form',
+    in_progress:'Filling the form', submitted:'Form submitted',
+    preview_rendered:'Form submitted', signing:'Signing',
+    all_signed:'All signed, sealing', docs_assembled:'Sealing the pack',
+    dispatched:'Docs dispatched', complete:'Done', sealed:'Done',
+    needs_attention:'Stuck', voided:'Canceled', void:'Canceled',
+    expired:'Expired', abandoned:'Abandoned', token_revoked:'Link revoked',
+    seal_stuck_retrying:'Seal retrying', seal_quarantined:'Seal failed'
+  };
+  function stageWord(st){st=String(st==null?'':st);return STAGE_WORD[st]||humanKey(st);}
+  // Short waiting-duration read ("3d" / "5h" / "12m") from an ISO stamp.
+  function sinceDur(iso){
+    if(!iso)return '';
+    var t=Date.parse(iso);
+    if(isNaN(t))return '';
+    var ms=Date.now()-t;
+    if(ms<0)return '';
+    var h=Math.floor(ms/3600000);
+    if(h<1){var m=Math.floor(ms/60000);return m<=0?'just now':(m+'m');}
+    if(h<48)return h+'h';
+    return Math.floor(h/24)+'d';
   }
   // snake_case / camelCase machine key -> "Title Case" label (for Details rows etc.).
   function humanKey(k){
@@ -4212,47 +4550,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var m=hay.match(/Waiting for (.+?) to sign/i);
     return m?m[1].replace(/\s+\d+$/,''):'';
   }
-  // Build the 5-segment rail + micro-label for one row. Exactly one gold segment per
-  // active row (the current milestone). Laterals stay quiet, never red.
+  // Build the compact 4-segment rail for one row (2026-08-06 redesign: the
+  // words moved into .rword / stageWord; the rail is a supporting progress
+  // read, not the row's dominant element - so this returns segments only).
+  // Laterals: attention states freeze the rail; dead states go full ghost.
   function railHtml(r){
     var st=String(r.stage||'');
-    var segs, railCls='', lbl='', lblCls='';
-    if(st==='voided'||st==='void'){ railCls='dead'; segs=['up','up','up','up']; lbl='Canceled'; lblCls='muted'; }
-    else if(st==='expired'){ railCls='dead'; segs=['up','up','up','up']; lbl='Expired'; lblCls='muted'; }
+    var segs, railCls='';
+    if(isCanceledStage(st)){ railCls='dead'; segs=['up','up','up','up']; }
     else if(st==='needs_attention'){
-      // C6d (2026-07-19): the list feed never emits lastStage, so the old
-      // STAGE_TO_MILESTONE[r.lastStage] read was dead code that always fell to
-      // its default - the rail froze at "In progress" while LOOKING like it knew
-      // where the process stalled. Freeze honestly at one fixed beat.
+      // C6d (2026-07-19): the list feed never emits lastStage, so freeze
+      // honestly at one fixed beat rather than pretending to know where.
       railCls='frozen'; segs=['done','current','up','up'];
-      lbl='Needs a look'; lblCls='muted';
+    } else if(st==='seal_stuck_retrying'||st==='seal_quarantined'){
+      // Seal laterals: everyone signed, the seal leg is stuck - freeze at the
+      // last beat so the rail agrees with the "Seal retrying/failed" word.
+      railCls='frozen'; segs=['done','done','done','current'];
     } else if(isCompletedStage(st)){
-      // C1 (2026-07-19): a phantom-complete row (registry says complete, the
-      // completion tail failed a records write; server sends stale:true) must
-      // never read as a clean green Done on the board. The drawer already said
-      // "Needs review"; the board rail now agrees.
-      if(r.stale){ railCls='frozen'; segs=['done','done','done','current']; lbl='Needs review'; lblCls='warn'; }
-      else { segs=['done','done','done','done']; lbl='Done'; }
+      // C1 (2026-07-19): a phantom-complete row (server sends stale:true) must
+      // never read as a clean green Done.
+      if(r.stale){ railCls='frozen'; segs=['done','done','done','current']; }
+      else { segs=['done','done','done','done']; }
     } else if(SEALING_STAGES[st]){
-      // Sealing = arriving at Done: the last segment fills as motion, not a static beat.
-      railCls='sealing'; segs=['done','done','done','sealing']; lbl='Sealing'; lblCls='muted';
+      // Sealing = arriving at Done: the last segment fills as motion.
+      railCls='sealing'; segs=['done','done','done','sealing'];
     } else {
       var mi=(STAGE_TO_MILESTONE[st]!=null)?STAGE_TO_MILESTONE[st]:0;
       segs=[]; for(var j=0;j<4;j++)segs.push(j<mi?'done':(j===mi?'current':'up'));
-      lbl=RAIL_MILESTONES[mi];
-      if(st==='signing'){
-        var fr=signerFraction(r), role=signerRoleLabel(r);
-        var bits=[role,fr].filter(Boolean).map(esc2).join(' &middot; ');
-        if(bits)lbl='Signing <span class="frac">- '+bits+'</span>';
-      }
     }
     var segHtml=segs.map(function(s){
       var c=(s==='done')?'seg done':(s==='current')?'seg current':(s==='sealing')?'seg sealing':'seg';
       return '<span class="'+c+'"></span>';
     }).join('');
-    var ageSuffix=r.age?' <span class="frac">&middot; '+esc2(r.age)+'</span>':'';
-    return '<span class="rstage"><span class="rail '+railCls+'">'+segHtml+'</span>'
-      +'<span class="rail-lbl'+(lblCls?' '+lblCls:'')+'">'+lbl+ageSuffix+'</span></span>';
+    return '<span class="rstage"><span class="rail '+railCls+'">'+segHtml+'</span></span>';
   }
   var allRows=[];
   var showDone=false, showCanceled=false; // quiet toggles: append completed / canceled rows below
@@ -4263,7 +4593,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // else ascending ageDays as a proxy (smaller age = more recent activity).
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
-      var an=(a.stage==='needs_attention')?1:0, bn=(b.stage==='needs_attention')?1:0;
+      var an=(isAttnStage(a.stage)||(isCompletedStage(a.stage)&&a.stale))?1:0, bn=(isAttnStage(b.stage)||(isCompletedStage(b.stage)&&b.stale))?1:0;
       if(an!==bn)return bn-an;
       if(a.lastActivityTs||b.lastActivityTs){
         var ta=a.lastActivityTs?Date.parse(a.lastActivityTs):0;
@@ -4309,21 +4639,81 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Tier-1 PII-gated ?api=opNotes fetch, never from the redacted ?api=list feed.
   var RNOTE_ICON='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3.5h10a1 1 0 0 1 1 1v8.6a1 1 0 0 1-.3.7l-2.9 2.9a1 1 0 0 1-.7.3H5a1 1 0 0 1-1-1v-11.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/><path d="M7 7h6M7 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   var RCOPY_CHECK='<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // Flow-type chip: the money-event word, tinted by direction. Console
+  // vocabulary is Join / Increase / Withdrawal (2026-08-04 standing: the UI
+  // says Withdrawal everywhere; the tracker write stays Redemption).
+  var FLOW_CHIP_WORD={onboarding:'Join',increase:'Increase',withdrawal:'Withdrawal',transfer:'Transfer'};
+  function flowChipHtml(r){
+    var w=String(r.typeLabel||'');
+    if(!w)return '';
+    var word=FLOW_CHIP_WORD[w]||humanKey(w);
+    var cls=(w==='withdrawal')?'f-out':(w==='onboarding'||w==='increase')?'f-in':'f-neutral';
+    return '<span class="flowchip '+cls+'">'+esc2(word)+'</span>';
+  }
+  // WHO the row is waiting on right now, and for how long. Signer name comes
+  // from the Tier-1 opBoardDetail merge (r.waitName); when that feed is absent
+  // the role scraped from the server's next-action phrase still answers "who"
+  // in kind, so the line degrades, never disappears.
+  function waitLineHtml(r){
+    var st=String(r.stage||'');
+    if(isTerminalStage(st)&&!(isCompletedStage(st)&&r.stale))return '';
+    var dur=sinceDur(r.waitSince)||'';
+    var durHtml=dur?' <span class="rw-dur">&middot; '+esc2(dur)+'</span>':'';
+    if(st==='signing'){
+      var frac=(r.waitIndex!=null&&r.waitCount!=null)?(r.waitIndex+' of '+r.waitCount):signerFraction(r);
+      var who=r.waitName||signerRoleLabel(r)||'the signer';
+      return '<span class="rwait">Waiting on <b dir="auto">'+esc2(who)+'</b>'
+        +(frac?' &middot; signer '+esc2(frac):'')+durHtml+'</span>';
+    }
+    if(st==='link_sent'||st==='opened'||st==='in_progress'){
+      return '<span class="rwait">Waiting on <b>the LP</b>'+durHtml+'</span>';
+    }
+    if(st==='submitted'||st==='preview_rendered'){
+      return '<span class="rwait">'+esc2(r.wait||'Preparing their documents')+'</span>';
+    }
+    if(SEALING_STAGES[st]){
+      return '<span class="rwait">Sealing runs by itself; only a stuck seal needs you</span>';
+    }
+    return r.wait?'<span class="rwait">'+esc2(r.wait)+'</span>':'';
+  }
+  // Attention badge with the ACTUAL reason (needs_attention / seal laterals /
+  // stale-complete). r.attnWhy is the curated human sentence from the Tier-1
+  // merge; r.wait (the server's next-action phrase) already humanizes the
+  // registry reason server-side, so it is the first fallback, never a raw code.
+  function attnBadgeHtml(r){
+    var st=String(r.stage||'');
+    var why='';
+    if(isAttnStage(st))why=r.attnWhy||r.wait||'Needs your attention';
+    else if(isCompletedStage(st)&&r.stale)why=r.wait||'Sealed, but a records write failed. Needs review';
+    else return '';
+    return '<span class="battn"><span class="battn-tag">Needs you</span>'
+      +'<span class="battn-why" title="'+esc2(why)+'">'+esc2(why)+'</span></span>';
+  }
   function rowHtml(r){
     var nm=r.name||r.he||'?';
-    var he=(r.he&&r.name)?r.he:'';
+    var he=(r.he&&r.name&&r.he!==r.name)?r.he:'';
+    var st=String(r.stage||'');
     // C1 fix-of-the-fix (pixel pass 2026-07-19): a stale-complete row must not
     // get the .done 50%-opacity fade - the whole point is that it is NOT quietly
     // finished. Same exemption the renderRows filter applies.
-    var done=(isTerminalStage(r.stage)&&!(isCompletedStage(r.stage)&&r.stale))?' done':'';
+    var stale=isCompletedStage(st)&&r.stale;
+    var attn=isAttnStage(st)||stale;
+    var done=(isTerminalStage(st)&&!stale)?' done':'';
+    var dead=isCanceledStage(st)?' dead':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
-    return '<div class="row'+done+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
-      +'<span class="ramt">'+esc2(amt)+'</span>'
-      +railHtml(r)
+    var wordCls=attn?' warn':((dead||isCompletedStage(st))?' muted':'');
+    var statSecond=attn?attnBadgeHtml(r):waitLineHtml(r);
+    return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
+      +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
+      +'<span class="rflow">'+flowChipHtml(r)+'</span>'
+      +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
+      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(stageWord(st))+'</span>'+railHtml(r)+'</span>'
+      +statSecond+'</span>'
+      +'<span class="rage">'+esc2(r.age||'')+'</span>'
+      +'<span class="ract">'
       +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
       +'<button type="button" class="rnote'+(r.note?' has-note':'')+'" data-pid="'+(r.pid||'')+'" data-note="'+esc2(r.note||'')+'" title="'+(r.note?esc2(r.note):'Add a note')+'" aria-label="Operator note">'+RNOTE_ICON+(r.note?'<span class="rnote-dot"></span>':'')+'</button>'
-      +'</div>';
+      +'</span></div>';
   }
   // Small inline popover anchored under the clicked .rnote button - lowest
   // friction, matches nothing else in this file needing a modal system.
@@ -4414,9 +4804,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var emptyMsg=query
       ?'No processes match "'+esc2(query)+'". <a href="#" id="emptyClearSearch">Clear search</a>'
       :'Nothing in flight.';
-    var html=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">'+emptyMsg+'</div>';
-    if(showDone&&completed.length)html+=completed.map(rowHtml).join("");
-    if(showCanceled&&canceled.length)html+=canceled.map(rowHtml).join("");
+    // Column header (2026-08-06 table redesign) leads whenever any rows render.
+    var anyRows=inflight.length||(showDone&&completed.length)||(showCanceled&&canceled.length);
+    var bhead='<div class="bhead"><span>Investor</span><span class="h-flow">Type</span><span class="h-amt">Amount</span><span>Status</span><span class="h-age">Age</span><span></span></div>';
+    var html=anyRows?bhead:'';
+    html+=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">'+emptyMsg+'</div>';
+    if(showDone&&completed.length)html+='<div class="bgroup">Completed &middot; '+completed.length+'</div>'+completed.map(rowHtml).join("");
+    if(showCanceled&&canceled.length)html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
     // Two quiet, independent toggles: completed (complete/sealed) and canceled
     // (voided/expired) filter separately, mirroring each other. The board now
@@ -4455,7 +4849,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // name, Hebrew name, stage (raw + spaced), type (word + raw), lane, age, next-action.
   function rowHay(r){
     return [r.name,r.he,r.stage,(r.stage||"").replace(/_/g," "),
-            r.typeLabel,r.type,r.lane,r.age,r.wait,r.pid]
+            r.typeLabel,r.type,r.lane,r.age,r.wait,r.waitName,r.pid]
       .filter(Boolean).join(" ").toLowerCase();
   }
   function applySearch(){
@@ -4469,7 +4863,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // zero pattern as the existing W-8 badge (2026-07-15, Noa: sidebar "isn't baked" -
   // the nav gave zero signal of what's waiting without opening the Board view first).
   function setBoardBadge(rows){
-    var n=rows.filter(function(r){return r.stage==='needs_attention';}).length;
+    var n=rows.filter(function(r){return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}).length;
     var b=document.getElementById("nav-board-badge");
     if(!b)return;
     if(n>0){b.textContent=n;b.hidden=false;}
@@ -4480,7 +4874,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(!el)return;
     if(!rows.length){el.hidden=true;return;}
     var active=rows.filter(function(r){return !isTerminalStage(r.stage);}).length;
-    var attn=rows.filter(function(r){return r.stage==='needs_attention';}).length;
+    var attn=rows.filter(function(r){return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}).length;
     var signing=rows.filter(function(r){return r.stage==='signing';}).length;
     document.getElementById("ss-active").textContent=active;
     document.getElementById("ss-attn").textContent=attn;
@@ -4672,17 +5066,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // or errored notes fetch must never block the board itself from rendering,
     // rows just show no notes that load.
     var notesFetch=apiFetch('?api=opNotes').catch(function(){return {notes:{}};});
+    // Board-row PII enrichment (current-signer names, Hebrew names, attention
+    // reasons): a SEPARATE Tier-1 fetch merged client-side, exactly like
+    // opNotes and for the same reason (?api=list stays redacted). Soft-fail:
+    // without it the board still renders, just with the role-word fallbacks.
+    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+state.lane).catch(function(){return {rows:{}};});
     Promise.all([
       apiFetch('?api=list&lane='+state.lane+'&includeDone='+(wantDone?'1':'0')),
-      notesFetch
+      notesFetch,
+      extrasFetch
     ]).then(function(results){
-      var d=results[0], notesResp=results[1];
+      var d=results[0], notesResp=results[1], extrasResp=results[2];
       if(rid!==LOAD_SEQ)return;
       doneLoaded=wantDone;
+      var extras=(extrasResp&&extrasResp.rows)||{};
       var notes=(notesResp&&notesResp.notes)||{};
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,signerIndex:it.signerIndex,signerCount:it.signerCount,type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];var x=extras[pid]||{};
+        return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
+        signerIndex:(x.signerIndex!=null?x.signerIndex:it.signerIndex),signerCount:(x.signerCount!=null?x.signerCount:it.signerCount),
+        waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
+        type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       render(rows);
       if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
@@ -4710,42 +5115,91 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // conditional left is rev-share (new-subscription only).
   function syncPanelFields(){
     var el;
+    // Step-1 chooser reflects the live state (also when an entry point preset
+    // it: quickPick, board search, the LP-directory action pills).
+    var pg=document.getElementById("procGrid");
+    if(pg)Array.prototype.forEach.call(pg.querySelectorAll("button"),function(x){
+      var on=x.getAttribute("data-proc")===state.process;
+      x.classList.toggle("on",on);x.setAttribute("aria-checked",on?"true":"false");
+    });
+    var spt=document.getElementById("segProcType");
+    if(spt)Array.prototype.forEach.call(spt.children,function(x){
+      var on=x.getAttribute("data-v")===state.type;
+      x.classList.toggle("on",on);x.setAttribute("aria-checked",on?"true":"false");
+    });
     // Existing-LP increase/withdrawal: pick an existing LP by name, mint a link (no manual
     // identity fields, no language toggle - the Israeli flow is Hebrew). The onboarding
     // subscription path keeps all its fields.
     var isExisting=(state.process==="increase"||state.process==="withdrawal");
+    // The applicant toggle only matters for onboarding (increase/withdrawal
+    // derive type from the picked LP's own Monday group, never ask).
+    el=document.getElementById("procTypeRow");if(el)el.style.display=isExisting?"none":"";
     el=document.getElementById("lpPickerWrap");if(el)el.style.display=isExisting?"block":"none";
     if(isExisting){
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
-      ["classRow","manualLpFields","foRow","langRow","foShareSection"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
+      ["classRow","manualLpFields","foRow","langRow","foShareSection","emailsStep"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
       var ttl=(state.process==="increase")?"Increase":"Withdrawal";
-      // 2026-08-04, Noa: the lead line only restated the panel title ("Creates
-      // the request and emails the invite to the existing LP.") - deleted, not
-      // just emptied, so a stale value from a prior Onboarding open can never
-      // leak through (display:none, reset by the onboarding branch below).
+      // 2026-08-04, Noa: the lead line only restated the panel title - deleted,
+      // not just emptied, so a stale value from a prior Onboarding open can
+      // never leak through (display:none, reset by the onboarding branch below).
       el=document.getElementById("panelLead");if(el)el.style.display="none";
-      el=document.getElementById("panelTitle");if(el)el.textContent=ttl+" · "+_typeLabel();
+      // No type suffix here: for an existing LP the Individual/Entity split is
+      // derived from their own Monday group at pick time, never pre-asserted.
+      el=document.getElementById("panelTitle");if(el)el.textContent=ttl;
       // 2026-08-04: closing the panel (X/scrim/Esc) while the confirm card is open
       // leaves this button hidden (the card-open handler sets display:none and only
       // Cancel/Go restore it) - syncPanelFields runs on every open(), so reset it here
       // too, or the NEXT panel open (any process) inherits a permanently invisible CTA.
       el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
+      updateCreateCta();
       return;
     }
-    // Onboarding is necessarily a NEW LP (the menu row that opened this panel already fixed
-    // both type and status), so set the status from the flow. No visible New/Existing chooser.
+    // Onboarding is necessarily a NEW LP (step 1 fixed both process and type),
+    // so set the status from the flow. No visible New/Existing chooser.
     state.lpKind="new";
     // Entity classification: Israeli entity onboarding only (operator call at mint).
     el=document.getElementById("classRow");if(el)el.style.display=(state.lane==="israel"&&state.type==="entity")?"":"none";
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
+    el=document.getElementById("emailsStep");if(el)el.style.display="";
     // FO share is a NEW-subscription field, same reasoning as classRow/langRow above.
     el=document.getElementById("foShareSection");if(el)el.style.display="";
     loadFoShareLabels();
-    el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Creates the Monday item, emails the investor, and notifies the team.";}
+    el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Four steps, one send at the end. Nothing happens before you press Send invite.";}
     el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
     el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
+    updateCreateCta();
+  }
+  // ---- CTA gating + the one-line plain statement of what Send will do ----
+  // (2026-08-06 guided create). The button is disabled until the form is
+  // genuinely sendable; the explain line always says exactly what happens.
+  function createFormValid(){
+    if(state.process==="increase"||state.process==="withdrawal")return !!state.selectedPeopleId;
+    var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
+    var hasName=!!(g("name")||g("nameHebrew"));
+    var emailOk=/\S+@\S+\.\S+/.test(g("email"));
+    return hasName&&emailOk;
+  }
+  function ctaExplainText(){
+    if(state.process==="increase"||state.process==="withdrawal"){
+      var lp=state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name);
+      var word=(state.process==="increase")?"increase":"withdrawal";
+      return lp
+        ? "Send creates the "+word+" request and emails the Hebrew invite to "+lp+", cc Omri."
+        : "Pick the LP above. Send will create the "+word+" request and email them the Hebrew invite, cc Omri.";
+    }
+    var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
+    var em=g("email"), fo=g("foEmail");
+    return "Send creates the Monday item, emails the invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+", and notifies the team.";
+  }
+  function updateCreateCta(){
+    var b=document.getElementById("createBtn");
+    if(!b)return;
+    // Never fight the in-flight submit states ("Creating..."/"Sending...").
+    if(b.textContent==="Send invite")b.disabled=!createFormValid();
+    var ex=document.getElementById("ctaExplain");
+    if(ex)ex.textContent=ctaExplainText();
   }
   // Title-cased investor type for the panel heading (#3): "Individual" / "Entity".
   function _typeLabel(){return state.type==="entity"?"Entity":"Individual";}
@@ -4759,9 +5213,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
-    var fsseg=document.getElementById('foShareSeg');if(fsseg)Array.prototype.forEach.call(fsseg.children,function(b){b.classList.remove('on');b.setAttribute('aria-pressed','false');});
-    var fsc=document.getElementById('foShareCustom');if(fsc){fsc.value='';fsc.style.display='none';}
-    var fst=document.getElementById('foShareCustomToggle');if(fst)fst.textContent='+ Add a tag not listed above';
+    foShareSelected=[];foShareRenderSel();
+    var fsp=document.getElementById('foSharePicker');if(fsp)fsp.hidden=true;
+    var fsi=document.getElementById('foShareSearch');if(fsi)fsi.value='';
     // Entity classification is a per-mint operator judgment call, not a sticky preference -
     // a completed mint must not leak its Active/Passive pick into the next one's default.
     state.classification='';
@@ -4780,6 +5234,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     syncPanelFields();
     // Rehydrate any persisted draft for this lane+process (survives reload/crash).
     if(window.__restoreCreateDraft)window.__restoreCreateDraft();
+    updateCreateCta();
     scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
   }
   function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
@@ -4825,6 +5280,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   Array.prototype.forEach.call(document.querySelectorAll(".new-dd-item"),function(btn){
     btn.onclick=function(){quickPick(btn);};
   });
+  // ---- Step-1 chooser wiring (2026-08-06 guided create) ----
+  (function(){
+    var pg=document.getElementById("procGrid");
+    if(pg)pg.onclick=function(e){
+      var b=e.target.closest("button");if(!b)return;
+      var proc=b.getAttribute("data-proc");
+      if(proc===state.process)return;
+      state.process=proc;
+      syncPanelFields();
+    };
+    var spt=document.getElementById("segProcType");
+    if(spt)spt.onclick=function(e){
+      var b=e.target.closest("button");if(!b)return;
+      state.type=b.getAttribute("data-v")||"individual";
+      syncPanelFields();
+    };
+    // The obvious front door: New process opens the guided panel on the most
+    // common flow (Onboarding, Individual); step 1 stays fully changeable.
+    var np=document.getElementById("newProcBtn");
+    if(np)np.onclick=function(){
+      state.process="subscription";
+      state.type="individual";
+      setToggleSilent("segLang","language",(state.lane==="israel")?"he":"en");
+      open();
+    };
+    // Any typing or click inside the panel re-evaluates the CTA gate + the
+    // explain line (delegated: covers pickers, chips and future fields too).
+    var pnl=document.getElementById("panel");
+    if(pnl){
+      pnl.addEventListener("input",function(){updateCreateCta();});
+      pnl.addEventListener("click",function(){setTimeout(updateCreateCta,0);});
+    }
+  })();
 
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
@@ -5091,7 +5579,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Quick links: Monday profile + onboarding form link
     var qlinks=[];
     if(d.mondayUrl)qlinks.push({label:'View in Monday',url:d.mondayUrl});
-    if(d.onboardingLink)qlinks.push({label:'Onboarding link',url:d.onboardingLink,copy:true});
+    if(d.onboardingLink){
+      // 2026-08-06: the server now returns the REAL emailed link when it has
+      // one (onboardingLinkKind 'sent') and only mints fresh as a fallback
+      // ('reissued'). Say which one the operator is about to paste.
+      var linkLbl=(d.onboardingLinkKind==='sent')?'Link in their inbox'
+        :(d.onboardingLinkKind==='reissued')?'Onboarding link (reissued, original not on record)'
+        :'Onboarding link';
+      qlinks.push({label:linkLbl,url:d.onboardingLink,copy:true});
+    }
     if(qlinks.length){
       h+='<div class="dsec"><h3>Quick links</h3>';
       qlinks.forEach(function(l){
@@ -5698,6 +6194,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Open on the operator's last fund, defaulting to Israel (Omri's lane). This sets
     // data-lane + the active pills and triggers the first board load.
     var savedLane=''; try{savedLane=localStorage.getItem('lvp_console_lane')||'';}catch(e){}
+    // DEMO-only: ?lane= wins (headless screenshot runs have no localStorage).
+    if(DEMO){try{var ql=(new URLSearchParams(location.search)).get('lane');if(ql==='cayman'||ql==='israel')savedLane=ql;}catch(e){}}
     syncFund(savedLane==='cayman'||savedLane==='israel'?savedLane:state.lane);
   })();
   // Every seg click sets its state key AND re-syncs the panel, so dependent fields stay
@@ -5710,7 +6208,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // to "" when nothing is chosen, which the mint call reads as "omit this param entirely".
   function wireToggleable(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;var wasOn=b.classList.contains("on");Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");x.setAttribute("aria-checked","false");});if(wasOn){state[key]="";}else{b.classList.add("on");b.setAttribute("aria-checked","true");state[key]=b.getAttribute("data-v");}syncPanelFields();};}
   wire("segLang","language");wireToggleable("segClass","classification");
-  (function(){var t=document.getElementById('foShareCustomToggle');var inp=document.getElementById('foShareCustom');if(!t||!inp)return;t.onclick=function(){var showing=inp.style.display!=='none';inp.style.display=showing?'none':'block';t.textContent=showing?'+ Add a tag not listed above':'− Hide';if(!showing)inp.focus();};})();
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
@@ -6087,11 +6584,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // tokens, never one compound label (see foShareSection's own comment).
     var foShare='';
     if(state.lpKind==='new'){
-      var _fsseg=document.getElementById('foShareSeg');
-      var _fstoks=_fsseg?Array.prototype.filter.call(_fsseg.children,function(b){return b.classList.contains('on');}).map(function(b){return b.getAttribute('data-v');}):[];
-      var _fscustom=document.getElementById('foShareCustom');
-      if(_fscustom&&_fscustom.style.display!=='none'&&_fscustom.value.trim())_fstoks.push(_fscustom.value.trim());
-      foShare=_fstoks.join(',');
+      foShare=foShareSelectedTokens().join(',');
     }
     apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':''), false, mintBaseForLane_(state.lane)).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
