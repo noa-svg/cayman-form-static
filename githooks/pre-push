@@ -29,6 +29,20 @@ if [ ! -d test ]; then
   echo "pre-push: test/ harnesses not present on this machine; refusing to deploy unverified. (git push --no-verify to override)"
   exit 1
 fi
+# 2026-08-07: preflight the test deps instead of letting 30+ harnesses each
+# crash with MODULE_NOT_FOUND. Same fail-closed outcome, one clear message.
+# (Historical note, same date: the pre-2026-08-06 sequential hook ran each
+# harness as `node test/x.cjs >/dev/null && echo "x OK"` under set -e, and
+# bash errexit does NOT fire when the failing command is a non-final member
+# of a && list -- so every harness except the bare coupling-check line could
+# fail without blocking the push. The parallel runner below closed that hole
+# structurally; never reintroduce per-line `&& echo OK` harness invocations.)
+if [ ! -d test/node_modules/jsdom ]; then
+  echo "pre-push: test/node_modules/jsdom missing - the jsdom harnesses cannot run."
+  echo "Fix: npm install --prefix test    (then push again)"
+  echo "Refusing to deploy unverified. (git push --no-verify to override, emergencies only)"
+  exit 1
+fi
 echo "pre-push: running deploy gate harnesses..."
 
 # 2026-08-06: these used to run STRICTLY SEQUENTIALLY and the gate exceeded ten
