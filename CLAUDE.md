@@ -33,6 +33,16 @@ it up once per clone:
 git config core.hooksPath githooks
 ```
 
+Test deps are separate from the (dependency-free) site: `npm install --prefix test`
+installs jsdom for the harnesses. The hook preflights this and refuses with the
+install command if it is missing (added 2026-08-07).
+
+The hook travels with the checkout: a worktree or clone checked out at a commit
+before 8ea9996 (2026-08-06) runs the OLD sequential hook, which had a real hole
+(harness failures did not block the push; only coupling-check did, because bash
+errexit ignores a failing non-final member of a `&&` list). Cut worktrees from
+current main, and treat any pre-8ea9996 checkout's green gate as unproven.
+
 Most of `test/*.cjs` is deliberately gitignored (`test/*` with individual
 files un-ignored by name in `.gitignore`) so the bulk of the test rig never
 ships to the LP-facing domain. This means the gitignore allowlist is a real
