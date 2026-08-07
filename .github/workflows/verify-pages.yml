@@ -1,0 +1,44 @@
+# DETECT for the 2026-08-07 stale-Pages incident: the pre-push gate proves the
+# CODE, but GitHub Pages builds asynchronously AFTER the push, and on 08-06 it
+# failed twice then hung "building" for ~20 hours. Live LPs (Shimon's flow.html
+# link) were served Thursday-afternoon code while every push signal read green.
+# This workflow makes that state impossible to miss: after every push to main
+# it polls the LIVE domain until each page serves the pushed __BUILD_TAG, and
+# goes red (which emails the pusher) if Pages has not caught up in 10 minutes.
+#
+# Bite condition: it compares live tags to the pushed tags, so it hard-fails
+# exactly when a tag-bumped file is stale. A push that bumps no tag passes
+# vacuously; the per-file tag bump on every LP-facing change is the existing
+# convention that makes this check bite (see test/coupling-check.cjs).
+name: verify-pages-deploy
+on:
+  push:
+    branches: [main]
+permissions: {}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Live domain must serve this commit's build tags
+        run: |
+          set -u
+          fail=0
+          for f in israel.html flow.html signer.html index.html console/index.html; do
+            want=$(grep -o "window.__BUILD_TAG = '[^']*'" "$f" | head -1 | cut -d"'" -f2)
+            if [ -z "$want" ]; then echo "skip $f (no tag)"; continue; fi
+            got=""
+            ok=""
+            for i in $(seq 1 40); do
+              got=$(curl -s "https://sign.legacyvpartners.com/$f?nocache=$(date +%s)-$i" | grep -o "window.__BUILD_TAG = '[^']*'" | head -1 | cut -d"'" -f2)
+              if [ "$got" = "$want" ]; then ok=1; break; fi
+              sleep 15
+            done
+            if [ -z "$ok" ]; then
+              echo "STALE: $f live serves '$got', this push carries '$want' - Pages did not build"
+              fail=1
+            else
+              echo "OK $f: $want"
+            fi
+          done
+          exit $fail
