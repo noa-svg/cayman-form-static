@@ -9,10 +9,18 @@ mirrored client-side here, submission processing, PDF sealing, tracker writes) l
 server-side in `ju-cayman` (`~/Desktop/legacy-tools/ju-cayman/`, GAS). Read that repo's
 own `CLAUDE.md` for the server side. This file only covers the static site.
 
-## A push to `main` IS a production deploy
+## A push to `main` IS a production deploy (but the build is ASYNC and can fail)
 
-There is no staging environment and no CI. `git push origin main` publishes
-straight to the live LP-signing domain. The only gate is the pre-push hook.
+`git push origin main` publishes to the live LP-signing domain via GitHub
+Pages. The pre-push hook gates the code, but the Pages build runs AFTER the
+push and can fail or hang silently: on 2026-08-06 it failed twice on abe4dec
+then sat "building" ~20 hours, so the live domain served Thursday-afternoon
+code while every push read green (Shimon's flow.html link went out mid-outage).
+A push is NOT deployed until the live domain serves the pushed `__BUILD_TAG`s.
+`.github/workflows/verify-pages.yml` now checks exactly that after every push
+and goes red (emailing the pusher) if Pages is stale after 10 minutes; a stuck
+build is fixed by requesting a fresh one:
+`gh api -X POST repos/{owner}/{repo}/pages/builds`.
 
 ## Deploy gate (read before your first push in a fresh clone)
 
