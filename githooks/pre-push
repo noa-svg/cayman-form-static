@@ -87,4 +87,7 @@ node test/board-search-lp-directory-harness.cjs  >/dev/null && echo "board-searc
 # gateway fallback (old-token boots retry the pre-flip GAS deployment and
 # stick; fresh sessions and primary outages never reroute).
 node test/pilot-fallback-harness.cjs             >/dev/null && echo "pilot-fallback OK"
+# 2026-08-08 mint identity binding incident: the picked Monday item id must
+# travel to the mint and win over the server's find-by-email dedup.
+node test/mint-pick-binding-harness.cjs          >/dev/null && echo "mint-pick-binding OK"
 echo "pre-push: all green - deploying to Pages."

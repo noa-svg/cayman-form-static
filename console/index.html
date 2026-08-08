@@ -4923,6 +4923,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // attempt sitting there - a blank "add as a new contact" start (prefill
       // null) must land genuinely blank, not silently inherit whatever the
       // operator picked and then backed out of a moment before.
+      // Reset any pick binding from an earlier attempt too: a blank start must
+      // never inherit a previous pick's Monday item id (the send-time email
+      // match is the backstop; this keeps the state honest at the source).
+      window.__onbPickItemId='';window.__onbPickEmail='';
       window.__pendingOnboardingPick=prefill||null;
       var first=newDd.querySelector('.dd-onboarding .new-dd-item');
       if(first)first.focus();
@@ -5194,6 +5198,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // old F5 intent: a COMPLETED invite never carries its name/email into the next one.
   function caymanClearCreateForm(){
     ['name','nameHebrew','nickname','email','foEmail'].forEach(function(id){var f=document.getElementById(id);if(f)f.value='';});
+    // Drop the Monday pick binding with the fields it described (2026-08-08).
+    window.__onbPickItemId='';window.__onbPickEmail='';
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
@@ -6327,8 +6333,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       catch(e){var ev=document.createEvent('HTMLEvents');ev.initEvent('input',true,false);f.dispatchEvent(ev);}
     }
     function subline(s){return [s.email,s.nickname?('“'+s.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearPick(){picked.hidden=true;picked.innerHTML='';}
+    function clearPick(){picked.hidden=true;picked.innerHTML='';window.__onbPickItemId='';window.__onbPickEmail='';}
     function pick(s){
+      // 2026-08-08 incident fix: remember the PICKED Monday item id (both the
+      // pending-submission picker and the board-search "Start onboarding" hand
+      // their match here). doCreateOnboarding sends it as &mondayItemId= so the
+      // server binds the process to the exact item the operator chose, instead
+      // of the find-by-email dedup silently choosing a row (which is how a test
+      // mint's completion overwrote an unrelated real People row). The picked
+      // email is remembered alongside: if the operator later edits the email
+      // away from the picked record's, the pick no longer names the identity
+      // being minted and the id must NOT be sent.
+      window.__onbPickItemId=String(s.itemId||'');
+      window.__onbPickEmail=String(s.email||'').trim().toLowerCase();
       setVal('name',s.nameEn);
       setVal('nameHebrew',s.nameHe);
       setVal('nickname',s.nickname);
@@ -6579,7 +6596,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // existing" button drives the GAS-fed drawer, which cannot resolve a
     // ju-born pid - "Re-mint anyway" (force) is the working resolution there.
     var mintViaJu=(state.lane==='israel');
-    (mintViaJu?juApiFetch:apiFetch)('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
+    // 2026-08-08 incident fix: carry the operator's EXPLICIT Monday pick to the
+    // mint. Sent ONLY while the typed email still equals the picked record's
+    // email - an operator who re-typed a different address is no longer minting
+    // the picked identity, so the mint falls back to the pick-less path (the
+    // server-side find-by-email dedup, its original job). Both engines accept
+    // the param (GAS ?admin=mintLink and ju-api's mintlink route).
+    var onbPickedId=(window.__onbPickItemId&&window.__onbPickEmail&&email.trim().toLowerCase()===window.__onbPickEmail)?window.__onbPickItemId:'';
+    (mintViaJu?juApiFetch:apiFetch)('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(onbPickedId?'&mondayItemId='+encodeURIComponent(onbPickedId):'')+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':'')).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click

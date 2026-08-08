@@ -37,3 +37,4 @@ test/*
 !test/board-search-lp-directory-harness.cjs
 !test/api-fetch-nonjson-harness.cjs
 !test/pilot-fallback-harness.cjs
+!test/mint-pick-binding-harness.cjs
