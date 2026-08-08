@@ -38,3 +38,4 @@ test/*
 !test/api-fetch-nonjson-harness.cjs
 !test/pilot-fallback-harness.cjs
 !test/required-note-harness.cjs
+!test/mint-pick-binding-harness.cjs

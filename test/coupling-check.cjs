@@ -15,6 +15,14 @@
 //       four pages carry. Drift protection preserved, not weakened: a stray
 //       second copy of either URL, a missing fallback, or a diverged id all
 //       fail here.
+//   C1j CONSOLE SEAM EXCEPTION (2026-08-07, Israeli-onboarding mint reroute):
+//       console/index.html carries the ju-api base (GW_JU) exactly once, ON
+//       TOP OF its unchanged C1 obligations (it still carries the one GAS
+//       /exec id for everything that is not an Israel-lane onboarding mint).
+//       This is a deliberate carve-out, not a weakening: the GAS id must
+//       still be consistent fleet-wide INCLUDING the console, AND the ju-api
+//       base must be the exact expected constant - a second copy of either
+//       URL, a typo'd ju-api host, or the seam vanishing all fail here.
 //   C2  index/israel/signer/flow each bake window.__BUILD_TAG exactly once,
 //       the tag prefix matches the file name, and every tag is unique;
 //   C3  console/index.html carries a build tag too (console- prefix,
@@ -105,6 +113,26 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
       && idsByFile['israel.html'][0] === idsByFile['index.html'][0],
     'israel: ' + JSON.stringify(idsByFile['israel.html'].map(id => id.slice(0, 12) + '...'))
       + ' index: ' + JSON.stringify(idsByFile['index.html'].map(id => id.slice(0, 12) + '...')));
+}
+// ---- C1j: console per-lane gateway seam (2026-08-07/08 Israeli mint reroute) --
+// The console's Israeli-onboarding mint CAN be born on ju-service, flag-gated
+// (ISRAEL_MINT_ON_JU_API in console/index.html, default false until the live
+// smoke proves a ju-service-minted process end to end); every other console
+// action still rides the GAS /exec gateway, whose C1 assertions above remain
+// fully in force for this file. Assert the ju-api base is the EXACT expected
+// constant and appears exactly once (the single JU_API definition), and that
+// the flag + its dispatcher (mintBaseForLane_) are present - drift protection
+// for the seam itself, not for one particular implementation shape of it.
+{
+  const juCount = html['console/index.html'].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1j console/index.html carries the ju-api base constant exactly once', juCount === 1,
+    'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
+  ok('C1j console seam is the flag-gated mintBaseForLane_ dispatcher (explicit lane split, greppable)',
+    html['console/index.html'].indexOf('function mintBaseForLane_(') !== -1
+      && html['console/index.html'].indexOf('ISRAEL_MINT_ON_JU_API') !== -1
+      && html['console/index.html'].indexOf("var JU_API = '" + PILOT_PRIMARY_URL + "'") !== -1);
+  ok('C1j console still carries the GAS /exec gateway for everything else (C1 not weakened)',
+    idsByFile['console/index.html'].length >= 1);
 }
 ok('C1 exactly ONE distinct deployment id across all files', allIds.size === 1,
   'distinct ids: ' + JSON.stringify([...allIds].map(id => id.slice(0, 12) + '...')) + ' per-file counts: ' +
