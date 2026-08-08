@@ -405,7 +405,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-08-06-1';
+      window.__BUILD_TAG = 'flow-2026-08-08-1';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -463,7 +463,49 @@
       // it at publish time. For now read from a meta tag the static repo sets,
       // OR a fallback /api/gateway file. The simplest path: hard-code below.
       var GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-      GW = GATEWAY_URL;
+
+      // ---- MONEY-FLOW GATEWAY SEAM (2026-08-08, agent/money-flow-juapi) -----
+      // Mirrors israel.html's 2026-08-05 primary+fallback pattern (see that
+      // file for the full design rationale; XHR here instead of fetch to
+      // match this file's existing transport style). Until now this file was
+      // hardcoded to GAS with NO ju-api primary and NO fallback - the two
+      // hard blockers console/index.html's mintBaseForLane_ comment names for
+      // why the money mint could not use that dispatcher. This closes
+      // blocker #1 (this page can now reach ju-service). Blocker #2
+      // (sendIsraeliInvite base threading) is closed in console/index.html
+      // in the same change.
+      //
+      // console/index.html's MONEY_MINT_ON_JU_API stays FALSE (unproven for
+      // money flows; the onboarding flip took a live end-to-end proof-mint
+      // first, see israel.html's history). Until it flips, EVERY real money
+      // process is minted on GAS, so EVERY real session's token is unknown
+      // to ju-api and this page falls back to LEGACY_GATEWAY on its very
+      // first load - a live, already-proven-safe path (israel.html has run
+      // this exact fallback for GAS-minted pre-flip sessions since
+      // 2026-08-05). A network error, a non-2xx, or any response shape
+      // other than the specific well-formed token-unknown config envelope
+      // NEVER triggers the fallback (see cfgTokenUnknown_ below), so a
+      // ju-service outage cannot silently reroute a session that genuinely
+      // belongs on GAS.
+      var JU_API = 'https://ju-api.legacyvpartners.com';
+      var LEGACY_GATEWAY = GATEWAY_URL; // the GAS /exec this file has always used
+      var flStickKey = 'lvp_fl_legacy_gw_v1_' + token;
+      var useLegacyGateway = false;
+      if (token) {
+        try { useLegacyGateway = sessionStorage.getItem(flStickKey) === '1'; } catch (e) {}
+      }
+      function activeGatewayUrl_() { return useLegacyGateway ? LEGACY_GATEWAY : JU_API; }
+      function stickToLegacyGateway_() {
+        useLegacyGateway = true;
+        GW = LEGACY_GATEWAY;
+        try { sessionStorage.setItem(flStickKey, '1'); } catch (e) {}
+        if (window.console) { try { console.log('[MoneyFlow] GAS-minted session: legacy gateway fallback engaged'); } catch (e) {} }
+      }
+      // Render-verify (?mock=) is a local dev/design tool, untouched by this
+      // seam: it never hits the network for config (see the mock branch
+      // below) and stays pinned to GAS exactly as before, in case any of its
+      // autosave/telemetry calls do fire during a manual preview session.
+      GW = qs.get('mock') ? LEGACY_GATEWAY : activeGatewayUrl_();
 
       function stubConfigForMock(m) {
         var ind = { legalName: 'משקיע בדיקה', idNumber: '123456782', email: 'noa+test@legacyvpartners.com', phone: '050-1234567' };
@@ -582,14 +624,74 @@
             if (x.readyState !== 4) return;
             if (x.status === 0 || x.status >= 500) { transientFail(); return; }
             if (x.status !== 200) { $loading.textContent = BROKEN_LINK_MSG; return; }
-            try { CFG = JSON.parse(x.responseText); }
+            var parsed;
+            try { parsed = JSON.parse(x.responseText); }
             catch (e) { $loading.textContent = BROKEN_LINK_MSG; return; }
-            if (!CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
-            flowType = CFG.flowType;
-            applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
-            bootstrapForm();
+            // Fallback gate (see the MONEY-FLOW GATEWAY SEAM above): only a
+            // well-formed token-unknown envelope from a REACHABLE, 2xx
+            // primary triggers the legacy probe - never on a bare network
+            // failure or non-2xx (both handled above already) and never once
+            // this session has already stuck to a gateway.
+            if (token && !useLegacyGateway && cfgTokenUnknown_(parsed)) {
+              probeLegacyGateway_(parsed, applyLoadedConfig_);
+              return;
+            }
+            applyLoadedConfig_(parsed);
           };
           x.send();
+        }
+        // ju-service's ?api=config never returns an {ok:false} error envelope
+        // for a bad/unknown token: every verify failure and every verified
+        // token with no session answers HTTP 200 with the well-formed config
+        // base envelope carrying flowType:'' (same contract israel.html's
+        // cfgTokenUnknown_ documents in full; routes/config.ts is generic
+        // across onboarding and money flows per the 2026-08-08 server-side
+        // verification). So "the primary does not know this token" is this
+        // SPECIFIC shape: flowType and resumePage keys both present (every
+        // config response carries them, including the broken-token one),
+        // flowType empty, not completed.
+        function cfgTokenUnknown_(cfg) {
+          return !!(cfg && typeof cfg === 'object'
+            && Object.prototype.hasOwnProperty.call(cfg, 'flowType')
+            && Object.prototype.hasOwnProperty.call(cfg, 'resumePage')
+            && !cfg.flowType && !cfg.completed);
+        }
+        // One-shot legacy probe: the primary answered "token unknown" for a
+        // real token, so ask GAS whether it owns this session (it minted
+        // every real money process while MONEY_MINT_ON_JU_API stays false).
+        // Only a well-formed legacy config that actually carries a flow (or
+        // a completed terminal state) engages the sticky fallback; anything
+        // else (legacy also does not know it, legacy unreachable, non-2xx,
+        // parse failure) falls through to the primary's own envelope and the
+        // normal broken-link handling, never a retry loop against GAS.
+        function probeLegacyGateway_(primaryCfg, onDone) {
+          var lx = new XMLHttpRequest();
+          var settled = false;
+          function useCfg(c) { if (settled) return; settled = true; onDone(c); }
+          lx.open('GET', LEGACY_GATEWAY + '?api=config&t=' + encodeURIComponent(token), true);
+          lx.timeout = 180000; // same generous budget as the primary; a cold GAS start is exactly the case this exists for
+          lx.onreadystatechange = function () {
+            if (lx.readyState !== 4) return;
+            if (lx.status !== 200) { useCfg(primaryCfg); return; }
+            var lcfg;
+            try { lcfg = JSON.parse(lx.responseText); } catch (e) { useCfg(primaryCfg); return; }
+            if (lcfg && (lcfg.flowType || lcfg.completed)) {
+              stickToLegacyGateway_();
+              useCfg(lcfg);
+            } else {
+              useCfg(primaryCfg);
+            }
+          };
+          lx.ontimeout = function () { useCfg(primaryCfg); };
+          lx.onerror = function () { useCfg(primaryCfg); };
+          lx.send();
+        }
+        function applyLoadedConfig_(cfg) {
+          CFG = cfg;
+          if (!CFG || !CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
+          flowType = CFG.flowType;
+          applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
+          bootstrapForm();
         }
         loadConfig();
       }

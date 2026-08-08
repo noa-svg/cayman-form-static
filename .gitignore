@@ -39,3 +39,5 @@ test/*
 !test/pilot-fallback-harness.cjs
 !test/required-note-harness.cjs
 !test/mint-pick-binding-harness.cjs
+!test/rig-flow.cjs
+!test/money-flow-fallback-harness.cjs

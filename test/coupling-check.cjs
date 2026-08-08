@@ -23,6 +23,15 @@
 //       still be consistent fleet-wide INCLUDING the console, AND the ju-api
 //       base must be the exact expected constant - a second copy of either
 //       URL, a typo'd ju-api host, or the seam vanishing all fail here.
+//   C1f MONEY-FLOW WIRING (2026-08-08, agent/money-flow-juapi): flow.html
+//       gets the SAME dual-gateway shape as C1p (ju-api primary + legacy
+//       /exec fallback), proving the wiring exists - not that it is live
+//       (console/index.html's MONEY_MINT_ON_JU_API stays false).
+//   C1m MONEY-FLOW MINT SEAM (2026-08-08): console/index.html's money mint
+//       gets its own flag (MONEY_MINT_ON_JU_API, default false) and its own
+//       dispatcher (moneyMintBaseForLane_), independently reversible from
+//       the onboarding seam (C1c); sendIsraeliInvite always threads the same
+//       base the mint used.
 //   C2  index/israel/signer/flow each bake window.__BUILD_TAG exactly once,
 //       the tag prefix matches the file name, and every tag is unique;
 //   C3  console/index.html carries a build tag too (console- prefix,
@@ -145,6 +154,50 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
       && html['console/index.html'].indexOf("var JU_API = '" + PILOT_PRIMARY_URL + "'") !== -1);
   ok('C1j console still carries the GAS /exec gateway for everything else (C1 not weakened)',
     idsByFile['console/index.html'].length >= 1);
+}
+// ---- C1f: MONEY-FLOW pilot wiring, flow.html (2026-08-08, agent/money-flow-juapi) ----
+// flow.html now carries the same dual-gateway seam as israel.html: JU_API
+// primary + the legacy /exec fallback, session-sticky, token-unknown-gated.
+// Unlike israel.html (whose console mint flag is already true), console/
+// index.html's MONEY_MINT_ON_JU_API stays false, so this primary is UNPROVEN
+// for real traffic today - this block proves the WIRING is present and
+// correctly shaped, not that it is live. Positive assertions, not a
+// weakening of C1: flow.html's one /exec occurrence (its LEGACY_GATEWAY
+// constant) still feeds allIds above exactly as before.
+{
+  const juCount = html['flow.html'].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1f flow.html carries the ju-api primary URL exactly once', juCount === 1,
+    'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
+  ok('C1f flow.html carries exactly ONE legacy /exec URL (GAS fallback)',
+    idsByFile['flow.html'].length === 1, 'found ' + idsByFile['flow.html'].length + ' occurrences');
+  ok('C1f flow.html legacy fallback id matches the id the other pages carry',
+    idsByFile['flow.html'].length === 1 && idsByFile['index.html'].length >= 1
+      && idsByFile['flow.html'][0] === idsByFile['index.html'][0]);
+  ok('C1f flow.html carries the token-unknown fallback probe (cfgTokenUnknown_ + probeLegacyGateway_)',
+    html['flow.html'].indexOf('function cfgTokenUnknown_(') !== -1
+      && html['flow.html'].indexOf('function probeLegacyGateway_(') !== -1);
+  ok('C1f render-verify (?mock=) stays pinned to GAS, untouched by the seam',
+    html['flow.html'].indexOf("GW = qs.get('mock') ? LEGACY_GATEWAY : activeGatewayUrl_();") !== -1);
+}
+// ---- C1m: console's MONEY-FLOW mint seam (2026-08-08, agent/money-flow-juapi) ----
+// The sibling of C1c, for increase/withdrawal. Deliberately checked as its OWN
+// flag+dispatcher, never sharing ISRAEL_MINT_ON_JU_API / mintBaseForLane_: the
+// two lanes must stay independently reversible. No new ju-api URL is expected
+// here (moneyMintBaseForLane_ reuses the console's single JU_API constant,
+// already asserted exactly-once by C1j above).
+{
+  const c = html['console/index.html'];
+  ok('C1m console carries MONEY_MINT_ON_JU_API defaulting to FALSE (separate flag from onboarding)',
+    /var MONEY_MINT_ON_JU_API\s*=\s*false\s*;/.test(c));
+  ok('C1m console carries its own moneyMintBaseForLane_ dispatcher (not a reuse of mintBaseForLane_)',
+    c.indexOf('function moneyMintBaseForLane_(') !== -1);
+  ok('C1m the money mint call site routes through moneyMintBaseForLane_, exactly once',
+    (c.match(/moneyMintBaseForLane_\(state\.lane\)/g) || []).length === 1);
+  ok('C1m auto-send invite after a money mint threads moneyBase_ (never a bare GW default)',
+    c.indexOf("apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId), false, moneyBase_)") !== -1);
+  ok('C1m manual resend threads the pid-bound data-base (never re-derived from current state.lane)',
+    c.indexOf("apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid), false, base)") !== -1
+      && c.indexOf("var base=b.getAttribute('data-base')||GW;") !== -1);
 }
 ok('C1 exactly ONE distinct deployment id across all files', allIds.size === 1,
   'distinct ids: ' + JSON.stringify([...allIds].map(id => id.slice(0, 12) + '...')) + ' per-file counts: ' +

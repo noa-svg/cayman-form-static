@@ -3693,7 +3693,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="lk" id="lk" style="font-family:var(--font-mono);font-size:11px;color:var(--color-atrium-deep);word-break:break-all;flex:1"></div>
         <button id="copyLinkBtn" class="btn" style="font-size: 13px;padding: 8px 16px;white-space:nowrap">Copy link</button>
       </div>
-      <button id="resSendBtn" class="cta" data-pid="" style="display:none;margin-top:12px;width:100%">Resend invite</button>
+      <button id="resSendBtn" class="cta" data-pid="" data-base="" style="display:none;margin-top:12px;width:100%">Resend invite</button>
       <div id="resSendStatus" role="status" aria-live="polite" style="font-size: 13px;color:var(--color-ink-muted);margin-top: 8px"></div>
     </div>
   </div>
@@ -3703,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-08-1';
+  window.__BUILD_TAG = 'console-2026-08-08-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3783,6 +3783,40 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function mintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     return (ISRAEL_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
+  }
+
+  // ---- MONEY-FLOW MINT SEAM (2026-08-08, agent/money-flow-juapi) -----------
+  // The sibling of ISRAEL_MINT_ON_JU_API above, for increase/withdrawal
+  // instead of onboarding. Deliberately a SEPARATE flag: arming money-flow
+  // routing is a materially bigger risk than onboarding (it is the LP's
+  // actual capital event, not a subscription form), and the two lanes must
+  // be independently reversible - flipping one must never move the other.
+  //
+  // The two hard blockers the ISRAEL_MINT_ON_JU_API comment named for why
+  // money could not share that dispatcher are now closed:
+  //   1. flow.html now carries the same primary+fallback pattern israel.html
+  //      has run live since 2026-08-05 (JU_API primary, GAS legacy fallback,
+  //      session-sticky, never on a bare 5xx - see flow.html's own MONEY-FLOW
+  //      GATEWAY SEAM comment).
+  //   2. sendIsraeliInvite is now called with the SAME base the mint used
+  //      (see moneyMintBaseForLane_ call sites below): a process minted on
+  //      ju-service gets its invite sent from ju-service, a process minted
+  //      on GAS gets its invite sent from GAS. Never crossed.
+  //
+  // DEFAULT false, DELIBERATELY, and server-side readiness is NOT the gate
+  // here (verified 2026-08-08: ju-service's admin mint/invite routes, LP
+  // config/submit, and the seal/completion tail for increase/withdrawal are
+  // all complete and tested). The gate is the SAME live end-to-end proof
+  // class the onboarding flip required before its flip, run against the
+  // diag-token-gated proof-mint route for money flows (see
+  // routes/proofmintmoney.ts in ju-service). Do not flip before a process
+  // minted via that route completes end to end: mint -> submit -> seal ->
+  // tracker row -> Monday update -> completion email, verified against live
+  // state, exactly like the Israeli-onboarding gate above.
+  var MONEY_MINT_ON_JU_API = false;
+  function moneyMintBaseForLane_(lane) {
+    var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
+    return (MONEY_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
   }
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var TOKEN_KEY='lvp_op_token_v1';
@@ -6577,16 +6611,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       document.getElementById("res").classList.remove("on");
       showMsg("Creating the request and sending the invite...",false);
       // Mint, then auto-send the approved Hebrew invite (Noa 2026-06-30: create == send).
-      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId||'')).then(function(res){
+      // moneyBase_ is resolved ONCE per create and threaded through both calls
+      // (and stashed on resSendBtn below for a later manual resend): a mint
+      // and its invite must always land on the SAME engine, and re-resolving
+      // moneyMintBaseForLane_ separately for each call would risk splitting
+      // them across GAS and ju-service if the flag ever flipped mid-session.
+      var moneyBase_=moneyMintBaseForLane_(state.lane);
+      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId||''), false, moneyBase_).then(function(res){
         if(!res||!res.ok){btn.disabled=false;btn.textContent="Send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
         var processId=res.processId||'', link=res.url||res.signerLink||"";
-        return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId)).then(function(sr){
+        return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId), false, moneyBase_).then(function(sr){
           btn.disabled=false;btn.textContent="Send invite";
           showMsg("",false);
           document.getElementById("res").classList.add("on");
           document.getElementById("lk").textContent=link;
           var _sb=document.getElementById('resSendBtn'),_ss=document.getElementById('resSendStatus');
-          if(_sb){_sb.setAttribute('data-pid',processId);_sb.style.display=processId?'':'none';_sb.disabled=false;_sb.textContent='Resend invite';}
+          // data-base: which engine THIS process was minted on, so a later
+          // manual resend (below) never crosses to the other engine.
+          if(_sb){_sb.setAttribute('data-pid',processId);_sb.setAttribute('data-base',moneyBase_);_sb.style.display=processId?'':'none';_sb.disabled=false;_sb.textContent='Resend invite';}
           if(sr&&sr.ok){
             document.getElementById('resTitle').textContent='Invite sent.';
             document.getElementById('resSub').textContent='The Hebrew invite was emailed to the LP (cc Omri). The link below is for your reference.';
@@ -6687,9 +6729,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // to the existing LP from ir@, cc Omri. The mint never auto-sends; the operator presses this.
   document.getElementById("resSendBtn").onclick=function(){
     var b=this; var pid=b.getAttribute('data-pid'); if(!pid)return;
+    // A ju-service-minted money process must not have its invite sent from
+    // GAS, and vice versa (see the MONEY-FLOW MINT SEAM comment above). This
+    // button is only ever populated right after a create (data-base set
+    // alongside data-pid at mint time), so the base travels with the pid
+    // rather than being re-derived from state.lane, which could have
+    // changed since the mint if the operator navigated the panel. Falls
+    // back to GW (GAS) if data-base is somehow unset, matching this call's
+    // behavior before this seam existed.
+    var base=b.getAttribute('data-base')||GW;
     b.disabled=true;b.textContent="Sending...";
     var st=document.getElementById('resSendStatus');if(st){st.style.color='var(--color-ink-muted)';st.textContent='';}
-    apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid)).then(function(r){
+    apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(pid), false, base).then(function(r){
       if(r&&r.ok){b.textContent="Invite sent";if(st){st.style.color='var(--color-success)';st.textContent='Sent to '+(r.sentTo||'the LP')+(r.cc?(' · cc '+r.cc):'');}}
       else{b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent=(r&&r.error)||'Send failed. Try again.';}}
     }).catch(function(e){b.disabled=false;b.textContent="Resend invite";if(st){st.style.color='var(--color-danger)';st.textContent='Server error: '+((e&&(e.serverError||e.message))||'unknown');}});
