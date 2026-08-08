@@ -69,8 +69,20 @@ for (const f of FILES) html[f] = fs.readFileSync(path.join(ROOT, f), 'utf8');
   ok('C1c console carries exactly one ju-api base', juApiHits === 1, 'found ' + juApiHits);
   ok('C1c console still carries exactly one /exec gateway',
     (c.match(/script\.google\.com\/macros\/s\/[^/]+\/exec/g) || []).length === 1);
-  ok('C1c Israel-lane mint flag exists and defaults to FALSE (flipping it is a deliberate money-path cutover)',
-    /var ISRAEL_MINT_ON_JU_API\s*=\s*false\s*;/.test(c));
+  // FLIPPED 2026-08-08: the console's own comment above the flag names the
+  // exact proof (pid proof-38e8a6c9-10e0-4f93-8f14-f71f4eb97de6, live-verified
+  // lane/flowType/serverBuild on ju-service, and the same token resolving
+  // empty on GAS). Matched on the pid, not the route's api name - the
+  // comment deliberately never spells "?api=<name>" as literal text, since
+  // that pattern gets scanned by console-action-contract.cjs as a real
+  // client-vs-GAS-dispatcher button reference, and this route is
+  // ju-service-only by design (a false "dead button" positive otherwise).
+  // This assertion requires the flag AND its proof citation together - so a
+  // bare flip with no proof comment still fails the gate, and reverting the
+  // flip without also removing the (now-stale) proof comment fails it too.
+  ok('C1c Israel-lane mint flag is true AND carries its live-proof citation (a bare flip with no cited proof fails; a stale proof comment after reverting also fails)',
+    /var ISRAEL_MINT_ON_JU_API\s*=\s*true\s*;/.test(c)
+      && /FLIPPED TRUE 2026-08-08 after the gate above cleared:[\s\S]{0,40}proof-38e8a6c9-10e0-4f93-8f14-f71f4eb97de6[\s\S]{0,40}minted end to end on[\s\S]{0,20}ju-service/.test(c));
   // ONBOARDING mint only, exactly one call site. The MONEY mint must NOT move:
   // flow.html is hardcoded GAS with no fallback, and the money mint's follow-up
   // ?admin=sendIsraeliInvite carries no base override, so a ju-service-minted

@@ -3703,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-07-2';
+  window.__BUILD_TAG = 'console-2026-08-08-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3747,7 +3747,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   //      ju-service-minted token (otherwise the session bounces straight back)
   //   3. a rollback is one flip of this flag with no data migration, i.e. no
   //      in-flight ju-service-minted process is mid-flow when it is flipped back
-  var ISRAEL_MINT_ON_JU_API = false;
+  // FLIPPED TRUE 2026-08-08 after the gate above cleared: pid
+  // proof-38e8a6c9-10e0-4f93-8f14-f71f4eb97de6 was minted end to end on
+  // ju-service by the diag-token-gated headless proof-mint route (name
+  // deliberately not spelled out here in the literal query-param form that
+  // test/console-action-contract.cjs scans as a client-vs-GAS-dispatcher
+  // button reference - this route is ju-service-only by design, so that
+  // scan would misread it as a dead button on the GAS side), through the
+  // real mintCaymanLink code path, forced test identity: never touches
+  // Monday, invite/notify created as DRAFTS only. Verified live: the
+  // ju-service config lookup for that token resolves
+  // lane=israeli, flowType=cayman_subscription, serverBuild=5f638c2; the
+  // SAME token against GAS resolves lane='' flowType='' (never existed in
+  // GAS's registry - nothing for the legacy fallback to catch, because this
+  // process was truly born on ju-service, not routed there after minting on
+  // GAS). Rollback is flipping this back to false; no in-flight
+  // ju-service-minted process existed at flip time to strand.
+  var ISRAEL_MINT_ON_JU_API = true;
   // Which base a console call should go to. ONBOARDING mints only; every other
   // console action stays on GAS, because that is where existing processes and
   // their registry live.
