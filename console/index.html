@@ -3703,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-09-1';
+  window.__BUILD_TAG = 'console-2026-08-09-2';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4663,7 +4663,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<span class="rstage"><span class="rail '+railCls+'">'+segHtml+'</span></span>';
   }
   var allRows=[];
-  var showDone=false, showCanceled=false; // quiet toggles: append completed / canceled rows below
+  // 2026-08-09 (Noa): completed rows show by default, grouped by month, so the
+  // board reads as a real activity log rather than hiding everything already
+  // done behind a manual toggle. Canceled stays opt-in (a canceled row is
+  // rarely what an operator wants staring at them by default).
+  var showDone=true, showCanceled=false; // quiet toggle: append canceled rows below
   var doneLoaded=false; // whether the current board fetch included terminal rows (includeDone=1)
   // Sort: needs_attention rows pinned first (the server orders them first, but a
   // pure recency sort used to bury them again - 2026-07-15 wiring item 3), then
@@ -4680,6 +4684,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       }
       return (a.ageNum||0)-(b.ageNum||0);
     });
+  }
+  // Completed rows grouped by calendar month (2026-08-09, Noa: "separate them
+  // by month"). `rows` is already newest-first via sortRows, so this just
+  // walks it once inserting a month header whenever the month changes -
+  // never a second sort, never a second pass over the array.
+  var MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function monthKeyAndLabel_(iso){
+    var t=iso?Date.parse(iso):NaN;
+    if(isNaN(t))return {key:'unknown',label:'Undated'};
+    var d=new Date(t);
+    return {key:d.getFullYear()+'-'+d.getMonth(),label:MONTH_NAMES_[d.getMonth()]+' '+d.getFullYear()};
+  }
+  function completedByMonthHtml(rows){
+    var html='',curKey=null,curLabel='',curCount=0,curRowsHtml='';
+    function flush(){if(curKey!==null)html+='<div class="bgroup">'+esc2(curLabel)+' &middot; '+curCount+'</div>'+curRowsHtml;}
+    for(var i=0;i<rows.length;i++){
+      var mk=monthKeyAndLabel_(rows[i].lastActivityTs);
+      if(mk.key!==curKey){flush();curKey=mk.key;curLabel=mk.label;curCount=0;curRowsHtml='';}
+      curCount++;curRowsHtml+=rowHtml(rows[i]);
+    }
+    flush();
+    return html;
   }
   // Amount display (wiring item 4): symbol for the currencies the fund actually
   // sees, code suffix otherwise, '' when no amount was captured yet.
@@ -4887,7 +4913,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var bhead='<div class="bhead"><span>Investor</span><span class="h-flow">Type</span><span class="h-amt">Amount</span><span>Status</span><span class="h-age">Age</span><span></span></div>';
     var html=anyRows?bhead:'';
     html+=inflight.length?inflight.map(rowHtml).join(""):'<div class="empty">'+emptyMsg+'</div>';
-    if(showDone&&completed.length)html+='<div class="bgroup">Completed &middot; '+completed.length+'</div>'+completed.map(rowHtml).join("");
+    if(showDone&&completed.length)html+=completedByMonthHtml(completed);
     if(showCanceled&&canceled.length)html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
     // Two quiet, independent toggles: completed (complete/sealed) and canceled
