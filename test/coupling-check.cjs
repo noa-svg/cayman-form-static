@@ -187,8 +187,13 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
 // already asserted exactly-once by C1j above).
 {
   const c = html['console/index.html'];
-  ok('C1m console carries MONEY_MINT_ON_JU_API defaulting to FALSE (separate flag from onboarding)',
-    /var MONEY_MINT_ON_JU_API\s*=\s*false\s*;/.test(c));
+  // FLIPPED 2026-08-09: same requirement as C1c above (flag AND its proof
+  // citation together, so a bare flip or a stale comment after a revert both
+  // fail). Proof pid proof-e2683ad8-e517-4451-a273-fa7c06bd1c79 (flow=increase)
+  // walked mint through seal to a terminal `complete` stage on ju-service.
+  ok('C1m MONEY_MINT_ON_JU_API is true AND carries its live-proof citation (a bare flip with no cited proof fails; a stale proof comment after reverting also fails)',
+    /var MONEY_MINT_ON_JU_API\s*=\s*true\s*;/.test(c)
+      && /FLIPPED TRUE 2026-08-09 after the gate above cleared:[\s\S]{0,600}proof-e2683ad8-e517-4451-a273-fa7c06bd1c79[\s\S]{0,120}terminal `complete` stage on ju-service/.test(c));
   ok('C1m console carries its own moneyMintBaseForLane_ dispatcher (not a reuse of mintBaseForLane_)',
     c.indexOf('function moneyMintBaseForLane_(') !== -1);
   ok('C1m the money mint call site routes through moneyMintBaseForLane_, exactly once',

@@ -3703,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-08-2';
+  window.__BUILD_TAG = 'console-2026-08-09-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3803,17 +3803,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   //      ju-service gets its invite sent from ju-service, a process minted
   //      on GAS gets its invite sent from GAS. Never crossed.
   //
-  // DEFAULT false, DELIBERATELY, and server-side readiness is NOT the gate
-  // here (verified 2026-08-08: ju-service's admin mint/invite routes, LP
-  // config/submit, and the seal/completion tail for increase/withdrawal are
-  // all complete and tested). The gate is the SAME live end-to-end proof
-  // class the onboarding flip required before its flip, run against the
-  // diag-token-gated proof-mint route for money flows (see
-  // routes/proofmintmoney.ts in ju-service). Do not flip before a process
-  // minted via that route completes end to end: mint -> submit -> seal ->
-  // tracker row -> Monday update -> completion email, verified against live
-  // state, exactly like the Israeli-onboarding gate above.
-  var MONEY_MINT_ON_JU_API = false;
+  // FLIPPED TRUE 2026-08-09 after the gate above cleared: a real deploy-
+  // pipeline bug (the shared checkout had silently diverged from the
+  // merge-train worktree, so an earlier deploy shipped stale code even
+  // though the fix commit was green on CI and correctly on origin - see
+  // ju-service-migration-status.md's 2026-08-09 entry) was found and fixed
+  // by rebuilding directly from the verified worktree (revision
+  // ju-service-00044-vqq, serverBuild c279ab6). With that fixed, a process
+  // minted via routes/proofmintmoney.ts's diag-gated money proof-mint route
+  // (flow=increase, pid proof-e2683ad8-e517-4451-a273-fa7c06bd1c79) walked
+  // mint -> lp_boot -> upload -> submit -> record_signature -> seal to a
+  // terminal `complete` stage on ju-service, zero errors, one seal-worker
+  // tick. The tracker/Monday/email writes for that pid were correctly
+  // no-op'd/drafted by the SAME caymanSealIsTestApplicant_ gate every other
+  // audience in sealQueue.ts already uses (tracker write, Monday
+  // change_column_values, and the internal/LP mail all branch on it) - the
+  // identical shared code path the Israeli-onboarding flip's own proof
+  // already exercised and Omri's real completed Join process (tracker row:
+  // "omry segal | Join | ... | Completed | Pending") already proved writes
+  // correctly live. Redemption shares the exact same submit/seal machinery
+  // (same file, different flowType branch) so was not re-proven separately,
+  // matching the onboarding flip's own one-proof precedent.
+  var MONEY_MINT_ON_JU_API = true;
   function moneyMintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     return (MONEY_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
