@@ -21,9 +21,22 @@
   'use strict';
 
   // ── primitives (verbatim ports of IsraeliValidation.js) ──────────────────────
-  var HE_RE       = /^[א-ת׳״\s'"\-]+$/;
+  // 2026-08-09: period added, mirroring ju-cayman's IsraeliValidation.ts
+  // ISRAELI_HE_RE_ fix (commit ea89a9a, Alex Glotzky). This module's own
+  // header claims a contract harness keeps it in sync with the server - no
+  // such harness exists yet (2026-08-09 duplication audit), which is exactly
+  // how this copy drifted from the fix in the first place.
+  var HE_RE       = /^[א-ת׳״\s'".\-]+$/;
   var EN_RE       = /^[A-Za-z\s'"\-]+$/;
   var DIGITS_RE   = /^\d+$/;
+  // 2026-08-09: added, mirroring IsraeliValidation.ts's ISRAELI_ACCOUNT_RE_.
+  // The il-account case below used to be DIGITS_RE (digits-only), which
+  // reintroduces a DIFFERENT already-fixed incident (2026-07-18 parity
+  // audit: digits-only wrongly rejected the legitimate nnnnnn/nn
+  // sub-account notation) - this case was dead in practice (israel.html
+  // keeps its own separate inline check, per the 2026-08-09 duplication
+  // audit), but is the copy anyone would reach for as "the shared rule."
+  var ACCOUNT_RE  = /^\d{4,13}(?:\/\d{1,3})?$/;
   var EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   var IL_PHONE_RE = /^05\d-?\d{7}$/;
   var DMY_RE      = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
@@ -142,7 +155,7 @@
       case 'pct':              return validOwnership(v);
       case 'email':            return EMAIL_RE.test(v);
       case 'cell-il':          return validIlPhone(v);
-      case 'il-account':       return DIGITS_RE.test(v);   // server rule: digits only
+      case 'il-account':       return ACCOUNT_RE.test(v);
       case 'gt50000':          return amountGt50k(v);
       case 'date':             return validDate(v);
       case 'date-past':        return validDate(v) && isPast(v);
@@ -157,7 +170,7 @@
 
   return {
     HE_RE: HE_RE, EN_RE: EN_RE, DIGITS_RE: DIGITS_RE, EMAIL_RE: EMAIL_RE,
-    IL_PHONE_RE: IL_PHONE_RE, MIN_JOIN_AMOUNT_STRICT: MIN_JOIN_AMOUNT_STRICT,
+    IL_PHONE_RE: IL_PHONE_RE, ACCOUNT_RE: ACCOUNT_RE, MIN_JOIN_AMOUNT_STRICT: MIN_JOIN_AMOUNT_STRICT,
     nameOk: nameOk, validId: validId, validSsn: validSsn,
     validCompanyNumber: validCompanyNumber, validOwnership: validOwnership,
     sanPhone: sanPhone, validIlPhone: validIlPhone,
