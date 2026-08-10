@@ -41,3 +41,4 @@ test/*
 !test/mint-pick-binding-harness.cjs
 !test/rig-flow.cjs
 !test/money-flow-fallback-harness.cjs
+!test/beneficiary-declaration-harness.cjs

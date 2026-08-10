@@ -1025,30 +1025,23 @@
         </section>
 
         <!-- PAGE: beneficiary declaration (beneficiaryStatement) -->
+        <!-- EasySend field model (SPEC-individual-onboarding.md:163,187 / SPEC-entity-onboarding.md:143):
+             ONE fieldset, THREE mutually-exclusive options mapping to isForMyself /
+             isUnknownBeneficies(+reasonUnknown REQ) / isBeneficiaries. chooseOneValidation
+             enforces exactly one. Value scheme here: statement = self | unknown | named. -->
         <section class="lvp-page" data-page="beneficiary" data-primary-only>
           <h2 class="lvp-page__title">הצהרה על נהנים ובעלי שליטה</h2>
           <fieldset class="lvp-fieldset">
-            <legend class="lvp-fieldset__legend">האם יש נהנים בפעולה זו?</legend>
-            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.hasBeneficiaries" value="no" data-show-when-trigger="beneficiaryStatement.hasBeneficiaries"> לא</label>
-            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.hasBeneficiaries" value="yes" data-show-when-trigger="beneficiaryStatement.hasBeneficiaries"> כן</label>
+            <legend class="lvp-fieldset__legend">המשקיע/ה מצהיר/ה בזאת:</legend>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="self" data-show-when-trigger="beneficiaryStatement.statement"> אני פועל/ת עבור עצמי בלבד</label>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="unknown" data-show-when-trigger="beneficiaryStatement.statement"> יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים</label>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> הנהנים בפעולה הם:</label>
           </fieldset>
-          <!-- Only when there ARE beneficiaries: ask whether their details are known.
-               Wrapped in one hasBeneficiaries=yes container so a stale statement choice
-               can never keep a sub-block visible after switching back to לא. When לא, the
-               server sanitizer maps hasBeneficiaries=no -> statement 'self' (act for self
-               only), preserving the doc's isForMyself box. -->
-          <div data-show-when="beneficiaryStatement.hasBeneficiaries=yes">
-            <fieldset class="lvp-fieldset">
-              <legend class="lvp-fieldset__legend">האם פרטי הזיהוי של הנהנים ידועים?</legend>
-              <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> פרטי הזיהוי של הנהנים ידועים</label>
-              <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="unknown" data-show-when-trigger="beneficiaryStatement.statement"> פרטי הזיהוי טרם ידועים</label>
-            </fieldset>
-            <label class="lvp-field" data-show-when="beneficiaryStatement.statement=unknown"><span class="lvp-field__label">הסיבה לכך</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.reasonUnknown"></label>
-            <div data-show-when="beneficiaryStatement.statement=named">
-              <div data-repeating-typed-path="beneficiaryStatement.beneficiariesDetails.beneficiariesArray" data-repeating-min="1" data-repeating-template="bnf"></div>
-              <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="beneficiaryStatement.beneficiariesDetails.beneficiariesArray">הוספת נהנה/ית +</button>
-              <label class="lvp-field"><span class="lvp-field__label">הזיקה ביני לבין הנהנה / ים המצוין / ים לעיל</span><textarea class="lvp-input--textarea" data-script="he" name="beneficiaryStatement.beneficiariesDetails.connectionBetweenBeneficiaries" rows="2"></textarea></label>
-            </div>
+          <label class="lvp-field" data-show-when="beneficiaryStatement.statement=unknown"><span class="lvp-field__label">הסיבה לכך</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.reasonUnknown"></label>
+          <div data-show-when="beneficiaryStatement.statement=named">
+            <div data-repeating-typed-path="beneficiaryStatement.beneficiariesDetails.beneficiariesArray" data-repeating-min="1" data-repeating-template="bnf"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="beneficiaryStatement.beneficiariesDetails.beneficiariesArray">הוספת נהנה/ית +</button>
+            <label class="lvp-field"><span class="lvp-field__label">הזיקה ביני לבין הנהנה / ים המצוין / ים לעיל</span><textarea class="lvp-input--textarea" data-script="he" name="beneficiaryStatement.beneficiariesDetails.connectionBetweenBeneficiaries" rows="2"></textarea></label>
           </div>
           <template data-row-template="bnf">
             <div class="lvp-repeating-row" data-row-index="${i}">

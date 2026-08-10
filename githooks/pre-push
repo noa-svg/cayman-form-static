@@ -76,6 +76,7 @@ HARNESSES=(
   index-honesty-harness
   snap-ttl-harness
   israel-flow
+  beneficiary-declaration-harness
   console-harness
   lvp-token-consistency
   atrium-palette-sync

@@ -117,7 +117,7 @@ async function walkToReview(rig, t) {
   checkBox(d, 'taxDeclaration.isNonBusinessIncome');
   ok(t + ' money -> beneficiary', (await clickNext(d)) === 'beneficiary', currentPage(d));
 
-  checkRadio(d, 'beneficiaryStatement.hasBeneficiaries', 'no');
+  checkRadio(d, 'beneficiaryStatement.statement', 'self');
   ok(t + ' beneficiary -> ind.taxres', (await clickNext(d)) === 'ind.taxres', currentPage(d));
 
   checkRadio(d, 'investorsArray[0].taxResidency.taxCountry', 'ישראל בלבד');
