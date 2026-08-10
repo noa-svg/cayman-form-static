@@ -3531,6 +3531,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
               <span id="allowlist-status" role="status" aria-live="polite" style="font-size:13px;color:var(--color-ink-muted);font-family:var(--font-body)"></span>
             </div>
           </div>
+
+          <div class="set-card" style="margin-top:16px">
+            <h3 class="set-h">Reminder cadence</h3>
+            <p class="set-p" id="set-reminder-cadence">Loading&hellip;</p>
+          </div>
+
+          <div class="set-card" style="margin-top:16px">
+            <h3 class="set-h">Armed state</h3>
+            <p class="set-p">Live read of the flags and scheduled-job heartbeats that gate real writes. Not editable here &mdash; flip a flag in the editor if it needs to change.</p>
+            <div id="set-armed-state" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;font-size:13px;font-family:var(--font-body)">Loading&hellip;</div>
+          </div>
+
+          <div class="set-card" style="margin-top:16px">
+            <h3 class="set-h">FO share catalog</h3>
+            <p class="set-p">Every FO share label currently on the Monday board, as offered in the mint panel's picker.</p>
+            <div id="set-fo-catalog" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">Loading&hellip;</div>
+          </div>
         </div>
       </div>
     </div>
@@ -4039,6 +4056,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       fields:{Process:'Cayman subscription',Lane:'Cayman',investmentAmount:250000,investmentCurrency:'USD'}};
     if(qs.indexOf('?api=lpHistory')===0) return {ok:true,processes:[]};
     if(qs.indexOf('?admin=getConsoleSettings')===0) return {ok:true,allowedEmails:['noa@legacyvpartners.com','omri@legacyvpartners.com']};
+    if(qs.indexOf('?admin=getSettingsHealth')===0) return {ok:true,healthCheckLastOk:'2026-08-10T09:00:00Z',attentionAlertLastOk:'2026-08-10T09:05:00Z',trackerSweepLastOk:'2026-08-10T06:00:00Z',resealSweepLastOk:'2026-08-10T09:30:00Z',departedArchiveWritesLive:false,resealSweepLive:true,abandonSweepLive:false,alertCredibilityLive:false,reminderCadenceFirstDay:2,reminderCadenceSecondDay:5};
+    if(qs.indexOf('?api=foShareLabels')===0) return {ok:true,labels:['None','Alon15%','Barak20%','Barak25%','Carmel20%','Dekel15%','Harel20%']};
     if(qs.indexOf('?api=messages')===0) return {messages:demoMessages_(L)};
     if(qs.indexOf('?admin=listOnboardingSubmissions')===0) return {ok:true,submissions:[
       {itemId:'d-onb-1',nameEn:'Ilan Yeshua',nameHe:'אילן ישועה',email:'ilan@example.com',nickname:''},
@@ -7197,6 +7216,67 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }).catch(function(){
       if(st){st.textContent='Could not load the current allowlist. Do not save.';st.style.color='var(--color-danger)';}
     });
+    loadSettingsHealth();
+    loadSettingsFoCatalog();
+  }
+  // 2026-08-10 (console Settings expansion, PM pass): reminder cadence +
+  // armed-state cards, both read-only. Sourced from ?admin=getSettingsHealth,
+  // a console-auth-gated sibling of ?api=diagHealth reading the same Script
+  // Properties - diagHealth itself is diag-token gated (DIAG_ROUTE_TOKEN),
+  // which a browser session never carries and must never be asked to.
+  function loadSettingsHealth(){
+    var cadenceEl=document.getElementById('set-reminder-cadence');
+    var armedEl=document.getElementById('set-armed-state');
+    apiFetch('?admin=getSettingsHealth').then(function(d){
+      if(!d||!d.ok){
+        if(cadenceEl)cadenceEl.textContent='Could not load.';
+        if(armedEl)armedEl.textContent='Could not load.';
+        return;
+      }
+      if(cadenceEl){
+        var f=d.reminderCadenceFirstDay,s=d.reminderCadenceSecondDay;
+        cadenceEl.innerHTML=(typeof f==='number'&&typeof s==='number')
+          ?('Reminds business day <strong>'+f+'</strong>, then business day <strong>'+s+'</strong>. Never more than 2. Not editable here by design.')
+          :'Not reported by the server.';
+      }
+      if(armedEl){
+        var rows=[
+          ['Departed-LP archive writes',d.departedArchiveWritesLive],
+          ['Reseal sweep',d.resealSweepLive],
+          ['Abandon sweep',d.abandonSweepLive],
+          ['Alert credibility',d.alertCredibilityLive],
+        ];
+        var heartbeats=[
+          ['Cron health check',d.healthCheckLastOk],
+          ['Attention alert sweep',d.attentionAlertLastOk],
+          ['Tracker reconcile sweep',d.trackerSweepLastOk],
+          ['Reseal sweep run',d.resealSweepLastOk],
+        ];
+        armedEl.innerHTML=
+          rows.map(function(r){
+            var on=r[1]===true;
+            return '<div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;flex:none;background:'+(on?'var(--color-success)':'var(--color-ink-muted)')+'"></span><span>'+esc2(r[0])+'</span><span style="color:var(--color-ink-muted);margin-left:auto">'+(on?'on':'off')+'</span></div>';
+          }).join('')
+          +'<div style="height:1px;background:var(--color-border);margin:4px 0"></div>'
+          +heartbeats.map(function(r){
+            return '<div style="display:flex;align-items:center;gap:8px"><span>'+esc2(r[0])+'</span><span style="color:var(--color-ink-muted);margin-left:auto;font-size:12px">'+(r[1]?esc2(String(r[1])):'never')+'</span></div>';
+          }).join('');
+      }
+    }).catch(function(){
+      if(cadenceEl)cadenceEl.textContent='Could not load.';
+      if(armedEl)armedEl.textContent='Could not load.';
+    });
+  }
+  function loadSettingsFoCatalog(){
+    var el=document.getElementById('set-fo-catalog');
+    if(!el)return;
+    apiFetch('?api=foShareLabels').then(function(d){
+      if(!d||!d.ok||!Array.isArray(d.labels)){el.textContent='Could not load.';return;}
+      var names=d.labels.filter(function(n){return n&&n!=='None';});
+      el.innerHTML=names.length
+        ? names.map(function(n){return '<span class="fo-chip"><span>'+esc2(n)+'</span></span>';}).join('')
+        : '<span style="color:var(--color-ink-muted);font-size:13px">No FO share labels on the board.</span>';
+    }).catch(function(){el.textContent='Could not load.';});
   }
   document.getElementById('allowlist-save').onclick=function(){
     var raw=document.getElementById('allowlist-input').value;
