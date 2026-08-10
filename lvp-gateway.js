@@ -22,6 +22,33 @@
  *   - classifyReject / classifyTimeout callbacks, which own every console
  *     diagnostic and every LP-facing error string (LP copy is per-form
  *     approved wording and never lives here)
+ *
+ * TIMEOUTS (2026-08-10): the ONE source of the two client-side timeout
+ * budgets every LVPGateway.post call site should use. Before this, each of
+ * index.html/israel.html/flow.html hardcoded its own numbers independently,
+ * and they drifted: flow.html's submit got raised to 180000 (the fix that
+ * unstuck Maxim Fainshtein and Alex Glotzky, both stranded by a client abort
+ * racing a slow-but-live gateway - see fund-wiki tools/ju-lp-issue-log.md),
+ * but israel.html's submit/record_signature and index.html's non-submit
+ * budget were never carried forward and stayed stale below the ~20s+work
+ * floor the gateway itself pays (measured 39.1s of pure overhead on
+ * 2026-08-06 before any action work begins). Every caller should read
+ * TIMEOUTS.submit / TIMEOUTS.default instead of a literal, so the next fix
+ * to either number reaches every page in one edit.
+ *   - submit:  180000ms. The heaviest client actions - the initial full-pack
+ *     submit and a signer's record_signature - which do real server-side
+ *     work (pack assembly/render, Drive upload, seal) on top of the gateway's
+ *     own cold-start floor. 180s covers the measured ~39s floor plus a cold
+ *     ~25-40s of actual work with room to spare, same number flow.html and
+ *     signer.html already proved live.
+ *   - default: 120000ms. Every other action (save_page, save_signer_progress,
+ *     upload_file, kyc_extract, etc). Lower than submit, but still clears the
+ *     ~39s floor by 3x so a "snappy" action does not abort on a server that
+ *     is still answering.
+ * A caller with a genuinely different, justified budget (israel.html's
+ * render_preview: a cold full-pack render measured just over 20s, watched by
+ * its own sign-preview race guard) may still pass an explicit override - this
+ * table is the DEFAULT, not a hard cap.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -85,5 +112,11 @@
     return run(opts.retries);
   }
 
-  return { post: post, retryOnTimeout: retryOnTimeout };
+  // Shared timeout budget table (see the docblock above for why these two
+  // numbers exist and what they cover). Frozen where supported so a call
+  // site cannot accidentally mutate the shared table for every other caller.
+  var TIMEOUTS = { submit: 180000, default: 120000 };
+  if (typeof Object.freeze === 'function') Object.freeze(TIMEOUTS);
+
+  return { post: post, retryOnTimeout: retryOnTimeout, TIMEOUTS: TIMEOUTS };
 }));

@@ -314,6 +314,21 @@
     </div>
   </div>
 
+  <!-- lvp-gateway.js is deliberately NOT loaded here (2026-08-02 CTO review:
+       this page hand-rolls its own XHR-based retry/timeout logic in several
+       separate blocks below, and wiring it onto the shared fetch-based
+       transport in one pass risked regressing that retry/backoff behavior on
+       the live e-signature submit path; the gateway-URL duplication note in
+       this repo's CLAUDE.md covers the same tradeoff). Because of that, this
+       page's own timeout literals (x.timeout = 180000 for signerform load and
+       p.timeout = 180000 for record_signature, search this file for
+       "x.timeout" / ".timeout =") are a MANUAL COPY of lvp-gateway.js's
+       TIMEOUTS.submit budget, not a read from it. 2026-08-10 verified they
+       already match (both 180000, same fix that unstuck Maxim Fainshtein /
+       Alex Glotzky - see lvp-gateway.js's docblock and fund-wiki
+       tools/ju-lp-issue-log.md) but they will NOT move together automatically:
+       any future change to TIMEOUTS.submit must be hand-applied here too, or
+       this page silently falls back out of step. -->
   <!-- Israeli-ID checksum (CTO review finding #3): validation-rules.js is the
        verbatim client port of the server validator, same module israel.html/
        flow.html already load. -->
@@ -577,6 +592,8 @@
       // two entry budgets are kept in step deliberately (both 180s after a 117s
       // exec leg was measured; 90s was the first, insufficient attempt). Retries are safe
       // (GET, no server side effect) but three fast aborts just fail faster.
+      // Manual copy of lvp-gateway.js's TIMEOUTS.submit (see the note above the
+      // validation-rules.js <script> tag near the top of this file); keep in sync.
       x.timeout = 180000;
       x.onreadystatechange = function () {
         if (x.readyState !== 4) return;
@@ -1987,6 +2004,9 @@
           p = new XMLHttpRequest();
           p.open('POST', GW + '?source=lp', true);
           p.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+          // Manual copy of lvp-gateway.js's TIMEOUTS.submit (see the note above
+          // the validation-rules.js <script> tag near the top of this file);
+          // keep in sync.
           p.timeout = 180000;
           p.onreadystatechange = function () {
             if (p.readyState !== 4) return;

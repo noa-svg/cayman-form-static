@@ -3703,7 +3703,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-09-2';
+  window.__BUILD_TAG = 'console-2026-08-10-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5630,6 +5630,25 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // A signer is still awaited during the pre-seal signing window. The current signer
     // is the first roster entry not yet done; used to word the "Reminder sent" line.
     var awaitingSigner=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress'||dstage==='signing'||dstage==='submitted');
+    // 2026-08-10 (Alex Glotzky, ju-lp-issue-log 2026-08-09 row): needs_attention
+    // had ONLY Void in the drawer - no way to re-notify a stuck LP without
+    // calling ?admin=resendInvite directly from the console's own JS console.
+    // Scoped narrowly, not a blanket add: a needs_attention row only gets the
+    // resend button when it has NO signing roster yet (d.signers empty - the
+    // same signal the People/Signers branch below already uses to tell
+    // pre-submission apart from in-flight signing). That is exactly Alex's
+    // shape (hasSubmission:false, signingRunExists:false - he stalled before
+    // his final submit ever landed) and the general pre-submission-stall
+    // class (Maxim Fainshtein et al, 2026-08-06 row). A needs_attention row
+    // that DOES have a signing roster is a POST-submission fault (seal_quarantined,
+    // seal_fanout_partial, tracker_write_failed, entity_stamp_missing, ...) -
+    // the LP already finished their part, so resending the onboarding link
+    // would resend a form they already completed, not fix the real fault.
+    // Those reasons need their own recovery (Attach company stamp above,
+    // Reseal docs, or an operator/engineer reading
+    // CAYMAN_ATTENTION_REASON_HELP_'s action for the specific attentionReason
+    // code) - deliberately not wired to a resend button here.
+    var needsAttentionPreSubmit=(dstage==='needs_attention'&&!(d.signers&&d.signers.length));
     var curSigner=null;
     if(d.signers&&d.signers.length){for(var _si=0;_si<d.signers.length;_si++){if(d.signers[_si].state!=='done'){curSigner=d.signers[_si];break;}}}
     var curSignerName=curSigner?String(curSigner.name||'').trim().split(/\s+/)[0]:'';
@@ -5640,10 +5659,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // which the post-send cooldown below addresses.
     // When the drawer shows the current-signer block, that block owns the
     // Remind button; keep the action row's copy only when there is no block.
-    if(awaitingSigner&&!isTerminal&&!d.currentSigner){
+    if((awaitingSigner||needsAttentionPreSubmit)&&!isTerminal&&!d.currentSigner){
       // C6b (2026-07-19): pre-submit there is no "signer" yet - the LP has not
       // started or is mid-form. Label by what the reminder actually does.
-      var preSubmit=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress');
+      // needsAttentionPreSubmit (2026-08-10) rides the same resendInvite arm:
+      // a stuck-before-submit LP needs the same fresh resume link, not a
+      // signer nudge (there is no signer yet).
+      var preSubmit=(dstage==='link_sent'||dstage==='opened'||dstage==='in_progress'||needsAttentionPreSubmit);
       dactBtns+='<button class="nudge" data-act="'+(preSubmit?'resendInvite':'nudge')+'">'+(preSubmit?'Resend invite reminder':'Remind signer')+'</button>';
     }
     // Reseal is a RECOVERY control for a stuck pack; a complete/sealed process

@@ -606,6 +606,9 @@
           // than wrong. 180s, not the 90s first shipped: a later measurement of the
           // exec leg alone hit 117s, which 90s would still have failed. Bounded, so
           // a genuinely dead gateway still surfaces an error instead of hanging.
+          // This is a raw XHR boot fetch, predating lvp-gateway.js's TIMEOUTS
+          // table and not routed through it, but the value is intentionally
+          // the same as TIMEOUTS.submit; keep in sync by hand if that changes.
           x.timeout = 180000;
           function transientFail(why) {
             if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
@@ -1913,7 +1916,12 @@
               // spare, and still bounds a genuinely dead /exec so the spinner
               // cannot hang forever. Revisit once the 5.4MB Code.js is split and
               // the gateway overhead goes back to single digits.
-              timeoutMs: 180000,
+              // 2026-08-10: sourced from the shared table in lvp-gateway.js
+              // (TIMEOUTS.submit) instead of a local literal, so this number
+              // and israel.html's/index.html's submit budgets move together
+              // rather than re-drifting the way they did before (see that
+              // file's docblock).
+              timeoutMs: window.LVPGateway.TIMEOUTS.submit,
               classifyReject: function (res) {
                 // ok !== true (tightened 2026-07-15): a JSON body WITHOUT ok
                 // (an HTTP 500 page that parses, a truncated proxy response)

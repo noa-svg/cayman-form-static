@@ -3497,10 +3497,16 @@
         return Promise.reject(new Error('Something went wrong. Please try again.'));
       }
       // 'submit' assembles + classifies the full conditional pack (~30pp for an
-      // entity) server-side before responding, which can exceed a 30s budget; a
-      // premature abort shows "Request timed out" even though the server completes.
-      // Give submit a generous budget; keep other actions snappy.
-      var timeoutMs = (action === 'submit') ? 120000 : 30000;
+      // entity) server-side before responding, which can exceed the gateway's
+      // own cold-start floor; a premature abort shows "Request timed out" even
+      // though the server completes. Budgets come from the shared table in
+      // lvp-gateway.js (TIMEOUTS), not a local literal, so this page's numbers
+      // move in lockstep with israel.html/flow.html/signer.html instead of
+      // drifting the way this exact line did until 2026-08-10 (it was still
+      // 30000 for non-submit actions - below the ~20s+work floor measured on
+      // israel.html 2026-08-06 - even after flow.html's submit was raised to
+      // 180000 to unstick real stranded LPs; see lvp-gateway.js's docblock).
+      var timeoutMs = (action === 'submit') ? window.LVPGateway.TIMEOUTS.submit : window.LVPGateway.TIMEOUTS.default;
       return window.LVPGateway.post({
         url: gUrl,
         body: { action: action, token: gToken, lane: 'cayman', payload: payload || {} },
