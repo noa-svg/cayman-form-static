@@ -3606,7 +3606,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div id="onbPicked" class="lp-picked" hidden style="margin-top: 8px"></div>
       <div class="hint">Pulls submissions from the onboarding board so you do not retype the name and email. The fields below stay editable.</div>
     </div>
-    <label for="name">Full name <span class="tag" id="nameReqHint">at least one</span></label>
+    <label for="name"><span id="nameFieldLabel">Full name</span> <span class="tag" id="nameReqHint">at least one</span></label>
     <div class="g2">
       <div><input id="name" autocomplete="name" aria-describedby="nameReqHint" placeholder="David Cohen  (English)"></div>
       <div><input id="nameHebrew" dir="rtl" aria-label="Full name (Hebrew)" aria-describedby="nameReqHint" placeholder="&#1491;&#1493;&#1491; &#1499;&#1492;&#1503;  (&#1506;&#1489;&#1512;&#1497;&#1514;)"></div>
@@ -5267,6 +5267,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     state.lpKind="new";
     // Entity classification: Israeli entity onboarding only (operator call at mint).
     el=document.getElementById("classRow");if(el)el.style.display=(state.lane==="israel"&&state.type==="entity")?"":"none";
+    // 2026-08-10 (pixel-review finding): the name field label/placeholder stayed
+    // person-oriented ("Full name", "David Cohen") even when Entity was selected.
+    el=document.getElementById("nameFieldLabel");if(el)el.textContent=(state.type==="entity")?"Entity name":"Full name";
+    el=document.getElementById("nameHebrew");if(el)el.setAttribute("aria-label",(state.type==="entity")?"Entity name (Hebrew)":"Full name (Hebrew)");
     el=document.getElementById("manualLpFields");if(el)el.style.display="";
     el=document.getElementById("foRow");if(el)el.style.display="";
     el=document.getElementById("langRow");if(el)el.style.display="";
@@ -5293,9 +5297,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(state.process==="increase"||state.process==="withdrawal"){
       var lp=state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name);
       var word=(state.process==="increase")?"increase":"withdrawal";
+      // 2026-08-10 (pixel-review finding): this hardcoded "Hebrew invite" even on
+      // the Cayman lane, where the real LP invite is English-only. Mirrors the
+      // lane check classRow already uses a few lines up.
+      var inviteWord=(state.lane==="israel")?"Hebrew invite":"invite";
       return lp
-        ? "Send creates the "+word+" request and emails the Hebrew invite to "+lp+", cc Omri."
-        : "Pick the LP above. Send will create the "+word+" request and email them the Hebrew invite, cc Omri.";
+        ? "Send creates the "+word+" request and emails the "+inviteWord+" to "+lp+", cc Omri."
+        : "Pick the LP above. Send will create the "+word+" request and email them the "+inviteWord+", cc Omri.";
     }
     var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
     var em=g("email"), fo=g("foEmail");
