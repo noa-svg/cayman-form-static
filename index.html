@@ -3521,7 +3521,14 @@
           if (res && res.detail && res.detail.validation && window.console) {
             console.log('submit rejected, validation detail:', JSON.stringify(res.detail.validation));
           }
-          return new Error((res && res.error) || 'Something went wrong. Please try again.');
+          var rErr = new Error((res && res.error) || 'Something went wrong. Please try again.');
+          // 2026-08-11 (Alex Glotzky corruption class-sweep): a corrupted/truncated
+          // upload is the one failure the LP can self-serve past (re-select the
+          // file), so it is tagged the same way classifyTimeout tags lvpTimeout,
+          // letting uploadFileNow/doSubmitNow_ show the specific approved copy
+          // instead of the generic failure line.
+          if (res && res.detail && res.detail.uploadError === 'corrupted') rErr.lvpUploadCorrupted = true;
+          return rErr;
         },
         classifyTimeout: function () {
           // Same message as before (console-only; no catch ever shows it to the
@@ -3586,7 +3593,33 @@
           pendingUploads[key] = { slot: key, fileName: entry.fileName, mimeType: entry.mimeType, fileSizeBytes: entry.fileSizeBytes, driveId: up.driveId };
           savePage(); // persist the driveId into the durable snapshot
         })
-        .catch(function () { /* best-effort: base64 stays, rides on final submit */ });
+        .catch(function (err) {
+          // 2026-08-11 (Alex Glotzky corruption class-sweep, Noa-approved): a
+          // corrupted/truncated upload used to be swallowed here exactly like any
+          // other best-effort failure, leaving the bad base64 in pendingUploads to
+          // silently ride the same corrupted bytes into final submit. This is the
+          // one failure the LP can immediately self-serve (re-select the file), so
+          // it gets a real inline prompt instead of staying silent. Every OTHER
+          // failure (network hiccup, timeout, server error) is still best-effort:
+          // base64 stays and rides on final submit, unchanged.
+          if (!err || !err.lvpUploadCorrupted) return;
+          var cur = pendingUploads[key];
+          if (!cur || cur !== entry) return; // slot was replaced while the request was in flight
+          delete pendingUploads[key]; // never let the same corrupted bytes ride to final submit
+          var inpErr = document.querySelector('[data-upload="' + key + '"]');
+          if (inpErr) inpErr.value = '';
+          var wrapErr = inpErr && inpErr.closest('.lvp-upload');
+          if (wrapErr) {
+            wrapErr.classList.remove('has-file');
+            var nmErr = wrapErr.querySelector('[data-upload-name]');
+            if (nmErr) { nmErr.textContent = ''; nmErr.removeAttribute('data-has-file'); }
+            var holderErr = wrapErr.closest('.lvp-field') || wrapErr;
+            holderErr.classList.add('lvp-field--error');
+          }
+          setStatus(curLang === 'he'
+            ? 'הקובץ לא הועלה כראוי. יש לבחור אותו מחדש.'
+            : "This file didn't upload correctly. Please select it again.", true);
+        });
     }
     // Stable client idempotency key, minted once per form session and kept in
     // sessionStorage. The server (CaymanSubmitIdempotency) prefers an explicit
@@ -3778,6 +3811,15 @@
         hideResultCard();
         // Never print a raw/technical server string to an investor. Fixed, calm line.
         if (window.console) console.log('submit error:', err && err.message || err);
+        // 2026-08-11 (Alex Glotzky corruption class-sweep, Noa-approved): reached
+        // only for a tokenless first-time submit, where uploadFileNow's inline
+        // check above never ran (no resume token yet). A corrupted upload gets
+        // its own actionable line naming the actual problem, instead of the
+        // generic retry copy that gave no hint a FILE was the issue.
+        if (err && err.lvpUploadCorrupted) {
+          setStatus('One of your uploaded files did not save correctly. Please remove it and upload it again, then submit.', true);
+          return;
+        }
         setStatus('We could not submit your subscription just now. Your entries are saved on this page. Please try again, or contact Legacy Value Partners.', true);
       });
     }

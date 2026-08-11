@@ -4339,7 +4339,14 @@
           if (window.console) {
             try { console.log('gateway ' + action + ' rejected:', JSON.stringify(res)); } catch (eLog) {}
           }
-          return new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+          var rErr = new Error((res && res.error) || 'אירעה תקלה. נא לנסות שוב.');
+          // 2026-08-11 (Alex Glotzky corruption class-sweep, Noa-approved): tags a
+          // corrupted/truncated upload so the submit catch below can show the
+          // approved specific line instead of the generic retry copy. This form
+          // has no on-selection upload, so final submit is the ONLY place this
+          // can surface to the LP.
+          if (res && res.detail && res.detail.uploadError === 'corrupted') rErr.lvpUploadCorrupted = true;
+          return rErr;
         },
         classifyTimeout: function () { return new Error('timeout'); }
       });
@@ -4584,6 +4591,14 @@
         submitting = false;
         hideResultCard();
         if (window.console) console.log('submit error:', err && err.message || err);
+        // 2026-08-11 (Alex Glotzky corruption class-sweep, Noa-approved): this form
+        // has no on-selection upload, so final submit is the only place a
+        // corrupted/truncated upload can surface. Names the actual problem
+        // instead of the generic retry copy.
+        if (err && err.lvpUploadCorrupted) {
+          setStatus(displayFor('אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.', curLang), true);
+          return;
+        }
         setStatus(displayFor('לא ניתן היה לשלוח את ההצטרפות כעת. הפרטים נשמרו בעמוד זה. נא לנסות שוב או לפנות לקרן לגאסי ואליו פרטנרס.', curLang), true);
       });
       });

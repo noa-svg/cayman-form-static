@@ -1932,7 +1932,15 @@
                 // only a STRING entry is renderable copy. Never paint
                 // [object Object] at the LP.
                 var v0 = res && res.detail && res.detail.validation && res.detail.validation[0];
-                var msg = (typeof v0 === 'string' && v0) || (res && typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
+                // 2026-08-11 (Alex Glotzky corruption class-sweep, Noa-approved): checked
+                // BEFORE the res.error fallback below, because res.error for this case is
+                // CAYMAN_LP_UPLOAD_CORRUPTED_ERROR_ (English, server-side log copy only) -
+                // this form is Hebrew, so it must never render that string verbatim. The
+                // approved Hebrew line names the actual problem instead of the generic
+                // SUBMIT_FAIL_MSG this class used to fall through to.
+                var msg = (res && res.detail && res.detail.uploadError === 'corrupted'
+                    && 'אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.')
+                  || (typeof v0 === 'string' && v0) || (res && typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
                 var rErr = new Error(msg);
                 rErr.lvpCurated = true;   // safe to show: server-curated or approved fallback
                 return rErr;
