@@ -3418,6 +3418,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div id="board-card"><div id="list"></div></div>
         <button class="show-done" id="showDoneToggle" hidden></button>
         <button class="show-done" id="showCanceledToggle" hidden></button>
+        <button class="show-done" id="showTestToggle">Show test rows</button>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
       </div>
     </div>
@@ -3721,7 +3722,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-12-3-jusvc-board-seam';
+  window.__BUILD_TAG = 'console-2026-08-13-1-show-test-rows';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4712,6 +4713,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // rarely what an operator wants staring at them by default).
   var showDone=true, showCanceled=false; // quiet toggle: append canceled rows below
   var doneLoaded=false; // whether the current board fetch included terminal rows (includeDone=1)
+  // TEST-ROW TOGGLE (2026-08-12): default OFF - test/proof rows (the
+  // production canary, diag-gated proof-mint routes) are excluded server-
+  // side by default (both engines' ?api=list now apply the same noise
+  // filter the attention-alert sweep already used). Unlike showDone/
+  // showCanceled this isn't a client-side filter over an already-fetched
+  // set - toggling it changes what the SERVER sends, so there is no count
+  // to show until a fetch with includeTest=1 actually happens.
+  var showTest=false;
   // Sort: needs_attention rows pinned first (the server orders them first, but a
   // pure recency sort used to bury them again - 2026-07-15 wiring item 3), then
   // by last-activity recency, newest first. lastActivityTs (ISO) if present,
@@ -4988,6 +4997,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       else if(!doneLoaded){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=showCanceled?'Loading canceled...':'Show canceled';}
       else{tc.hidden=true;}
     }
+    // TEST-ROW TOGGLE: no count shown (unlike showDone/showCanceled, test
+    // rows are excluded server-side, not client-filtered from an
+    // already-fetched set - the count of hidden rows isn't known until a
+    // fetch with includeTest=1 actually happens).
+    var tt=document.getElementById("showTestToggle");
+    if(tt){tt.classList.toggle("on",showTest);tt.textContent=showTest?'Hide test rows':'Show test rows';}
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){
       var go=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};
       el.onclick=go;
@@ -5062,6 +5077,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(tg)tg.addEventListener("click",function(){showDone=!showDone;if(showDone&&!doneLoaded)load(true);applySearch();});
     var tc=document.getElementById("showCanceledToggle");
     if(tc)tc.addEventListener("click",function(){showCanceled=!showCanceled;if(showCanceled&&!doneLoaded)load(true);applySearch();});
+    var tt=document.getElementById("showTestToggle");
+    // Always refetches (unlike showDone/showCanceled's doneLoaded guard):
+    // toggling this changes what the server sends, so there is no
+    // already-fetched superset to filter client-side either way.
+    if(tt)tt.addEventListener("click",function(){showTest=!showTest;load(true);});
   })();
   // Board-search LP directory results (2026-08-02, Noa: "search flow being
   // buried in a menu, i dont want that menu" / "dont show in the search non
@@ -5221,10 +5241,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // rejects - a ju-service outage must degrade the merged board to GAS-only
   // rows, not blank it (same fail-open idiom the individual fetches below
   // already used before this engine loop existed).
-  function fetchEngineBoard_(base, lane, wantDone){
+  function fetchEngineBoard_(base, lane, wantDone, wantTest){
     var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){return {notes:{}};});
     var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){return {rows:{}};});
-    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0'),false,base).catch(function(){return {processes:[]};});
+    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){return {processes:[]};});
     return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
       return {base:base,list:r[0],notes:r[1],extras:r[2]};
     });
@@ -5239,7 +5259,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // (GAS + ju-service) for Israel - a process born since 2026-08-08 lives
     // ONLY in ju-service's registry and is invisible if this only asks GAS.
     var engines=enginesForLane_(state.lane);
-    Promise.all(engines.map(function(base){return fetchEngineBoard_(base,state.lane,wantDone);})).then(function(perEngine){
+    Promise.all(engines.map(function(base){return fetchEngineBoard_(base,state.lane,wantDone,showTest);})).then(function(perEngine){
       if(rid!==LOAD_SEQ)return;
       doneLoaded=wantDone;
       // Merge maps/lists across engines in order (GAS first, ju-service
