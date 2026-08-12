@@ -360,5 +360,46 @@ function extractVarObj(name) {
   ok('K11 note textarea caps input at 240 chars', html.includes('maxlength="240"'));
 })();
 
+// ---- K13: the board row mapper must read field names the SERVER actually sends
+// (2026-08-12). The completed-by-month grouping shipped 2026-08-09 reading
+// `lastActivityTs` / `lastActivityAt`, and NO server in legacy-tools-mono has
+// ever emitted either name: the pipeline feed emits `updatedAt` +
+// `lastTouchedAt` (CaymanPipelineBoard.ts:440/446) and the registry fallback
+// emits `updatedAt` (CaymanConsole.ts). Date.parse('') is NaN, so 100% of
+// completed rows rendered under a single "Undated" header and sortRows silently
+// fell through to its ageNum proxy. The bug class is "client consumes a field
+// name no server produces", and it is invisible precisely because the fallback
+// is a plausible empty string rather than an error. Lock both halves.
+(function () {
+  const monthKeyAndLabel_ = new Function(
+    extractVar('MONTH_NAMES_') + ';' + extractFn('monthKeyAndLabel_') + '; return monthKeyAndLabel_;'
+  )();
+
+  ok('K13 a real ISO timestamp buckets to its own calendar month',
+    monthKeyAndLabel_('2026-08-09T16:07:20Z').label === 'August 2026',
+    monthKeyAndLabel_('2026-08-09T16:07:20Z').label);
+  ok('K13 an empty timestamp is the ONLY thing that reads Undated',
+    monthKeyAndLabel_('').label === 'Undated' && monthKeyAndLabel_(undefined).label === 'Undated');
+  // Bucketing is by LOCAL calendar month (d.getMonth()), which for this operator
+  // is Asia/Jerusalem - the same zone the tracker's own month tabs use. So a
+  // UTC-midnight edge legitimately falls in the neighbouring local month; these
+  // assertions deliberately sit mid-month so they assert the grouping, not the
+  // machine's offset.
+  ok('K13 two rows in the same month share a bucket key',
+    monthKeyAndLabel_('2026-08-09T16:07:20Z').key === monthKeyAndLabel_('2026-08-21T06:00:00Z').key);
+  ok('K13 rows in different months do not',
+    monthKeyAndLabel_('2026-08-21T06:00:00Z').key !== monthKeyAndLabel_('2026-09-21T06:00:00Z').key);
+
+  // Source-level half: the mapper must reach at least one name the server sends.
+  // Without this, every assertion above still passes while the board shows
+  // nothing but "Undated" - which is exactly what shipped for three days.
+  const loadSrc = extractFn('load');
+  const mapper = /lastActivityTs:([^,]+),/.exec(loadSrc);
+  ok('K13 the row mapper assigns lastActivityTs at all', !!mapper);
+  ok('K13 the mapper reads a field the server actually emits (updatedAt / lastTouchedAt)',
+    !!mapper && /it\.(updatedAt|lastTouchedAt)/.test(mapper[1]),
+    mapper && mapper[1]);
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

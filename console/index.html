@@ -3720,7 +3720,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-10-2';
+  window.__BUILD_TAG = 'console-2026-08-12-1';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4692,6 +4692,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // pure recency sort used to bury them again - 2026-07-15 wiring item 3), then
   // by last-activity recency, newest first. lastActivityTs (ISO) if present,
   // else ascending ageDays as a proxy (smaller age = more recent activity).
+  //
+  // 2026-08-12: lastActivityTs was ALWAYS empty. No server in the monorepo has
+  // ever emitted `lastActivityTs` or `lastActivityAt` - the board feeds emit
+  // `updatedAt` (CaymanPipelineBoard.ts:440, and the registry fallback in
+  // CaymanConsole.ts), with the pipeline feed also emitting `lastTouchedAt`.
+  // So this sort silently fell through to the ageDays proxy every time, and the
+  // completed-by-month grouping below bucketed 100% of rows as "Undated"
+  // (Date.parse('') is NaN). The mapper now reads the names the server actually
+  // sends. Keep the two legacy names first in the chain so a future server that
+  // does emit them still wins.
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
       var an=(isAttnStage(a.stage)||(isCompletedStage(a.stage)&&a.stale))?1:0, bn=(isAttnStage(b.stage)||(isCompletedStage(b.stage)&&b.stale))?1:0;
@@ -5211,7 +5221,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var src=(d&&d.processes)||(d&&d.items)||[];
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
       var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];var x=extras[pid]||{};
-        return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
+        return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||it.updatedAt||it.lastTouchedAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
         signerIndex:(x.signerIndex!=null?x.signerIndex:it.signerIndex),signerCount:(x.signerCount!=null?x.signerCount:it.signerCount),
         waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
