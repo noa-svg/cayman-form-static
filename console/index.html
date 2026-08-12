@@ -3464,6 +3464,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button id="wlReviewBtn" class="btn">Review</button>
             <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
+            <button id="wlVerifyBtn" class="btn">Verification copy</button>
             <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also create a Gmail draft (to Noa, review only)</label>
           </div>
           <div id="wlFindings" style="margin-top:12px"></div>
@@ -3720,7 +3721,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-12-1';
+  window.__BUILD_TAG = 'console-2026-08-12-2-verifycopy';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7170,6 +7171,33 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         setResult(h,'');
       }).catch(function(err){
         genBtn.disabled=false;reviewBtn.disabled=false;
+        setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
+      });
+    };
+    // Verification copy (2026-08-12). Produces the real document for this month
+    // and currency WITHOUT stamping settlement, so the retirement diff against
+    // the old transfer-forms path can be run as often as it needs to without
+    // moving EXECUTION_STATUS / SETTLED_AT on live money rows (those feed Rough
+    // Yield, the tracker badge, the Home Transfers card and Monday archival).
+    // Deliberately NOT gated on Review: the server runs the HY-close preflight on
+    // this path anyway, and this button never settles and never drafts.
+    var verifyBtn=document.getElementById('wlVerifyBtn');
+    if(verifyBtn)verifyBtn.onclick=function(){
+      var month=(monthEl.value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>','');return;}
+      verifyBtn.disabled=true;
+      setResult('<div style="color:var(--color-ink-muted)">Generating verification copy (nothing will be settled)...</div>','');
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&verifyOnly=true').then(function(r){
+        verifyBtn.disabled=false;
+        if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
+        var h='<div style="color:var(--color-green)">Verification copy generated. No row was settled.</div>'
+          +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>'
+          +'<div style="margin-top:6px;color:var(--color-ink-muted)">Give this doc id to the diff against the old path.</div>';
+        if(r.missingBankDetailsMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.missingBankDetailsMessage)+'</div>';
+        if(r.overflowMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.overflowMessage)+'</div>';
+        setResult(h,'');
+      }).catch(function(err){
+        verifyBtn.disabled=false;
         setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
     };
