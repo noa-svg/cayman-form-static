@@ -38,7 +38,9 @@ function extractFn(name) {
   throw new Error('unbalanced braces for ' + name);
 }
 function extractVar(name) {
-  const m = html.match(new RegExp('var ' + name + '=[^\\n]*;'));
+  // \s* before '=' tolerates both spacing conventions this file mixes (e.g.
+  // 'var GW = ...' vs 'var RCOPY_ICON=...').
+  const m = html.match(new RegExp('var ' + name + '\\s*=[^\\n]*;'));
   if (!m) throw new Error('var not found: ' + name);
   return m[0];
 }
@@ -154,9 +156,14 @@ function extractVarObj(name) {
 // ---- K6: source-level wiring assertions ---------------------------------------
 (function () {
   const loadSrc = extractFn('load');
-  ok('K6 board fetch keys includeDone off the toggles', loadSrc.includes("includeDone='+(wantDone?'1':'0')"));
-  ok('K6 board fetch always sends the lane', loadSrc.includes("'?api=list&lane='+state.lane"));
-  ok('K6 no unconditional includeDone=1 fetch left', !loadSrc.includes('includeDone=1'));
+  const engineFetchSrc = extractFn('fetchEngineBoard_');
+  // 2026-08-12 BOARD READ + ACTION SEAM: load() delegates the actual per-
+  // engine fetch to fetchEngineBoard_, so the includeDone/lane wiring now
+  // lives there, not in load() itself.
+  ok('K6 board fetch keys includeDone off the toggles', engineFetchSrc.includes("includeDone='+(wantDone?'1':'0')"));
+  ok('K6 board fetch always sends the lane', engineFetchSrc.includes("'?api=list&lane='+lane"));
+  ok('K6 no unconditional includeDone=1 fetch left', !engineFetchSrc.includes('includeDone=1'));
+  ok('K6 load() asks enginesForLane_ for the Israeli lane\'s engine set, not a single hardcoded gateway', loadSrc.includes('enginesForLane_(state.lane)'));
   const drawerSrc = extractFn('renderDrawer');
   ok('K6 drawer renders d.people pre-submit (P1 #6)', drawerSrc.includes('d.people&&d.people.length'));
   ok('K6 drawer renders the current-signer block', drawerSrc.includes('currentSignerHtml(d.currentSigner,d.reminders)'));
@@ -280,7 +287,7 @@ function extractVarObj(name) {
     + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
-    + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';'
+    + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
     + extractFn('rowHtml') + '; return rowHtml;';
   const rowHtml = new Function(src)();
 
@@ -338,9 +345,15 @@ function extractVarObj(name) {
   // relying on ?api=list to carry PII (see the CaymanGateway.ts opNotes route
   // comment for why - this is the client-side half of that same invariant).
   const loadSrc = extractFn('load');
-  ok('K11 load() fetches the separate PII-gated opNotes route', loadSrc.includes("apiFetch('?api=opNotes')"));
-  ok('K11 opNotes fetch is soft-failed (never blocks the board)', /notesFetch=apiFetch\('\?api=opNotes'\)\.catch/.test(loadSrc));
-  ok('K11 list and opNotes are fetched together via Promise.all', loadSrc.includes('Promise.all('));
+  const engineFetchSrc = extractFn('fetchEngineBoard_');
+  // 2026-08-12 BOARD READ + ACTION SEAM: the per-engine list/opNotes/
+  // opBoardDetail fetch (and its own inner Promise.all) now lives in
+  // fetchEngineBoard_, one call per engine; load() itself Promise.all's
+  // across engines instead.
+  ok('K11 load() fetches the separate PII-gated opNotes route', engineFetchSrc.includes("apiFetch('?api=opNotes'"));
+  ok('K11 opNotes fetch is soft-failed (never blocks the board)', /notesFetch=apiFetch\('\?api=opNotes'.*?\)\.catch/.test(engineFetchSrc));
+  ok('K11 list and opNotes are fetched together via Promise.all', engineFetchSrc.includes('Promise.all('));
+  ok('K11 load() itself Promise.all\'s across every engine for the lane', loadSrc.includes('Promise.all(engines.map('));
   ok('K11 row mapping pulls note text from the merged notes map, keyed by pid', loadSrc.includes('note:(n&&n.text)||\'\''));
 
   // Save/Clear ride the same ?source=op tunnel every other admin action uses

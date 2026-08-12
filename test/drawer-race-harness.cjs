@@ -31,9 +31,9 @@ function lastFetch() { return pending[pending.length - 1]; }
 const rendered = [];
 function renderDrawer(d) { rendered.push(d); }
 
-const openDrawer = (new Function('drawer', 'dscrim', 'document', 'allRows', 'esc2', 'stageMilestone', 'apiFetch', 'state', 'renderDrawer',
-  'var currentPid=null, drawerOpener=null;' + src + '; return openDrawer;'
-))(drawer, dscrim, dom, allRows, esc2, stageMilestone, apiFetch, state, renderDrawer);
+const openDrawer = (new Function('drawer', 'dscrim', 'document', 'allRows', 'esc2', 'stageMilestone', 'apiFetch', 'state', 'renderDrawer', 'GW',
+  'var currentPid=null, currentEngine=GW, drawerOpener=null;' + src + '; return openDrawer;'
+))(drawer, dscrim, dom, allRows, esc2, stageMilestone, apiFetch, state, renderDrawer, 'https://gas.example/exec');
 
 const flush = () => new Promise((res) => { let n = 0; (function f() { if (++n > 8) return res(); Promise.resolve().then(f); })(); });
 

@@ -3847,6 +3847,29 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     return (MONEY_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
   }
+
+  // ---- BOARD READ + ACTION SEAM (2026-08-12) --------------------------------
+  // THE GAP THIS CLOSES: the two seams above only move where a NEW process is
+  // BORN. Every process born on ju-service since the 2026-08-08 flip is
+  // invisible everywhere else in this file - the board never asked ju-service
+  // for its list, so those LPs never appeared, and "0 need a look" on the
+  // Israel board was never true, it was blind. Live-confirmed 2026-08-12:
+  // ju-service's own ?api=consoleSummary read 30 active / 8 needs_attention
+  // while the console board showed 4 rows / 0 attention.
+  //
+  // ju-service's console-read/action routes are already ported and tested
+  // (PORT-MAP.md: ?api=list, ?api=opNotes, ?api=opBoardDetail, ?api=opprocess,
+  // admin=nudge/resendInvite/void/mintLink all marked gap "none"), and it
+  // answers the SAME ?source=op tunnel envelope GAS does - so this is a
+  // read/write ROUTING fix, not new protocol or server work.
+  //
+  // Cayman lane stays GAS-only: it has not been flipped to ju-service, so
+  // querying it there would add a slow, pointless empty-result round trip.
+  var ENGINES_FOR_LANE_ = { cayman: [GW], israel: [GW, JU_API] };
+  function enginesForLane_(lane) {
+    var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
+    return isIsrael ? ENGINES_FOR_LANE_.israel : ENGINES_FOR_LANE_.cayman;
+  }
   var GSI_CLIENT_ID = '717035109771-18bc6sb4651ofk6ep82q1ka4vjum326v.apps.googleusercontent.com';
   var TOKEN_KEY='lvp_op_token_v1';
   var ID_TOKEN=localStorage.getItem(TOKEN_KEY)||'';
@@ -4837,7 +4860,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var amt=fmtAmount(r.amountNum,r.ccy);
     var wordCls=attn?' warn':((dead||isCompletedStage(st))?' muted':'');
     var statSecond=attn?attnBadgeHtml(r):waitLineHtml(r);
-    return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" tabindex="0" role="button">'
+    return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
       +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
@@ -4845,8 +4868,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
       +'<span class="ract">'
-      +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
-      +'<button type="button" class="rnote'+(r.note?' has-note':'')+'" data-pid="'+(r.pid||'')+'" data-note="'+esc2(r.note||'')+'" title="'+(r.note?esc2(r.note):'Add a note')+'" aria-label="Operator note">'+RNOTE_ICON+(r.note?'<span class="rnote-dot"></span>':'')+'</button>'
+      +'<button type="button" class="rcopy" data-pid="'+(r.pid||'')+'" data-lane="'+esc2(r.lane||'')+'" data-base="'+esc2(r._engine||GW)+'" title="Copy onboarding link" aria-label="Copy onboarding link">'+RCOPY_ICON+'</button>'
+      +'<button type="button" class="rnote'+(r.note?' has-note':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" data-note="'+esc2(r.note||'')+'" title="'+(r.note?esc2(r.note):'Add a note')+'" aria-label="Operator note">'+RNOTE_ICON+(r.note?'<span class="rnote-dot"></span>':'')+'</button>'
       +'</span></div>';
   }
   // Small inline popover anchored under the clicked .rnote button - lowest
@@ -4858,6 +4881,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     closeAnyNotePopover();
     if(wasOpenForThisBtn) return;
     var pid=btn.getAttribute('data-pid'); if(!pid) return;
+    var rowBase=btn.getAttribute('data-base')||GW;
     var pop=document.createElement('div'); pop.className='rnote-pop';
     pop.innerHTML='<textarea maxlength="240" placeholder="Private note (not visible to LPs)">'+esc2(btn.getAttribute('data-note')||'')+'</textarea>'
       +'<div class="rnote-pop-actions"><span class="rnote-count"></span><button type="button" class="rnote-clear">Clear</button><button type="button" class="rnote-save">Save</button></div>';
@@ -4869,7 +4893,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     ta.oninput=updCount; updCount(); ta.focus();
     pop.querySelector('.rnote-save').onclick=function(e){
       e.stopPropagation();
-      apiFetch('?admin=saveNote&processId='+encodeURIComponent(pid)+'&text='+encodeURIComponent(ta.value)).then(function(r){
+      apiFetch('?admin=saveNote&processId='+encodeURIComponent(pid)+'&text='+encodeURIComponent(ta.value),false,rowBase).then(function(r){
         var text=(r&&r.text)||'';
         btn.setAttribute('data-note',text);
         btn.title=text||'Add a note';
@@ -4882,7 +4906,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     };
     pop.querySelector('.rnote-clear').onclick=function(e){
       e.stopPropagation();
-      apiFetch('?admin=clearNote&processId='+encodeURIComponent(pid)).then(function(){
+      apiFetch('?admin=clearNote&processId='+encodeURIComponent(pid),false,rowBase).then(function(){
         btn.setAttribute('data-note',''); btn.title='Add a note'; btn.classList.remove('has-note');
         var dot=btn.querySelector('.rnote-dot'); if(dot)dot.remove();
         pop.remove();
@@ -4897,9 +4921,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function copyRowLink(btn){
     var pid=btn.getAttribute('data-pid'); if(!pid) return;
     var lane=btn.getAttribute('data-lane')||state.lane;
+    var rowBase=btn.getAttribute('data-base')||GW;
     if(btn.disabled) return;
     btn.disabled=true;
-    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+encodeURIComponent(lane)).then(function(d){
+    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+encodeURIComponent(lane),false,rowBase).then(function(d){
       btn.disabled=false;
       var link=d&&d.onboardingLink;
       if(!link){
@@ -5192,42 +5217,57 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var one='<div class="skel-row"><span class="skel-bar sk-name"></span><span class="skel-bar sk-rail"></span><span class="skel-bar sk-age"></span></div>';
     return one+one+one;
   }
+  // Fetch one engine's board triple (list + opNotes + opBoardDetail). NEVER
+  // rejects - a ju-service outage must degrade the merged board to GAS-only
+  // rows, not blank it (same fail-open idiom the individual fetches below
+  // already used before this engine loop existed).
+  function fetchEngineBoard_(base, lane, wantDone){
+    var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){return {notes:{}};});
+    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){return {rows:{}};});
+    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0'),false,base).catch(function(){return {processes:[]};});
+    return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
+      return {base:base,list:r[0],notes:r[1],extras:r[2]};
+    });
+  }
   function load(silent){
     var rid=++LOAD_SEQ;
     if(!silent) document.getElementById("list").innerHTML=boardSkeleton();
     // includeDone=0 by default (wiring item 5): terminal rows are fetched only
     // once a Show completed / Show canceled toggle asks for them.
     var wantDone=(showDone||showCanceled);
-    // opNotes is a SEPARATE, Tier-1-PII-gated fetch (never joined server-side
-    // into ?api=list, which is deliberately servable with no auth - see
-    // CaymanGateway.ts's opNotes route comment). Soft-fail: an unauthenticated
-    // or errored notes fetch must never block the board itself from rendering,
-    // rows just show no notes that load.
-    var notesFetch=apiFetch('?api=opNotes').catch(function(){return {notes:{}};});
-    // Board-row PII enrichment (current-signer names, Hebrew names, attention
-    // reasons): a SEPARATE Tier-1 fetch merged client-side, exactly like
-    // opNotes and for the same reason (?api=list stays redacted). Soft-fail:
-    // without it the board still renders, just with the role-word fallbacks.
-    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+state.lane).catch(function(){return {rows:{}};});
-    Promise.all([
-      apiFetch('?api=list&lane='+state.lane+'&includeDone='+(wantDone?'1':'0')),
-      notesFetch,
-      extrasFetch
-    ]).then(function(results){
-      var d=results[0], notesResp=results[1], extrasResp=results[2];
+    // BOARD READ + ACTION SEAM (2026-08-12): one engine for Cayman, two
+    // (GAS + ju-service) for Israel - a process born since 2026-08-08 lives
+    // ONLY in ju-service's registry and is invisible if this only asks GAS.
+    var engines=enginesForLane_(state.lane);
+    Promise.all(engines.map(function(base){return fetchEngineBoard_(base,state.lane,wantDone);})).then(function(perEngine){
       if(rid!==LOAD_SEQ)return;
       doneLoaded=wantDone;
-      var extras=(extrasResp&&extrasResp.rows)||{};
-      var notes=(notesResp&&notesResp.notes)||{};
-      var src=(d&&d.processes)||(d&&d.items)||[];
+      // Merge maps/lists across engines in order (GAS first, ju-service
+      // second) - pids are random UUIDs with no cross-engine collision path
+      // today, but a real-money board gets the cheap defensive dedupe anyway.
+      var extras={}, notes={}, src=[], seenPid={}, latestGeneratedAt='';
+      perEngine.forEach(function(eng){
+        var d=eng.list;
+        Object.assign(extras,(eng.extras&&eng.extras.rows)||{});
+        Object.assign(notes,(eng.notes&&eng.notes.notes)||{});
+        var items=(d&&d.processes)||(d&&d.items)||[];
+        items.forEach(function(it){
+          var pid=it.processId||it.id||'';
+          if(pid&&seenPid[pid]){console.warn('board: pid seen on more than one engine, keeping first',pid);return;}
+          if(pid)seenPid[pid]=true;
+          it._engine=eng.base;
+          src.push(it);
+        });
+        if(d&&d.generatedAt&&d.generatedAt>latestGeneratedAt)latestGeneratedAt=d.generatedAt;
+      });
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
       var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];var x=extras[pid]||{};
-        return {pid:pid,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||it.updatedAt||it.lastTouchedAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
+        return {pid:pid,_engine:it._engine,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||it.updatedAt||it.lastTouchedAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
         signerIndex:(x.signerIndex!=null?x.signerIndex:it.signerIndex),signerCount:(x.signerCount!=null?x.signerCount:it.signerCount),
         waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       render(rows);
-      if(d&&d.generatedAt){var t=d.generatedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
+      if(latestGeneratedAt){var t=latestGeneratedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
       // C5 (2026-07-19): the board error state gets an in-place Retry and the real
       // cause in small print, instead of a dead-end "refresh or check auth" guess.
@@ -5476,6 +5516,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     syncLabel();
   })();
   var currentPid=null;
+  // Which engine the currently-open drawer's process was born on - set in
+  // openDrawer from the in-memory row's _engine (BOARD READ + ACTION SEAM,
+  // 2026-08-12). Every drawer-scoped admin/read call below threads this as
+  // apiFetch's base so an action on a ju-service-born process reaches
+  // ju-service, not GAS.
+  var currentEngine=GW;
   // CTO review finding (2026-08-02): esc2 is used to build double-quoted HTML
   // attributes (value=/data-note=/data-c=/href= etc) as well as text content,
   // but only escaped &/</> - a " in a name/email typed by an LP or
@@ -6167,7 +6213,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(act==='nudge'||act==='resendInvite'){
           b.disabled=true;dStatus('Sending the reminder...','');
           var remRoute=(act==='resendInvite')?'?admin=resendInvite&processId=':'?admin=nudge&processId=';
-          apiFetch(remRoute+encodeURIComponent(currentPid)).then(function(r){
+          apiFetch(remRoute+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
             if(r&&r.ok){
               dStatus((act==='resendInvite')?'Invite reminder sent.':('Reminder sent'+(curSignerName?(' to '+curSignerName):'')+'.'),'ok');
               // Ive E1: the history line is the material record of the send.
@@ -6232,7 +6278,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       goEl.disabled=true;cancelEl.disabled=true;
       dStatus(c.working,'');
       if(act==='markMoneyReceived'){
-        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid)).then(function(r){
+        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
@@ -6245,7 +6291,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         });
         return;
       }
-      apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid)).then(function(r){
+      apiFetch('?admin='+act+'&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
         if(r&&r.ok){
           // F1: void closes the drawer; live-looking actions on a dead process are a misfire hazard.
           if(act==='void'){dHideConfirm();dclose();load();}
@@ -6291,6 +6337,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // panel opens showing WHO and WHERE immediately instead of a bare Loading.
     var known=null;
     for(var ki=0;ki<allRows.length;ki++){if(allRows[ki].pid===pid){known=allRows[ki];break;}}
+    currentEngine=(known&&known._engine)||GW;
     var skel='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
     if(known){
       skel='<div class="dh"><h2>'+esc2(known.name||'LP')+'</h2>'
@@ -6299,7 +6346,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'<div class="dsec" style="color:var(--color-ink-muted)">Loading details...</div>';
     }
     document.getElementById("dbody").innerHTML=skel;
-    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane).then(function(d){
+    apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane,false,currentEngine).then(function(d){
       // Stale-response guard (2026-07-30): opening drawer B while A's fetch is
       // still in flight moves currentPid to B. A's late response must not
       // paint over the drawer the operator has since opened. Same idiom as
