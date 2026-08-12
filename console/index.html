@@ -7237,9 +7237,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&verifyOnly=true').then(function(r){
         verifyBtn.disabled=false;
         if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
+        // The server returns ok:true with NO document when the HY-close gate says
+        // no-go (go:false is the discriminator, not ok:false - see
+        // CaymanWireLetter.ts). Checking only r.ok reported a false success with an
+        // empty link, which is exactly what happened on the first live run.
+        if(r.go===false){
+          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
+          setResult('<div style="color:var(--color-danger)">No verification copy: the HY-close gate blocked this batch'+(r.verdict?' ('+esc2(r.verdict)+')':'')+'. Findings above.</div>','');
+          return;
+        }
+        if(!r.docUrl){setResult('<div style="color:var(--color-danger)">Server reported success but returned no document. Nothing was generated.</div>','');return;}
         var h='<div style="color:var(--color-green)">Verification copy generated. No row was settled.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>'
-          +'<div style="margin-top:6px;color:var(--color-ink-muted)">Give this doc id to the diff against the old path.</div>';
+          +'<div style="margin-top:6px;color:var(--color-ink-muted)">Doc id: '+esc2(r.docId||'')+'</div>';
         if(r.missingBankDetailsMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.missingBankDetailsMessage)+'</div>';
         if(r.overflowMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.overflowMessage)+'</div>';
         setResult(h,'');
