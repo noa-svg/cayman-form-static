@@ -3518,6 +3518,37 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           </div>
           <div id="mrResult" style="margin-top:12px"></div>
         </div>
+
+        <div class="set-card" style="max-width:900px;margin-top:20px">
+          <h3 class="set-h">Fill a placeholder amount</h3>
+          <p class="set-p">Writes a real figure into a row that still carries the NAV-pending placeholder. It can only ever fill a placeholder cell, so it can never overwrite an amount already on the sheet. Identify the row by its RID; derived split rows (capital-gains tax, fees) have no RID, so use the month, row number and exact name instead.</p>
+          <div class="mr-section-lbl">Which row</div>
+          <div class="mr-field">
+            <label>Master RID</label>
+            <input id="sraRid" type="text" placeholder="manual__…">
+          </div>
+          <div class="mr-field" style="margin-top:12px">
+            <label>Or, for a row with no RID: month, row number and exact name</label>
+            <div style="display:grid;grid-template-columns:120px 100px;gap:12px;margin-top:6px">
+              <input id="sraTab" type="text" placeholder="MM/YYYY">
+              <input id="sraRow" type="text" placeholder="row #">
+            </div>
+            <!-- Full width, on its own line: this field has to be compared
+                 character by character against the sheet before money is
+                 written, so it must never clip. In a third grid column it cut
+                 a real entity name mid-glyph at 768px. -->
+            <input id="sraName" type="text" placeholder="exact name on the sheet" style="margin-top:12px">
+          </div>
+          <div class="mr-section-lbl">Transaction</div>
+          <div class="mr-field">
+            <label>Amount</label>
+            <input id="sraAmount" type="text" placeholder="647901.50">
+          </div>
+          <div style="margin-top:14px">
+            <button id="sraSetBtn" class="btn">Fill amount</button>
+          </div>
+          <div id="sraResult" style="margin-top:12px"></div>
+        </div>
       </div>
     </div>
     <div class="view" id="v-settings" hidden>
@@ -3722,7 +3753,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-13-1-show-test-rows';
+  window.__BUILD_TAG = 'console-2026-08-15-1-set-row-amount';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4171,7 +4202,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // every such response to the caller's .catch, which renders an honest
       // error state. A response with NO ok field (bare data) is untouched
       // (undefined !== false), so success shapes still pass. (2026-07-17 review.)
-      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||'unknown'; throw e; }
+      // 2026-08-15: fall back to `reason` before giving up on 'unknown'. A
+      // refusal that carries only {ok:false, reason:"..."} - the shape a
+      // decision-core route returns when it deliberately declines, e.g.
+      // opSetRowAmount's placeholder guard - was rendering the bare word
+      // "unknown" and throwing away the sentence explaining WHY the write was
+      // refused. Every caller renders e.serverError, so this fixes them all.
+      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||d.reason||'unknown'; throw e; }
       return d;
     });
   }
@@ -7306,6 +7343,43 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         document.getElementById('mrNotes').value='';
       }).catch(function(err){
         addBtn.disabled=false;
+        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+      });
+    };
+  })();
+  (function(){
+    // Fill one placeholder AMOUNT cell. The server refuses anything that is not
+    // a placeholder, so the worst a wrong RID here can do is a refusal - but
+    // exactly one locator must be sent, or the server refuses that too.
+    var setBtn=document.getElementById('sraSetBtn'),resEl=document.getElementById('sraResult');
+    if(!setBtn)return;
+    setBtn.onclick=function(){
+      var rid=(document.getElementById('sraRid').value||'').trim();
+      var tab=(document.getElementById('sraTab').value||'').trim();
+      var row=(document.getElementById('sraRow').value||'').trim();
+      var name=(document.getElementById('sraName').value||'').trim();
+      var amount=(document.getElementById('sraAmount').value||'').trim();
+      var byRid=!!rid, byRowMatch=!!(tab&&row&&name);
+      if(byRid&&byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give either a RID or the month/row/name, not both.</div>';return;}
+      if(!byRid&&!byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give a RID, or all three of month, row number and exact name.</div>';return;}
+      if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div style="color:var(--color-danger)">Month must be MM/YYYY.</div>';return;}
+      if(!amount){resEl.innerHTML='<div style="color:var(--color-danger)">Amount is required.</div>';return;}
+      setBtn.disabled=true;
+      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
+      var qs='?api=opSetRowAmount&amount='+encodeURIComponent(amount);
+      if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
+      else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
+      apiFetch(qs).then(function(r){
+        setBtn.disabled=false;
+        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the amount.')+'</div>';return;}
+        resEl.innerHTML='<div style="color:var(--color-green)">Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').</div>';
+        document.getElementById('sraRid').value='';
+        document.getElementById('sraTab').value='';
+        document.getElementById('sraRow').value='';
+        document.getElementById('sraName').value='';
+        document.getElementById('sraAmount').value='';
+      }).catch(function(err){
+        setBtn.disabled=false;
         resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
