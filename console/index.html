@@ -2966,11 +2966,22 @@ body.side-coll .ss-lbl { display: none; }
    information than Amount/Bank details/Notes (optional, transaction-level).
    Optional fields get a dashed border (Ive E1: material, not a text label
    suffix, carries "not required"). */
-.mr-section-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);margin:18px 0 8px}
+.mr-section-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);margin:14px 0 8px}
 .mr-section-lbl:first-child{margin-top:0}
 .mr-field label{display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px}
 .mr-field input,.mr-field select{width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none}
 .mr-field.mr-optional input{border-style:dashed;border-color:var(--color-border)}
+/* Ive pass 2026-08-15 (Noa: "I dont love how big each block on the TF page
+   is"). Scoped to .tf-card only - Settings' own .set-card cards are
+   untouched. Family 1 (Subtract): trims the padding and header-to-body
+   gaps that made three stacked cards read as heavy panels. Family 3
+   (Systematize): drops the redundant border+shadow (Ive Y4 - one edge
+   definition, not both) and the card-to-card gap moves off a 20px magic
+   number onto the --space-4 token. Pure spacing/chrome; no field, label,
+   button, or safety-rail copy changed on any of the three cards. */
+.tf-card{padding:var(--space-5);box-shadow:none}
+.tf-card .set-h{margin-bottom:var(--space-1)}
+.tf-card .set-p{margin-bottom:var(--space-3)}
 /* Board-search LP directory results (2026-08-02, redesigned as a floating
    popover after Noa: "why would a user think the search is a shortcut to
    a new process"). Increase/Withdrawal reachable straight from the board's
@@ -3441,7 +3452,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="view" id="v-wireletter" hidden>
       <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
       <div class="content">
-        <div class="set-card" style="max-width:900px">
+        <div class="set-card tf-card" style="max-width:900px">
           <h3 class="set-h">Generate</h3>
           <p class="set-p">Month/year of the tracker tab and currency.</p>
           <div style="display:flex;gap:12px;margin-top:8px">
@@ -3472,7 +3483,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div id="wlResult" style="margin-top:12px"></div>
         </div>
 
-        <div class="set-card" style="max-width:900px;margin-top:20px">
+        <div class="set-card tf-card" style="max-width:900px;margin-top:var(--space-4)">
           <h3 class="set-h">Add a manual row</h3>
           <p class="set-p">For money events that never went through Ju's own flow (an estate redemption, a foreign-entity case). Amount defaults to the fund's real NAV-pending placeholder, never a guess - fill it in once a real figure exists.</p>
           <div class="mr-section-lbl">Who</div>
@@ -3519,7 +3530,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div id="mrResult" style="margin-top:12px"></div>
         </div>
 
-        <div class="set-card" style="max-width:900px;margin-top:20px">
+        <div class="set-card tf-card" style="max-width:900px;margin-top:var(--space-4)">
           <h3 class="set-h">Fill a placeholder amount</h3>
           <p class="set-p">Writes a real figure into a row that still carries the NAV-pending placeholder. It can only ever fill a placeholder cell, so it can never overwrite an amount already on the sheet. Identify the row by its RID; derived split rows (capital-gains tax, fees) have no RID, so use the month, row number and exact name instead.</p>
           <div class="mr-section-lbl">Which row</div>
@@ -3753,7 +3764,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-15-1-set-row-amount';
+  window.__BUILD_TAG = 'console-2026-08-15-2-tf-tighten';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
