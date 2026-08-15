@@ -3555,10 +3555,41 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <label>Amount</label>
             <input id="sraAmount" type="text" placeholder="647901.50">
           </div>
+          <div class="mr-field mr-optional" style="margin-top:12px">
+            <label>Correcting a figure already on the sheet? Type what it says now</label>
+            <input id="sraExpect" type="text" placeholder="leave empty unless replacing a real value">
+          </div>
           <div style="margin-top:14px">
             <button id="sraSetBtn" class="btn">Fill amount</button>
           </div>
           <div id="sraResult" style="margin-top:12px"></div>
+        </div>
+
+        <div class="set-card" style="max-width:900px;margin-top:20px">
+          <h3 class="set-h">Fill bank details</h3>
+          <p class="set-p">A row with no account is left out of the wire section entirely, and the document still generates clean, so this is how a redemption goes missing from a transfer form. Fills an empty bank-details cell only. It will never repoint an account already on the sheet.</p>
+          <div class="mr-section-lbl">Which row</div>
+          <div class="mr-field">
+            <label>Master RID</label>
+            <input id="sbdRid" type="text" placeholder="manual__…">
+          </div>
+          <div class="mr-field" style="margin-top:12px">
+            <label>Or, for a row with no RID: month, row number and exact name</label>
+            <div style="display:grid;grid-template-columns:120px 100px;gap:12px;margin-top:6px">
+              <input id="sbdTab" type="text" placeholder="MM/YYYY">
+              <input id="sbdRow" type="text" placeholder="row #">
+            </div>
+            <input id="sbdName" type="text" placeholder="exact name on the sheet" style="margin-top:12px">
+          </div>
+          <div class="mr-section-lbl">Account</div>
+          <div class="mr-field">
+            <label>Bank details</label>
+            <input id="sbdBank" type="text" placeholder="בנק הפועלים בע&quot;מ, סניף 630, חשבון 669295">
+          </div>
+          <div style="margin-top:14px">
+            <button id="sbdSetBtn" class="btn">Fill bank details</button>
+          </div>
+          <div id="sbdResult" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
@@ -3764,7 +3795,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-15-2-tf-tighten';
+  window.__BUILD_TAG = 'console-2026-08-15-3-bank-details';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7377,7 +7408,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(!amount){resEl.innerHTML='<div style="color:var(--color-danger)">Amount is required.</div>';return;}
       setBtn.disabled=true;
       resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
+      var expect=(document.getElementById('sraExpect').value||'').trim();
       var qs='?api=opSetRowAmount&amount='+encodeURIComponent(amount);
+      if(expect)qs+='&expectCurrent='+encodeURIComponent(expect);
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
       apiFetch(qs).then(function(r){
@@ -7389,6 +7422,44 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         document.getElementById('sraRow').value='';
         document.getElementById('sraName').value='';
         document.getElementById('sraAmount').value='';
+        document.getElementById('sraExpect').value='';
+      }).catch(function(err){
+        setBtn.disabled=false;
+        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+      });
+    };
+  })();
+  (function(){
+    // Fill an EMPTY bank-details cell. The server is fill-blank-only, so the
+    // worst a wrong RID can do here is a refusal - it cannot repoint an
+    // account that is already on the sheet.
+    var setBtn=document.getElementById('sbdSetBtn'),resEl=document.getElementById('sbdResult');
+    if(!setBtn)return;
+    setBtn.onclick=function(){
+      var rid=(document.getElementById('sbdRid').value||'').trim();
+      var tab=(document.getElementById('sbdTab').value||'').trim();
+      var row=(document.getElementById('sbdRow').value||'').trim();
+      var name=(document.getElementById('sbdName').value||'').trim();
+      var bank=(document.getElementById('sbdBank').value||'').trim();
+      var byRid=!!rid, byRowMatch=!!(tab&&row&&name);
+      if(byRid&&byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give either a RID or the month/row/name, not both.</div>';return;}
+      if(!byRid&&!byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give a RID, or all three of month, row number and exact name.</div>';return;}
+      if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div style="color:var(--color-danger)">Month must be MM/YYYY.</div>';return;}
+      if(!bank){resEl.innerHTML='<div style="color:var(--color-danger)">Bank details are required.</div>';return;}
+      setBtn.disabled=true;
+      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
+      var qs='?api=opSetRowBankDetails&bankDetails='+encodeURIComponent(bank);
+      if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
+      else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
+      apiFetch(qs).then(function(r){
+        setBtn.disabled=false;
+        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the bank details.')+'</div>';return;}
+        resEl.innerHTML='<div style="color:var(--color-green)">Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.</div>';
+        document.getElementById('sbdRid').value='';
+        document.getElementById('sbdTab').value='';
+        document.getElementById('sbdRow').value='';
+        document.getElementById('sbdName').value='';
+        document.getElementById('sbdBank').value='';
       }).catch(function(err){
         setBtn.disabled=false;
         resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
