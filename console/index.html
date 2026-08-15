@@ -3454,13 +3454,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="content">
         <div class="set-card tf-card" style="max-width:900px">
           <h3 class="set-h">Generate</h3>
-          <p class="set-p">Month/year of the tracker tab and currency.</p>
+          <p class="set-p">Month/year of the tracker tab and currency. The NAV month is the month the figures were STRUCK, which is not the month the rows are wired in: an August batch struck at the end of July verifies against the July NAV. Leave it empty and the gate looks for a NAV named after the tracker tab, which for a current month does not exist yet.</p>
           <div style="display:flex;gap:12px;margin-top:8px">
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
               <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
                 <option value="">Loading...</option>
               </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">NAV month (struck)</label>
+              <input id="wlNavMonth" type="text" placeholder="YYYY-MM" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
             </div>
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
@@ -3795,7 +3799,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-15-3-bank-details';
+  window.__BUILD_TAG = 'console-2026-08-16-1-nav-month';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7206,6 +7210,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult'),
         awaitEl=document.getElementById('wlAwaiting');
     if(!reviewBtn)return;
+    // The struck-NAV month, appended to every generate/review/verify call.
+    // Empty means "let the server default to the tracker tab's own month",
+    // which is the old behaviour and is wrong for any batch wired in a month
+    // that has not closed yet - there is no NAV named after a month still in
+    // progress, and the gate blocks on "no NAV map" rather than saying so.
+    function wlNavMonthQs(){
+      var el=document.getElementById('wlNavMonth');
+      var v=(el&&el.value||'').trim();
+      if(!v)return '';
+      if(!/^\d{4}-\d{2}$/.test(v))return '';
+      return '&navMonth='+encodeURIComponent(v);
+    }
+    function wlNavMonthInvalid(){
+      var el=document.getElementById('wlNavMonth');
+      var v=(el&&el.value||'').trim();
+      return !!v && !/^\d{4}-\d{2}$/.test(v);
+    }
     var lastGo=false,peekSeq=0,wlLastTransfers=null,awaitSeq=0;
     function peekAwaiting(){
       var month=(monthEl.value||'').trim();
@@ -7282,10 +7303,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('Month must be MM/YYYY.','');return;}
+      if(wlNavMonthInvalid()){setResult('NAV month must be YYYY-MM. Clear it to use the tracker tab month.','');return;}
       reviewBtn.disabled=true;genBtn.disabled=true;lastGo=false;
       findEl.innerHTML='<div style="color:var(--color-ink-muted)">Reviewing...</div>';
       setResult('','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&dryRun=true').then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true').then(function(r){
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
         if(r.go===false){
@@ -7304,9 +7326,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     genBtn.onclick=function(){
       if(!lastGo)return;
       var month=(monthEl.value||'').trim();
+      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
       genBtn.disabled=true;reviewBtn.disabled=true;
       setResult('<div style="color:var(--color-ink-muted)">Generating...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&createDraft='+(draftEl.checked?'true':'false')).then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&createDraft='+(draftEl.checked?'true':'false')).then(function(r){
         genBtn.disabled=false;reviewBtn.disabled=false;
         if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         var h='<div style="color:var(--color-green)">Candidate doc generated (labeled "not for sending" until the parallel diff is verified).</div>'
@@ -7331,9 +7354,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(verifyBtn)verifyBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>','');return;}
+      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
       verifyBtn.disabled=true;
       setResult('<div style="color:var(--color-ink-muted)">Generating verification copy (nothing will be settled)...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+'&verifyOnly=true').then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true').then(function(r){
         verifyBtn.disabled=false;
         if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
         // The server returns ok:true with NO document when the HY-close gate says
