@@ -3454,8 +3454,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="content">
         <div class="set-card tf-card" style="max-width:900px">
           <h3 class="set-h">Generate</h3>
-          <p class="set-p">Month/year of the tracker tab and currency. The NAV month is the month the figures were STRUCK, which is not the month the rows are wired in: an August batch struck at the end of July verifies against the July NAV. Leave it empty and the gate looks for a NAV named after the tracker tab, which for a current month does not exist yet.</p>
+          
           <div style="display:flex;gap:12px;margin-top:8px">
+            <div id="wlNavLine" style="font-size:var(--text-sm);color:var(--color-ink-muted);margin:0 0 12px"></div>
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
               <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
@@ -3463,7 +3464,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
               </select>
             </div>
             <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">NAV month (struck)</label>
+              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Struck NAV <span style="opacity:.7">(override)</span></label>
               <input id="wlNavMonth" type="text" placeholder="YYYY-MM" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
             </div>
             <div>
@@ -3799,7 +3800,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-16-1-nav-month';
+  window.__BUILD_TAG = 'console-2026-08-16-2-struck-nav-derived';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7215,12 +7216,50 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // which is the old behaviour and is wrong for any batch wired in a month
     // that has not closed yet - there is no NAV named after a month still in
     // progress, and the gate blocks on "no NAV map" rather than saying so.
-    function wlNavMonthQs(){
+    // The struck-NAV month is NEVER the tracker tab's own month in normal
+    // operation: a batch wired in August was struck at the end of July. The
+    // field used to start empty, which meant the gate looked for a NAV named
+    // after a month that has not closed and cannot exist, and refused with
+    // "no NAV map" - read by the operator as a missing NAV rather than an
+    // unfilled field. It cost a live batch on 2026-08-16. So the prior month
+    // is DERIVED and shown in words, and the input only exists to override it.
+    function wlPrevMonthOf(tab){
+      var m=/^(\d{2})\/(\d{4})$/.exec(String(tab||'').trim());
+      if(!m)return '';
+      var mo=parseInt(m[1],10),yr=parseInt(m[2],10);
+      mo-=1; if(mo<1){mo=12;yr-=1;}
+      return yr+'-'+(mo<10?'0':'')+mo;
+    }
+    var WL_MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    function wlMonthWords(ym){
+      var m=/^(\d{4})-(\d{2})$/.exec(String(ym||''));
+      if(!m)return ym||'';
+      return WL_MONTH_NAMES_[parseInt(m[2],10)-1]+' '+m[1];
+    }
+    // The value actually sent: an explicit override if the operator typed one,
+    // otherwise the derived prior close. Never empty, so the server-side
+    // fall-back-to-tab-month path is now unreachable from this UI.
+    function wlEffectiveNavMonth(){
       var el=document.getElementById('wlNavMonth');
       var v=(el&&el.value||'').trim();
-      if(!v)return '';
-      if(!/^\d{4}-\d{2}$/.test(v))return '';
-      return '&navMonth='+encodeURIComponent(v);
+      if(v)return /^\d{4}-\d{2}$/.test(v)?v:'';
+      return wlPrevMonthOf(monthEl&&monthEl.value);
+    }
+    function wlRenderNavLine(){
+      var lineEl=document.getElementById('wlNavLine');
+      if(!lineEl)return;
+      var eff=wlEffectiveNavMonth();
+      var el=document.getElementById('wlNavMonth');
+      var overridden=!!(el&&(el.value||'').trim());
+      lineEl.innerHTML=eff
+        ? 'Verified against the <span style="color:var(--color-ink)">'+esc2(wlMonthWords(eff))+'</span> close'
+          +(overridden?' <span style="color:var(--color-ink-muted)">(overridden)</span>':'')
+        : '<span style="color:var(--color-danger)">Pick a month to derive the struck NAV.</span>';
+    }
+    function wlNavMonthQs(){
+      var eff=wlEffectiveNavMonth();
+      if(!eff)return '';
+      return '&navMonth='+encodeURIComponent(eff);
     }
     function wlNavMonthInvalid(){
       var el=document.getElementById('wlNavMonth');
@@ -7294,12 +7333,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
       if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
       monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
-      peekRows();peekAwaiting();
+      wlRenderNavLine();peekRows();peekAwaiting();
     }).catch(function(){
       monthEl.innerHTML='<option value="">Could not load months</option>';
     });
-    monthEl.onchange=function(){peekRows();peekAwaiting();};
+    monthEl.onchange=function(){wlRenderNavLine();peekRows();peekAwaiting();};
     ccyEl.onchange=peekRows;
+    // The override re-states itself as you type, so the month the gate will
+    // actually use is never a guess - the operator reads it back in words
+    // before committing, rather than discovering it in a blocking finding.
+    (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=wlRenderNavLine;})();
+    wlRenderNavLine();
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('Month must be MM/YYYY.','');return;}
