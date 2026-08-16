@@ -3482,7 +3482,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <button id="wlReviewBtn" class="btn">Review</button>
             <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
             <button id="wlVerifyBtn" class="btn">Verification copy</button>
-            <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also create a Gmail draft (to Noa, review only)</label>
+            <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
+            <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
           </div>
           <div id="wlFindings" style="margin-top:12px"></div>
           <div id="wlResult" style="margin-top:12px"></div>
@@ -3800,7 +3801,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-16-2-struck-nav-derived';
+  window.__BUILD_TAG = 'console-2026-08-16-3-draft-recipients';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7343,6 +7344,26 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
     (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=wlRenderNavLine;})();
+    // The recipient list is shown BEFORE generating, not discovered in the
+    // sent folder afterwards. July's letter went out missing two signatories
+    // and needed a chase the next morning; the operator's stated fear on
+    // 2026-08-16 was sending to the wrong list. Mirrors the old transfer-forms
+    // sidebar's `recipient-line`, which showed exactly this and which the
+    // console had dropped. Kept in sync with @lvp/wire-letter's
+    // buildWireLetterDraftPlan_ by tests/console-draft-recipients.cjs.
+    (function(){
+      var box=document.getElementById('wlCreateDraft'),out=document.getElementById('wlDraftTo');
+      if(!box||!out)return;
+      var TO=['AviSe@bdo.co.il','SasiE@bdo.co.il','ramik@mtrust.co.il','NatanY@bdo.co.il','tomer@efraty.com'];
+      var CC=['asafefraty@gmail.com','omri@legacyvpartners.com'];
+      box.onchange=function(){
+        if(!box.checked){out.style.display='none';return;}
+        out.style.display='';
+        out.innerHTML='<span style="color:var(--color-ink)">To</span> '+esc2(TO.join(', '))
+          +'<br><span style="color:var(--color-ink)">Cc</span> '+esc2(CC.join(', '))
+          +'<br>Drafted, never sent.';
+      };
+    })();
     wlRenderNavLine();
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
