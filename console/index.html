@@ -3487,7 +3487,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
               <span style="color:var(--color-ink)">Letter template</span>
               &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
-              &nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
+              &nbsp;<input id="tplWidths" type="text" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
               <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
             </div>
           </div>
@@ -3807,7 +3807,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-17-1-letter-template';
+  window.__BUILD_TAG = 'console-2026-08-17-2-template-widths-field';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7375,9 +7375,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           .catch(function(e){btn.disabled=false;out.innerHTML='<span style="color:var(--color-danger)">'+esc2(String(e))+'</span>';});
       }
       mBtn.onclick=function(){call('',mBtn);};
+      // An inline field, not a prompt(). A native dialog blocks the renderer,
+      // which makes the control unusable to anything driving the page and
+      // makes a human type three numbers blind into a modal. The field shows
+      // the values before they are sent and stays on screen next to the
+      // measurement they are derived from.
       cBtn.onclick=function(){
-        var w=(prompt('Column widths in points, comma separated, index order. Blank entry or 0 leaves a column alone. Cancel to abort.')||'').trim();
-        if(!w)return;
+        var el=document.getElementById('tplWidths');
+        var w=((el&&el.value)||'').trim();
+        if(!/^[0-9.,\s]+$/.test(w)||!w){
+          out.innerHTML='<span style="color:var(--color-danger)">Widths must be numbers in points, comma separated.</span>';
+          return;
+        }
         call('&apply=true&widths='+encodeURIComponent(w),cBtn);
       };
     })();
