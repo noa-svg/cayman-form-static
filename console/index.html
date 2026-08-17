@@ -3817,7 +3817,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-17-3-corrections-tiered';
+  window.__BUILD_TAG = 'console-2026-08-17-4-empty-batch';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7327,6 +7327,26 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Always-on rows peek (Noa, 2026-08-02: "i need to see the rows at all
     // times") - fast, gate-free, runs on load and on every month/currency
     // change, independent of the slower Review click.
+    // A month with nothing left to wire is its own state, not a clean pass.
+    // Every row on a fully-settled tab is already `Paid to client` or `Moved to
+    // trading`, so nothing is eligible, so the HY-close gate finds nothing to
+    // block on and reports GO. Generating there produced a letter with no rows
+    // on it. On 2026-08-16 that reading cost real time on an already-late batch:
+    // the July tab reviewed green while August was the tab with the money.
+    // Saying so, and withholding Generate, is the whole fix.
+    function wlApplyEmptyBatchState(transfers){
+      var empty=!transfers||!transfers.length;
+      if(reviewBtn)reviewBtn.disabled=empty;
+      if(empty){
+        lastGo=false;
+        if(genBtn)genBtn.disabled=true;
+        if(findEl)findEl.innerHTML='';
+        rowsEl.innerHTML='<div style="padding:14px 0;font-size:var(--text-sm);color:var(--color-ink-muted)">'
+          +'<span style="color:var(--color-ink)">Nothing to wire this month.</span><br>'
+          +'Every row on this tab has already been paid or moved to trading. A letter generated here would have no rows on it.'
+          +'</div>';
+      }
+    }
     function peekRows(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
@@ -7337,6 +7357,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!r||!r.ok){wlLastTransfers=null;rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
         renderWlRows();
+        wlApplyEmptyBatchState(r.transfers);
       }).catch(function(err){
         if(rid!==peekSeq)return;
         wlLastTransfers=null;
