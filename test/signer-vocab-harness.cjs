@@ -31,9 +31,13 @@ function eq(actual, expected, label) {
 }
 
 function extractHandler() {
-  const anchor = 'x.onreadystatechange = function () {';
+  // 2026-08-17: the routing body moved out of onreadystatechange into
+  // handleSignerCtx_ when signer.html gained its dual-gateway seam, so that the
+  // primary and the legacy-probe paths land on byte-identical handling. The
+  // vocabulary contract under test is unchanged; only where it lives moved.
+  const anchor = 'function handleSignerCtx_(ctx, rawText) {';
   const start = html.indexOf(anchor);
-  if (start < 0) throw new Error('onreadystatechange anchor not found (boot contract changed)');
+  if (start < 0) throw new Error('handleSignerCtx_ anchor not found (boot contract changed)');
   const bodyOpen = start + anchor.length - 1; // index of the opening '{'
   let i = bodyOpen, depth = 0;
   for (; i < html.length; i++) {
@@ -60,7 +64,7 @@ function route(ctx) {
   const fn = new Function(
     'x', 'document', 'window',
     'setLaneFromCtx_', 'applyLang', 'show', 'renderSignerForm',
-    'return (' + handlerSrc + ')();'
+    handlerSrc + '\nreturn handleSignerCtx_(JSON.parse(x.responseText), x.responseText);'
   );
   fn(
     x, document, window,

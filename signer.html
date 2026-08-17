@@ -344,8 +344,31 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-07-15-1';
-    var GW = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+    window.__BUILD_TAG = 'signer-2026-08-17-1-juapi-seam';
+    // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
+    // flow.html (C1f) already run, added here after a REAL LP was blocked.
+    //
+    // Since the 2026-08-08 pilot flip, israel.html mints every new Israeli
+    // process on ju-service, so the sign token it hands this page is signed by
+    // ju-service. This page still posted that token to the GAS /exec, which has
+    // never heard of the process and correctly answers
+    // {ok:false, reason:'invalid_sig'} -> the "Link unavailable" dead end.
+    // Confirmed live 2026-08-17 against a real ju-service sign token: ju-service
+    // returned ok:true with full signer context, GAS returned invalid_sig for
+    // the identical token. Every Israeli LP minted since the flip hits this the
+    // moment they reach signing; the first real one did today. No automated test
+    // caught it because the canary and every synthetic walk POST to ju-service's
+    // API directly and never load this page.
+    var JU_API = 'https://ju-api.legacyvpartners.com';
+    var LEGACY_GATEWAY = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+    // Sticky per tab: once the legacy probe wins, every later POST from this
+    // signer (save-progress, record_signature) must go to the SAME engine that
+    // owns the token, never split across the two.
+    var useLegacyGateway = false;
+    try { useLegacyGateway = sessionStorage.getItem('lvp_signer_legacy') === '1'; } catch (eStick) {}
+    // All three call sites below read GW at call time, so flipping it here
+    // reroutes the whole signer session atomically.
+    var GW = useLegacyGateway ? LEGACY_GATEWAY : JU_API;
     var params = new URLSearchParams(location.search);
     var TOKEN = params.get('t') || params.get('sign') || '';
 
@@ -599,6 +622,29 @@
         if (x.readyState !== 4) return;
         var ctx = {};
         try { ctx = JSON.parse(x.responseText); } catch (e) { ctx = { ok: false }; }
+        // LEGACY PROBE (2026-08-17), mirroring israel.html's cfgTokenUnknown_ /
+        // probeLegacyGateway_ pair. A token minted BEFORE the 2026-08-08 flip is
+        // signed by GAS, so ju-service cannot verify it and answers with a
+        // signature-vocabulary reason. Probe the legacy engine exactly once, and
+        // only when ALL of these hold, so an outage can never silently reroute:
+        //   - HTTP was 2xx (a well-formed envelope, not a 5xx or network error)
+        //   - we are not already sticky on legacy
+        //   - the reason is specifically "I cannot verify this token", never a
+        //     terminal business reason (expired/voided/revoked/already_signed/
+        //     not_current) which BOTH engines express identically and which must
+        //     render its own screen rather than bounce to the other engine.
+        if (x.status === 200 && !useLegacyGateway && !ctx.ok
+            && (ctx.reason === 'invalid_sig' || ctx.reason === 'malformed'
+                || ctx.reason === 'unknown_request' || ctx.reason === 'unknown_signer')) {
+          probeLegacySigner_();
+          return;
+        }
+        handleSignerCtx_(ctx, x.responseText);
+      };
+      // The original success/failure body, unchanged, extracted so the primary
+      // and the legacy-probe paths land on byte-identical handling.
+      function handleSignerCtx_(ctx, rawText) {
+        var x = { responseText: rawText || '' };
         // Resolve the lane from the response (present on ok:true AND on the
         // already_signed / not_current terminal reasons) so every screen below
         // renders in the signer's own language. Cayman/unknown stays English.
@@ -642,7 +688,35 @@
           applyLang('he'); show('invalid'); return;
         }
         renderSignerForm(ctx);
-      };
+      }
+      // One-shot legacy probe. Flips GW stickily so every later POST from this
+      // signer goes to the engine that actually owns the token. On any failure
+      // it hands the PRIMARY's own envelope to the normal handler, so a dead
+      // token still renders its real reason rather than a legacy artefact.
+      function probeLegacySigner_() {
+        var lx = new XMLHttpRequest();
+        lx.open('GET', LEGACY_GATEWAY + '?api=signerform&t=' + encodeURIComponent(TOKEN), true);
+        lx.timeout = 180000;
+        lx.onreadystatechange = function () {
+          if (lx.readyState !== 4) return;
+          var lctx = {};
+          try { lctx = JSON.parse(lx.responseText); } catch (eL) { lctx = { ok: false }; }
+          if (lctx && lctx.ok) {
+            useLegacyGateway = true;
+            GW = LEGACY_GATEWAY;
+            try { sessionStorage.setItem('lvp_signer_legacy', '1'); } catch (eS) {}
+            if (window.console) { try { console.log('signer: legacy gateway owns this token; sticking to GAS'); } catch (eC) {} }
+            handleSignerCtx_(lctx, lx.responseText);
+            return;
+          }
+          // Legacy does not know it either: the token is genuinely bad. Render
+          // the PRIMARY's envelope, which is the authoritative one post-flip.
+          handleSignerCtx_({ ok: false, reason: 'invalid_sig' }, lx.responseText);
+        };
+        lx.ontimeout = function () { retryOrGiveUp_('legacy probe timeout'); };
+        lx.onerror   = function () { retryOrGiveUp_('legacy probe network error'); };
+        lx.send(null);
+      }
       function retryOrGiveUp_(why) {
         if (window.console) { try { console.log('signer: signerform ' + why); } catch (eT) {} }
         if (signerformRetriesLeft_ > 0) {

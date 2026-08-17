@@ -179,6 +179,32 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
   ok('C1f render-verify (?mock=) stays pinned to GAS, untouched by the seam',
     html['flow.html'].indexOf("GW = qs.get('mock') ? LEGACY_GATEWAY : activeGatewayUrl_();") !== -1);
 }
+// ---- C1s: SIGNER dual-gateway seam, signer.html (2026-08-17) --------------
+// Added after a REAL LP was blocked. Since the 2026-08-08 flip israel.html
+// mints on ju-service, so the sign token it hands signer.html is signed by
+// ju-service - but this page still POSTed it to GAS, which correctly answers
+// invalid_sig, giving the LP a "Link unavailable" dead end at the signing step.
+// Verified live 2026-08-17 on a real ju-service sign token: ju-service ok:true,
+// GAS invalid_sig, same token. Nothing caught it because the canary and every
+// synthetic walk hit ju-service's API directly and never load this page.
+// Same positive-assertion shape as C1p/C1f; signer.html's one /exec occurrence
+// (its LEGACY_GATEWAY constant) still feeds allIds exactly as before.
+{
+  const juCount = html['signer.html'].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1s signer.html carries the ju-api primary URL exactly once', juCount === 1,
+    'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
+  ok('C1s signer.html carries exactly ONE legacy /exec URL (GAS fallback)',
+    idsByFile['signer.html'].length === 1, 'found ' + idsByFile['signer.html'].length + ' occurrences');
+  ok('C1s signer.html legacy fallback id matches the id the other pages carry',
+    idsByFile['signer.html'].length === 1 && idsByFile['index.html'].length >= 1
+      && idsByFile['signer.html'][0] === idsByFile['index.html'][0]);
+  ok('C1s signer.html carries the one-shot legacy probe (probeLegacySigner_)',
+    html['signer.html'].indexOf('function probeLegacySigner_(') !== -1);
+  ok('C1s signer.html defaults to the ju-api primary, legacy only when sticky',
+    html['signer.html'].indexOf('var GW = useLegacyGateway ? LEGACY_GATEWAY : JU_API;') !== -1);
+  ok('C1s signer.html probes legacy ONLY on a 200 + signature-vocabulary reason (an outage must never reroute)',
+    html['signer.html'].indexOf('x.status === 200 && !useLegacyGateway && !ctx.ok') !== -1);
+}
 // ---- C1m: console's MONEY-FLOW mint seam (2026-08-08, agent/money-flow-juapi) ----
 // The sibling of C1c, for increase/withdrawal. Deliberately checked as its OWN
 // flag+dispatcher, never sharing ISRAEL_MINT_ON_JU_API / mintBaseForLane_: the
