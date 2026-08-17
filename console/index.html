@@ -3484,6 +3484,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <button id="wlVerifyBtn" class="btn">Verification copy</button>
             <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
             <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
+              <span style="color:var(--color-ink)">Letter template</span>
+              &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
+              &nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
+              <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
+            </div>
           </div>
           <div id="wlFindings" style="margin-top:12px"></div>
           <div id="wlResult" style="margin-top:12px"></div>
@@ -3801,7 +3807,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-16-3-draft-recipients';
+  window.__BUILD_TAG = 'console-2026-08-17-1-letter-template';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -7344,6 +7350,37 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
     (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=wlRenderNavLine;})();
+    // Letter-template maintenance. Column widths, fonts and the total-row
+    // wording are ALL inherited from the template document - docFill only
+    // clones protoRow and never sets a width - so a cramped amount column has
+    // no fix in code. Measure is read-only; Build candidate edits a COPY and
+    // hands back a link, so the live template only ever changes when a human
+    // promotes a reviewed candidate.
+    (function(){
+      var mBtn=document.getElementById('tplMeasureBtn'),cBtn=document.getElementById('tplCandidateBtn'),out=document.getElementById('tplResult');
+      if(!mBtn||!cBtn||!out)return;
+      function show(r){
+        if(!r||!r.ok){out.innerHTML='<span style="color:var(--color-danger)">'+esc2((r&&r.error)||'failed')+'</span>';return;}
+        var h='columns '+r.columns+' &middot; widths '+esc2((r.widthsBefore||[]).join(', '));
+        if(r.applied){
+          h+='<br>after '+esc2((r.widthsAfter||[]).join(', '));
+          if(r.totalsRenamed&&r.totalsRenamed.length)h+='<br>renamed '+r.totalsRenamed.length+' total row(s)';
+          if(r.candidateUrl)h+='<br><a href="'+esc2(r.candidateUrl)+'" target="_blank" rel="noopener">open candidate</a>';
+        }
+        out.innerHTML=h;
+      }
+      function call(q,btn){
+        btn.disabled=true;out.textContent='Working...';
+        apiFetch('?api=opLetterTemplateGeometry'+q).then(function(r){btn.disabled=false;show(r);})
+          .catch(function(e){btn.disabled=false;out.innerHTML='<span style="color:var(--color-danger)">'+esc2(String(e))+'</span>';});
+      }
+      mBtn.onclick=function(){call('',mBtn);};
+      cBtn.onclick=function(){
+        var w=(prompt('Column widths in points, comma separated, index order. Blank entry or 0 leaves a column alone. Cancel to abort.')||'').trim();
+        if(!w)return;
+        call('&apply=true&widths='+encodeURIComponent(w),cBtn);
+      };
+    })();
     // The recipient list is shown BEFORE generating, not discovered in the
     // sent folder afterwards. July's letter went out missing two signatories
     // and needed a chase the next morning; the operator's stated fear on
