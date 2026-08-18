@@ -244,6 +244,26 @@ async function walkToReview(rig, t) {
     ok('F4 partially filled page still blocks', (await clickNext(d)) === 'ind.personal');
   }
 
+  // ---- F5: an autosave failure never shows the LP an English server string ----
+  // The two savePage() catch sites used to print err.message straight into the
+  // status line, and err.message is whatever the server sent: 'busy, please
+  // retry', 'invalid or expired link', the generic English CAYMAN_LP_GENERIC_ERROR
+  // sentence, or the bare word 'timeout' from the gateway's own abort. In a
+  // Hebrew RTL form that is an English sentence in front of an LP, on the path
+  // that fires most often. doSubmit always swallowed the raw string and showed
+  // approved Hebrew; autosave never did (fixed 2026-08-18, Noa approved reusing
+  // the existing approved line rather than writing new copy).
+  {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'israel.html'), 'utf8');
+    ok('F5 no autosave catch prints the raw server error',
+      src.indexOf('savePage().catch(function (err) { setStatus(String(err') === -1);
+    const handler = src.slice(src.indexOf('function autosaveFailed_'), src.indexOf('function autosaveFailed_') + 400);
+    ok('F5 the autosave handler exists', handler.indexOf('function autosaveFailed_') === 0);
+    ok('F5 it shows the approved Hebrew line', handler.indexOf('אירעה תקלה. נא לנסות שוב.') !== -1);
+    ok('F5 both autosave sites route through it',
+      (src.match(/savePage\(\)\.catch\(autosaveFailed_\)/g) || []).length === 2);
+  }
+
   console.log(pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('ERR', e.stack || e); process.exit(1); });

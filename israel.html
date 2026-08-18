@@ -1571,7 +1571,7 @@
       hydrationSettled = true;
       if (pendingSaveAfterHydration) {
         pendingSaveAfterHydration = false;
-        savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+        savePage().catch(autosaveFailed_);
       }
     }
     // Exposed so the earlier <script> block's fetchCfg (a separate closure, only
@@ -1819,6 +1819,29 @@
       return null;
     }
     // Resolve the display string for cached Hebrew origHe at the given lang.
+    /**
+     * autosaveFailed_ - what the LP is shown when a background save fails.
+     *
+     * Both autosave catch sites used to do `setStatus(String(err.message))`,
+     * which prints the SERVER's own error string. Those strings are English
+     * ('busy, please retry', 'invalid or expired link', the generic
+     * CAYMAN_LP_GENERIC_ERROR sentence, and the bare word 'timeout' from the
+     * gateway's own abort), so an ordinary lock-contention retry put an
+     * English sentence into this Hebrew RTL form. doSubmit has always
+     * swallowed the raw string and shown approved Hebrew; the autosave path,
+     * which fires constantly, never did.
+     *
+     * The line below is the SAME approved line this file already uses for a
+     * failed gateway call. No new LP copy is introduced here (Noa approved
+     * reusing it on this path, 2026-08-18). The real error still reaches the
+     * console for diagnosis, matching the dev-logging convention the gateway
+     * wrapper already follows.
+     */
+    function autosaveFailed_(err) {
+      if (window.console) { try { console.log('autosave failed:', (err && err.message) || err); } catch (eLog) {} }
+      setStatus(displayFor('אירעה תקלה. נא לנסות שוב.', curLang), true);
+    }
+
     function displayFor(origHe, lang) {
       if (lang === 'he') return origHe;
       var en = lookupEn(origHe);
@@ -3894,7 +3917,7 @@
       // replaces (not merges) session.snapshot with it. localStorage above already
       // covers this device; queue the server save for right after hydration settles.
       if (hydrationSettled) {
-        savePage().catch(function (err) { setStatus(String(err && err.message || err), true); });
+        savePage().catch(autosaveFailed_);
       } else {
         pendingSaveAfterHydration = true;
       }
