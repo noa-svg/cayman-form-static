@@ -1299,7 +1299,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-05-2';
+      window.__BUILD_TAG = 'israel-2026-08-19-1';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -4369,6 +4369,15 @@
           // has no on-selection upload, so final submit is the ONLY place this
           // can surface to the LP.
           if (res && res.detail && res.detail.uploadError === 'corrupted') rErr.lvpUploadCorrupted = true;
+          // 2026-08-19 (Noa: "any incomplete submit should take LP to required
+          // field like a normal form"). The server's {path, code} problems were
+          // being dropped here, so a server-side refusal painted the generic
+          // retry line and left the LP staring at the review page with no idea
+          // which field was wrong. Carried through so the submit catch can put
+          // them ON the field, exactly like the client-side sweep already does.
+          if (res && res.detail && Array.isArray(res.detail.validation) && res.detail.validation.length) {
+            rErr.lvpValidation = res.detail.validation;
+          }
           return rErr;
         },
         classifyTimeout: function () { return new Error('timeout'); }
@@ -4477,6 +4486,42 @@
       if (res.nextUrl) return true;
       var d = res.detail || {};
       return !!(d.signersPlanned || d.signerXofY || d.lawyerEmailed || d.coHolderEmailed || d.note);
+    }
+
+    /**
+     * Put the LP on the field the SERVER refused (2026-08-19).
+     *
+     * Server paths are a mix of raw form paths ('lawyerDetails.firstName') and
+     * typed submission paths ('qualification.lawyer.name'), because the
+     * validator runs on the sanitized shape. So this matches progressively:
+     * exact name, then the same path with array indexes normalised, then a
+     * trailing-segment match. Returns false when nothing matches, and the
+     * caller then shows the existing generic line - never a silent no-op.
+     */
+    function focusServerValidation_(problems) {
+      var el = null;
+      for (var i = 0; i < problems.length && !el; i++) {
+        var path = String((problems[i] && problems[i].path) || '');
+        if (!path) continue;
+        el =
+          form.querySelector('[name="' + path + '"]') ||
+          form.querySelector('[name="' + path.replace(/\[\d+\]/g, '[0]') + '"]') ||
+          form.querySelector('[name$=".' + path.split('.').pop() + '"]');
+      }
+      if (!el) return false;
+      var page = el.closest ? el.closest('.lvp-page') : null;
+      if (page) {
+        var pages = visiblePages();
+        for (var pi = 0; pi < pages.length; pi++) {
+          if (pages[pi] === page) { showPage(pi); break; }
+        }
+        if (!renderErrorSummary(page)) setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
+      } else {
+        setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
+      }
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (eScroll) { try { el.scrollIntoView(); } catch (eScroll2) {} }
+      try { if (el.focus) el.focus({ preventScroll: true }); } catch (eFocus) {}
+      return true;
     }
 
     var submitting = false;
@@ -4618,6 +4663,14 @@
         // has no on-selection upload, so final submit is the only place a
         // corrupted/truncated upload can surface. Names the actual problem
         // instead of the generic retry copy.
+        // Server-side refusal that named fields: navigate to the first one and
+        // mark it, reusing the SAME page-walk, error summary and approved
+        // status line the client-side sweep uses. Best effort by design: if no
+        // field matches the server's path, we fall through to the generic copy
+        // below, so this can never be worse than the previous behaviour.
+        if (err && err.lvpValidation && focusServerValidation_(err.lvpValidation)) {
+          return;
+        }
         if (err && err.lvpUploadCorrupted) {
           setStatus(displayFor('אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.', curLang), true);
           return;
