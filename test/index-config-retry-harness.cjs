@@ -31,7 +31,18 @@ function extractFn(name) {
   }
   throw new Error('unbalanced braces for ' + name);
 }
-const fetchCfgSrc = extractFn('fetchCfg');
+// fetchCfg now calls out to sibling functions (the 2026-08-19 JU_API gateway
+// seam - primary+fallback, same pattern israel.html already carries), so all
+// of them have to be extracted and put in scope together, not just fetchCfg
+// alone. useLegacyGateway/gasOverridden are declared locally (not injected)
+// since this file tests retry/backoff behavior, not the fallback probe path
+// itself - the probe path is exercised by coupling-check.cjs C1s and by
+// rig.cjs booting the real page end to end.
+const fetchCfgSrc = [
+  'var useLegacyGateway = false;', 'var gasOverridden = false;',
+  extractFn('cfgUrlFor_'), extractFn('handleCfgLoaded_'), extractFn('cfgTokenUnknown_'),
+  extractFn('activeGatewayUrl_'), extractFn('probeLegacyGateway_'), extractFn('fetchCfg'),
+].join('\n');
 if (fetchCfgSrc.indexOf('attempt < 3') === -1) throw new Error('fetchCfg no longer retries up to 3 attempts - fix regressed');
 
 // Controllable fetch: each call either resolves with a json() promise or
@@ -63,13 +74,15 @@ function build(behaviors, timers) {
   const scheduled = [];
   const setTimeoutStub = (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; };
   const factory = new Function(
-    'fetch', 'window', 'document', 'setTimeout', 'p', 'fixtureParam', 'cacheKey', 'url',
+    'fetch', 'window', 'document', 'setTimeout', 'p', 'fixtureParam', 'screenshotMode', 'cacheKey',
+    'idxToken', 'gasUrl', 'LEGACY_GATEWAY',
     'applyCfgVisuals', 'markDoneIfCompleted',
     fetchCfgSrc + '; return fetchCfg;'
   );
   const fetchCfg = factory(
     fetch, window, document, setTimeoutStub,
-    { get: () => '' }, '', 'k', 'https://example.invalid/exec?api=config',
+    { get: () => '' }, '', '', 'k',
+    'test-token', 'https://example.invalid/exec', 'https://example-legacy.invalid/exec',
     () => {}, () => {}
   );
   return { fetchCfg, calls, scheduled, document, window };

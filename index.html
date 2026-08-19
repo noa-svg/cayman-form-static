@@ -1396,7 +1396,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-07-18-3';
+    window.__BUILD_TAG = 'index-2026-08-19-1-juapi-seam';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -1412,8 +1412,46 @@
     (function () {
       if (document.documentElement.classList.contains('lvp-gate-mode')) return;
       var p = new URLSearchParams(location.search);
-      var gasUrl = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-      var cacheKey = 'lvp_cfg_v1_' + (p.get('t') || p.get('token') || '');
+      // JU_API GATEWAY SEAM (2026-08-19, ported from israel.html's 2026-08-05
+      // primary+fallback pattern; see that file for the full design
+      // rationale). index.html - the primary Cayman onboarding entry point -
+      // was the one sibling form (flow.html, israel.html, signer.html all
+      // already carry this) still hardcoded straight to GAS with no ju-api
+      // primary and no fallback. New Cayman-lane (non-Israeli) invites are
+      // still minted on GAS only today (mintBaseForLane_/moneyMintBaseForLane_
+      // in console/index.html gate ju-api minting to the Israel lane), so in
+      // practice every real token here answers "token unknown" on the primary
+      // and this falls back to LEGACY_GATEWAY on first load - the same stage
+      // flow.html's own seam went through before its lane's mint flag
+      // flipped. A network error, a non-2xx, or any response shape other
+      // than the specific well-formed token-unknown envelope (cfgTokenUnknown_
+      // below) never triggers the fallback, so a ju-service outage cannot
+      // silently reroute traffic here, and a tokenless fresh session never
+      // probes legacy at all.
+      var idxToken = p.get('t') || p.get('token') || '';
+      var gasUrl = 'https://ju-api.legacyvpartners.com';
+      var LEGACY_GATEWAY = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
+      var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+      var gasOverridden = !!(isLocal && p.get('gas'));
+      if (gasOverridden) gasUrl = p.get('gas');
+      // Legacy-gateway stickiness: once the boot probe establishes that this
+      // token belongs to a GAS-minted session, every call this session makes
+      // goes to LEGACY_GATEWAY for the rest of the tab, mirrored into
+      // sessionStorage so a same-tab reload does not re-probe the primary.
+      // Keyed by token; never touched when the URL carries no token, and
+      // inert under the localhost ?gas= dev override.
+      var legacyStickKey = 'lvp_idx_legacy_gw_v1_' + idxToken;
+      var useLegacyGateway = false;
+      if (idxToken && !gasOverridden) {
+        try { useLegacyGateway = sessionStorage.getItem(legacyStickKey) === '1'; } catch (e) {}
+      }
+      function activeGatewayUrl_() { return useLegacyGateway ? LEGACY_GATEWAY : gasUrl; }
+      function stickToLegacyGateway_() {
+        useLegacyGateway = true;
+        try { sessionStorage.setItem(legacyStickKey, '1'); } catch (e) {}
+        if (window.console) { try { console.log('[CaymanForm] legacy gateway fallback engaged'); } catch (e) {} }
+      }
+      var cacheKey = 'lvp_cfg_v1_' + idxToken;
 
       function applyCfgVisuals(cfg) {
         if (!cfg) return;
@@ -1479,14 +1517,83 @@
         // baselines stay stable.
         try { document.body.setAttribute('data-screenshot-mode', '1'); } catch(e) {}
       }
-      var url = gasUrl + '?api=config'
-        + '&t='        + encodeURIComponent(p.get('t')    || '')
-        + '&type='     + encodeURIComponent(p.get('type') || '')
-        + '&lane='     + encodeURIComponent(p.get('lane') || '')
-        + '&fp='       + encodeURIComponent(p.get('fp')   || '')
-        + '&fixture='  + encodeURIComponent(fixtureParam)
-        + '&screenshotMode=' + encodeURIComponent(screenshotMode)
-        + '&lang='     + encodeURIComponent(p.get('lang') || '');
+      function cfgUrlFor_(base) {
+        return base + '?api=config'
+          + '&t='        + encodeURIComponent(p.get('t')    || '')
+          + '&type='     + encodeURIComponent(p.get('type') || '')
+          + '&lane='     + encodeURIComponent(p.get('lane') || '')
+          + '&fp='       + encodeURIComponent(p.get('fp')   || '')
+          + '&fixture='  + encodeURIComponent(fixtureParam)
+          + '&screenshotMode=' + encodeURIComponent(screenshotMode)
+          + '&lang='     + encodeURIComponent(p.get('lang') || '');
+      }
+      // The original success-path body, unchanged (visuals + done-state +
+      // broken-link gate + language auto-select + re-cache + the
+      // __caymanOnCfgUpdate hook), extracted so the primary path and the
+      // legacy-probe path land on the exact same handling regardless of
+      // which engine actually answered.
+      function handleCfgLoaded_(cfg) {
+        window.CAYMAN_CFG = cfg;
+        applyCfgVisuals(cfg);
+        markDoneIfCompleted(cfg);
+        // Bad / expired / revoked token: the gateway returns a config with no usable
+        // flow (flowType '') exactly as caymanFormConfig_ documents. Route it to the
+        // broken-link gate instead of leaving the LP on a blank form that only fails at
+        // submit. Skip fixture/screenshot renders and already-completed links.
+        var tokenish = p.get('t') || p.get('token') || p.get('item') || p.get('sign');
+        if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
+          document.documentElement.classList.add('lvp-gate-mode');
+        }
+        if (cfg.language === 'en' || cfg.language === 'he') {
+          var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
+          if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
+        }
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
+        // Re-route type + URLs if the main IIFE initialized before this fetch resolved.
+        // newCfg.gatewayUrl is what actually routes every subsequent gateway()
+        // POST (window.__caymanOnCfgUpdate below sets CFG.gatewayUrl from it),
+        // so handing this function the LEGACY engine's own config response -
+        // which self-reports its own URL via caymanWebAppUrl_() - is what
+        // makes the fallback correct without any separate override here.
+        if (typeof window.__caymanOnCfgUpdate === 'function') window.__caymanOnCfgUpdate(cfg);
+      }
+      // Pilot-flip fallback trigger (mirrors israel.html's 2026-08-05 pattern).
+      // ju-api's ?api=config never returns an {ok:false} error envelope for a
+      // bad/unminted token: it answers HTTP 200 with the well-formed config
+      // base envelope carrying flowType:'' (routes/config.ts's base cfg +
+      // fall-through). So "the primary does not know this token" is detected
+      // by that SPECIFIC shape - a parsed object carrying the envelope's own
+      // base keys (flowType AND resumePage present) with flowType empty and
+      // not completed - never by a generic error body or an HTTP/network
+      // failure (both excluded at the call site below).
+      function cfgTokenUnknown_(cfg) {
+        return !!(cfg && typeof cfg === 'object'
+          && Object.prototype.hasOwnProperty.call(cfg, 'flowType')
+          && Object.prototype.hasOwnProperty.call(cfg, 'resumePage')
+          && !cfg.flowType && !cfg.completed);
+      }
+      // One-shot legacy probe: the primary answered "token unknown" for a
+      // real token, so ask GAS whether IT owns this session (true for every
+      // Cayman-lane invite today, since minting still happens there only).
+      // Only a well-formed legacy config that actually carries a flow (or a
+      // completed terminal state) engages the sticky fallback; anything else
+      // (legacy also does not know it, legacy unreachable, non-2xx, parse
+      // failure) falls through to the primary's own envelope and the normal
+      // broken-link gate, never a retry loop against the legacy host.
+      function probeLegacyGateway_(primaryCfg) {
+        var legacyHttpOk = false;
+        return fetch(cfgUrlFor_(LEGACY_GATEWAY))
+          .then(function (r) { legacyHttpOk = !!r.ok; return r.json(); })
+          .then(function (lcfg) {
+            if (legacyHttpOk && lcfg && (lcfg.flowType || lcfg.completed)) {
+              stickToLegacyGateway_();
+              handleCfgLoaded_(lcfg);
+            } else {
+              handleCfgLoaded_(primaryCfg);
+            }
+          })
+          .catch(function () { handleCfgLoaded_(primaryCfg); });
+      }
       // Retry with backoff (CTO review finding, 2026-08-02): a single silent
       // attempt against a cold GAS start left this form's LP with no config,
       // no error, and a form that only fails at submit ("Form is still
@@ -1496,27 +1603,21 @@
       // point, was the outlier with a bare fetch + silent .catch.
       function fetchCfg(attempt) {
         try {
-          fetch(url)
-            .then(function(r) { return r.json(); })
+          var httpOk = false;
+          fetch(cfgUrlFor_(activeGatewayUrl_()))
+            .then(function(r) { httpOk = !!r.ok; return r.json(); })
             .then(function(cfg) {
-              window.CAYMAN_CFG = cfg;
-              applyCfgVisuals(cfg);
-              markDoneIfCompleted(cfg);
-              // Bad / expired / revoked token: the gateway returns a config with no usable
-              // flow (flowType '') exactly as caymanFormConfig_ documents. Route it to the
-              // broken-link gate instead of leaving the LP on a blank form that only fails at
-              // submit. Skip fixture/screenshot renders and already-completed links.
-              var tokenish = p.get('t') || p.get('token') || p.get('item') || p.get('sign');
-              if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
-                document.documentElement.classList.add('lvp-gate-mode');
+              // Fallback gate: token present (a tokenless fresh session
+              // never probes legacy - fresh onboarding invites are only ever
+              // minted with a real token), primary reachable AND 2xx (an
+              // outage or 5xx must never reroute), not already sticky, no
+              // dev override, and the response is the SPECIFIC token-unknown
+              // envelope, not any generic failure.
+              if (httpOk && idxToken && !useLegacyGateway && !gasOverridden && cfgTokenUnknown_(cfg)) {
+                probeLegacyGateway_(cfg);
+                return;
               }
-              if (cfg.language === 'en' || cfg.language === 'he') {
-                var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
-                if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
-              }
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
-              // Re-route type + URLs if the main IIFE initialized before this fetch resolved.
-              if (typeof window.__caymanOnCfgUpdate === 'function') window.__caymanOnCfgUpdate(cfg);
+              handleCfgLoaded_(cfg);
             })
             .catch(function() {
               if (attempt < 3) { setTimeout(function () { fetchCfg(attempt + 1); }, attempt * 2500); return; }
