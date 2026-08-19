@@ -3817,7 +3817,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-17-4-empty-batch';
+  window.__BUILD_TAG = 'console-2026-08-19-1-cayman-dual-engine';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3959,9 +3959,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // answers the SAME ?source=op tunnel envelope GAS does - so this is a
   // read/write ROUTING fix, not new protocol or server work.
   //
-  // Cayman lane stays GAS-only: it has not been flipped to ju-service, so
-  // querying it there would add a slow, pointless empty-result round trip.
-  var ENGINES_FOR_LANE_ = { cayman: [GW], israel: [GW, JU_API] };
+  // Cayman lane flipped to dual-read 2026-08-19: the engineering gaps that
+  // kept it GAS-only are closed (full cross-engine parity net, the inline-
+  // signature bug, the CP-link-leak bug - all fixed and verified on both
+  // engines; PORT-MAP.md marks every console read/action route gap `none`
+  // for BOTH lanes; consolelist.ts's `?lane=cayman` filter already existed).
+  // MINTING new Cayman processes stays GAS-only (mintBaseForLane_/
+  // moneyMintBaseForLane_ are untouched, still isIsrael-gated) - real
+  // traffic still starts on GAS until the actual pilot begins. This line
+  // only changes where EXISTING processes are read/acted on, so a Cayman
+  // process minted on ju-service (synthetic proof or, later, real) becomes
+  // visible/actionable in the console the same way an Israeli one already is.
+  var ENGINES_FOR_LANE_ = { cayman: [GW, JU_API], israel: [GW, JU_API] };
   function enginesForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     return isIsrael ? ENGINES_FOR_LANE_.israel : ENGINES_FOR_LANE_.cayman;
