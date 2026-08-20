@@ -36,7 +36,6 @@ const ROLE_MAP = {
   '--color-ink': '--ink',
   '--color-ink-sub': '--ink-soft',
   '--color-ink-muted': '--ink-faint',
-  '--color-border-focus': '--banner-blue',
   '--color-coral': '--coral',
   '--color-bg-page': '--paper',
   '--color-bg-strip': '--paper',
@@ -45,6 +44,14 @@ const ROLE_MAP = {
 // name to reference, e.g. a derived "-deep" hover shade, or Atrium's
 // green/red aliases which live under --up/--down not --green/--red).
 const LITERAL_MAP = {
+  // --color-border-focus was mapped to Atrium --banner-blue until that token was
+  // REMOVED from tokens.css by legacy-tools-mono e23f588 ("sync atrium client from
+  // legacy tree (production truth)"). Atrium now defines only --blue #1F5DB0 and
+  // --blue-deep #143F7F, neither of which is this value, so there is no honest role
+  // to assert. Pinned as a literal rather than dropped: dropping it would stop this
+  // harness protecting the colour at all, which is the drift it exists to catch.
+  // If Atrium ever reintroduces a focus-ring role, move this back into ROLE_MAP.
+  '--color-border-focus': '#23649E',
   '--color-atrium-deep': '#184C90', // paired --s-accent-deep for Atrium's --blue elsewhere in this codebase
   '--color-green': '#2E8540', // Atrium --up
   '--color-red': '#C0202E', // Atrium --down
