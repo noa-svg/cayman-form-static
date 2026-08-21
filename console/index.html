@@ -782,20 +782,73 @@ body.side-coll .side-foot .foot-gear { display: none; }
    const) to show Onboarding on the Israel fund; no CSS change needed then. */
 body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 
-/* Quiet demoted "Show completed" toggle (no box) */
+/* BOARD FILTER ROW (rebuilt 2026-08-20. Noa, looking at the row: "this doesnt
+   look good Show completed Show canceled Show test rows" - which is exactly how
+   it read, because the three buttons were separated only by the collapsed HTML
+   newline between them: 2.8px, narrower than a word-space in their own font, in
+   a .content block with no flex and no gap. They also carried no border, no box
+   and no dot, so nothing read as a control, and the ON state was a 1.48:1 colour
+   nudge. This container is a REAL flex row with a real gap - do not "fix" the
+   spacing by reflowing the source tags onto one line, that only makes the labels
+   touch.)
+   Left padding aligns the row to the TABLE TEXT column, not to #board-card's
+   outer border edge: card border (--bw) + .bhead's 14px inner padding. */
+.board-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) 0 0 calc(var(--bw) + 14px);
+}
+
+/* The control treatment is the page's existing segmented-control idiom
+   (.seg button, ~line 1422): card ground, hairline border, --radius-md,
+   border+colour change on hover, --color-atrium when on. Type is the house
+   10px/800 uppercase tracked label idiom shared with .bhead, so the row is
+   two type sizes with the sync stamp below it instead of three.
+   Resting colour is --color-ink-sub (5.7:1 on white), not --color-ink-muted
+   (3.67:1, under the 4.5:1 floor at this size). */
 .show-done {
   font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--color-ink-muted);
-  background: transparent;
-  border: none;
-  padding: var(--space-3) 2px;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-sub);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
-  transition: color var(--dur-base) var(--ease-out);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
-.show-done:hover { color: var(--color-ink-sub); }
-.show-done.on { color: var(--color-ink-sub); }
+.show-done:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-ink);
+}
+/* ON is unmistakable: the same atrium fill the lane switcher and stage rail
+   use for an active state. Previously ON changed only the text colour, by
+   1.48:1 - clicking looked like nothing happened. */
+.show-done.on {
+  background: var(--color-atrium-tint);
+  color: var(--color-atrium);
+  border-color: var(--color-atrium);
+}
+.show-done .sd-n {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+/* Loading is a genuinely dead state, not a live-looking toggle: dimmed,
+   not clickable, not hoverable (it also carries `disabled`). */
+.show-done.loading {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
 
 /* ============================================================
    BOARD TABLE (redesigned 2026-08-06. Noa: "its ugly" / "i asked for more
@@ -2866,6 +2919,8 @@ body.side-coll .ss-lbl { display: none; }
   .rwait { white-space: normal; }
   .row { gap: 10px; padding: 10px; }
   .bhead { gap: 10px; padding: 8px 10px; }
+  /* Filter row tracks the table's text column, which tightens to 10px here. */
+  .board-filters { padding-left: calc(var(--bw) + 10px); }
 
   /* Status bar: wrap */
   .statusbar { flex-wrap: wrap; gap: 4px 0; }
@@ -3427,9 +3482,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
       <div class="content">
         <div id="board-card"><div id="list"></div></div>
-        <button class="show-done" id="showDoneToggle" hidden></button>
-        <button class="show-done" id="showCanceledToggle" hidden></button>
-        <button class="show-done" id="showTestToggle">Show test rows</button>
+        <div class="board-filters" id="boardFilters" hidden>
+          <button type="button" class="show-done" id="showDoneToggle" aria-pressed="false" hidden></button>
+          <button type="button" class="show-done" id="showCanceledToggle" aria-pressed="false" hidden></button>
+          <button type="button" class="show-done" id="showTestToggle" aria-pressed="false" hidden></button>
+        </div>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
       </div>
     </div>
@@ -3817,7 +3874,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-19-1-cayman-dual-engine';
+  window.__BUILD_TAG = 'console-2026-08-20-1-board-filter-row';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5090,29 +5147,58 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(showDone&&completed.length)html+=completedByMonthHtml(completed);
     if(showCanceled&&canceled.length)html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(rowHtml).join("");
     document.getElementById("list").innerHTML=html;
-    // Two quiet, independent toggles: completed (complete/sealed) and canceled
-    // (voided/expired) filter separately, mirroring each other. The board now
-    // loads includeDone=0 by default (wiring item 5) - terminal rows are fetched
-    // lazily on first toggle - so until doneLoaded the toggle shows without a
-    // count (we cannot know it yet on the Monday-mirror path).
+    // Three independent filter chips: completed (complete/sealed), canceled
+    // (voided/expired) and test rows, each filtering separately. The board
+    // loads includeDone=0 by default (wiring item 5) - terminal rows are
+    // fetched lazily on first toggle - so until doneLoaded the completed and
+    // canceled chips show without a count (we cannot know it yet on the
+    // Monday-mirror path).
+    // ONE code path for all three filter chips (2026-08-20). Previously each
+    // toggle built its own label inline and they drifted apart: two grammars
+    // ("Show completed - 1" with an ASCII hyphen nothing else on the page uses,
+    // vs a bare "Show canceled"), and the test toggle was a one-liner with no
+    // hidden branch at all - so on an empty board the other two hid themselves
+    // and it survived alone under the table as one orphan line of grey text
+    // that read like leftover debug output. setFilterChip is now the only place
+    // a chip label, state or visibility is decided.
+    //   count === null  -> no count is knowable (test rows are excluded
+    //                      SERVER-side, so the hidden-row count is unknown
+    //                      until a fetch with includeTest=1 happens)
+    //   loading true    -> real dead state: dimmed, disabled, not clickable
+    // Separator is the middle dot the sync stamp and the Status column already
+    // use ("synced &middot; ", "Waiting on the LP &middot; 14d"), and the loading
+    // ellipsis is the real U+2026 the table uses, not three ASCII dots.
+    function setFilterChip(el,opts){
+      if(!el)return;
+      if(opts.hidden){el.hidden=true;el.disabled=false;el.classList.remove("loading");return;}
+      el.hidden=false;
+      el.disabled=!!opts.loading;
+      el.classList.toggle("loading",!!opts.loading);
+      el.classList.toggle("on",!!opts.on);
+      el.setAttribute("aria-pressed",opts.on?"true":"false");
+      if(opts.loading){el.textContent='Loading '+opts.noun+'\u2026';return;}
+      el.textContent=(opts.on?'Hide ':'Show ')+opts.noun;
+      if(opts.count!==null&&opts.count!==undefined){
+        var n=document.createElement("span");
+        n.className="sd-n";
+        n.textContent=' \u00b7 '+opts.count;
+        el.appendChild(n);
+      }
+    }
     var tg=document.getElementById("showDoneToggle");
-    if(tg){
-      if(completed.length){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=(showDone?'Hide completed - ':'Show completed - ')+completed.length;}
-      else if(!doneLoaded){tg.hidden=false;tg.classList.toggle("on",showDone);tg.textContent=showDone?'Loading completed...':'Show completed';}
-      else{tg.hidden=true;}
-    }
+    setFilterChip(tg,completed.length?{on:showDone,noun:'completed',count:completed.length}
+      :!doneLoaded?{on:showDone,noun:'completed',count:null,loading:showDone}
+      :{hidden:true});
     var tc=document.getElementById("showCanceledToggle");
-    if(tc){
-      if(canceled.length){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=(showCanceled?'Hide canceled - ':'Show canceled - ')+canceled.length;}
-      else if(!doneLoaded){tc.hidden=false;tc.classList.toggle("on",showCanceled);tc.textContent=showCanceled?'Loading canceled...':'Show canceled';}
-      else{tc.hidden=true;}
-    }
-    // TEST-ROW TOGGLE: no count shown (unlike showDone/showCanceled, test
-    // rows are excluded server-side, not client-filtered from an
-    // already-fetched set - the count of hidden rows isn't known until a
-    // fetch with includeTest=1 actually happens).
+    setFilterChip(tc,canceled.length?{on:showCanceled,noun:'canceled',count:canceled.length}
+      :!doneLoaded?{on:showCanceled,noun:'canceled',count:null,loading:showCanceled}
+      :{hidden:true});
     var tt=document.getElementById("showTestToggle");
-    if(tt){tt.classList.toggle("on",showTest);tt.textContent=showTest?'Hide test rows':'Show test rows';}
+    setFilterChip(tt,{on:showTest,noun:'test rows',count:null});
+    // The row collapses entirely when every chip is hidden, so it can never
+    // leave an empty padded gap between the card and the sync stamp.
+    var bf=document.getElementById("boardFilters");
+    if(bf)bf.hidden=!((tg&&!tg.hidden)||(tc&&!tc.hidden)||(tt&&!tt.hidden));
     Array.prototype.forEach.call(document.querySelectorAll("#list .row"),function(el){
       var go=function(){var p=el.getAttribute("data-pid");if(p)openDrawer(p);};
       el.onclick=go;
