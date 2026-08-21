@@ -344,7 +344,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-17-1-juapi-seam';
+    window.__BUILD_TAG = 'signer-2026-08-21-1-sticky-token-key';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -361,16 +361,40 @@
     // API directly and never load this page.
     var JU_API = 'https://ju-api.legacyvpartners.com';
     var LEGACY_GATEWAY = 'https://script.google.com/macros/s/AKfycbxSu6wp_NHktucOde1kS-rCVeV1IjkMnJxpycHffy62YU7lb4o-A349gF6_wwSiXLywfg/exec';
-    // Sticky per tab: once the legacy probe wins, every later POST from this
-    // signer (save-progress, record_signature) must go to the SAME engine that
-    // owns the token, never split across the two.
+    var params = new URLSearchParams(location.search);
+    var TOKEN = params.get('t') || params.get('sign') || '';
+    // Sticky per tab AND PER TOKEN: once the legacy probe wins, every later
+    // POST from this signer (save-progress, record_signature) must go to the
+    // SAME engine that owns the token, never split across the two.
+    //
+    // Keyed by token (2026-08-21), matching the sibling pages' established
+    // pattern (index.html lvp_idx_legacy_gw_v1_<token>, israel.html
+    // lvp_il_legacy_gw_v1_<token>, flow.html lvp_fl_legacy_gw_v1_<token>).
+    // The key used to be bare (no token in it at all), which scoped the pin
+    // to the TAB rather than to the signing session: a signer who finished a
+    // GAS-minted leg and then opened a DIFFERENT, ju-service-minted signer
+    // link in the same tab inherited useLegacyGateway=true and posted
+    // save_signer_progress / record_signature to GAS, which does not own that
+    // process. Nothing re-probes once sticky, so it could not self-correct.
+    // Latent only while every Cayman process is still minted on GAS; live the
+    // moment Cayman minting flips to ju-service, so it is fixed BEFORE that
+    // flip, not after. Token-keying does NOT weaken the anti-split guarantee:
+    // within one token's session the flag still pins exactly as before.
+    //
+    // The OLD bare key is deliberately NOT read-migrated. A bare entry carries
+    // no record of WHICH token set it, so honoring it is precisely the bug -
+    // it would pin an unrelated token to the wrong engine for one more hop.
+    // Ignoring it costs at most one extra legacy probe on the token that
+    // really is GAS-owned, which is the ordinary cold-boot path and already
+    // proven safe; the entry then dies with the tab.
+    var signerStickKey = 'lvp_signer_legacy_gw_v1_' + TOKEN;
     var useLegacyGateway = false;
-    try { useLegacyGateway = sessionStorage.getItem('lvp_signer_legacy') === '1'; } catch (eStick) {}
+    if (TOKEN) {
+      try { useLegacyGateway = sessionStorage.getItem(signerStickKey) === '1'; } catch (eStick) {}
+    }
     // All three call sites below read GW at call time, so flipping it here
     // reroutes the whole signer session atomically.
     var GW = useLegacyGateway ? LEGACY_GATEWAY : JU_API;
-    var params = new URLSearchParams(location.search);
-    var TOKEN = params.get('t') || params.get('sign') || '';
 
     var HE_MAP = {
       "Draw": "לצייר",
@@ -704,7 +728,7 @@
           if (lctx && lctx.ok) {
             useLegacyGateway = true;
             GW = LEGACY_GATEWAY;
-            try { sessionStorage.setItem('lvp_signer_legacy', '1'); } catch (eS) {}
+            try { sessionStorage.setItem(signerStickKey, '1'); } catch (eS) {}
             if (window.console) { try { console.log('signer: legacy gateway owns this token; sticking to GAS'); } catch (eC) {} }
             handleSignerCtx_(lctx, lx.responseText);
             return;

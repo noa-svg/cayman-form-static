@@ -106,6 +106,7 @@ HARNESSES=(
   console-action-contract
   board-search-lp-directory-harness
   pilot-fallback-harness
+  signer-sticky-token-key-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

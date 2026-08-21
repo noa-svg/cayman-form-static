@@ -405,7 +405,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-08-08-1';
+      window.__BUILD_TAG = 'flow-2026-08-21-1';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -475,14 +475,21 @@
       // (sendIsraeliInvite base threading) is closed in console/index.html
       // in the same change.
       //
-      // console/index.html's MONEY_MINT_ON_JU_API stays FALSE (unproven for
-      // money flows; the onboarding flip took a live end-to-end proof-mint
-      // first, see israel.html's history). Until it flips, EVERY real money
-      // process is minted on GAS, so EVERY real session's token is unknown
-      // to ju-api and this page falls back to LEGACY_GATEWAY on its very
-      // first load - a live, already-proven-safe path (israel.html has run
-      // this exact fallback for GAS-minted pre-flip sessions since
-      // 2026-08-05). A network error, a non-2xx, or any response shape
+      // STATE OF THE MINT (corrected 2026-08-21; this paragraph previously
+      // claimed MONEY_MINT_ON_JU_API "stays FALSE", which contradicted
+      // production). console/index.html now reads
+      // `var MONEY_MINT_ON_JU_API = true;` and its moneyMintBaseForLane_
+      // returns JU_API for the Israel lane, GAS for every other lane. So
+      // ISRAELI money links are minted on ju-api TODAY: a fresh Israeli
+      // session's token is known to the primary and this page never probes
+      // legacy at all. The fallback below is what carries the REMAINDER:
+      // every money process minted before that flip, plus every non-Israel
+      // lane, both still GAS-owned - their tokens are unknown to ju-api and
+      // this page falls back to LEGACY_GATEWAY on its very first load, a
+      // live, already-proven-safe path (israel.html has run this exact
+      // fallback for GAS-minted pre-flip sessions since 2026-08-05).
+      // Behaviour on this page is unchanged by this correction; only the
+      // description was wrong. A network error, a non-2xx, or any response shape
       // other than the specific well-formed token-unknown config envelope
       // NEVER triggers the fallback (see cfgTokenUnknown_ below), so a
       // ju-service outage cannot silently reroute a session that genuinely
