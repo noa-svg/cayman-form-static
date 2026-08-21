@@ -3874,7 +3874,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-20-1-board-filter-row';
+  window.__BUILD_TAG = 'console-2026-08-21-1-cayman-mint-flip';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -3935,6 +3935,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // GAS). Rollback is flipping this back to false; no in-flight
   // ju-service-minted process existed at flip time to strand.
   var ISRAEL_MINT_ON_JU_API = true;
+  // ---- CAYMAN ONBOARDING MINT FLIP (2026-08-21) ---------------------------
+  // Separate flag from ISRAEL_MINT_ON_JU_API above, deliberately: arming one
+  // lane must never silently arm the other, and rollback has to be per-lane.
+  //
+  // WHY THIS IS SAFE NOW, each point verified rather than assumed:
+  //   - index.html (where a Cayman onboarding link lands) already carries the
+  //     ju-api primary + GAS fallback seam: gasUrl -> ju-api, LEGACY_GATEWAY ->
+  //     GAS, with cfgTokenUnknown_/probeLegacyGateway_/stickToLegacyGateway_.
+  //   - signer.html's legacy-sticky pin is now TOKEN-KEYED (2026-08-21,
+  //     lvp_signer_legacy_gw_v1_<token>). Before that fix a signer who finished
+  //     a GAS leg in one tab would drag the pin onto a ju-service-minted signer
+  //     link and post to the wrong engine. That bug was LATENT only because
+  //     Cayman was all-GAS; this flip is exactly what would have activated it.
+  //   - the live Cayman E2E ran against PRODUCTION ju-service and passed 5/5
+  //     applicant shapes end to end (mint, real KYC uploads, submit with a
+  //     drawn signature, every secondary leg in spec order with lawyer LAST,
+  //     the real seal worker, terminal `complete`), including the 5-leg entity
+  //     roster and the joint-holder roster with mixed W-9/W-8BEN.
+  //   - ju-service's ?admin=mintLink handles the Cayman lane (mintCaymanLink
+  //     treats non-'israeli' as cayman) and sends the real invite for a real
+  //     LP, drafting only for test identities.
+  //
+  // UNLIKE the money lane below, the onboarding mint is a SINGLE call that
+  // sends its own invite - there is no follow-up ?admin=sendIsraeliInvite with
+  // an un-overridden base to strand a ju-service-born process.
+  //
+  // FAILURE IS HONEST, not silent: there is no fallback mint on the other
+  // engine in either direction, so a ju-api refusal surfaces as "ju-api refused
+  // the mint", never as a generic GAS hiccup. Worst case is a failed mint the
+  // operator sees immediately, with no link created and no LP stranded.
+  //
+  // ROLLBACK: set this back to false. Nothing else changes.
+  var CAYMAN_MINT_ON_JU_API = true;
   // Which base a console call should go to. ONBOARDING mints only; every other
   // console action stays on GAS, because that is where existing processes and
   // their registry live.
@@ -3953,7 +3986,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // events.
   function mintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
-    return (ISRAEL_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
+    if (isIsrael) return ISRAEL_MINT_ON_JU_API ? JU_API : GW;
+    return CAYMAN_MINT_ON_JU_API ? JU_API : GW;
   }
 
   // ---- MONEY-FLOW MINT SEAM (2026-08-08, agent/money-flow-juapi) -----------
@@ -4021,12 +4055,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // signature bug, the CP-link-leak bug - all fixed and verified on both
   // engines; PORT-MAP.md marks every console read/action route gap `none`
   // for BOTH lanes; consolelist.ts's `?lane=cayman` filter already existed).
-  // MINTING new Cayman processes stays GAS-only (mintBaseForLane_/
-  // moneyMintBaseForLane_ are untouched, still isIsrael-gated) - real
-  // traffic still starts on GAS until the actual pilot begins. This line
-  // only changes where EXISTING processes are read/acted on, so a Cayman
-  // process minted on ju-service (synthetic proof or, later, real) becomes
-  // visible/actionable in the console the same way an Israeli one already is.
+  // SUPERSEDED 2026-08-21: Cayman ONBOARDING now mints on ju-service
+  // (CAYMAN_MINT_ON_JU_API above). Cayman MONEY still mints on GAS -
+  // moneyMintBaseForLane_ remains isIsrael-gated, deliberately, because the
+  // money lane is the LP's actual capital event and moves separately.
+  // This dual-read line remains correct and necessary either way: it is what
+  // makes a ju-service-born Cayman process visible and actionable on the
+  // board, which matters MORE now that real Cayman processes are born there.
   var ENGINES_FOR_LANE_ = { cayman: [GW, JU_API], israel: [GW, JU_API] };
   function enginesForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
