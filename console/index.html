@@ -3874,7 +3874,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-21-1-cayman-mint-flip';
+  window.__BUILD_TAG = 'console-2026-08-23-1-w8-renewals-flip';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4033,6 +4033,41 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function moneyMintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     return (MONEY_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
+  }
+
+  // ---- W-8 RENEWAL SIDEBAR FLIP (2026-08-23) --------------------------------
+  // Its own flag, same reason the three above are separate: this reads a
+  // DIFFERENT store from everything else here, so arming it must not ride on
+  // any other lane's flip and rolling it back must not disturb them.
+  //
+  // WHY THIS ONE MOVED FIRST. Archiving GAS with the sidebar pointed at it
+  // turns a compliance panel into a permanent "Could not load".
+  //
+  // IT IS NOT THE LAST GAS-BOUND READ IN THIS FILE, and an earlier draft of
+  // this comment wrongly said it was. Two console calls still resolve to GW
+  // because apiFetch defaults there, and NEITHER has a ju-service equivalent
+  // yet (grepped, 2026-08-23):
+  //
+  //     apiFetch('?api=foShareLabels')        x2
+  //     apiFetch('?api=listTrackerMonthTabs')
+  //
+  // Both must be answered somewhere before ju-cayman is archived, or the
+  // rev-share label picker and the wire-letter month picker break. Tracked in
+  // ~/.claude/plans/ju-cayman-retirement-runbook.md; do not read this flip as
+  // "the console is off GAS".
+  //
+  // PRECONDITION, and it is a real one: ju-service must already hold the
+  // corpus (migration w8_backfill_from_gas, 23 party keys) BEFORE this is
+  // armed. Flipping first would show an operator an empty W-8 panel and,
+  // worse, an empty panel is what "nothing is due" looks like. Verified via
+  // ?api=diagHealth -> w8Records before this went true.
+  //
+  // Rollback is flipping this to false: GAS keeps its own copy of the corpus
+  // (nothing is deleted there by the migration) so the old panel still works
+  // for as long as the project exists.
+  var W8_RENEWALS_ON_JU_API = true;
+  function w8RenewalsBase_() {
+    return W8_RENEWALS_ON_JU_API ? JU_API : GW;
   }
 
   // ---- BOARD READ + ACTION SEAM (2026-08-12) --------------------------------
@@ -7246,7 +7281,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var rid=++W8_SEQ;
     var wl=document.getElementById('w8list');
     if(wl)wl.innerHTML=w8Skeleton();
-    apiFetch('?api=w8renewals').then(function(d){
+    // Third arg is the per-lane gateway override; without it this resolves to
+    // GW (GAS), which is the engine being retired. See W8_RENEWALS_ON_JU_API.
+    apiFetch('?api=w8renewals', false, w8RenewalsBase_()).then(function(d){
       if(rid!==W8_SEQ)return;
       W8=d||{counts:{valid:0,expiring:0,expired:0},due:[]};renderW8(W8);
     }).catch(function(){
