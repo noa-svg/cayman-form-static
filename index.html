@@ -1396,7 +1396,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-08-19-1-juapi-seam';
+    window.__BUILD_TAG = 'index-2026-08-22-1-post-target-pin';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -1505,7 +1505,12 @@
       // Serve cached CFG immediately (repeat visits are instant)
       try {
         var raw = sessionStorage.getItem(cacheKey);
-        if (raw) { window.CAYMAN_CFG = JSON.parse(raw); applyCfgVisuals(window.CAYMAN_CFG); markDoneIfCompleted(window.CAYMAN_CFG); }
+        // Pin the POST target on the cache-hit path too. This branch runs
+        // SYNCHRONOUSLY at parse time and seeds window.CAYMAN_CFG, which the app
+        // IIFE captures as CFG, so a repeat visitor who submits before the
+        // background fetch resolves would otherwise POST at a cached gatewayUrl.
+        // See the note in handleCfgLoaded_ below for why that can be empty.
+        if (raw) { var cachedCfg = JSON.parse(raw); cachedCfg.gatewayUrl = activeGatewayUrl_(); window.CAYMAN_CFG = cachedCfg; applyCfgVisuals(window.CAYMAN_CFG); markDoneIfCompleted(window.CAYMAN_CFG); }
       } catch(e) {}
 
       // Always fetch fresh in background; update cache + apply language if needed
@@ -1533,6 +1538,19 @@
       // legacy-probe path land on the exact same handling regardless of
       // which engine actually answered.
       function handleCfgLoaded_(cfg) {
+        // Never let a cached or server-echoed URL redirect the POST target.
+        // israel.html:1387 and flow.html:508 already pin their own; this page was
+        // the last one still trusting the engine's self-report, and it only ever
+        // worked because GAS happens to echo its own /exec URL back. ju-service
+        // answers gatewayUrl:'' (routes/config.ts reads CAYMAN_WEBAPP_URL then
+        // WEB_APP_BASE_URL, neither set on the live revision), and gateway()
+        // routes every save_page / upload_file / submit / signstatus through this
+        // value, so a ju-service-minted Cayman token would boot the form fine and
+        // then fail EVERY post with 'Form is still loading'. activeGatewayUrl_ is
+        // already legacy-sticky here, so the GAS fallback path still stamps GAS.
+        // Engine-agnostic and a no-op while Cayman minting stays on GAS, which is
+        // exactly why it ships BEFORE any mint flip rather than with it.
+        cfg.gatewayUrl = activeGatewayUrl_();
         window.CAYMAN_CFG = cfg;
         applyCfgVisuals(cfg);
         markDoneIfCompleted(cfg);
