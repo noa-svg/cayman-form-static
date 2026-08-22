@@ -3874,7 +3874,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-23-1-w8-renewals-flip';
+  window.__BUILD_TAG = 'console-2026-08-23-2-console-reads-flip';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4043,31 +4043,42 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // WHY THIS ONE MOVED FIRST. Archiving GAS with the sidebar pointed at it
   // turns a compliance panel into a permanent "Could not load".
   //
-  // IT IS NOT THE LAST GAS-BOUND READ IN THIS FILE, and an earlier draft of
-  // this comment wrongly said it was. Two console calls still resolve to GW
-  // because apiFetch defaults there, and NEITHER has a ju-service equivalent
-  // yet (grepped, 2026-08-23):
+  // THE OTHER TWO GAS-BOUND READS ARE NOW MOVED TOO (2026-08-23, later the
+  // same day). The foShareLabels reads (two call sites) and the
+  // listTrackerMonthTabs read were GAS-bound purely because they passed no
+  // base argument - nothing recorded them as pointing at the engine being
+  // retired, they simply inherited it. Both now have real ju-service routes
+  // and ride CONSOLE_READS_ON_JU_API below.
   //
-  //     apiFetch('?api=foShareLabels')        x2
-  //     apiFetch('?api=listTrackerMonthTabs')
+  // The route names are spelled WITHOUT the apiFetch( wrapper on purpose: the
+  // grep below is the standing check for this bug class, and a comment that
+  // contained the literal pattern would make it return itself forever.
   //
-  // Both must be answered somewhere before ju-cayman is archived, or the
-  // rev-share label picker and the wire-letter month picker break. Tracked in
-  // ~/.claude/plans/ju-cayman-retirement-runbook.md; do not read this flip as
-  // "the console is off GAS".
-  //
-  // PRECONDITION, and it is a real one: ju-service must already hold the
-  // corpus (migration w8_backfill_from_gas, 23 party keys) BEFORE this is
-  // armed. Flipping first would show an operator an empty W-8 panel and,
-  // worse, an empty panel is what "nothing is due" looks like. Verified via
-  // ?api=diagHealth -> w8Records before this went true.
-  //
-  // Rollback is flipping this to false: GAS keeps its own copy of the corpus
-  // (nothing is deleted there by the migration) so the old panel still works
-  // for as long as the project exists.
+  // The mechanical check that finds this whole class, since a default is
+  // invisible to a reader:
+  //     grep -oE "apiFetch\('\?api=[a-zA-Z]+'\)" console/index.html
+  // Anything it returns is GAS-bound by omission. It should return nothing.
   var W8_RENEWALS_ON_JU_API = true;
   function w8RenewalsBase_() {
     return W8_RENEWALS_ON_JU_API ? JU_API : GW;
+  }
+
+  // ---- REMAINING CONSOLE READS FLIP (2026-08-23) ----------------------------
+  // The FO rev-share label picker and the wire-letter month picker. Grouped
+  // under one flag rather than two: unlike the mint seams above, these are
+  // both plain reads with no in-flight state to strand, so a per-lane rollback
+  // buys nothing and two flags would just be two things to forget.
+  //
+  // ju-service serves them as ?api=foShareLabels and ?api=listTrackerMonthTabs
+  // (routes/fosharelabels.ts, routes/trackermonths.ts), same console-R auth
+  // tier and same response envelopes as the GAS originals: {ok, labels} and
+  // {ok, months}, months newest-first.
+  //
+  // Rollback is flipping this to false. GAS keeps serving both until the
+  // project is archived.
+  var CONSOLE_READS_ON_JU_API = true;
+  function consoleReadBase_() {
+    return CONSOLE_READS_ON_JU_API ? JU_API : GW;
   }
 
   // ---- BOARD READ + ACTION SEAM (2026-08-12) --------------------------------
@@ -4523,7 +4534,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       foShareRenderList();
       return;
     }
-    apiFetch('?api=foShareLabels').then(function(d){
+    apiFetch('?api=foShareLabels', false, consoleReadBase_()).then(function(d){
       if(!d||!d.ok||!Array.isArray(d.labels))return;
       // Skip a raw atomic label already fully absorbed into a known combo
       // (Gilad15% never appears outside the Gilad+Ashri+Eitan deal).
@@ -7534,7 +7545,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Month dropdown (Noa, 2026-08-02: "it should have a dropdown for the
     // month i want to see") - populated from the tracker's real month tabs,
     // newest first. Defaults to the newest month, then peeks immediately.
-    apiFetch('?api=listTrackerMonthTabs').then(function(r){
+    apiFetch('?api=listTrackerMonthTabs', false, consoleReadBase_()).then(function(r){
       var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
       if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
       monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
@@ -7874,7 +7885,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function loadSettingsFoCatalog(){
     var el=document.getElementById('set-fo-catalog');
     if(!el)return;
-    apiFetch('?api=foShareLabels').then(function(d){
+    apiFetch('?api=foShareLabels', false, consoleReadBase_()).then(function(d){
       if(!d||!d.ok||!Array.isArray(d.labels)){el.textContent='Could not load.';return;}
       var names=d.labels.filter(function(n){return n&&n!=='None';});
       el.innerHTML=names.length
