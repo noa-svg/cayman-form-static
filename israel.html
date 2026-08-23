@@ -553,7 +553,8 @@
           </fieldset>
 
           <div data-show-when="__indQualified=true" data-primary-only>
-            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <h3 class="lvp-subhead">טופס כשירות</h3>
+            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
               <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="כן" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> כן</label>
@@ -571,7 +572,6 @@
         <section class="lvp-page" data-page="ind.lawyer" data-applicant="individual" data-page-when="lawyerNeededInd" hidden>
           <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
           <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.</p>
-          <p class="lvp-hint-small">הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. מומלץ ליידע אותו.</p>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
@@ -640,7 +640,8 @@
           </fieldset>
 
           <div data-show-when="__entQualified=true">
-            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <h3 class="lvp-subhead">טופס כשירות</h3>
+            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
             <fieldset class="lvp-fieldset">
               <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
               <label class="lvp-radio"><input type="radio" name="corporationDetails.isSignedQualification" value="כן" data-show-when-trigger="corporationDetails.isSignedQualification"> כן</label>
@@ -1299,7 +1300,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-23-1-review-fixes';
+      window.__BUILD_TAG = 'israel-2026-08-24-1-qualification-disclosure';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1651,12 +1652,12 @@
       "גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.":"My income in each of the last two years exceeds ILS 1,411,772, or my household income exceeds ILS 2,117,657.",
       "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 5,882,380 and my income in each of the last two years exceeds ILS 705,885, or my household income exceeds ILS 1,058,827.",
       "אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.":"I am joining as a non-qualified investor, with the knowledge of the fund manager Omri Velvart.",
-      "אישור כשירות":"Qualification verification",
+      "טופס כשירות":"Qualification form",
+      "גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.":"A verifying party (lawyer or CPA) must approve the qualification form. They will receive a link to sign the qualification form after your documents are completed. Please notify them.",
       "האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?":"Do you have a signed qualification form issued within the last 12 months?",
       "כן":"Yes",
       "לא":"No",
       "את טופס הכשירות החתום ניתן להעלות בעמוד העלאת הקבצים.":"You can upload the signed qualification form on the File Upload page.",
-      "עו\"ד או רו\"ח בלתי תלוי/ה יקבל/תקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו/ה.":"An independent lawyer or CPA will receive a link to sign the qualification form after your documents are completed. Please let them know.",
       "פרטי עורך/ת דין / רואה/ת חשבון":"Lawyer or CPA details",
       "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when a qualified investor has not uploaded a signed qualification form.",
       "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when the entity is qualified and has not uploaded a signed qualification form.",

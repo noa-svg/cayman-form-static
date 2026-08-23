@@ -344,7 +344,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-23-1-doc-ready-gate';
+    window.__BUILD_TAG = 'signer-2026-08-24-1-qualification-terms';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -472,13 +472,13 @@
       "U.S. tax status *": "מעמד מס בארה\"ב",
       "Not a U.S. person": "אינו/ה U.S. Person",
       "U.S. person": "U.S. Person",
-      "Accredited-investor qualification basis *": "בסיס כשירות המשקיע/ה",
+      "Investor qualification basis *": "בסיס כשירות המשקיע/ה",
       "Bank name": "שם הבנק",
       "Bank branch": "סניף",
       "Bank account number": "מספר חשבון",
       "SWIFT": "קוד SWIFT",
       "Beneficiaries (if any)": "נהנים (אם קיימים)",
-      "I independently confirm the accredited-investor qualification *": "הריני לאשר באופן בלתי תלוי את כשירות המשקיע/ה",
+      "I independently confirm the investor qualification *": "הריני לאשר באופן בלתי תלוי את כשירות המשקיע/ה",
       "This detail needs to be completed with Legacy Value Partners.": "יש להשלים פרט זה מול קרן לגאסי.",
       "Please fill in all required fields.": "יש למלא את כל השדות המסומנים.",
       "Please complete the highlighted fields.": "יש להשלים את השדות המסומנים.",
@@ -1085,7 +1085,7 @@
         taxResidency: { label: 'Country of tax residence *', type: 'text', autocomplete: 'country-name' },
         taxId:        { label: 'Tax ID / TIN', type: 'text', autocomplete: 'off', inputmode: 'numeric' },
         fatcaStatus:  { label: 'U.S. tax status *', type: 'select', options: ['Not a U.S. person', 'U.S. person'] },
-        qualification:{ label: 'Accredited-investor qualification basis *', type: 'text' },
+        qualification:{ label: 'Investor qualification basis *', type: 'text' },
         bankName:     { label: 'Bank name', type: 'text' },
         bankBranch:   { label: 'Bank branch', type: 'text', inputmode: 'numeric' },
         bankAccount:  { label: 'Bank account number', type: 'text', inputmode: 'numeric' },
@@ -1095,7 +1095,7 @@
         firmName:     { label: 'Firm name', type: 'text', autocomplete: 'organization' },
         controlType:  { label: 'Control type *', type: 'text' },
         ownershipPercentage: { label: 'Ownership percentage *', type: 'text', inputmode: 'decimal' },
-        attestationConfirmed: { label: 'I independently confirm the accredited-investor qualification *', type: 'checkbox' },
+        attestationConfirmed: { label: 'I independently confirm the investor qualification *', type: 'checkbox' },
         // F-lawyer-evidence (2026-07-21): the Israeli lawyer/CPA qualification leg
         // (caymanApplyIsraeliLawyerLeg_) declares these five fields server-side but
         // never had client defs, so every lawyer signer hard-blocked at Sign & Send
