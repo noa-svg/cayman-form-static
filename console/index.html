@@ -3271,6 +3271,11 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 /* ---- inputs ---- */
 input,textarea,select{border-radius:var(--radius-md)!important}
 #panel input,#panel textarea,#panel select,#drawer input,#drawer textarea,#allowlist-input{border:var(--bw) solid var(--color-ink)!important;border-radius:var(--radius-md)!important}
+/* Transfer-in existing-position entry (2026-08-23). The panel has no generic
+   <select> rule (only the bordered #panel select override above), so the
+   currency picker gets input parity here instead of per-element inline styles. */
+#transferAmtRow .tf-sub{display:block;font-size:var(--text-xs);letter-spacing:0.06em;color:var(--color-ink-muted);margin-bottom:4px}
+#transferAmtRow select{width:100%;font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-normal);color:var(--color-ink);background:var(--color-bg-input);padding:var(--space-2) var(--space-3);line-height:var(--leading-normal);outline:none}
 
 /* ---- labels + tags ---- */
 label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:11px;color:var(--color-ink)}
@@ -3799,6 +3804,47 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
       <div class="hint" id="existingLpHint">Search the People board and pick the LP who is transferring. Their name and email fill in below and stay editable, but the picked record is what the process binds to.</div>
     </div>
+    <!-- OPERATOR-ENTERED EXISTING POSITION (2026-08-23). Cayman transfer-in only.
+         The LP form correctly drops both money pages for a transfer-in
+         (index.html: data-page="investment" and data-page="investment.bank" both
+         carry data-page-when="isExistingLp=false") - they are not wiring new
+         money and have no account to wire from. But three downstream consumers
+         still need a figure: the subscription agreement renders the investment
+         amount twice (and the LP sees it in the review preview BEFORE signing),
+         the transfer-forms tracker writes a Join row, and the bdo_draft asks the
+         accountant to confirm a deposit. The LP cannot know the certificated
+         figure and must never invent it, so the OPERATOR supplies it here and it
+         travels with the mint as &amount=/&currency=.
+         The currency options are the SAME three the LP form offers on
+         name="investment.currency" (ILS/USD/EUR) - not a new list - so a
+         transfer-in and a new subscription put the same vocabulary into the
+         session snapshot and every consumer downstream of it.
+         NO DEFAULT CURRENCY on purpose: a select that silently starts on ILS
+         would print ILS on a USD certificate's subscription agreement and read
+         as an operator assertion nobody made. Both halves are required, and the
+         gate below is the same expression that builds the query string.
+         Deliberately NOT persisted in the create draft (see __saveCreateDraft's
+         field list): like the entity classification, a figure that belongs to
+         ONE LP's certificate must never be restored into the next transfer-in. -->
+    <div id="transferAmtRow" role="group" aria-labelledby="transferAmtLbl" style="display:none;margin-bottom: 16px">
+      <!-- Group heading, NOT a for= label: the two controls carry their own
+           (Currency / Amount). A heading that also claimed for="transferAmt"
+           would put two labels on one field and leave the currency select
+           labelled only by its own sub-label, which is how the wrong currency
+           gets picked without anyone noticing. -->
+      <label id="transferAmtLbl">Existing position at transfer <span class="tag">required</span></label>
+      <div class="g2">
+        <div>
+          <label class="tf-sub" for="transferCcy">Currency</label>
+          <select id="transferCcy" aria-describedby="transferAmtHint"><option value="">Pick</option><option value="ILS">ILS</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
+        </div>
+        <div>
+          <label class="tf-sub" for="transferAmt">Amount</label>
+          <input id="transferAmt" inputmode="decimal" autocomplete="off" aria-describedby="transferAmtHint" placeholder="500,000">
+        </div>
+      </div>
+      <div class="hint" id="transferAmtHint">The LP's existing position per the administrator certificate at the transfer date. Not new money. Copy it from the certificate.</div>
+    </div>
     <div id="onbPickerWrap" style="margin-bottom: 16px">
       <label>Pending onboarding submission <span class="opt">optional</span></label>
       <div style="display:flex;align-items:center;gap: 12px;flex-wrap:wrap">
@@ -3908,7 +3954,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-23-3-required-base-and-transfer-in';
+  window.__BUILD_TAG = 'console-2026-08-23-5-transfer-in-marker-split';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5801,6 +5847,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     syncLpKindToggle_();
     var isTransferIn=(state.lpKind==="existing");
     el=document.getElementById("existingLpPickWrap");if(el)el.style.display=isTransferIn?"":"none";
+    // The existing-position entry rides with the Monday pick: both exist only
+    // for a transfer-in, and a hidden row must never contribute to the gate
+    // (transferAmountParts_ returns null unless state.lpKind==="existing").
+    el=document.getElementById("transferAmtRow");if(el)el.style.display=isTransferIn?"":"none";
     // The pending-submission loader reads the NEW-investor landing group, so it
     // is the wrong source for a transferring LP; picking from it would bind the
     // process to a landing-group row. Hidden rather than left there to be misused.
@@ -5857,6 +5907,48 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     email=email.trim().toLowerCase();
     return (window.__onbPickItemId&&window.__onbPickEmail&&email===window.__onbPickEmail)?window.__onbPickItemId:"";
   }
+  // ---- transfer-in existing position (2026-08-23) -------------------------
+  // The three currencies the LP FORM offers on name="investment.currency"
+  // (index.html, the "Your investment" page). Read from there rather than
+  // invented so a transfer-in cannot introduce a currency token no downstream
+  // consumer of the session snapshot has ever seen.
+  var TRANSFER_CCYS=['ILS','USD','EUR'];
+  // ONE parse, three consumers: the CTA gate, the review card, and the mint URL.
+  // Returns null unless this is a transfer-in carrying a usable figure AND a
+  // currency the form's own list contains. Everything below derives from this,
+  // so "Send is enabled" and "the query string carries a number" cannot drift
+  // apart - a separate boolean gate is exactly how a legal document ends up
+  // rendering an empty money field with the button having been green.
+  function transferAmountParts_(){
+    if(state.lpKind!=="existing")return null;
+    var a=document.getElementById("transferAmt"),c=document.getElementById("transferCcy");
+    // Operators type thousands separators; the wire value must be a bare number.
+    var raw=String(a&&a.value||"").replace(/[,\s\u00a0]/g,"");
+    var ccy=String(c&&c.value||"").trim().toUpperCase();
+    if(!/^\d+(\.\d{1,2})?$/.test(raw))return null;
+    if(!(Number(raw)>0))return null;
+    if(TRANSFER_CCYS.indexOf(ccy)<0)return null;
+    return {amount:raw,currency:ccy};
+  }
+  // The query-string fragment the mint appends. Called with no argument by the
+  // gate (live) and with the submit-time parse by the mint, so the value the
+  // operator reviewed on the confirm card is the value that is sent.
+  function transferAmountQs_(parts){
+    var p=(parts===undefined)?transferAmountParts_():parts;
+    // &transferIn=1 rides WITH the amount, from the same parse, so a mint can
+    // never carry one without the other. It is a SEPARATE marker from
+    // lpKind=existing on purpose: "existing" also covers a top-up, where the LP
+    // states their own new amount and must keep the money pages. Keying the
+    // migration behaviour on lpKind alone would have hidden those pages from
+    // every topping-up LP. Noa confirmed 2026-08-23 that a migration never adds
+    // new money in the same transaction, so the two are mutually exclusive.
+    return p?('&transferIn=1&amount='+encodeURIComponent(p.amount)+'&currency='+encodeURIComponent(p.currency)):'';
+  }
+  // Human-readable echo of the SAME parse, for the review card and CTA line.
+  function transferAmountText_(parts){
+    var p=(parts===undefined)?transferAmountParts_():parts;
+    return p?fmtAmount(p.amount,p.currency):'';
+  }
   // ---- CTA gating + the one-line plain statement of what Send will do ----
   // (2026-08-06 guided create). The button is disabled until the form is
   // genuinely sendable; the explain line always says exactly what happens.
@@ -5871,6 +5963,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // turns that guard off. So the refusal has to happen here instead, and it is
     // gated on the id that will actually be SENT, not merely on a pick existing.
     if(state.lpKind==="existing"&&!onbPickedItemId_())return false;
+    // An existing LP MUST also carry the existing position. The LP form has no
+    // amount page for them, so this is the ONLY place the figure can enter the
+    // system, and the subscription agreement prints it twice. Gated on the very
+    // expression that builds the query string (transferAmountQs_), never on a
+    // parallel "is the field non-empty" test that could pass while the URL sent
+    // nothing.
+    if(state.lpKind==="existing"&&!transferAmountQs_())return false;
     return hasName&&emailOk;
   }
   function ctaExplainText(){
@@ -5892,9 +5991,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // new-investor one. Say both, because both differ from the default path the
     // operator is used to reading here.
     if(state.lpKind==="existing"){
-      return onbPickedItemId_()
-        ? "Send binds to the picked Monday LP (no new item) and emails the transfer invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+"."
-        : "Pick the existing LP above. Without a pick the process would be created with no Monday record behind it, so Send stays off.";
+      if(!onbPickedItemId_())return "Pick the existing LP above. Without a pick the process would be created with no Monday record behind it, so Send stays off.";
+      if(!transferAmountQs_())return "Enter the existing position and its currency from the administrator certificate. The subscription agreement prints that figure, so Send stays off until it is there.";
+      return "Send binds to the picked Monday LP (no new item), carries "+transferAmountText_()+" as the existing position, and emails the transfer invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+".";
     }
     return "Send creates the Monday item, emails the invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+", and notifies the team.";
   }
@@ -5927,6 +6026,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     syncLpKindToggle_();
     var _exS=document.getElementById('existingLpSearch');if(_exS)_exS.value='';
     var _exR=document.getElementById('existingLpResults');if(_exR){_exR.hidden=true;_exR.innerHTML='';}
+    // Existing position is a per-mint figure off ONE LP's certificate: a
+    // completed transfer-in must not leave it sitting in the field for the next
+    // one, and the currency goes back to "Pick" rather than a silent default.
+    var _taA=document.getElementById('transferAmt');if(_taA)_taA.value='';
+    var _taC=document.getElementById('transferCcy');if(_taC)_taC.value='';
     foShareSelected=[];foShareRenderSel();
     var fsp=document.getElementById('foSharePicker');if(fsp)fsp.hidden=true;
     var fsi=document.getElementById('foShareSearch');if(fsi)fsi.value='';
@@ -7479,6 +7583,36 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var _exi=document.getElementById("existingLpSearch");if(_exi)_exi.focus();
       return;
     }
+    // MANDATORY existing position for a transfer-in, parsed ONCE here and reused
+    // for the review card and the mint URL below, so what the operator confirms
+    // is literally the string that is sent. Re-checked at submit for the same
+    // reason the Monday pick is: the CTA gate is a disabled button, and this
+    // figure is the one the subscription agreement renders (twice) in front of
+    // the LP before they sign.
+    var _amtParts=transferAmountParts_();
+    var _amtQs=transferAmountQs_(_amtParts);
+    // Resolved HERE, above the guard that needs it, and reused by the failure
+    // handlers far below. test/coupling-check.cjs's C1c asserts exactly ONE
+    // call site routes through mintBaseForLane_, so the guard must read this
+    // value rather than ask the helper again.
+    var mintBase = mintBaseForLane_(state.lane);
+    var mintViaJu = mintBase === JU_API;
+    // ROLLBACK GUARD (2026-08-23). &transferIn=1 is understood by ju-service
+    // ONLY. ju-cayman has no transfer-in path at all: it would ignore the
+    // marker AND the amount and mint an ordinary existing-LP link, leaving the
+    // LP on money pages asking for a figure they do not have, with the
+    // operator's Send button green the whole way. CAYMAN_MINT_ON_JU_API exists
+    // to be flipped back, so this cannot be left as an invariant nobody checks.
+    // Fail here, at the operator, rather than silently at the LP.
+    if(state.lpKind==="existing"&&_amtQs&&!mintViaJu){
+      showMsg("Transfer-in mints require the ju-api route, which is currently off for this lane. Re-enable it before minting a migration link, or this LP would be sent an ordinary subscription form with no way to state their existing position.",true);
+      return;
+    }
+    if(state.lpKind==="existing"&&!_amtQs){
+      showMsg("Enter the LP's existing position and its currency from the administrator certificate before sending. The subscription agreement prints this figure and would otherwise render blank.",true);
+      var _tai=document.getElementById("transferAmt");if(_tai)_tai.focus();
+      return;
+    }
     // C3 (2026-07-19): the native confirm() showed only the email - right email +
     // wrong LP/lane sailed through. Same inline review card as the money path.
     // 2026-08-04, Noa: same "two stacked green CTAs" fix as the increase/
@@ -7495,6 +7629,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // here: an existing LP already has a live People row that completion writes
     // back to.
     if(state.lpKind==='existing')_reviewRows.push(['LP status','Existing LP transferring in · Monday item '+onbPickedItemId_(email)]);
+    // The figure sits next to the LP status row because the two are one claim:
+    // THIS Monday LP is moving THIS certificated position across. Rendered from
+    // the same _amtParts the mint sends, not a re-read of the field.
+    if(state.lpKind==='existing')_reviewRows.push(['Existing position',transferAmountText_(_amtParts)+' · per administrator certificate']);
     createReviewConfirm(_reviewRows,'Send invite',function(){btn.style.display='';doCreateOnboarding();},function(){btn.style.display='';});
     function doCreateOnboarding(force){
     btn.disabled=true;btn.textContent="Sending...";
@@ -7529,9 +7667,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // asserts exactly one call site routes through mintBaseForLane_, so the
     // engine the mint used must be derived from this single value rather than
     // by asking the helper a second time.
-    var mintBase = mintBaseForLane_(state.lane);
-    var mintViaJu = mintBase === JU_API;
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':''), false, mintBase).then(function(res){
+    // (mintBase / mintViaJu are resolved once, above the transfer-in guard.)
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+_amtQs+(force?'&force=1':''), false, mintBase).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
