@@ -3954,7 +3954,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-23-5-transfer-in-marker-split';
+  window.__BUILD_TAG = 'console-2026-08-24-1-transfer-in-gate-rationale';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5964,8 +5964,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // gated on the id that will actually be SENT, not merely on a pick existing.
     if(state.lpKind==="existing"&&!onbPickedItemId_())return false;
     // An existing LP MUST also carry the existing position. The LP form has no
-    // amount page for them, so this is the ONLY place the figure can enter the
-    // system, and the subscription agreement prints it twice. Gated on the very
+    // amount page for them (index.html gates both money pages on
+    // isTransferIn=false), so this is the ONLY place the figure can enter the
+    // system, and the subscription agreement prints it twice.
+    //
+    // WHY EXISTING == MIGRATION HERE, since the 2026-08-23 split says the two
+    // are different populations: on the CAYMAN lane a top-up has nowhere to go.
+    // increase and redemption route unconditionally to the Israeli lane
+    // (ju-service routes/mintlink.ts resolveMintRoute), so there is no Cayman
+    // top-up mint path, and ju-service refuses an existing-LP Cayman mint that
+    // does not declare transferIn=1. Do NOT "fix" this gate by making the
+    // amount optional: that mints a link the server rejects, or worse, one that
+    // reaches an LP with a blank figure on the agreement they sign. If a Cayman
+    // top-up flow is ever built, this gate and that refusal change together.
+    //
+    // Gated on the very
     // expression that builds the query string (transferAmountQs_), never on a
     // parallel "is the field non-empty" test that could pass while the URL sent
     // nothing.
