@@ -626,6 +626,16 @@
       <div class="lvp-toast" data-toast role="status" aria-live="polite"></div>
       <form id="lvp-form" autocomplete="on" novalidate aria-label="Legacy Value Partners subscription">
 
+        <!-- Migrating-LP flag, mirrored from the server's cfg.isExistingLp by
+             seedExistingLpFlag_ so the EXISTING data-page-when engine can gate
+             whole pages on it (the money pages below). Static default is "false"
+             (new subscriber) so a config that never resolves keeps the full flow.
+             Lives outside every .lvp-page on purpose: it must never be swept up by
+             validatePage, and it must stay readable by currentValueFor no matter
+             which page is showing. collectAll picks it up by name, agreeing with the
+             isExistingLp it already seeds from CFG. -->
+        <input type="hidden" name="isExistingLp" value="false">
+
         <!-- ========================= PAGE 1: WELCOME (greeting only, no fields - EasySend parity) ========================= -->
         <section class="lvp-page" data-page="welcome">
           <h2 class="lvp-page__title">Welcome to Legacy Value Partners</h2>
@@ -913,8 +923,15 @@
           </div>
         </section>
 
-        <!-- ========================= PAGE: INVESTMENT AMOUNT + LP BANK (shared, ci-spec Page 12) ========================= -->
-        <section class="lvp-page" data-page="investment">
+        <!-- ========================= PAGE: INVESTMENT AMOUNT + LP BANK (shared, ci-spec Page 12) =========================
+             Both money pages are gated on isExistingLp=false. A migrating LP is moving an
+             existing position across, so there is no new subscription amount to state and no
+             account they are wiring from; their data-required holders (amount, currency, and
+             the four lpBank fields) would otherwise be an unpassable wall on Next/Submit, and
+             the amount FORMAT rule additionally rejects anything under 1000. data-page-when
+             takes them out of visiblePages() entirely, so the stage rail recomputes without
+             them and validatePage never sees their holders (they stay [hidden]). -->
+        <section class="lvp-page" data-page="investment" data-page-when="isExistingLp=false" hidden>
           <h2 class="lvp-page__title">Your investment</h2>
           <div class="lvp-grid-2">
             <label class="lvp-field" data-required><span class="lvp-field__label">Currency</span>
@@ -924,7 +941,7 @@
           </div>
         </section>
 
-        <section class="lvp-page" data-page="investment.bank">
+        <section class="lvp-page" data-page="investment.bank" data-page-when="isExistingLp=false" hidden>
           <h2 class="lvp-page__title">Your bank details</h2>
           <p class="lvp-page__hint">The account you will wire from.</p>
           <label class="lvp-field" data-required><span class="lvp-field__label">Name and address of your bank</span><input class="lvp-input" type="text" name="investment.lpBank.nameAndAddress" data-help="Full legal name of bank plus full branch address including city and country"></label>
@@ -1922,6 +1939,14 @@
         // with a blank required fatcaCrs.usPersonStatus.
         if (typeof syncUsCitizenshipToFatca === 'function') syncUsCitizenshipToFatca();
       }
+      // Money-page gate: re-seed from the authoritative config now that it has
+      // arrived. Must run AFTER restoreFormData above, which would otherwise let a
+      // saved snapshot's isExistingLp outrank the live config. Only take the key when
+      // newCfg actually carries it, so a partial config cannot clear a true flag.
+      // A flip changes which pages exist, so recompute the sequence (rebuild clamps
+      // idx when the money pages disappear from under the LP).
+      if (typeof newCfg.isExistingLp !== 'undefined') CFG.isExistingLp = !!newCfg.isExistingLp;
+      if (seedExistingLpFlag_()) rebuild();
       // Cold start: the sync boot ran before config resolved, so it could not jump
       // to the saved page and the LP is sitting on the welcome page with data
       // present but invisible. Now that config (incl. resumePage) has arrived,
@@ -1933,6 +1958,30 @@
     };
 
     function applicant() { return state.applicantType || ''; } // always preset from CFG; the LP never self-classifies
+
+    // ---- migrating-LP money gate ----
+    // cfg.isExistingLp is the operator's decision, made at mint time; the LP never
+    // self-classifies here either. Read it from BOTH config sources for the same
+    // reason validatePage reads screenshotMode from three: the static CFG capture at
+    // line ~1660 races the async config fetch, which REPLACES window.CAYMAN_CFG with
+    // a fresh object rather than mutating the one CFG captured. window wins when it
+    // carries the key at all, so a stale sessionStorage boot cannot pin the flag.
+    function existingLpFromConfig_() {
+      var w = (typeof window !== 'undefined') ? window.CAYMAN_CFG : null;
+      if (w && typeof w.isExistingLp !== 'undefined') return !!w.isExistingLp;
+      return !!(CFG && CFG.isExistingLp);
+    }
+    // Mirror the config flag into the hidden isExistingLp field that both money pages'
+    // data-page-when reads through currentValueFor. Returns true only when the value
+    // actually changed, so callers know whether the page sequence needs recomputing.
+    function seedExistingLpFlag_() {
+      var el = form.querySelector('input[type="hidden"][name="isExistingLp"]');
+      if (!el) return false;
+      var want = existingLpFromConfig_() ? 'true' : 'false';
+      if (el.value === want) return false;
+      el.value = want;
+      return true;
+    }
 
     function visiblePages() {
       var ap = applicant();
@@ -4414,6 +4463,10 @@
     applyConditionals();
     // Restore prefill data into form fields (resume or test link).
     if (CFG.prefill && Object.keys(CFG.prefill).length > 1) { restoreFormData(CFG.prefill); syncUsCitizenshipToFatca(); }
+    // Money-page gate: seed AFTER restoreFormData (a saved snapshot carries its own
+    // isExistingLp and must not outrank the live config) and BEFORE the resume-page
+    // lookup and showPage below, both of which read visiblePages().
+    seedExistingLpFlag_();
     dobInitAll(); // split any restored ISO birthDate into the DD/MM/YYYY segments
     applyOffJuLock(); // pre-vetted off-ju fields: set to in-scope values + disable
     // Amount: whole-number, grouped with thousands separators on blur, so the LP

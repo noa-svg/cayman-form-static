@@ -338,7 +338,11 @@
             </label>
             <label class="lvp-field" data-field="bank-account">
               <span class="lvp-field__label">מספר חשבון<span class="lvp-req" aria-hidden="true">*</span></span>
-              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,13}" maxlength="13" enterkeyhint="done" aria-describedby="err-bank-account">
+              <!-- pattern/maxlength widened 2026-08-23 (finding #10) to the SAME rule
+                   vAccount enforces (LVPRules.ACCOUNT_RE): 4-13 digits plus the optional
+                   Israeli sub-account suffix, e.g. 740800/88. maxlength 17 = 13 + "/nnn".
+                   A maxlength of 13 physically blocked typing the suffix on a long account. -->
+              <input class="lvp-input lvp-input--ltr" type="text" id="bank-account" inputmode="numeric" autocomplete="off" required pattern="[0-9]{4,13}(/[0-9]{1,3})?" maxlength="17" enterkeyhint="done" aria-describedby="err-bank-account">
               <span class="lvp-field__error" id="err-bank-account"></span>
             </label>
           </div>
@@ -385,7 +389,11 @@
     <img class="lvp-busy__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <div class="lvp-busy__spinner" aria-hidden="true"></div>
     <p class="lvp-busy__title" id="lvp-busy-title">טוען...</p>
-    <p class="lvp-busy__warn">נא לא לסגור את החלון.</p>
+    <!-- id + [hidden] support added 2026-08-23 (finding #31): the boot overlay hides
+         this line for its first BOOT_WARN_AFTER_MS and reveals it once the config
+         fetch has visibly gone long. The submit overlay shows it from the first
+         frame, exactly as before. Same string in both cases; no new copy. -->
+    <p class="lvp-busy__warn" id="lvp-busy-warn">נא לא לסגור את החלון.</p>
   </div>
 
   <script src="validation-rules.js"></script>
@@ -537,6 +545,40 @@
         applicantType = CFG.applicantType;
         bootstrapForm();
       } else {
+        // ---- BOOT WAIT FEEDBACK (2026-08-23, CTO review finding #31) ---------
+        // The boot config fetch is budgeted 180s across 3 attempts and may run a
+        // 180s legacy probe on top, and this file's own measurements put the GOOD
+        // case at 18-47s. Until now the only feedback was the static word in
+        // #lvp-loading: no spinner, no motion, nothing that reads as work in
+        // progress on a phone. The page already owns a proper busy overlay
+        // (#lvp-busy, logo + spinner + title) and used it only for submit; reuse
+        // it here. The "do not close the window" line stays hidden for the first
+        // BOOT_WARN_AFTER_MS so a fast boot never flashes an alarming instruction,
+        // and appears once the wait has visibly gone long. No new copy: both
+        // strings are the ones the submit overlay already shows.
+        var BOOT_WARN_AFTER_MS = 10000;
+        var bootWarnTimer = null;
+        function bootBusyStart_() {
+          var busy = document.getElementById('lvp-busy');
+          var warn = document.getElementById('lvp-busy-warn');
+          if (warn) warn.hidden = true;
+          if (busy) busy.classList.add('is-active');
+          bootWarnTimer = setTimeout(function () {
+            bootWarnTimer = null;
+            if (warn) warn.hidden = false;
+          }, BOOT_WARN_AFTER_MS);
+        }
+        // Called on EVERY boot exit (success and each terminal error), so the
+        // overlay can never outlive the fetch and hide the message underneath it.
+        // Also restores the warn line to visible, because the submit overlay
+        // reuses this same element and expects it shown from the first frame.
+        function bootBusyDone_() {
+          if (bootWarnTimer) { clearTimeout(bootWarnTimer); bootWarnTimer = null; }
+          var busy = document.getElementById('lvp-busy');
+          var warn = document.getElementById('lvp-busy-warn');
+          if (busy) busy.classList.remove('is-active');
+          if (warn) warn.hidden = false;
+        }
         // Config load is idempotent (a read), so a transient failure (stalled
         // connection, timeout, network drop, or a 5xx) is safe to retry and is
         // NOT a broken link. The old code had no timeout/onerror at all, so a
@@ -619,6 +661,7 @@
           x.timeout = 180000;
           function transientFail(why) {
             if (cfgAttempts < CFG_MAX_ATTEMPTS) { setTimeout(loadConfig, 800 * cfgAttempts); return; }
+            bootBusyDone_();
             $loading.textContent = NETWORK_FAIL_MSG;
             // 2026-08-06: report the give-up, do not just show it. This exact
             // branch is what a real LP hit for two days while the server side
@@ -633,10 +676,10 @@
           x.onreadystatechange = function () {
             if (x.readyState !== 4) return;
             if (x.status === 0 || x.status >= 500) { transientFail(); return; }
-            if (x.status !== 200) { $loading.textContent = BROKEN_LINK_MSG; return; }
+            if (x.status !== 200) { bootBusyDone_(); $loading.textContent = BROKEN_LINK_MSG; return; }
             var parsed;
             try { parsed = JSON.parse(x.responseText); }
-            catch (e) { $loading.textContent = BROKEN_LINK_MSG; return; }
+            catch (e) { bootBusyDone_(); $loading.textContent = BROKEN_LINK_MSG; return; }
             // Fallback gate (see the MONEY-FLOW GATEWAY SEAM above): only a
             // well-formed token-unknown envelope from a REACHABLE, 2xx
             // primary triggers the legacy probe - never on a bare network
@@ -697,12 +740,14 @@
           lx.send();
         }
         function applyLoadedConfig_(cfg) {
+          bootBusyDone_();
           CFG = cfg;
           if (!CFG || !CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
           flowType = CFG.flowType;
           applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
           bootstrapForm();
         }
+        bootBusyStart_();
         loadConfig();
       }
 
@@ -1370,16 +1415,21 @@
 
       // ---- redemption month picker ------------------------------------------
       // Friedman: only valid options are shown. Each option is the 1st of a
-      // calendar month, and the earliest visible month is the first whose 1st
-      // is >= today + 14 days (the server rule). 2 months horizon (Noa).
+      // calendar month, and the earliest visible month is the soonest 1st that is
+      // not in the past. There is NO 14-day buffer: Noa removed that rule
+      // (2026-06-27) and the server agrees with this code, so on the 1st of a month
+      // the first offered option IS today. An earlier version of this comment
+      // claimed a 14-day server rule; it was never true of the shipped code.
+      // 2 months horizon (Noa).
       var REDEMPTION_MONTHS_AHEAD = 2;
       var REDEMPTION_MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
         'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
       // The redemption day is ALWAYS the 1st of a calendar month (Noa 2026-06-27).
-      // The control is exactly REDEMPTION_MONTHS_AHEAD radio options, each a valid
-      // 1st-of-month >= today + 14 days. There is no "immediate" path: every choice
-      // is structurally a 1st-of-month, so the sealed notice can never carry today's
-      // date or a mid-month date.
+      // The control is exactly REDEMPTION_MONTHS_AHEAD radio options, each a
+      // 1st-of-month that is not in the past. There is no "immediate" path: every
+      // choice is structurally a 1st-of-month, so the sealed notice can never carry a
+      // MID-MONTH date. It CAN carry today's date, on the 1st of a month, and that is
+      // correct and intended. Do not "restore" a 14-day buffer here.
       function populateRedemptionMonths() {
         var host = document.getElementById('wd-date-radios');
         if (!host) return;
@@ -1561,12 +1611,40 @@
         var bank = selectedBank();
         return (bank && v && branchByCode(bank, +v)) ? { ok: true } : { ok: false, msg: 'נא לבחור סניף' };
       }
+      // Account number normaliser + rule. 2026-08-23 (CTO review finding #10): this
+      // used to be vDigits('bank-account',4,13), i.e. strip spaces/hyphens then demand
+      // PURE DIGITS, which rejected the legitimate Israeli sub-account notation
+      // nnnnnn/nn (e.g. 740800/88). israel.html has always accepted it, and
+      // validation-rules.js records digits-only as an already-fixed incident (the
+      // 2026-07-18 parity audit). This is the increase/redemption form: the account
+      // here is the one money is WIRED TO, so a rejected-but-valid account is an LP
+      // who cannot file at all, and a silently-unnormalised one is a hyphen reaching
+      // the tracker. Both halves are fixed together: the SAME normalised string is
+      // what gets validated and what gets posted (see buildSubmission's lpBank).
+      function normAccount(v) {
+        return String(v == null ? '' : v).trim().replace(/[\s-]/g, '');
+      }
+      // Shared rule first (LVPRules.ACCOUNT_RE, the verbatim port of the server's
+      // ISRAELI_ACCOUNT_RE_). The local literal is the SAME expression and exists only
+      // so a script-load hiccup cannot brick the form; it must never be re-tightened
+      // to digits-only independently of the shared module.
+      var ACCOUNT_RX_FALLBACK = /^\d{4,13}(?:\/\d{1,3})?$/;
+      function accountRx() {
+        return (window.LVPRules && window.LVPRules.ACCOUNT_RE) || ACCOUNT_RX_FALLBACK;
+      }
       function vAccount() {
-        // Empty gets Noa's required message; otherwise the standard digit/range check.
-        // Israeli IBAN account slot is 13 digits (ISO 13616: IL + 2 check + 3 bank + 3
-        // branch + 13 account), zero-left-padded, so 4-13 is the real range.
-        if (!val('bank-account').replace(/\D/g, '')) return { ok: false, msg: 'נא להזין מספר חשבון' };
-        return vDigits('bank-account', 4, 13);
+        // Empty gets Noa's required message. Israeli IBAN account slot is 13 digits
+        // (ISO 13616: IL + 2 check + 3 bank + 3 branch + 13 account), zero-left-padded,
+        // so 4-13 digits is the real range, plus the optional /nn sub-account suffix.
+        var v = normAccount(val('bank-account'));
+        if (!v) return { ok: false, msg: 'נא להזין מספר חשבון' };
+        if (accountRx().test(v)) return { ok: true };
+        // Rejected. The reason is picked from the two messages ALREADY approved on
+        // this page (no new copy): a right-shaped value with the wrong digit count
+        // gets the range message, anything else gets the digits message.
+        return /^\d+(?:\/\d{1,3})?$/.test(v)
+          ? { ok: false, msg: 'נא להזין בין 4 ל-13 ספרות.' }
+          : { ok: false, msg: 'נא להזין ספרות בלבד.' };
       }
       function validateField(name) {
         switch (name) {
@@ -1602,8 +1680,9 @@
           case 'bank-account':   return vAccount();
           case 'wd-mode':        return document.querySelector('input[name="wd-mode"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'wd-date':
-            // Every radio is a server-valid 1st-of-month >= today + 14 days, so
-            // the only failure mode is "none picked" (silent-red per house style).
+            // Every radio is a server-valid 1st-of-month that is not in the past
+            // (no 14-day buffer, see populateRedemptionMonths), so the only failure
+            // mode is "none picked" (silent-red per house style).
             return document.querySelector('input[name="wd-date"]:checked') ? { ok: true } : { ok: false, silent: true };
           case 'accountManagementApproval':
             // 2026-07-18 (pixel-pass finding): missing required uploads used the
@@ -2039,7 +2118,10 @@
           bankName: val('bank-name'),
           bankCode: (bankEl && bankEl.getAttribute('data-bank-code')) || '',
           branch: val('bank-branch'),
-          accountNumber: val('bank-account')
+          // Normalised the SAME way vAccount validates it (finding #10): a typed
+          // "123-4567" must never validate clean here and reach the tracker with a
+          // hyphen still in it.
+          accountNumber: normAccount(val('bank-account'))
         };
         return s;
       }

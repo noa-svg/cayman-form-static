@@ -96,6 +96,12 @@ async function loadFlowForm(opts) {
           const resp = r || { status: 200, body: makeFlowCfg() };
           if (resp.network) { fail(); return; }
           if (resp.timeout) { timeout(); return; }
+          // {hold:true}: never settle. The real ?api=config is budgeted 180s and
+          // measures 18-47s even when it succeeds, so "what the LP is looking at
+          // WHILE it is in flight" is a real state this rig could not otherwise
+          // reach - every other response shape settles before loadFlowForm
+          // returns. Nothing is scheduled, so the page simply stays mid-boot.
+          if (resp.hold) return;
           settle(resp.status, JSON.stringify(resp.body));
           return;
         }

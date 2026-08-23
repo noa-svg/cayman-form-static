@@ -4021,7 +4021,10 @@
       // Signature gate: the drawn PNG is the consent (matching EasySend's sign-then-
       // send). The button is never disabled; if the pad is empty we send the LP back
       // to the sign page and mark the error rather than submitting without a signature.
-      if (!sigPadPng) {
+      // Read the pad NOW (finding #30): captureSig writes sigPadPng, which doSubmit
+      // and every retry attempt below then read, so the posted signaturePng is the
+      // canvas as it stands at submit, not a stale mid-stroke snapshot.
+      if (!(sigPadCapture ? sigPadCapture() : sigPadPng)) {
         setStatus(displayFor('יש לשרטט חתימה לפני השליחה.', curLang), true);
         var pages = visiblePages();
         for (var si = 0; si < pages.length; si++) {
@@ -4049,6 +4052,11 @@
     var sigPadReady = false;
     var sigPadPng = null;
     var sigPadRefit = null;   // set by initSigPad; re-fits the canvas on re-entry to ind.sign
+    // set by initSigPad; encodes the pad to a PNG (into sigPadPng) on demand. The
+    // submit gate calls it instead of the pad re-encoding itself on every pointermove
+    // (finding #30). Null until the pad has been initialised, i.e. the LP never
+    // reached the sign page, which is the same "no signature" outcome as before.
+    var sigPadCapture = null;
     // ---- sign-step doc preview (2026-07-07) ----
     // Fetches the LP's rendered subscription doc via the Israeli render_preview
     // branch and shows it above the pad. Sub-second server render (same md sources
@@ -4183,7 +4191,6 @@
         var p = pos(e);
         ctx2.beginPath(); ctx2.moveTo(last.x, last.y); ctx2.lineTo(p.x, p.y); ctx2.stroke();
         last = p; dirty = true; points++;
-        updateSigState();
         e.preventDefault();
       }
       function endDraw() { drawing = false; }
@@ -4201,18 +4208,24 @@
       // Re-fit the backing store and restore any captured signature. Runs on rotate /
       // viewport change AND on every re-entry to the sign page (see showPage), so a
       // resize that fired while the page was hidden can't leave a dead pad.
+      var restorePending = false;   // a rotate-restore drawImage is still in flight
       function refit() {
         if (!canvas.getBoundingClientRect().width) return;  // still hidden: nothing to fit
-        var prevPng = sigPadPng;
+        // Capture from the LIVE canvas, so strokes drawn since the last capture
+        // survive a rotate. The one exception is a restore that has not landed yet:
+        // the canvas is momentarily blank then, and the already-captured PNG is the
+        // truth (capturing there would save a blank and wipe the signature).
+        var prevPng = restorePending ? sigPadPng : captureSig();
         drawing = false; size();
         if (prevPng) {
-          var img = new Image();
-          img.onload = function () { try { ctx2.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (e) {} };
-          img.src = prevPng;
           sigPadPng = prevPng;   // keep the signature valid for submit even if redraw is async
+          restorePending = true;
+          var img = new Image();
+          img.onload = function () { restorePending = false; try { ctx2.drawImage(img, 0, 0, canvas.width, canvas.height); } catch (e) {} };
+          img.onerror = function () { restorePending = false; };
+          img.src = prevPng;
         } else {
-          dirty = false; points = 0; sigPadPng = null;
-          updateSigState();
+          dirty = false; points = 0; sigPadPng = null; restorePending = false;
         }
       }
       var resizeTimer = null;
@@ -4225,16 +4238,24 @@
       sigPadRefit = refit;   // exposed so showPage can re-fit on re-entry to ind.sign
       if (clearBtn) clearBtn.addEventListener('click', function () {
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
-        dirty = false; points = 0; sigPadPng = null;
+        dirty = false; points = 0; sigPadPng = null; restorePending = false;
         if (errEl) errEl.textContent = '';
-        updateSigState();
       });
-      function updateSigState() {
-        // Never disable the submit control; only keep sigPadPng in sync so the submit
-        // handler can read it and guide the LP to the pad if it is empty.
+      // 2026-08-23 (CTO review finding #30): this used to run on EVERY pointermove,
+      // i.e. a full canvas-to-PNG encode per touch sample, dozens of times a second,
+      // mid-stroke, on a 2x-DPR phone. The symptom is a pad that stutters and drops
+      // parts of the stroke on a mid-range Android, on the one screen where a bad
+      // experience is most expensive. The PNG is now produced only where it is
+      // actually needed: at submit, and at a refit that has to redraw the stroke.
+      // signer.html has always captured at submit only; this matches it. `dirty` and
+      // `points` remain the sole record of whether a signature exists, exactly as
+      // before, so the MIN_POINTS threshold is unchanged.
+      function captureSig() {
         var hasSig = dirty && points >= MIN_POINTS;
         sigPadPng = hasSig ? canvas.toDataURL('image/png') : null;
+        return sigPadPng;
       }
+      sigPadCapture = captureSig;   // exposed so the submit gate can read the pad on demand
     }
 
     // Error summary (a11y, WCAG 3.3.1/2.4.3): render a titled list of the page's errored

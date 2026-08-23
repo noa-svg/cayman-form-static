@@ -3765,6 +3765,40 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 
     <div id="manualLpFields">
     <div class="pstep-h"><span class="pstep-n">2</span>Who is it?</div>
+    <!-- EXISTING-LP ENTRY POINT (2026-08-23). CAYMAN LANE ONLY; syncPanelFields
+         hides this row and forces lpKind back to "new" on the Israeli lane, and
+         the reason is server-side, not cosmetic: ju-service's resendInvite
+         (domain/resendInvite.ts, the israeli branch) derives isOnboarding from
+         !session.isExistingLp, so an Israeli process carrying isExistingLp=true
+         would have INCREASE copy resent to an onboarding LP. The Cayman branch
+         of that same function has no such crossover (it maps the flag onto the
+         invite_new / invite_existing pair, which is what this control is for).
+         This does NOT change state.process: the flow stays "subscription", so
+         the money-path guard in ju-service's resolveMintRoute (routes/
+         mintlink.ts, which reads process/flow BEFORE lane and routes
+         increase|redemption|withdrawal away from the Cayman mint) is not
+         touched by anything here. -->
+    <div id="lpKindRow" style="display:none">
+      <label id="segLpKindLbl">LP status</label>
+      <div class="seg" id="segLpKind" style="max-width:280px" role="radiogroup" aria-labelledby="segLpKindLbl"><button type="button" data-v="new" role="radio" aria-checked="true" class="on">New investor</button><button type="button" data-v="existing" role="radio" aria-checked="false">Existing LP</button></div>
+      <div class="hint">Choose "Existing LP" only for an LP whose Israeli position is moving into the Cayman fund. It changes which invite they receive, requires a Monday pick, and skips the FO share fields.</div>
+    </div>
+    <!-- The Monday pick is MANDATORY for an existing LP, enforced in
+         createFormValid below. ju-service's orphan-SENT guard
+         (domain/caymanMint.ts, `if (!isExistingLp && !mondayItemId)`) switches
+         OFF for an existing LP, so without a pick the mint would happily create
+         a process with no Monday anchor and every later re-read (FO cc, LP sync,
+         completion) would silently miss it. The guard that would have caught
+         that is exactly the one this flag disables, so the console has to be the
+         one that refuses. -->
+    <div id="existingLpPickWrap" style="display:none;margin-bottom: 16px">
+      <label for="existingLpSearch">Existing LP on Monday <span class="tag">required</span></label>
+      <div class="lp-search">
+        <input id="existingLpSearch" type="search" autocomplete="off" aria-describedby="existingLpHint" placeholder="Search by name (Hebrew or English)">
+        <div id="existingLpResults" class="lp-results" hidden></div>
+      </div>
+      <div class="hint" id="existingLpHint">Search the People board and pick the LP who is transferring. Their name and email fill in below and stay editable, but the picked record is what the process binds to.</div>
+    </div>
     <div id="onbPickerWrap" style="margin-bottom: 16px">
       <label>Pending onboarding submission <span class="opt">optional</span></label>
       <div style="display:flex;align-items:center;gap: 12px;flex-wrap:wrap">
@@ -3874,7 +3908,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-23-2-console-reads-flip';
+  window.__BUILD_TAG = 'console-2026-08-23-3-required-base-and-transfer-in';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4050,14 +4084,31 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // retired, they simply inherited it. Both now have real ju-service routes
   // and ride CONSOLE_READS_ON_JU_API below.
   //
-  // The route names are spelled WITHOUT the apiFetch( wrapper on purpose: the
-  // grep below is the standing check for this bug class, and a comment that
-  // contained the literal pattern would make it return itself forever.
-  //
-  // The mechanical check that finds this whole class, since a default is
-  // invisible to a reader:
+  // ---- THE STANDING CHECK FOR THE GAS-BY-OMISSION BUG CLASS ----------------
+  // The check that used to live here was
   //     grep -oE "apiFetch\('\?api=[a-zA-Z]+'\)" console/index.html
-  // Anything it returns is GAS-bound by omission. It should return nothing.
+  // and it was WORTHLESS: it anchored on a closing quote-then-paren, so it only
+  // ever matched a call whose whole argument was one bare quoted literal. Every
+  // real GAS-bound call site concatenates (+encodeURIComponent(...)) or passes a
+  // prebuilt variable, so the pattern matched ZERO of the 26 sites that were
+  // actually GAS-bound by omission. It returned nothing and was read as proof
+  // that nothing was wrong. A check that structurally cannot fail is not a check.
+  //
+  // The replacement below CAN fail, and did: run against the 2026-08-23 tree it
+  // printed all 26 offenders. It is line-based and shape-based rather than
+  // route-name-based, so it catches a call site whose query string is built any
+  // way at all:
+  //     grep -nE 'apiFetch\(' console/index.html | grep -Ev ',[[:space:]]*(false|true),'
+  // EXPECTED OUTPUT: exactly ONE line, the definition line itself - the only
+  // place the token legitimately appears with no second and third argument.
+  // Anything else is a call site that did not name its gateway, which now also
+  // throws at runtime (see the guard in that function).
+  // No comment in this file may self-match, or the expected count stops being
+  // one: spell the token as apiFetch\( with a backslash whenever a comment has
+  // to name it, which is not the literal text the grep looks for.
+  //
+  // To DRILL it: delete the `, false, consoleReadBase_()` from any call site and
+  // re-run; that line appears in the output. Restore it; the output is one line.
   var W8_RENEWALS_ON_JU_API = true;
   function w8RenewalsBase_() {
     return W8_RENEWALS_ON_JU_API ? JU_API : GW;
@@ -4080,6 +4131,63 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function consoleReadBase_() {
     return CONSOLE_READS_ON_JU_API ? JU_API : GW;
   }
+
+  // ---- MONDAY-BACKED CONSOLE READS (2026-08-23) -----------------------------
+  // searchLps (two call sites), searchInvestments, listOnboardingSubmissions.
+  // Its own flag rather than riding CONSOLE_READS_ON_JU_API above, because the
+  // two groups have different blast radii and must roll back separately: those
+  // are label/month pickers, these are the identity lookups the mint binds to.
+  //
+  // WHY THIS ONE IS SAFE TO ARM. Every route here reads MONDAY, not either
+  // engine's own store, so there is no read/write split to create: ju-service's
+  // domain/mondaySearch.ts queries the SAME People/Investments boards through
+  // the same board-id props GAS reads, and returns the same match shape
+  // ({ok, matches:[{itemId,name,nameHe,nameEn,email,nickname}]} for searchLps /
+  // {ok, submissions:[...]} for listOnboardingSubmissions). A wrong answer here
+  // would be a wrong answer on both engines.
+  //
+  // Handlers verified present in the ju-service dispatch table before flipping
+  // (routes/consoledispatch.ts, dispatchAdmin): admin==='searchLps',
+  // admin==='searchInvestments', admin==='listOnboardingSubmissions'.
+  //
+  // ROLLBACK: set this to false. Nothing else changes.
+  var CONSOLE_MONDAY_READS_ON_JU_API = true;
+  function consoleMondayReadBase_() {
+    return CONSOLE_MONDAY_READS_ON_JU_API ? JU_API : GW;
+  }
+
+  // ---- EMAIL-COPY EDITOR SEAM (2026-08-23) ----------------------------------
+  // ?api=messages (read) + ?admin=saveMessage + ?admin=resetMessage (writes).
+  // All three DO have ju-service handlers (consoledispatch.ts: api==='messages',
+  // admin==='saveMessage', admin==='resetMessage'), and all three are wired to
+  // this ONE flag deliberately: the read and the writes hit an ENGINE-LOCAL copy
+  // store, so moving the read alone would show ju-service's copy while Save wrote
+  // GAS's, and the operator's edit would appear to vanish. They move together or
+  // not at all.
+  //
+  // DEFAULT false, and this one is NOT mine to flip. This panel is the LP-facing
+  // email copy. GAS still SENDS from its own copy store for every GAS-born
+  // process (the whole pre-flip back catalogue) and for Cayman money, whose mint
+  // is still GAS (moneyMintBaseForLane_ is isIsrael-gated). Arming this would let
+  // an operator edit copy that the engine actually sending to those LPs never
+  // reads, i.e. a silent two-version divergence in LP-facing wording. That is a
+  // Noa decision about LP copy, not a routing decision.
+  //
+  // GATE, do not flip before both hold:
+  //   1. Noa approves that the console's copy editor becomes ju-service-only.
+  //   2. Either GAS no longer sends any LP mail (Cayman money mint moved off it
+  //      and no GAS-born process can still be nudged/resent), or the two copy
+  //      stores have been reconciled and a check exists that keeps them so.
+  var CONSOLE_MESSAGES_ON_JU_API = false;
+  function consoleMessagesBase_() {
+    return CONSOLE_MESSAGES_ON_JU_API ? JU_API : GW;
+  }
+
+  // Explicit "this route has no ju-service handler yet" pin. Same value as GW;
+  // a separate NAME so a reader (and a reviewer) can tell a deliberate GAS pin
+  // apart from a call that simply has not been looked at. Every use is annotated
+  // with the route that is missing server-side.
+  var GAS_ONLY_ = GW;
 
   // ---- BOARD READ + ACTION SEAM (2026-08-12) --------------------------------
   // THE GAP THIS CLOSES: the two seams above only move where a NEW process is
@@ -4361,21 +4469,37 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return {kind:'html', msg:'Ju returned a web page instead of data (HTTP '+status+'). That is a server-side hiccup, not something you typed.'};
     return {kind:'unknown', msg:'Ju returned something that is not data (HTTP '+status+').'};
   }
-  // `base` (optional) overrides the gateway for a single call. Only the
-  // Israel-lane mint uses it today, via mintBaseForLane_; everything else omits
-  // it and stays on GAS. Threaded as an explicit argument rather than read from
-  // a global so a call site can never silently inherit the wrong gateway.
+  // `base` is REQUIRED and names the gateway this one call goes to. It used to
+  // be optional with `(base||GW)` at the fetch below, and that default was the
+  // whole bug: 26 call sites across 23 routes were pinned to the engine being
+  // retired purely by NOT mentioning it, so nothing in the file recorded them as
+  // GAS-bound and no reader could see it. Omission now fails LOUDLY instead of
+  // meaning GAS.
+  //
+  // The guard throws SYNCHRONOUSLY and before the DEMO short-circuit, on purpose:
+  //   - synchronous, so a call site with no .catch cannot swallow it into a quiet
+  //     rejected promise; it surfaces as an uncaught error at the click that made
+  //     it, naming the route.
+  //   - before DEMO, so a demo/dev run cannot hide a miswired call site.
+  //   - identity-checked against the only two gateways that exist, so passing the
+  //     query string by mistake - the exact old single-argument shape - is caught
+  //     rather than being treated as a URL.
+  // The argument ORDER is unchanged (qs, _retried, base) because
+  // test/coupling-check.cjs's C1c asserts the retry line verbatim as
+  // apiFetch(qs, true, base); reordering would silently defeat that assertion.
   function apiFetch(qs, _retried, base){
+    if(base!==GW&&base!==JU_API){
+      throw new Error('apiFetch: base is required and must be GW or JU_API. Every call site names its gateway; this one did not. Route: '+String(qs).slice(0,120));
+    }
     if(DEMO){return new Promise(function(res){setTimeout(function(){res(demoResolve_(qs));},60);});}
     // F20: POST so the id_token + params ride in the body, not the URL. The
     // server (?source=op) rebuilds the param map and delegates to the same router.
     // text/plain keeps it a CORS-simple request (no preflight), matching the LP form.
-    // _gw: per-lane gateway override (the Israeli-onboarding mint seam, see
-    // ISRAEL_MINT_ON_JU_API above). Default stays GW (GAS) for every existing call site; the
-    // override rides through the retry recursion so a retried ju-api call can
-    // never silently land on GAS.
+    // `base` is whatever the call site named (there is no default any more - see
+    // the guard above). It rides through the retry recursion so a retried ju-api
+    // call can never silently land on GAS.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
-    return fetch((base||GW)+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
+    return fetch(base+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
       // Read as TEXT first. r.json() throws a parser message the operator cannot
       // act on and, worse, destroys the body that says what actually happened.
       return r.text().then(function(txt){
@@ -4754,7 +4878,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
   }
 
-  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",language:"he",classification:"",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
+  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",onbLpKind:"new",language:"he",classification:"",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
   // Israeli onboarding readiness flag: flip to true when the branded doc layer +
   // seal E2E are green (deploy gate). Gates the Onboarding menu group on the
   // Israel fund + the classification row.
@@ -5499,7 +5623,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         box.hidden=false;
         var emptyDivNow=document.querySelector('#list .empty');
         if(emptyDivNow)emptyDivNow.hidden=true;
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){
+        // The base is typeof-guarded ONLY here, and only because this whole
+        // board-search IIFE is extracted and evaluated in an injected scope by
+        // test/board-search-lp-directory-harness.cjs, which predates this helper
+        // and cannot see it. In the page the helper is always in scope, so the
+        // guard never fires. When it DOES fire it yields undefined, which
+        // apiFetch refuses outright - deliberately NOT a GW fallback, because a
+        // silent GAS default is the exact defect this change exists to remove.
+        // Correct fix, out of scope for this edit: add consoleMondayReadBase_ to
+        // that harness's injected parameter list and drop the guard.
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false,
+          (typeof consoleMondayReadBase_==='function')?consoleMondayReadBase_():undefined).then(function(d){
           if(mySeq!==seq)return; // stale: query changed while this was in flight
           render((d&&d.matches)||[]);
         }).catch(function(err){ if(mySeq===seq)renderError(err); });
@@ -5629,9 +5763,48 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       updateCreateCta();
       return;
     }
-    // Onboarding is necessarily a NEW LP (step 1 fixed both process and type),
-    // so set the status from the flow. No visible New/Existing chooser.
-    state.lpKind="new";
+    // ---- LP STATUS, onboarding only (2026-08-23) ---------------------------
+    // This used to be an unconditional state.lpKind="new" with the comment
+    // "Onboarding is necessarily a NEW LP". That is true of the Israeli lane and
+    // was true of Cayman only while the Cayman fund had no migrating LPs, which
+    // is the case that is now arriving: an LP whose Israeli position transfers
+    // into the Cayman fund onboards as a Cayman subscription while being an
+    // EXISTING LP. ju-service has been ready for this on the Cayman side for a
+    // while (mintCaymanLink maps lpKind onto invite_new / invite_existing, and
+    // domain/emailCopy.ts's own note says invite_existing is unreachable
+    // "because the console cannot set lpKind='existing' today"). This is the
+    // entry point that makes it reachable.
+    //
+    // state.process is deliberately NOT touched: the flow stays "subscription",
+    // so ju-service's money-path guard (resolveMintRoute reads process/flow
+    // before lane and hard-routes increase|redemption|withdrawal to the Israeli
+    // money flow) sees exactly what it saw before. This control cannot reach it.
+    //
+    // ISRAELI LANE IS HARD-FORCED BACK TO "new", not merely hidden: on that lane
+    // isExistingLp=true makes resendInvite resolve invite_increase instead of
+    // invite_israeli, i.e. an onboarding LP gets increase copy resent. Forcing
+    // the value (rather than only hiding the control) means a lane switch with
+    // the panel already open cannot leave a stale "existing" behind.
+    // The operator's choice lives in state.onbLpKind, NOT in state.lpKind, and
+    // lpKind is DERIVED from it here. The two must stay separate because the
+    // increase/withdrawal branch above also writes state.lpKind="existing" (an
+    // increase is necessarily an existing LP). Reading lpKind back as "what the
+    // operator picked" therefore inherits that: pick Increase, then switch back
+    // to Onboarding, and the panel would come up in transfer-in mode with the
+    // Monday picker demanding a pick nobody asked for. Caught by drilling the
+    // Increase-then-Onboarding path, not by reasoning about it.
+    var lpKindRow=document.getElementById("lpKindRow");
+    var laneAllowsExisting=(state.lane==="cayman");
+    if(!laneAllowsExisting)state.onbLpKind="new";
+    state.lpKind=(laneAllowsExisting&&state.onbLpKind==="existing")?"existing":"new";
+    if(lpKindRow)lpKindRow.style.display=laneAllowsExisting?"":"none";
+    syncLpKindToggle_();
+    var isTransferIn=(state.lpKind==="existing");
+    el=document.getElementById("existingLpPickWrap");if(el)el.style.display=isTransferIn?"":"none";
+    // The pending-submission loader reads the NEW-investor landing group, so it
+    // is the wrong source for a transferring LP; picking from it would bind the
+    // process to a landing-group row. Hidden rather than left there to be misused.
+    el=document.getElementById("onbPickerWrap");if(el)el.style.display=isTransferIn?"none":"";
     // Entity classification: Israeli entity onboarding only (operator call at mint).
     el=document.getElementById("classRow");if(el)el.style.display=(state.lane==="israel"&&state.type==="entity")?"":"none";
     // 2026-08-10 (pixel-review finding): the name field label/placeholder stayed
@@ -5643,12 +5816,46 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     el=document.getElementById("langRow");if(el)el.style.display="";
     el=document.getElementById("emailsStep");if(el)el.style.display="";
     // FO share is a NEW-subscription field, same reasoning as classRow/langRow above.
-    el=document.getElementById("foShareSection");if(el)el.style.display="";
-    loadFoShareLabels();
+    // Hidden for a transferring LP because doCreateOnboarding only collects
+    // foShare when lpKind==='new' - leaving the picker on screen would let an
+    // operator tick chips that are then silently dropped at send.
+    el=document.getElementById("foShareSection");if(el)el.style.display=isTransferIn?"none":"";
+    if(!isTransferIn)loadFoShareLabels();
     el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Three steps, one send at the end. Nothing happens before you press Send invite.";}
-    el=document.getElementById("panelTitle");if(el)el.textContent="Onboarding · "+_typeLabel();
+    el=document.getElementById("panelTitle");if(el)el.textContent=(isTransferIn?"Transfer in · ":"Onboarding · ")+_typeLabel();
     el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
     updateCreateCta();
+  }
+  // Reflect state.lpKind back onto the segLpKind control (class + aria-checked).
+  // Its own function rather than setToggleSilent, which does not maintain
+  // aria-checked - a radiogroup whose checked state only lives in a CSS class is
+  // invisible to a screen reader.
+  function syncLpKindToggle_(){
+    var s=document.getElementById("segLpKind");
+    if(!s)return;
+    Array.prototype.forEach.call(s.children,function(x){
+      var on=x.getAttribute("data-v")===state.onbLpKind;
+      x.classList.toggle("on",on);x.setAttribute("aria-checked",on?"true":"false");
+    });
+  }
+  // The Monday item id that will ACTUALLY be sent as &mondayItemId= at mint.
+  // Extracted 2026-08-23 from doCreateOnboarding so the existing-LP mandatory-
+  // pick gate and the value the mint sends are the SAME expression: a gate that
+  // asserted "a pick exists" while the mint sent '' (because the operator edited
+  // the email away from the picked record) would pass and still mint an
+  // unanchored process, which is the exact failure the gate exists to stop.
+  // `emailForCheck` defaults to the LIVE field (what the gate should judge), but
+  // the mint passes the exact email string it is about to SEND, so the id and the
+  // email in one request always describe the same identity even if the operator
+  // edited the field after opening the confirm card.
+  function onbPickedItemId_(emailForCheck){
+    var email;
+    if(emailForCheck===undefined){
+      var f=document.getElementById("email");
+      email=String(f&&f.value||"");
+    } else { email=String(emailForCheck||""); }
+    email=email.trim().toLowerCase();
+    return (window.__onbPickItemId&&window.__onbPickEmail&&email===window.__onbPickEmail)?window.__onbPickItemId:"";
   }
   // ---- CTA gating + the one-line plain statement of what Send will do ----
   // (2026-08-06 guided create). The button is disabled until the form is
@@ -5658,6 +5865,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
     var hasName=!!(g("name")||g("nameHebrew"));
     var emailOk=/\S+@\S+\.\S+/.test(g("email"));
+    // An existing LP MUST carry a Monday pick. ju-service's orphan-SENT guard
+    // (domain/caymanMint.ts) is the thing that normally refuses to mint without
+    // an anchor, and it is gated on !isExistingLp - i.e. setting lpKind=existing
+    // turns that guard off. So the refusal has to happen here instead, and it is
+    // gated on the id that will actually be SENT, not merely on a pick existing.
+    if(state.lpKind==="existing"&&!onbPickedItemId_())return false;
     return hasName&&emailOk;
   }
   function ctaExplainText(){
@@ -5674,6 +5887,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
     var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
     var em=g("email"), fo=g("foEmail");
+    // Existing LP transferring in: no new Monday item is created (the process
+    // binds to the picked one), and the LP gets the transfer invite, not the
+    // new-investor one. Say both, because both differ from the default path the
+    // operator is used to reading here.
+    if(state.lpKind==="existing"){
+      return onbPickedItemId_()
+        ? "Send binds to the picked Monday LP (no new item) and emails the transfer invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+"."
+        : "Pick the existing LP above. Without a pick the process would be created with no Monday record behind it, so Send stays off.";
+    }
     return "Send creates the Monday item, emails the invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+", and notifies the team.";
   }
   function updateCreateCta(){
@@ -5698,6 +5920,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var _onbP=document.getElementById('onbPicked');if(_onbP){_onbP.hidden=true;_onbP.innerHTML='';}
     var _onbR=document.getElementById('onbResults');if(_onbR){_onbR.hidden=true;_onbR.innerHTML='';}
     var _onbS=document.getElementById('onbStatus');if(_onbS)_onbS.textContent='';
+    // LP status is a per-mint operator judgment call, same reasoning as the
+    // entity classification below: a completed transfer-in must not leave the
+    // next onboarding pre-set to "existing".
+    state.lpKind='new';state.onbLpKind='new';
+    syncLpKindToggle_();
+    var _exS=document.getElementById('existingLpSearch');if(_exS)_exS.value='';
+    var _exR=document.getElementById('existingLpResults');if(_exR){_exR.hidden=true;_exR.innerHTML='';}
     foShareSelected=[];foShareRenderSel();
     var fsp=document.getElementById('foSharePicker');if(fsp)fsp.hidden=true;
     var fsi=document.getElementById('foShareSearch');if(fsi)fsi.value='';
@@ -6276,7 +6505,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var q="?api=opUpdateSignerContact&processId="+encodeURIComponent(currentPid)
           +"&role="+encodeURIComponent(role)+"&firstName="+encodeURIComponent(fn)
           +"&lastName="+encodeURIComponent(ln)+"&email="+encodeURIComponent(em);
-        apiFetch(q).then(function(r){
+        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
+        // ?api=opUpdateSignerContact: routes/consoledispatch.ts dispatches on
+        // params.api / params.admin and the nearest thing it has is the differently-named
+        // admin action updateSignerContact, which this query does not name. Repointing this
+        // would return {ok:false,error:'unknown route'} on every click, so it
+        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
+        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
+        // threaded here, so this recovery action is unusable for a
+        // ju-service-born process either way. Fixing that needs the route
+        // ported server-side, not a client base change.
+        apiFetch(q, false, GAS_ONLY_).then(function(r){
           if(r&&r.ok){
             var oldLbl=(r.old&&(r.old.name||r.old.email))?((r.old.name||"")+(r.old.email?(" <"+r.old.email+">"):"")):"(none)";
             var newLbl=(r.new&&r.new.name||"")+(r.new&&r.new.email?(" <"+r.new.email+">"):"");
@@ -6323,7 +6562,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!docKey||!currentPid){dcstatus("Missing processId/docKey - reload the drawer and try again.","error");return;}
         goEl.disabled=true;dcstatus("Scheduling...",null);
         var q="?api=opCorrectSealedDoc&processId="+encodeURIComponent(currentPid)+"&docKey="+encodeURIComponent(docKey);
-        apiFetch(q).then(function(r){
+        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
+        // ?api=opCorrectSealedDoc: routes/consoledispatch.ts dispatches on
+        // params.api / params.admin and the string never appears in src/. Repointing this
+        // would return {ok:false,error:'unknown route'} on every click, so it
+        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
+        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
+        // threaded here, so this recovery action is unusable for a
+        // ju-service-born process either way. Fixing that needs the route
+        // ported server-side, not a client base change.
+        apiFetch(q, false, GAS_ONLY_).then(function(r){
           if(r&&r.ok){
             dcstatus("Scheduled - runs within about a minute. Reopen this drawer shortly to see the result (or check the process's attention feed).","ok");
           }else{
@@ -6363,7 +6611,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!driveId){astatus("A Drive file id is required.","error");return;}
         asaveEl.disabled=true;astatus("Attaching...",null);
         var q="?api=opAttachLawyerStamp&processId="+encodeURIComponent(currentPid)+"&driveId="+encodeURIComponent(driveId);
-        apiFetch(q).then(function(r){
+        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
+        // ?api=opAttachLawyerStamp: routes/consoledispatch.ts dispatches on
+        // params.api / params.admin and the string never appears in src/. Repointing this
+        // would return {ok:false,error:'unknown route'} on every click, so it
+        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
+        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
+        // threaded here, so this recovery action is unusable for a
+        // ju-service-born process either way. Fixing that needs the route
+        // ported server-side, not a client base change.
+        apiFetch(q, false, GAS_ONLY_).then(function(r){
           if(r&&r.ok){
             astatus("Attached. Run 'Correct this doc' on the affected document to re-seal with it.","ok");
             setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
@@ -6405,7 +6662,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!driveId){astatus2("A Drive file id is required.","error");return;}
         asaveEl2.disabled=true;astatus2("Attaching...",null);
         var q="?api=opAttachCompanyStamp&processId="+encodeURIComponent(currentPid)+"&driveId="+encodeURIComponent(driveId);
-        apiFetch(q).then(function(r){
+        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
+        // ?api=opAttachCompanyStamp: routes/consoledispatch.ts dispatches on
+        // params.api / params.admin and the string never appears in src/. Repointing this
+        // would return {ok:false,error:'unknown route'} on every click, so it
+        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
+        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
+        // threaded here, so this recovery action is unusable for a
+        // ju-service-born process either way. Fixing that needs the route
+        // ported server-side, not a client base change.
+        apiFetch(q, false, GAS_ONLY_).then(function(r){
           if(r&&r.ok){
             astatus2("Attached. Run 'Correct this doc' on the subscription document to re-seal with it.","ok");
             setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
@@ -6454,7 +6720,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(house)q+="&houseNumber="+encodeURIComponent(house);
         if(city)q+="&city="+encodeURIComponent(city);
         if(idnum)q+="&idNumber="+encodeURIComponent(idnum);
-        apiFetch(q).then(function(r){
+        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
+        // ?api=opFixSecondaryAddress: routes/consoledispatch.ts dispatches on
+        // params.api / params.admin and the string never appears in src/. Repointing this
+        // would return {ok:false,error:'unknown route'} on every click, so it
+        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
+        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
+        // threaded here, so this recovery action is unusable for a
+        // ju-service-born process either way. Fixing that needs the route
+        // ported server-side, not a client base change.
+        apiFetch(q, false, GAS_ONLY_).then(function(r){
           if(r&&r.ok){
             fstatus("Fixed. Run 'Correct this doc' on the affected document(s) to re-seal with it.","ok");
             setTimeout(function(){if(currentPid)openDrawer(currentPid);},900);
@@ -6597,9 +6872,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         else{dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,r),'error');}
       }).catch(function(err){dactBusy=false;goEl.disabled=false;cancelEl.disabled=false;dStatus(dActError(act,(err&&err.serverError)?{error:err.serverError}:null),'error');});
     };
-    // Async history load
+    // Async history load. Threads currentEngine rather than a flag: this LP's
+    // OTHER processes live in the same registry as the one the drawer is showing,
+    // so the engine that owns the open process is the engine that can answer.
+    // (Handler verified: consoledispatch.ts api==='lpHistory', console-R tier.)
+    // A flag here would have been wrong in both positions - pinned to GAS it
+    // returns an empty history for every ju-service-born process, pinned to
+    // ju-service it does the same for the GAS back catalogue.
     if(d.mondayItemId){
-      apiFetch('?api=lpHistory&mondayItemId='+encodeURIComponent(d.mondayItemId)).then(function(hr){
+      apiFetch('?api=lpHistory&mondayItemId='+encodeURIComponent(d.mondayItemId), false, currentEngine).then(function(hr){
         var el=document.getElementById('dhist');if(!el)return;
         if(!hr||!hr.ok||!hr.processes||!hr.processes.length){el.remove();return;}
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
@@ -6693,6 +6974,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // F3: a lane switch resets every per-lane view state and cache so nothing
       // from the prior lane bleeds across (toggle, search, w8, messages).
       showDone=false; showCanceled=false; doneLoaded=false;
+      // LP status is Cayman-only (see syncPanelFields). syncPanelFields already
+      // forces it back on the next panel open, but reset it here too so the
+      // window between a lane switch and that open cannot hold "existing" on the
+      // Israeli lane, where isExistingLp makes resendInvite send increase copy.
+      state.lpKind="new";state.onbLpKind="new";
+      if(window.__onbClearPick)window.__onbClearPick();
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
       W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
@@ -6722,6 +7009,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // to "" when nothing is chosen, which the mint call reads as "omit this param entirely".
   function wireToggleable(id,key){var s=document.getElementById(id);if(!s)return;s.onclick=function(e){var b=e.target.closest("button");if(!b)return;var wasOn=b.classList.contains("on");Array.prototype.forEach.call(s.children,function(x){x.classList.remove("on");x.setAttribute("aria-checked","false");});if(wasOn){state[key]="";}else{b.classList.add("on");b.setAttribute("aria-checked","true");state[key]=b.getAttribute("data-v");}syncPanelFields();};}
   wire("segLang","language");wireToggleable("segClass","classification");
+  // segLpKind gets its own handler instead of wire(): changing LP status must
+  // also DROP any pick made under the previous status. The pending-submission
+  // picker binds to the new-investor landing group and the existing-LP search
+  // binds to a live People row; carrying one across would silently anchor the
+  // process to the wrong record, which is the whole class of bug the
+  // 2026-08-08 identity-binding fix exists to prevent.
+  (function(){
+    var s=document.getElementById("segLpKind");
+    if(!s)return;
+    s.onclick=function(e){
+      var b=e.target.closest("button");if(!b)return;
+      var v=b.getAttribute("data-v")||"new";
+      if(v===state.onbLpKind)return;
+      state.onbLpKind=v;
+      if(window.__onbClearPick)window.__onbClearPick();
+      syncPanelFields();
+    };
+  })();
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
   // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
   // name, pick the deal row (carries the linked People item = LP identity), and the mint
@@ -6757,7 +7062,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var mySeq=++invSeq;
       var term=(m.email||m.nameHe||m.nameEn||m.name||'').trim();
       if(term.length<2)return;
-      apiFetch('?admin=searchInvestments&q='+encodeURIComponent(term)+'&limit=20').then(function(d){
+      apiFetch('?admin=searchInvestments&q='+encodeURIComponent(term)+'&limit=20', false, consoleMondayReadBase_()).then(function(d){
         if(mySeq!==invSeq)return; // stale: pick changed or cleared while this was in flight
         if(state.selectedPeopleId!==(m.itemId||''))return;
         var hits=((d&&d.matches)||[]).filter(function(x){return x.linkedPeopleItemId&&x.linkedPeopleItemId===state.selectedPeopleId;});
@@ -6814,7 +7119,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(q.length<2){box.hidden=true;rows=[];return;}
       if(T)clearTimeout(T);
       T=setTimeout(function(){
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(err){
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false, consoleMondayReadBase_()).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(err){
           // C5 (2026-07-19): a search ERROR is not "no matches" - say so, offer a
           // one-click retry, and name the likely cause (a server error here was the
           // tell of both grant outages; the operator should not have to guess).
@@ -6883,6 +7188,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // Monday-contact match straight to this exact autofill - same field shape
     // as an onboarding-submission pick, no second implementation.
     window.__onbPick=pick;
+    // Exposed 2026-08-23 so the LP-status toggle can drop a pick made under
+    // the OTHER status (see segLpKind's handler): the two pickers read
+    // different Monday sources and a carried-over pick would anchor the
+    // process to the wrong record.
+    window.__onbClearPick=clearPick;
     function render(){
       if(!subs.length){box.innerHTML='<div class="lp-empty">No pending submissions.</div>';box.hidden=false;return;}
       box.innerHTML=subs.map(function(s,i){return '<div class="lp-row" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(s.nameHe||s.nameEn||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(s))+'</div></div></div>';}).join('');
@@ -6891,13 +7201,75 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
     loadBtn.onclick=function(){
       status.textContent='Loading...';box.hidden=true;
-      apiFetch('?admin=listOnboardingSubmissions').then(function(d){
+      apiFetch('?admin=listOnboardingSubmissions', false, consoleMondayReadBase_()).then(function(d){
         subs=(d&&d.submissions)||[];
         status.textContent=subs.length?(subs.length+' pending'):'None pending';
         render();
       }).catch(function(err){status.textContent='Load failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'.');subs=[];});
     };
     document.addEventListener('click',function(e){var w=document.getElementById('onbPickerWrap');if(w&&!w.contains(e.target))box.hidden=true;});
+  })();
+  // ---- Existing-LP picker (Cayman transfer-in only) ----
+  // The transfer-in entry point's MANDATORY Monday pick. Deliberately reuses two
+  // things rather than growing a third copy of either:
+  //   - ?admin=searchLps, the same People-board search the money lane's LP
+  //     picker uses. Its match shape (itemId/name/nameHe/nameEn/email/nickname,
+  //     ju-service domain/mondaySearch.ts) is exactly what window.__onbPick
+  //     consumes, so no field mapping is invented here.
+  //   - window.__onbPick itself, so a transfer-in pick lands in the SAME
+  //     __onbPickItemId/__onbPickEmail binding the mint reads. There is one
+  //     picked-identity binding in this panel, not one per picker, which is why
+  //     onbPickedItemId_ can be the single gate for both.
+  // A row with no itemId is unpickable: an existing LP with no People record has
+  // nothing to anchor to, and that is precisely the case the disabled orphan
+  // guard would no longer catch server-side.
+  (function(){
+    var inp=document.getElementById('existingLpSearch'),box=document.getElementById('existingLpResults');
+    if(!inp||!box)return;
+    var rows=[],T=null,seq=0;
+    function subline(m){return [m.email,m.nickname?('\u201c'+m.nickname+'\u201d'):''].filter(Boolean).join('  \u00b7  ');}
+    function render(){
+      if(!rows.length){box.innerHTML='<div class="lp-empty">No match. Try a different spelling.</div>';box.hidden=false;return;}
+      box.innerHTML=rows.map(function(m,i){
+        if(!m.itemId){
+          return '<div class="lp-row" data-i="'+i+'" aria-disabled="true" style="cursor:not-allowed;opacity:.55"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div><div class="lp-sub" style="color:var(--color-coral)">no linked LP record</div></div></div>';
+        }
+        return '<div class="lp-row" data-i="'+i+'"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div></div>';
+      }).join('');
+      box.hidden=false;
+      Array.prototype.forEach.call(box.querySelectorAll('.lp-row'),function(r){
+        if(r.getAttribute('aria-disabled')==='true')return;
+        r.onclick=function(){
+          var m=rows[+r.getAttribute('data-i')];
+          box.hidden=true;
+          if(window.__onbPick)window.__onbPick(m);
+          updateCreateCta();
+        };
+      });
+    }
+    inp.addEventListener('input',function(){
+      var q=inp.value.trim();
+      if(q.length<2){box.hidden=true;rows=[];return;}
+      if(T)clearTimeout(T);
+      var mySeq=++seq;
+      T=setTimeout(function(){
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false, consoleMondayReadBase_()).then(function(d){
+          if(mySeq!==seq)return; // stale: query changed while this was in flight
+          rows=(d&&d.matches)||[];render();
+        }).catch(function(err){
+          // Same honesty rule as the money-lane picker: a search ERROR is not
+          // "no matches", and saying so is what tells an operator the difference
+          // between a typo and an outage.
+          if(mySeq!==seq)return;
+          rows=[];
+          box.innerHTML='<div class="lp-empty">Search hit a server error (not "no matches").'
+            +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+            +'</div>';
+          box.hidden=false;
+        });
+      },220);
+    });
+    document.addEventListener('click',function(e){var w=document.getElementById('existingLpPickWrap');if(w&&!w.contains(e.target))box.hidden=true;});
   })();
   // ---- in-progress create-draft persistence (localStorage, keyed by lane+process) ----
   // Operator state must never be lost. The draft survives click-out, navigating to another
@@ -7095,17 +7467,35 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var nameOk=validateNameField(),emailOk=validateEmailField();
     if(!nameOk){showMsg("Enter at least one name, English or Hebrew.",true);document.getElementById("name").focus();return}
     if(!emailOk){showMsg("Enter a valid investor email.",true);document.getElementById("email").focus();return}
+    // MANDATORY Monday pick for a transfer-in, re-checked at submit and against
+    // the email actually about to be sent. The CTA gate already blocks this, but
+    // the gate is a disabled button and this is the condition under which the
+    // SERVER's own orphan guard is switched off (domain/caymanMint.ts skips it
+    // when isExistingLp), so it gets a real refusal on the submit path too.
+    // Editing the email away from the picked record drops the binding, which is
+    // why this reads the same onbPickedItemId_ the mint will call, not a flag.
+    if(state.lpKind==="existing"&&!onbPickedItemId_(email)){
+      showMsg("Pick the existing LP on Monday before sending. Without it the process would be created with no Monday record behind it. If you edited the email after picking, re-pick or restore the picked address.",true);
+      var _exi=document.getElementById("existingLpSearch");if(_exi)_exi.focus();
+      return;
+    }
     // C3 (2026-07-19): the native confirm() showed only the email - right email +
     // wrong LP/lane sailed through. Same inline review card as the money path.
     // 2026-08-04, Noa: same "two stacked green CTAs" fix as the increase/
     // withdrawal path above - hide the outer Send-invite button while the
     // confirm card is open, restore it on Cancel or at the start of Go.
     btn.style.display='none';
-    createReviewConfirm([
+    var _reviewRows=[
       ['Name',name||nameHebrew],
       ['Email',email],
-      ['Flow','Onboarding · '+_typeLabel()+' · '+(state.lane==='israel'?'Israel':'Cayman')]
-    ],'Send invite',function(){btn.style.display='';doCreateOnboarding();},function(){btn.style.display='';});
+      ['Flow',(state.lpKind==='existing'?'Transfer in · ':'Onboarding · ')+_typeLabel()+' · '+(state.lane==='israel'?'Israel':'Cayman')]
+    ];
+    // The transfer-in case shows WHICH Monday record it binds to. "Right email,
+    // wrong LP" is the exact failure C3 added this card for, and it is sharper
+    // here: an existing LP already has a live People row that completion writes
+    // back to.
+    if(state.lpKind==='existing')_reviewRows.push(['LP status','Existing LP transferring in · Monday item '+onbPickedItemId_(email)]);
+    createReviewConfirm(_reviewRows,'Send invite',function(){btn.style.display='';doCreateOnboarding();},function(){btn.style.display='';});
     function doCreateOnboarding(force){
     btn.disabled=true;btn.textContent="Sending...";
     document.getElementById("res").classList.remove("on");
@@ -7127,8 +7517,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // currently-typed email still matches the picked record's email - if the
     // operator edited the email away from the pick, the id no longer names
     // the identity being minted and must not be sent (see pick() above).
-    var pickedId=(window.__onbPickItemId&&window.__onbPickEmail&&String(email||'').trim().toLowerCase()===window.__onbPickEmail)?window.__onbPickItemId:'';
-    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':''), false, mintBaseForLane_(state.lane)).then(function(res){
+    var pickedId=onbPickedItemId_(email);
+    // DECLARED 2026-08-23. Both failure handlers below already read mintViaJu
+    // to name which engine refused the mint, and it was declared NOWHERE:
+    // two uses, zero definitions, confirmed by grep. So every failing mint
+    // threw ReferenceError instead of showing the operator the error - once
+    // in the refusal branch and again inside the .catch, where it replaced a
+    // real server message with an unhandled rejection. The failure path was
+    // the only path that could not report a failure.
+    // Resolved ONCE and reused, deliberately: test/coupling-check.cjs's C1c
+    // asserts exactly one call site routes through mintBaseForLane_, so the
+    // engine the mint used must be derived from this single value rather than
+    // by asking the helper a second time.
+    var mintBase = mintBaseForLane_(state.lane);
+    var mintViaJu = mintBase === JU_API;
+    apiFetch('?admin=mintLink&type='+encodeURIComponent(state.type)+'&email='+encodeURIComponent(email)+'&name='+encodeURIComponent(name)+'&nameHebrew='+encodeURIComponent(nameHebrew)+'&nickname='+encodeURIComponent(nickname)+'&lpKind='+encodeURIComponent(state.lpKind)+'&language='+encodeURIComponent(state.language)+'&lane='+encodeURIComponent(state.lane)+'&process='+encodeURIComponent(state.process)+(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')+(foEmail?'&foEmail='+encodeURIComponent(foEmail):'')+(foShare?'&foShare='+encodeURIComponent(foShare):'')+((state.lane==='israel'&&state.type==='entity'&&state.classification)?'&classification='+encodeURIComponent(state.classification):'')+(force?'&force=1':''), false, mintBase).then(function(res){
       btn.disabled=false;btn.textContent="Send invite";
       if(!res||!res.ok){
         // C6a (2026-07-19): the server's duplicate-mint answer carries a one-click
@@ -7399,6 +7802,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }).join('');
     return '<div class="wl-rows">'+hdr+rows+'</div>';
   }
+  // ---- THE MONEY / WIRE-LETTER PANEL IS GAS-ONLY (2026-08-23 seam audit) -----
+  // Everything from here to the Settings panel below talks to the transfer-forms
+  // tracker, and NONE of it is ported. Checked route by route against
+  // routes/consoledispatch.ts (the single dispatch table; the ?source=op tunnel
+  // re-enters it, so there is no second surface): ju-service has no handler for
+  //   opPeekAwaitingMoney, opMarkMoneyReceived, opPeekMonthTransfers,
+  //   opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
+  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails
+  // - none of those eight strings appears anywhere under ju-service/src. An
+  // unknown api there returns {ok:false,error:'unknown route'}, which apiFetch
+  // turns into a thrown server_error, so repointing any of these would break a
+  // live operator panel that touches real money rows on the first click.
+  // They therefore pass GAS_ONLY_ explicitly. Same destination as before; the
+  // difference is that it is now WRITTEN DOWN rather than inherited from a
+  // default, which is the entire point of making base required.
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -7466,7 +7884,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){awaitEl.innerHTML='';return;}
       var rid=++awaitSeq;
-      apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month)).then(function(r){
+      apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month), false, GAS_ONLY_).then(function(r){
         if(rid!==awaitSeq)return;
         awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
       }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
@@ -7482,7 +7900,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
       btn.disabled=true;btn.textContent='Marking...';
-      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid)).then(function(r){
+      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
         setTimeout(function(){ peekAwaiting(); peekRows(); },600);
@@ -7530,7 +7948,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
       var rid=++peekSeq;
       rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
-      apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)).then(function(r){
+      apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, GAS_ONLY_).then(function(r){
         if(rid!==peekSeq)return;
         if(!r||!r.ok){wlLastTransfers=null;rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
@@ -7580,7 +7998,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       }
       function call(q,btn){
         btn.disabled=true;out.textContent='Working...';
-        apiFetch('?api=opLetterTemplateGeometry'+q).then(function(r){btn.disabled=false;show(r);})
+        apiFetch('?api=opLetterTemplateGeometry'+q, false, GAS_ONLY_).then(function(r){btn.disabled=false;show(r);})
           .catch(function(e){btn.disabled=false;out.innerHTML='<span style="color:var(--color-danger)">'+esc2(String(e))+'</span>';});
       }
       mBtn.onclick=function(){call('',mBtn);};
@@ -7627,7 +8045,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       reviewBtn.disabled=true;genBtn.disabled=true;lastGo=false;
       findEl.innerHTML='<div style="color:var(--color-ink-muted)">Reviewing...</div>';
       setResult('','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true').then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, GAS_ONLY_).then(function(r){
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
         if(r.go===false){
@@ -7649,7 +8067,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
       genBtn.disabled=true;reviewBtn.disabled=true;
       setResult('<div style="color:var(--color-ink-muted)">Generating...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&createDraft='+(draftEl.checked?'true':'false')).then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&createDraft='+(draftEl.checked?'true':'false'), false, GAS_ONLY_).then(function(r){
         genBtn.disabled=false;reviewBtn.disabled=false;
         if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         var h='<div style="color:var(--color-green)">Candidate doc generated (labeled "not for sending" until the parallel diff is verified).</div>'
@@ -7677,7 +8095,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
       verifyBtn.disabled=true;
       setResult('<div style="color:var(--color-ink-muted)">Generating verification copy (nothing will be settled)...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true').then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true', false, GAS_ONLY_).then(function(r){
         verifyBtn.disabled=false;
         if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
         // The server returns ok:true with NO document when the HY-close gate says
@@ -7719,7 +8137,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         +'&amount='+encodeURIComponent((document.getElementById('mrAmount').value||'').trim())
         +'&bank='+encodeURIComponent((document.getElementById('mrBank').value||'').trim())
         +'&notes='+encodeURIComponent((document.getElementById('mrNotes').value||'').trim());
-      apiFetch(qs).then(function(r){
+      apiFetch(qs, false, GAS_ONLY_).then(function(r){
         addBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
@@ -7757,7 +8175,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(expect)qs+='&expectCurrent='+encodeURIComponent(expect);
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
-      apiFetch(qs).then(function(r){
+      apiFetch(qs, false, GAS_ONLY_).then(function(r){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the amount.')+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').</div>';
@@ -7795,7 +8213,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var qs='?api=opSetRowBankDetails&bankDetails='+encodeURIComponent(bank);
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
-      apiFetch(qs).then(function(r){
+      apiFetch(qs, false, GAS_ONLY_).then(function(r){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the bank details.')+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.</div>';
@@ -7812,6 +8230,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   })();
 
   // Settings
+  // ---- THE SETTINGS PANEL STAYS GAS-ONLY, AS A SET (2026-08-23 seam audit) --
+  // Two of its three routes DO have ju-service handlers (consoledispatch.ts
+  // admin==='getConsoleSettings' and admin==='setConsoleSettings'), but the
+  // third does NOT: ?admin=getSettingsHealth appears nowhere under
+  // ju-service/src, so it cannot move. Moving the other two on their own splits
+  // one panel across two engines, and this particular panel must not split:
+  //   - the health card would report GAS's configuration while the allowlist
+  //     box beside it showed ju-service's, with nothing on screen saying so;
+  //   - worse, the allowlist is an AUTH store, and the two engines keep their
+  //     own. GAS still serves the whole money/wire-letter panel above, so an
+  //     operator who edited the list on ju-service alone would believe they had
+  //     granted or revoked access that GAS still decides by its old copy. A
+  //     revocation that does not revoke is the failure that matters here.
+  // So all three pass GAS_ONLY_ and this is the reason. Moving the panel needs
+  // getSettingsHealth ported AND a decision about which engine owns the
+  // allowlist; it is not a client-side flip.
   // Guard against the allowlist-wipe hazard: if the current allowlist never
   // loaded (fetch failed, auth lapsed), the textarea reads empty, and a blind
   // Save would push an empty allowlist and lock every operator out. Save is
@@ -7820,7 +8254,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function loadSettings(){
     ALLOWLIST_LOADED=false;
     var st=document.getElementById('allowlist-status');
-    apiFetch('?admin=getConsoleSettings').then(function(d){
+    apiFetch('?admin=getConsoleSettings', false, GAS_ONLY_).then(function(d){
       if(d&&d.ok){
         document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
         ALLOWLIST_LOADED=true;
@@ -7842,7 +8276,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function loadSettingsHealth(){
     var cadenceEl=document.getElementById('set-reminder-cadence');
     var armedEl=document.getElementById('set-armed-state');
-    apiFetch('?admin=getSettingsHealth').then(function(d){
+    apiFetch('?admin=getSettingsHealth', false, GAS_ONLY_).then(function(d){
       if(!d||!d.ok){
         if(cadenceEl)cadenceEl.textContent='Could not load.';
         if(armedEl)armedEl.textContent='Could not load.';
@@ -7901,7 +8335,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return;
     }
     st.textContent='Saving...';st.style.color='var(--color-ink-muted)';
-    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw)).then(function(d){
+    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw), false, GAS_ONLY_).then(function(d){
       if(d&&d.ok){st.textContent='Saved';st.style.color='var(--color-success)';}
       else{st.textContent=(d&&d.error)||'Error';st.style.color='var(--color-danger)';}
     }).catch(function(){st.textContent='Error';st.style.color='var(--color-danger)';});
@@ -7942,11 +8376,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return L.overridden?'custom':'default';
   }
   var MSG_SEQ=0;
+  // The three calls in this panel (this read plus saveMessage / resetMessage
+  // below) all pass consoleMessagesBase_(), which is one flag for the set. See
+  // its declaration for why it defaults to GAS: the wiring is here and reversible
+  // in one line, but the flip is a decision about LP-facing copy, not routing.
   function loadMsgs(){
     var rid=++MSG_SEQ;
     var sp=document.getElementById('msgspine');
     if(sp)sp.innerHTML=msgSkeleton();
-    apiFetch('?api=messages&lane='+state.lane).then(function(d){
+    apiFetch('?api=messages&lane='+state.lane, false, consoleMessagesBase_()).then(function(d){
       if(rid!==MSG_SEQ)return;
       MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];renderSpine();
       // Default-select the first message so the editor + preview are never an empty half-screen.
@@ -8217,13 +8655,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var L2=curMsg[curLang]||(curMsg[curLang]={subject:'',body:''});
       L2.subject=sub;L2.body=body;L2.overridden=true;renderSpine();
       sv.textContent="Saving...";
-      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(err){sv.textContent='Save failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
+      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane, false, consoleMessagesBase_()).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(err){sv.textContent='Save failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
     };
     document.getElementById('m-reset').onclick=function(){
       if(document.getElementById('m-reset').disabled)return;
       var sv=document.getElementById('m-saved');
       sv.textContent="Reverting...";
-      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane).then(function(){MSGS=null;curMsg=null;var d2=document.getElementById('msgdetail');d2.className='msgempty';d2.innerHTML='Select an email to edit its copy and preview what sends.';loadMsgs();}).catch(function(err){sv.textContent='Revert failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
+      apiFetch('?admin=resetMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&lane='+state.lane, false, consoleMessagesBase_()).then(function(){MSGS=null;curMsg=null;var d2=document.getElementById('msgdetail');d2.className='msgempty';d2.innerHTML='Select an email to edit its copy and preview what sends.';loadMsgs();}).catch(function(err){sv.textContent='Revert failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
     };
   }
 </script>

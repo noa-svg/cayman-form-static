@@ -107,6 +107,9 @@ HARNESSES=(
   board-search-lp-directory-harness
   pilot-fallback-harness
   signer-sticky-token-key-harness
+  flow-account-normalise-harness
+  signer-doc-gate-harness
+  israel-sigpad-encode-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

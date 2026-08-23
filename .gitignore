@@ -43,3 +43,7 @@ test/*
 !test/money-flow-fallback-harness.cjs
 !test/beneficiary-declaration-harness.cjs
 !test/signer-sticky-token-key-harness.cjs
+!test/rig-signer.cjs
+!test/flow-account-normalise-harness.cjs
+!test/signer-doc-gate-harness.cjs
+!test/israel-sigpad-encode-harness.cjs

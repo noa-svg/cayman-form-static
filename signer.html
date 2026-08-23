@@ -1216,7 +1216,18 @@
             var wasChecked = cb && cb.checked;
             var isReqCb = def.label.indexOf('*') >= 0;
             var reqCbAttr = isReqCb ? ' required aria-required="true"' : '';
-            lbl.innerHTML = '<input type="checkbox" name="' + esc(f) + '"' + reqCbAttr + ' aria-describedby="err-' + esc(f) + '"> ' +
+            // id="f-<name>" MUST be re-emitted here (2026-08-23, CTO review
+            // finding #50). controlMarkup emits it on the first render; this
+            // re-translate branch used to drop it, so after ONE EN/HE toggle the
+            // three lawyer-evidence lookups (f-checkLiquid / f-checkIncome /
+            // f-checkOther) returned null. That silently disabled the
+            // at-least-one-evidence group check AND skipped building
+            // payload.lawyer entirely, so the evidence selections and the licence
+            // number were dropped server-side and the qualification doc sealed
+            // with empty evidence boxes. Latent only because the toggle is
+            // display:none today; it goes live the moment it is re-enabled. The
+            // submit path now also prefers [name] over id (see efField_).
+            lbl.innerHTML = '<input type="checkbox" id="f-' + esc(f) + '" name="' + esc(f) + '"' + reqCbAttr + ' aria-describedby="err-' + esc(f) + '"> ' +
               esc(tHe(def.label).replace(/\s*\*\s*$/, '')) + (isReqCb ? ' <span class="req">*</span>' : '');
             if (wasChecked) lbl.querySelector('input').checked = true;
           }
@@ -1350,15 +1361,23 @@
           var el = document.createElement('div');
           el.className = 'doc';
           el.id = 'signerdoc-' + di;
+          // 2026-08-23 (CTO review finding #12): the two note branches carry
+          // DIFFERENT marker classes. They render the same way, but they mean
+          // opposite things - an acroFill note says "this form is fine, it is just
+          // filled from your answers", while the error note says "the server could
+          // not give us this document at all". The doc-ready gate below used to
+          // accept a bare .doc__note as proof a document rendered, so an errored
+          // pack passed the very gate that exists to stop someone signing what they
+          // could not see. Class names only; no copy change.
           if (doc.acroFill) {
             el.innerHTML = titleHtml(doc.title) +
-              '<div class="doc__note">' + esc(tHe(doc.note || 'This tax form will be completed from your answers.')) + '</div>';
+              '<div class="doc__note doc__note--acrofill">' + esc(tHe(doc.note || 'This tax form will be completed from your answers.')) + '</div>';
           } else if (doc.html) {
             el.innerHTML = titleHtml(doc.title);
             el.appendChild(buildDocBody_(doc.html));
           } else {
             el.innerHTML = titleHtml(doc.title) +
-              '<div class="doc__note">' + esc(tHe(doc.error || 'Document preview not available.')) + '</div>';
+              '<div class="doc__note doc__note--unavailable">' + esc(tHe(doc.error || 'Document preview not available.')) + '</div>';
           }
           var titleEl = el.querySelector('.doc__title');
           if (titleEl) {
@@ -1386,8 +1405,16 @@
           if (titleEl) titleEl.textContent = tHe(doc.title);
           var noteEl = el.querySelector('.doc__note');
           if (noteEl) {
-            if (doc.acroFill) noteEl.textContent = tHe(doc.note || 'This tax form will be completed from your answers.');
-            else noteEl.textContent = tHe(doc.error || 'Document preview not available.');
+            // Re-stamp the marker class alongside the text, so a re-render can
+            // never leave an error note wearing the acroFill marker (or the
+            // reverse) and quietly re-open the gate hole above.
+            if (doc.acroFill) {
+              noteEl.className = 'doc__note doc__note--acrofill';
+              noteEl.textContent = tHe(doc.note || 'This tax form will be completed from your answers.');
+            } else {
+              noteEl.className = 'doc__note doc__note--unavailable';
+              noteEl.textContent = tHe(doc.error || 'Document preview not available.');
+            }
           }
         });
         buildSignerJumpNav_(ctx); // re-translate chips on language toggle
@@ -1862,6 +1889,21 @@
           waited += step; setTimeout(tick, step);
         })();
       }
+      // Editable-field lookup, NAME first and id only as a fallback (2026-08-23,
+      // CTO review finding #50). The language-toggle re-render rebuilds controls;
+      // a re-render that loses the id must never be able to silently disable a
+      // validation gate or drop a payload leg. `name` is the attribute the submit
+      // path already trusts (allInputs queries by [name]) and the attribute the
+      // server keys on. Matched by iteration rather than a built selector so a
+      // field key with a quote in it cannot break the query.
+      function efField_(name) {
+        var scope = document.getElementById('signer-form') || document;
+        var list = scope.querySelectorAll('[name]');
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].getAttribute('name') === name) return list[i];
+        }
+        return document.getElementById('f-' + name);
+      }
       function doSignSubmit_() {
         // Server-declared field with no client renderer (F10 path). The unknown
         // field renders as a .field--error note but had no input bound, so a
@@ -1889,12 +1931,12 @@
         // checkLiquid needs the evidence date; checkOther needs the free-text
         // detail. checkIncome needs neither. Fields exist only on lawyer legs -
         // absent inputs skip the whole block (every other signer role unchanged).
-        var evLiquid = document.getElementById('f-checkLiquid');
-        var evIncome = document.getElementById('f-checkIncome');
-        var evOther = document.getElementById('f-checkOther');
+        var evLiquid = efField_('checkLiquid');
+        var evIncome = efField_('checkIncome');
+        var evOther = efField_('checkOther');
         if (evLiquid && evIncome && evOther) {
-          var evDate = document.getElementById('f-evidenceDate');
-          var evText = document.getElementById('f-otherEvidence');
+          var evDate = efField_('evidenceDate');
+          var evText = efField_('otherEvidence');
           if (!evLiquid.checked && !evIncome.checked && !evOther.checked) {
             markField(evLiquid, tHe('Please check at least one option.'));
             if (!firstInvalid) firstInvalid = evLiquid;
@@ -1920,7 +1962,13 @@
         // rendered (template miss, render throw, network failure that left an empty
         // doc list). Without this, the LP can sign on a blank card and the server
         // accepts the signature against a document they did not actually review.
-        var renderedDoc = document.querySelector('#doc-list .doc .doc__body, #doc-list .doc .doc__note');
+        // 2026-08-23 (finding #12): the gate used to accept ANY .doc__note, and the
+        // server-error branch renders exactly a .doc__note - so the failure case was
+        // being read as success and a CP / joint holder / lawyer could sign a pack
+        // they had been shown an error message instead of. Proof of a rendered
+        // document is now a real .doc__body or an acroFill note; an unavailable note
+        // is proof of the opposite and must never satisfy this gate.
+        var renderedDoc = document.querySelector('#doc-list .doc .doc__body, #doc-list .doc .doc__note--acrofill');
         if (!renderedDoc) {
           if (window.console) console.error('signer: refusing submit; no doc rendered (template miss or render error)');
           errEl.textContent = tHe('We could not record your signature. Please try again.');
@@ -2027,22 +2075,22 @@
         // real booleans: signerFormData's 'true'/'false' STRINGS would coerce
         // !!'false' -> true server-side, rendering every box checked on the
         // sealed legal doc regardless of what the lawyer actually chose.
-        var lawLiquid = document.getElementById('f-checkLiquid');
-        var lawIncome = document.getElementById('f-checkIncome');
-        var lawOther = document.getElementById('f-checkOther');
+        var lawLiquid = efField_('checkLiquid');
+        var lawIncome = efField_('checkIncome');
+        var lawOther = efField_('checkOther');
         if (isLawyer && lawLiquid && lawIncome && lawOther) {
-          function lawVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+          function lawVal(name) { var el = efField_(name); return el ? String(el.value || '').trim() : ''; }
           payloadObj.lawyer = {
-            firstName: lawVal('f-firstName'),
-            lastName: lawVal('f-lastName'),
-            email: lawVal('f-email'),
-            phone: lawVal('f-phone'),
-            licenseNumber: lawVal('f-licenseNumber'),
+            firstName: lawVal('firstName'),
+            lastName: lawVal('lastName'),
+            email: lawVal('email'),
+            phone: lawVal('phone'),
+            licenseNumber: lawVal('licenseNumber'),
             checkLiquid: !!lawLiquid.checked,
             checkIncome: !!lawIncome.checked,
             checkOther: !!lawOther.checked,
-            evidenceDate: lawVal('f-evidenceDate'),
-            otherEvidence: lawVal('f-otherEvidence')
+            evidenceDate: lawVal('evidenceDate'),
+            otherEvidence: lawVal('otherEvidence')
           };
         }
         // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so
