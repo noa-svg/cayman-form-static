@@ -22,6 +22,37 @@ and goes red (emailing the pusher) if Pages is stale after 10 minutes; a stuck
 build is fixed by requesting a fresh one:
 `gh api -X POST repos/{owner}/{repo}/pages/builds`.
 
+## Editing a form here turns ju-cayman's suite RED until you re-vendor (2026-08-24)
+
+`legacy-tools-mono/apps/ju-cayman/tests/form-snapshots/` holds VENDORED copies of
+`index.html`, `israel.html`, `console/index.html`, `validation-rules.js`,
+`doc-sanitize.js`, `lvp-gateway.js` and `bank-registry.json`. Two ju-cayman
+assertions compare them against THIS repo's COMMITTED state:
+
+- `tests/israeli-form-validator-parity.test.mjs` / `tests/cayman-form-validator-parity.test.mjs`
+  "form snapshot freshness: vendored index.html matches the live sibling form"
+- `tests/console-route-contract.test.mjs`
+  "freshness: the vendored console snapshot matches the sibling repo COMMITTED state"
+
+So a push here that changes any vendored file leaves the ju-cayman suite failing in
+the OTHER repo, with nothing in this repo's own green deploy gate hinting at it. Hit
+live on 2026-08-24: two qualification commits here (`5219e4f`, `7f30078`) passed this
+repo's full pre-push gate and pushed clean, and the breakage only surfaced when
+ju-cayman's suite was run for an unrelated reason.
+
+**After any push that touches a vendored file, copy it across and commit that in the
+mono repo** (on the branch ju actually ships from, currently
+`drift-guards-doc-assertions-coverage-floor`, NOT `main`):
+
+```bash
+cp index.html israel.html <mono>/apps/ju-cayman/tests/form-snapshots/
+cp console/index.html <mono>/apps/ju-cayman/tests/form-snapshots/console-index.html
+```
+
+Re-vendor only the files YOUR change made stale. A snapshot left stale by another
+session's commit is theirs to refresh; pulling it in bundles their in-flight work into
+your commit and goes stale again the moment they push.
+
 ## Deploy gate (read before your first push in a fresh clone)
 
 `githooks/pre-push` runs the full test suite before every push and refuses to
