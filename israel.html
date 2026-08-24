@@ -553,14 +553,14 @@
           </fieldset>
 
           <div data-show-when="__indQualified=true" data-primary-only>
-            <h3 class="lvp-subhead">טופס כשירות</h3>
-            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
+            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את אישור הכשירות. הגורם המאשר יקבל קישור לחתימה על אישור הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
             <fieldset class="lvp-fieldset">
-              <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
+              <legend class="lvp-fieldset__legend">האם ברשותך אישור כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
               <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="כן" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> כן</label>
               <label class="lvp-radio"><input type="radio" name="investorsArray[0].qualification.isSignedQualification" value="לא" data-show-when-trigger="investorsArray[0].qualification.isSignedQualification"> לא</label>
             </fieldset>
-            <label class="lvp-field" data-optional data-show-when="investorsArray[0].qualification.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="investors.0.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field" data-optional data-show-when="investorsArray[0].qualification.isSignedQualification=כן"><span class="lvp-field__label">אישור כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="investors.0.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
           </div>
         </section>
 
@@ -571,7 +571,7 @@
              not-needed lawyer is never required. -->
         <section class="lvp-page" data-page="ind.lawyer" data-applicant="individual" data-page-when="lawyerNeededInd" hidden>
           <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
-          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.</p>
+          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על אישור הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה אישור כשירות חתום.</p>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
@@ -640,14 +640,14 @@
           </fieldset>
 
           <div data-show-when="__entQualified=true">
-            <h3 class="lvp-subhead">טופס כשירות</h3>
-            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
+            <h3 class="lvp-subhead">אישור כשירות</h3>
+            <p class="lvp-page__hint">גורם מאשר (עו״ד או רו״ח) נדרש לאשר את אישור הכשירות. הגורם המאשר יקבל קישור לחתימה על אישור הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.</p>
             <fieldset class="lvp-fieldset">
-              <legend class="lvp-fieldset__legend">האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
+              <legend class="lvp-fieldset__legend">האם ברשותך אישור כשירות חתום שניתן במהלך 12 החודשים האחרונים?</legend>
               <label class="lvp-radio"><input type="radio" name="corporationDetails.isSignedQualification" value="כן" data-show-when-trigger="corporationDetails.isSignedQualification"> כן</label>
               <label class="lvp-radio"><input type="radio" name="corporationDetails.isSignedQualification" value="לא" data-show-when-trigger="corporationDetails.isSignedQualification"> לא</label>
             </fieldset>
-            <label class="lvp-field" data-optional data-show-when="corporationDetails.isSignedQualification=כן"><span class="lvp-field__label">טופס כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="entity.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <label class="lvp-field" data-optional data-show-when="corporationDetails.isSignedQualification=כן"><span class="lvp-field__label">אישור כשירות חתום</span><input class="lvp-file-input" type="file" data-upload="entity.qualification" accept="image/jpeg,image/png,application/pdf"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
           </div>
         </section>
 
@@ -931,7 +931,7 @@
              out of the sequence. -->
         <section class="lvp-page" data-page="ent.lawyer" data-applicant="entity" data-page-when="lawyerNeededEnt" hidden>
           <h2 class="lvp-page__title">פרטי עורך/ת דין / רואה/ת חשבון</h2>
-          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.</p>
+          <p class="lvp-page__hint">פרטים אלה משמשים לשליחת קישור לחתימה על אישור הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה אישור כשירות חתום.</p>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
@@ -1178,8 +1178,8 @@
              the sign token (see doSubmit). data-lawyer-only marks a lawyer page so
              visiblePages() includes it ONLY in LAWYER mode and drops it otherwise. -->
         <section class="lvp-page" data-page="lawyer.details" data-lawyer-only hidden>
-          <h2 class="lvp-page__title">טופס כשירות</h2>
-          <p class="lvp-page__hint"><span data-lawyer-investors></span> מבקש/ת את חתימתך על טופס הכשירות במסגרת ההצטרפות לקרן לגאסי.</p>
+          <h2 class="lvp-page__title">אישור כשירות</h2>
+          <p class="lvp-page__hint"><span data-lawyer-investors></span> מבקש/ת את חתימתך על אישור הכשירות במסגרת ההצטרפות לקרן לגאסי.</p>
           <h3 class="lvp-subhead">פרטי עו"ד / רו"ח</h3>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
@@ -1298,7 +1298,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-24-2-qualification-upload-inline';
+      window.__BUILD_TAG = 'israel-2026-08-24-3-ishur-not-tofes';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1650,14 +1650,14 @@
       "גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.":"My income in each of the last two years exceeds ILS 1,411,772, or my household income exceeds ILS 2,117,657.",
       "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 5,882,380 and my income in each of the last two years exceeds ILS 705,885, or my household income exceeds ILS 1,058,827.",
       "אני מצטרפ/ת כמשקיע/ה לא כשיר/ה בידיעת מנהל הקרן עומרי ולורט.":"I am joining as a non-qualified investor, with the knowledge of the fund manager Omri Velvart.",
-      "טופס כשירות":"Qualification form",
-      "גורם מאשר (עו״ד או רו״ח) נדרש לאשר את טופס הכשירות. הגורם המאשר יקבל קישור לחתימה על טופס הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.":"A verifying party (lawyer or CPA) must approve the qualification form. They will receive a link to sign the qualification form after your documents are completed. Please notify them.",
-      "האם ברשותך טופס כשירות חתום שניתן במהלך 12 החודשים האחרונים?":"Do you have a signed qualification form issued within the last 12 months?",
+      "אישור כשירות":"Qualification form",
+      "גורם מאשר (עו״ד או רו״ח) נדרש לאשר את אישור הכשירות. הגורם המאשר יקבל קישור לחתימה על אישור הכשירות לאחר השלמת המסמכים שלך. נא ליידע אותו.":"A verifying party (lawyer or CPA) must approve the qualification form. They will receive a link to sign the qualification form after your documents are completed. Please notify them.",
+      "האם ברשותך אישור כשירות חתום שניתן במהלך 12 החודשים האחרונים?":"Do you have a signed qualification form issued within the last 12 months?",
       "כן":"Yes",
       "לא":"No",
       "פרטי עורך/ת דין / רואה/ת חשבון":"Lawyer or CPA details",
-      "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when a qualified investor has not uploaded a signed qualification form.",
-      "פרטים אלה משמשים לשליחת קישור לחתימה על טופס הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה טופס כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when the entity is qualified and has not uploaded a signed qualification form.",
+      "פרטים אלה משמשים לשליחת קישור לחתימה על אישור הכשירות. הפרטים נדרשים רק כאשר משקיע/ה כשיר/ה לא העלה/תה אישור כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when a qualified investor has not uploaded a signed qualification form.",
+      "פרטים אלה משמשים לשליחת קישור לחתימה על אישור הכשירות. הפרטים נדרשים רק כאשר התאגיד כשיר ולא העלה אישור כשירות חתום.":"These details are used to send a link to sign the qualification form. They are required only when the entity is qualified and has not uploaded a signed qualification form.",
       "לכתובת זו יישלח קישור החתימה":"The signing link will be sent to this address",
       "מספר רישיון":"License number",
       "פרטי התאגיד":"Entity details",
@@ -1777,7 +1777,7 @@
       "ספח תעודת הזהות":"ID appendix",
       "צילום דרכון":"Passport scan",
       "אישור ניהול חשבון":"Account management approval",
-      "טופס כשירות חתום":"Signed qualification form",
+      "אישור כשירות חתום":"Signed qualification form",
       "תעודת התאגדות":"Certificate of incorporation",
       "תקנון התאגיד":"Entity articles",
       "פרוטוקול מורשי החתימה":"Signatory protocol",
@@ -4712,7 +4712,7 @@
     // was emailed their own qualification-form link. The confirmation HEADER is the
     // standard success line; the lawyer notice is BODY text (not a shouted header,
     // Noa 2026-07-08), using the EasySend-VERBATIM completion string
-    // «טופס כשירות נשלח לחתימת עו"ד/רו"ח {name} שנוספו על ידי {primary}». This card is
+    // «אישור כשירות נשלח לחתימת עו"ד/רו"ח {name} שנוספו על ידי {primary}». This card is
     // reached ONLY when the server confirmed the lawyer leg fired (res.detail.
     // lawyerEmailed), so the line never shows when no lawyer leg is relevant. The two
     // names are read from what the primary already filled (lawyerDetails + their own
@@ -4725,7 +4725,7 @@
       var primaryName = [gv('investorsArray[0].firstName'), gv('investorsArray[0].lastName')].filter(Boolean).join(' ').trim()
         || gv('corporationDetails.corporationName')
         || String(detail.investorFullName || detail.primaryName || detail.investorName || '').trim();
-      var line = 'טופס כשירות נשלח לחתימת עו"ד/רו"ח ' + lawyerName + ' שנוספו על ידי ' + primaryName;
+      var line = 'אישור כשירות נשלח לחתימת עו"ד/רו"ח ' + lawyerName + ' שנוספו על ידי ' + primaryName;
       showResultCard(
         '<div class="lvp-result__check" aria-hidden="true">' +
         '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="#0D3F6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
