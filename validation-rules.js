@@ -126,11 +126,14 @@
     return d.getTime() >= cutoff.getTime();
   }
 
+  // CHANGED 2026-08-25 (Noa): the FIRST OF NEXT MONTH, not the first business day.
+  // The weekend skip (Fri=5, Sat=6) pushed a month opening on a Friday to the 3rd.
+  // The subscription is booked to a MONTH, so the skip bought nothing and made the
+  // date the LP was told to enter differ from the one they would naturally pick.
+  // Name kept so all three implementations and the parity suite move together.
   function firstBusinessDayNextMonth(ref) {
     var r = ref || new Date();
-    var d = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 1));
-    while (d.getUTCDay() === 5 || d.getUTCDay() === 6) d = new Date(d.getTime() + 24 * 3600 * 1000);
-    return d;
+    return new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 1));
   }
   function isFirstBusinessDayNextMonth(v, ref) {
     var d = parseDate(v); if (!d) return false;

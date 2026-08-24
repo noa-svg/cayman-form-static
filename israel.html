@@ -988,7 +988,7 @@
             </label>
             <label class="lvp-field"><span class="lvp-field__label">סכום השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investedAmount" data-amount data-validate="gt50000" inputmode="numeric" placeholder="לדוגמה: 500,000"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-business-day" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב"></label>
+          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-business-day" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב"></label>
 
           <!-- Bank section header = פרטי חשבון (Noa's standing house standard,
                feedback_bank_section_header_pratei_cheshbon; was המוסד ממנו יועברו הכספים). -->
@@ -1326,7 +1326,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-3-attester-hint';
+      window.__BUILD_TAG = 'israel-2026-08-25-4-first-of-month';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1756,7 +1756,7 @@
       "סכום השקעה":"Investment amount",
       "לדוגמה: 500,000":"e.g., 500,000",
       "תאריך השקעה":"Investment date",
-      "נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב":"Please state the first business day of the upcoming calendar month",
+      "נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב":"Please state the first business day of the upcoming calendar month",
       "המוסד ממנו יועברו הכספים":"The institution the funds will be transferred from",
       "שם הבנק":"Bank name",
       "מספר סניף":"Branch number",
@@ -3589,10 +3589,14 @@
     // to mirror the server's israeliFirstBusinessDayOfNextMonth_ exactly (Israel local
     // runs 2-3h ahead of UTC; near midnight on the 1st the local month is already
     // next month while the server's UTC ref is not. UTC is the contract.)
+    // CHANGED 2026-08-25 (Noa): the FIRST OF NEXT MONTH, not the first business day.
+    // This is the THIRD copy of this rule (the others are validation-rules.js and the
+    // server's israeliFirstBusinessDayOfNextMonth_) and it is the one that PREFILLS
+    // the field, so it has to move with them or the form offers a date the server
+    // then rejects.
     function firstBusinessDayNextMonth() {
       var now = new Date();
       var d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-      while (d.getUTCDay() === 5 || d.getUTCDay() === 6) d = new Date(d.getTime() + 24 * 3600 * 1000);
       return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     }
     function firstBusinessDayNextMonthDdMmYyyy() {
@@ -3651,7 +3655,7 @@
         // mirroring the server so the LP never hits the opaque must_be_first_business_day
         // bounce. Two-message UX preserved (unparseable vs wrong-day).
         if (R && !R.validDate(v)) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        if (R && !R.isFirstBusinessDayNextMonth(v)) return 'נא לנקוב ביום העסקים הראשון לחודש הקלנדרי הקרוב';
+        if (R && !R.isFirstBusinessDayNextMonth(v)) return 'נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב';
       }
       if (rule === 'gt50000') { if (R && !R.validateFormat('gt50000', v)) return 'סכום ההשקעה חייב להיות גדול מ-50,000.'; }
       // Audit #7/#8 messages (Noa-approved 2026-07-03). cell-il/ssn/pct now match the
