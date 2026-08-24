@@ -362,7 +362,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-10-paper-size-cap-and-clear';
+    window.__BUILD_TAG = 'signer-2026-08-24-11-paper-type-and-read-errors';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -463,6 +463,7 @@
       "Please upload your passport or national ID before submitting.": "נא להעלות דרכון או תעודת זהות לפני השליחה.",
       "Lawyer / accountant stamp": "חותמת עו״ד / רו״ח",
       "Please upload a JPG or PNG file only.": "נא להעלות קובץ בפורמט JPG או PNG בלבד",
+      "Please upload a PDF, JPG or PNG file only.": "נא להעלות קובץ בפורמט PDF, JPG או PNG בלבד.",
       "Please upload the stamp before submitting.": "נא להעלות את החותמת לפני השליחה",
       "A file is larger than 10 MB. Please upload a smaller file.": "קובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.",
       "We could not read that file. Please try again.": "לא ניתן לקרוא את הקובץ. נא לנסות שוב.",
@@ -1635,6 +1636,17 @@
           var perr = document.getElementById('paper-err');
           if (perr) perr.textContent = '';
           if (!f) { pendingPaperScan = null; return; }
+          // Type gate (2026-08-24, Noa-approved copy). The `accept` attribute is a
+          // picker FILTER and many mobile pickers ignore it, so a .docx was reaching
+          // the success screen and the fund would have received a Word file where a
+          // signed PDF or image must be. Unlike the stamp control this one legitimately
+          // takes PDF, so it needs its own string rather than the JPG/PNG-only sibling.
+          if (f.type !== 'application/pdf' && f.type !== 'image/jpeg' && f.type !== 'image/png') {
+            if (perr) perr.textContent = tHe('Please upload a PDF, JPG or PNG file only.');
+            inp.value = '';
+            pendingPaperScan = null;
+            return;
+          }
           // Size cap, mirroring handleIdUpload and handleLawyerStamp (2026-08-24).
           // This handler had none, so a 12MB scan was accepted silently and
           // produced a measured 16.7MB POST. Same limit, same approved string.
@@ -1666,11 +1678,24 @@
             // file. Dropping the holder here keeps the submit gates honest rather
             // than posting a zero-byte scan that looks like a successful upload.
             var b64 = comma > -1 ? res.slice(comma + 1) : '';
-            if (!b64) { pendingPaperScan = null; return; }
+            if (!b64) {
+              pendingPaperScan = null;
+              inp.value = '';
+              if (perr) perr.textContent = tHe('We could not read that file. Please try again.');
+              return;
+            }
             pendingPaperScan.base64 = b64;
             pendingPaperScan.reading = false;
           };
-          rdr.onerror = function () { pendingPaperScan = null; };
+          // A failed read used to drop the scan silently while the filename stayed
+          // on screen looking accepted, so the next submit failed with the signature
+          // error instead of anything about the file. Reuses the read-failure string
+          // already in the map rather than adding a near-duplicate.
+          rdr.onerror = function () {
+            pendingPaperScan = null;
+            inp.value = '';
+            if (perr) perr.textContent = tHe('We could not read that file. Please try again.');
+          };
           rdr.readAsDataURL(f);
         });
       }
