@@ -362,7 +362,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-9-paper-stamp-and-race';
+    window.__BUILD_TAG = 'signer-2026-08-24-10-paper-size-cap-and-clear';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -1059,6 +1059,10 @@
           '<label for="paper-scan" class="paper-drop">' + esc(tHe('Upload the signed form')) +
             '<input type="file" id="paper-scan" data-paper-upload="signedQualification" accept="application/pdf,image/jpeg,image/png">' +
           '</label>' +
+          // The paper input was the only upload on this page with nowhere to put
+          // an error (2026-08-24), so an oversize file or a failed read produced
+          // no message at all and the filename stayed on screen looking accepted.
+          '<div id="paper-err" class="err" role="alert" aria-live="assertive"></div>' +
         '</div>';
       host.hidden = false;
 
@@ -1628,7 +1632,18 @@
           var inp = e.target;
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-paper-upload')) return;
           var f = inp.files && inp.files[0];
+          var perr = document.getElementById('paper-err');
+          if (perr) perr.textContent = '';
           if (!f) { pendingPaperScan = null; return; }
+          // Size cap, mirroring handleIdUpload and handleLawyerStamp (2026-08-24).
+          // This handler had none, so a 12MB scan was accepted silently and
+          // produced a measured 16.7MB POST. Same limit, same approved string.
+          if (f.size > 10 * 1024 * 1024) {
+            if (perr) perr.textContent = tHe('A file is larger than 10 MB. Please upload a smaller file.');
+            inp.value = '';
+            pendingPaperScan = null;
+            return;
+          }
           // Mark the read IN FLIGHT before it starts (2026-08-24), so
           // uploadsReading() can hold the submit until the bytes are actually
           // here. Without this the submit ran while pendingPaperScan was still
@@ -1778,6 +1793,15 @@
         ctx2.clearRect(0, 0, canvas.width, canvas.height);
         dirty = false; points = 0; strokes = []; curStroke = null; errEl.textContent = '';
         if (sigMode === 'type' && typedInput) { typedInput.value = ''; typedInput.focus(); }
+        // Clear the attached paper scan too (2026-08-24). It did nothing on the
+        // paper route: an attester who picked the wrong scan and tapped Clear to
+        // undo it saw no change and would still have submitted the wrong file,
+        // because the scan lives outside the canvas this handler was written for.
+        pendingPaperScan = null;
+        var pf = document.getElementById('paper-scan');
+        if (pf) pf.value = '';
+        var pe = document.getElementById('paper-err');
+        if (pe) pe.textContent = '';
         updateBtn();
       });
 
