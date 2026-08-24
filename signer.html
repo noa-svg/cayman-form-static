@@ -283,10 +283,6 @@
         <!-- Lawyer stamp upload: rendered ONLY for the 'lawyer' role by
              renderLawyerStamp(ctx). Empty + hidden for every other signer role. -->
         <div id="lawyer-stamp-upload" hidden></div>
-        <!-- Paper return: the attester downloads the form, signs it by hand and
-             uploads the scan instead of signing on screen. Lawyer role only. -->
-        <div id="lawyer-paper-return" hidden></div>
-
         <!-- Inline doc preview -->
         <div class="doc-preview">
           <h2>Subscription documents</h2>
@@ -300,11 +296,11 @@
           <!-- Draw/Type toggle ABOVE the pad so the LP (and any keyboard/AT signer) sees
                the Type option before engaging the canvas; Type mode is fully keyboard-
                operable, Draw is not. -->
-          <div class="sig-mode" role="group" aria-label="Signature method">
+          <div class="sig-mode" id="sig-mode-host" role="group" aria-label="Signature method">
             <button type="button" class="sig-mode__opt is-active" data-sig-mode="draw" aria-pressed="true">Draw</button>
             <button type="button" class="sig-mode__opt" data-sig-mode="type" aria-pressed="false">Type</button>
           </div>
-          <div class="pad-shell">
+          <div class="pad-shell" id="pad-shell-host">
             <canvas id="pad" role="img" aria-labelledby="sig-title"></canvas>
           </div>
           <div class="sig-typed" id="sig-typed" hidden>
@@ -318,6 +314,15 @@
             <button type="button" class="btn btn--primary" id="done">Sign and submit</button>
           </div>
           <div class="err" id="err"></div>
+          <!-- Paper return: the attester downloads the form, signs it by hand and
+               uploads the scan instead of signing on screen. Lawyer role only.
+               MOVED HERE 2026-08-24. It used to sit above the documents section,
+               measured at y=1294 on a 375px screen with the pad at 1756 and the
+               submit at 2006, so it was off screen by the time the attester
+               reached the signature and nothing near the pad offered paper at
+               all. With a real multi-page qualification the gap is several
+               screens. It belongs where the decision is actually made. -->
+          <div id="lawyer-paper-return" hidden></div>
         </div>
       </div>
 
@@ -362,7 +367,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-11-paper-type-and-read-errors';
+    window.__BUILD_TAG = 'signer-2026-08-24-12-paper-placement-and-print';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -1073,9 +1078,22 @@
         panel.hidden = !on;
         toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
         toggle.textContent = tHe(on ? 'Sign here instead' : 'Print and sign by hand instead');
-        var pad = document.getElementById('pad');
-        var block = pad && pad.closest ? pad.closest('section, .field, div') : null;
-        if (block) block.hidden = on;
+        // 2026-08-24: this used to hide ONLY .pad-shell, which is what
+        // pad.closest('section, .field, div') actually resolved to. So taking the
+        // paper route left the "Your signature" heading, the Draw/Type toggle with
+        // Draw still shown as selected, the typed-name input and the Clear button
+        // sitting over an empty white void - which reads as a pad that FAILED to
+        // load, not as a mode deliberately switched off.
+        //
+        // Hide the whole signature apparatus by id, and deliberately NOT the error
+        // line or the submit row: the paper route still submits through the same
+        // button and still needs somewhere to show a message.
+        ['pad-shell-host', 'sig-mode-host', 'sig-typed', 'clear'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.hidden = on;
+        });
+        var padTitle = document.getElementById('sig-title');
+        if (padTitle) padTitle.hidden = on;
         if (!on) { pendingPaperScan = null; var f = document.getElementById('paper-scan'); if (f) f.value = ''; }
       }
       toggle.addEventListener('click', function () { setPaper(panel.hidden); });
@@ -1085,8 +1103,31 @@
         // A real download, not window.open + document.write: that was popup-blocked or
         // opened blank on iOS Safari and much of mobile, so the paper route's FIRST step
         // failed for exactly the person who wanted paper.
-        var html = '<!doctype html><meta charset="utf-8">' +
-          printable.map(function (d) { return d.html || ''; }).join('<hr>');
+        // 2026-08-24: the blob used to be a bare doctype + the doc HTML, with no
+        // <title>, no lang/dir, and no print stylesheet. A CPA got a web page to
+        // save and open, each document ran into the next, and on iOS it landed in
+        // Files with no obvious print path. Same content, made actually printable:
+        // a real title (which is what the browser prints in the header and what the
+        // saved file is called on most platforms), RTL declared at the document
+        // level rather than only on the server's inner wrapper, a sane print margin,
+        // and a hard page break between documents instead of an <hr> that a printer
+        // renders mid-page.
+        var html = '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">' +
+          // Reuse the title the server already sends on each printable doc. It is an
+          // existing approved onboarding-doc label (israeliSignerScopedDocs.ts sets it
+          // from caymanLaneDocTitle_ precisely so no new LP copy is needed), so this
+          // adds none either.
+          '<title>' + esc((printable[0] && printable[0].title) || '') + '</title>' +
+          '<style>' +
+            '@page{margin:18mm}' +
+            'body{margin:0;font-family:Arial,Helvetica,sans-serif}' +
+            '.pgbrk{page-break-after:always;break-after:page}' +
+            '.pgbrk:last-child{page-break-after:auto;break-after:auto}' +
+          '</style></head><body>' +
+          printable.map(function (d) {
+            return '<div class="pgbrk">' + (d.html || '') + '</div>';
+          }).join('') +
+          '</body></html>';
         var url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
         var a = document.createElement('a');
         a.href = url; a.download = 'qualification.html';
