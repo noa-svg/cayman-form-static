@@ -1450,7 +1450,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-08-24-3-ishur-verb';
+    window.__BUILD_TAG = 'index-2026-08-25-1-reveal-scroll';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -2345,6 +2345,7 @@
     function cssEsc(s) { return String(s).replace(/(["\\\]\[])/g, '\\$1'); }
 
     // ---- conditional show/hide (data-show-when="path=value" or "p=v1;p=v2" OR semantics) ----
+    var AUTOSCROLL_ARMED = false;   // see the change handler below
     function applyConditionals(scope) {
       (scope || form).querySelectorAll('[data-show-when]').forEach(function (el) {
         var cond = el.getAttribute('data-show-when');
@@ -2355,7 +2356,29 @@
           var path = clause.slice(0, eq), want = clause.slice(eq + 1);
           return String(currentValueFor(path)) === String(want);
         });
+        var wasHidden = el.hidden;
         el.hidden = !show;
+        // 2026-08-25, ported from israel.html: bring a NEWLY revealed field to the
+        // signer. Answering a question can reveal a required follow-up further down
+        // the page; the signer's next action is the next button, so they press it,
+        // get refused, and only then find a question that appeared underneath them
+        // while they were looking elsewhere. Scrolling the reveal into view removes
+        // that loop at its cause. Same three guards as the Israeli lane: only on a
+        // real hidden -> visible transition, only once the LP has actually
+        // interacted (so the initial render and a resume restore never move the
+        // page), and never for something already on screen.
+        if (wasHidden && !el.hidden && AUTOSCROLL_ARMED) {
+          (function (target) {
+            setTimeout(function () {
+              try {
+                if (target.hidden) return;
+                var r = target.getBoundingClientRect();
+                if (r.top >= 0 && r.bottom <= (window.innerHeight || 0)) return;
+                if (target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              } catch (e) { /* scrolling is a nicety, never break the form for it */ }
+            }, 60);
+          })(el);
+        }
       });
       // applicant-type inline spans / sub-blocks
       var ap = applicant();
@@ -2393,6 +2416,11 @@
     }
 
     form.addEventListener('change', function (e) {
+      // Armed on the LP's FIRST trusted interaction; applyConditionals reads it
+      // before scrolling a newly revealed field into view, so the initial render
+      // and a resume restore - both of which flip many fields visible in one pass -
+      // never yank the page around.
+      if (e && e.isTrusted) AUTOSCROLL_ARMED = true;
       // Qualification: individual uses radios, entity uses checkboxes, None is a
       // checkbox. Mutual exclusion enforced both ways so the LP cannot have any
       // condition AND "None" ticked at once.
