@@ -76,6 +76,21 @@
     .signer-note { font-size:13px; color:var(--error); margin: 4px 0 0; }
     .save-status { font-size:13px; color:#5a6b7b; margin: 8px 0 0; }
 
+    /* Paper return, as a disclosure. Signing IS the page; this is the way out of it.
+       Replaced two icon cards on a Friedman pass. Their selected state was encoded only by
+       the CSS has-selector, used nowhere else on this page, so without support NEITHER card
+       filled while the JS still toggled the panel. The page behaved one way and looked
+       another, and the attester could not tell what they had chosen. A disclosure has no
+       selected state to encode, so that failure class disappears instead of being patched. */
+    .paper-switch { margin: 14px 0 0; }
+    .signer-linkbtn--quiet { border:0; padding:6px 0; text-decoration:underline; background:none;
+      font:inherit; font-size:14px; font-weight:500; color:var(--navy); cursor:pointer; }
+    .signer-linkbtn--quiet:hover { color:#164a8c; }
+    /* The whole block is the tap target, not just the native file button. */
+    .paper-drop { display:block; font-size:14px; color:#5a6b7b; border:1px dashed var(--line, #D1D5DB);
+      border-radius:10px; padding:14px; cursor:pointer; }
+    .paper-drop input { display:block; margin-top:8px; font-size:13px; }
+
     /* Doc preview */
     .doc-preview { margin-top: 24px; }
     /* Sticky jump-nav so a CP / 2nd signatory / lawyer can reach any document or
@@ -347,7 +362,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-3-sign-mode-choice';
+    window.__BUILD_TAG = 'signer-2026-08-24-8-paper-disclosure';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -424,6 +439,10 @@
       "Your details": "הפרטים שלך",
       "Subscription documents": "מסמכי הצטרפות",
       "Your signature": "חתימה",
+      "Print and sign by hand instead": "להדפסה וחתימה ידנית",
+      "Sign here instead": "לחתימה כאן",
+      "Download to print": "הורדה להדפסה",
+      "Upload the signed form": "העלאת האישור החתום",
       "Clear": "נקה",
       "Sign and submit": "חתימה ושליחה",
       "Recording...": "מתעד....",
@@ -1013,6 +1032,11 @@
     // Paper return. Rendered only for the attester, only when the server actually sent a
     // printable (signerform emits printableDocs solely on that leg), so every other signer
     // and every failed render simply never sees the block.
+    // Two marks, chosen because they cannot be confused with each other: a signature
+    // squiggle, and a printer. Everything else about the two routes is shared, so the
+    // icon has to carry the ONLY real difference - does paper come out of a machine.
+    // Inline, stroke-only, currentColor, so they invert with the selected card and need
+    // no asset, no font and no network (the page is CSP-tight and dependency-free).
     function renderLawyerPaperReturn(ctx) {
       var host = document.getElementById('lawyer-paper-return');
       if (!host) return;
@@ -1022,47 +1046,47 @@
         host.hidden = true; host.innerHTML = '';
         return;
       }
-      // Two ways to finish, and only two. Digital is preselected because it is faster and
-      // is what most attesters do; the paper route sits underneath, plainly available, for
-      // the ones who will not sign inside a system they do not know. Choosing one hides
-      // the other's controls so the page never shows both at once.
+      // No chooser. The attester opened this link to sign, so signing IS the page: pad
+      // visible, zero decisions. The paper route is one plainly worded line underneath.
       host.innerHTML =
-        '<fieldset class="field" data-paper-return>' +
-          '<legend>' + esc(tHe('How would you like to sign?')) + '</legend>' +
-          '<label class="signer-choice"><input type="radio" name="signMode" value="digital" checked> ' +
-            esc(tHe('Sign here, now')) + '</label>' +
-          '<label class="signer-choice"><input type="radio" name="signMode" value="paper"> ' +
-            esc(tHe('Print, sign by hand and upload')) + '</label>' +
-          '<div id="paper-controls" hidden>' +
-            '<button type="button" id="paper-download" class="signer-linkbtn">' + esc(tHe('Download the form')) + '</button>' +
-            '<label for="paper-scan">' + esc(tHe('Upload the signed form')) + '</label>' +
+        '<p class="paper-switch">' +
+          '<button type="button" id="paper-toggle" class="signer-linkbtn--quiet" aria-expanded="false" aria-controls="paper-controls">' +
+            esc(tHe('Print and sign by hand instead')) +
+          '</button>' +
+        '</p>' +
+        '<div id="paper-controls" role="region" aria-live="polite" hidden>' +
+          '<button type="button" id="paper-download" class="signer-linkbtn">' + esc(tHe('Download to print')) + '</button>' +
+          '<label for="paper-scan" class="paper-drop">' + esc(tHe('Upload the signed form')) +
             '<input type="file" id="paper-scan" data-paper-upload="signedQualification" accept="application/pdf,image/jpeg,image/png">' +
-          '</div>' +
-        '</fieldset>';
+          '</label>' +
+        '</div>';
       host.hidden = false;
 
-      function applyMode() {
-        var paper = !!host.querySelector('input[name="signMode"][value="paper"]:checked');
-        var pc = document.getElementById('paper-controls');
-        if (pc) pc.hidden = !paper;
-        // The pad and the evidence block belong to the digital route only. On paper both
-        // live on the printed page, and the server stops requiring the evidence boxes.
-        var padWrap = document.getElementById('sig-block') || document.getElementById('pad');
-        if (padWrap && padWrap.closest) { var b = padWrap.closest('section, .field, div'); if (b) b.hidden = paper; }
-        if (!paper) { pendingPaperScan = null; var f = document.getElementById('paper-scan'); if (f) f.value = ''; }
+      var toggle = document.getElementById('paper-toggle');
+      var panel = document.getElementById('paper-controls');
+      function setPaper(on) {
+        panel.hidden = !on;
+        toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
+        toggle.textContent = tHe(on ? 'Sign here instead' : 'Print and sign by hand instead');
+        var pad = document.getElementById('pad');
+        var block = pad && pad.closest ? pad.closest('section, .field, div') : null;
+        if (block) block.hidden = on;
+        if (!on) { pendingPaperScan = null; var f = document.getElementById('paper-scan'); if (f) f.value = ''; }
       }
-      host.addEventListener('change', function (e) {
-        if (e.target && e.target.name === 'signMode') applyMode();
-      });
-      applyMode();
+      toggle.addEventListener('click', function () { setPaper(panel.hidden); });
 
       var dl = document.getElementById('paper-download');
       if (dl) dl.addEventListener('click', function () {
-        var html = printable.map(function (d) { return d.html || ''; }).join('<hr>');
-        var w = window.open('', '_blank');
-        if (!w) return;
-        w.document.write(html);
-        w.document.close();
+        // A real download, not window.open + document.write: that was popup-blocked or
+        // opened blank on iOS Safari and much of mobile, so the paper route's FIRST step
+        // failed for exactly the person who wanted paper.
+        var html = '<!doctype html><meta charset="utf-8">' +
+          printable.map(function (d) { return d.html || ''; }).join('<hr>');
+        var url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+        var a = document.createElement('a');
+        a.href = url; a.download = 'qualification.html';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
       });
     }
 
