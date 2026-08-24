@@ -560,7 +560,18 @@
                string), so the mechanic's " חובה" suffix lands on it. The JS mutex
                (enforceQualMutex / single-select) is selector-based and unaffected. -->
           <fieldset class="lvp-fieldset">
-          <legend class="lvp-fieldset__legend">יש לבחור אפשרות אחת.</legend>
+          <!-- Legend text was "יש לבחור אפשרות אחת." and was REMOVED 2026-08-25 (Noa:
+               "jusr remove iits obvious enough"), because the form no longer works that
+               way: an LP may satisfy several qualified criteria at once and the mutex
+               that forced a single pick is gone. Leaving the sentence would have told
+               them the opposite of what the page does.
+               The legend ELEMENT stays, carrying the page's own subject, because two
+               mechanisms read it and both regress if it is emptied: the required
+               marker and the " חובה" error suffix land on .lvp-fieldset__legend, and
+               renderErrorSummary builds its jump-list label from the legend text,
+               falling back to the meaningless generic "שדה" when there is none. Same
+               word as the page title above, no new LP copy. -->
+          <legend class="lvp-fieldset__legend">כשירות</legend>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isLiquidAssets" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isIncomeLevel" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isBoth" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
@@ -1315,7 +1326,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-24-6-required-markers';
+      window.__BUILD_TAG = 'israel-2026-08-25-1-qual-multi-select';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -2286,11 +2297,26 @@
       if (e.isTrusted && e.target && e.target.name) TOUCHED[e.target.name] = true;
       var qualGroup = e.target.getAttribute && (e.target.getAttribute('data-qual-group') || e.target.getAttribute('data-qual-none'));
       if (qualGroup) {
-        // The 4 qualification options are mutually exclusive (choose ONE). Checking
-        // any one clears the other three, so they behave like radios and the LP can
-        // freely switch a regretted pick. No disabling (that made it feel stuck).
+        // CORRECTED 2026-08-25 (Noa: "but they can chose more than one", "let them").
+        // The three QUALIFIED criteria are NOT mutually exclusive: an LP can satisfy
+        // the liquid-assets test and the income test and the combined test at once,
+        // and checking one used to silently uncheck the others, so a genuinely
+        // multi-qualified LP could only ever declare one of them.
+        //
+        // The server has always modelled it correctly - validate.ts:209 is
+        // `isLiquidAssets || isIncomeLevel || isBoth`, an OR - so this was a
+        // client-only restriction that the payload never required.
+        //
+        // What IS still exclusive, and stays enforced here: the not-qualified
+        // declaration versus any qualified criterion. You cannot declare yourself
+        // both qualified and not qualified, and the server agrees
+        // (validate.ts:212 raises exclusive_conflict on exactly that pair).
         if (e.target.checked) {
-          form.querySelectorAll('input[data-qual-group="' + qualGroup + '"], input[data-qual-none="' + qualGroup + '"]').forEach(function (c) {
+          var isNoneBox = !!(e.target.getAttribute && e.target.getAttribute('data-qual-none'));
+          var clearSel = isNoneBox
+            ? 'input[data-qual-group="' + qualGroup + '"]'   // "not qualified" clears the three criteria
+            : 'input[data-qual-none="' + qualGroup + '"]';   // any criterion clears "not qualified" only
+          form.querySelectorAll(clearSel).forEach(function (c) {
             if (c !== e.target) c.checked = false;
           });
         }
