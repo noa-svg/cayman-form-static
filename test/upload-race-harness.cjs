@@ -57,12 +57,18 @@ function runCase(label, assertFn) {
     + extractFn('handleLawyerStamp') + ';'
     + extractFn('uploadsReading') + ';'
     + extractFn('whenUploadsReady') + ';'
-    + 'return {handleIdUpload:handleIdUpload, handleLawyerStamp:handleLawyerStamp, uploadsReading:uploadsReading, whenUploadsReady:whenUploadsReady, getPendingId:function(){return pendingIdUploads;}, getPendingLawyer:function(){return pendingLawyerStamp;}};';
+    + 'return {handleIdUpload:handleIdUpload, handleLawyerStamp:handleLawyerStamp, uploadsReading:uploadsReading, whenUploadsReady:whenUploadsReady, getPendingId:function(){return pendingIdUploads;}, getPendingLawyer:function(){return pendingLawyerStamp;}, setPaper:function(v){pendingPaperScan=v;}, getPaper:function(){return pendingPaperScan;}};';
   // pendingIdUploads/pendingLawyerStamp are free variables in the real file
   // (module-level `var` in signer.html's IIFE); declare them in this
   // function's own scope so the extracted functions close over THESE, then
   // expose getters so the test can inspect them.
-  const wrapped = 'var pendingIdUploads={}; var pendingLawyerStamp={}; var FileReader=MOCK_FR; var tHe=function(s){return s;}; ' + src;
+  // pendingPaperScan is the THIRD holder (attester paper return, 2026-08-24).
+  // It was added to uploadsReading() after a real defect: the submit could run
+  // while the scan's FileReader was still in flight, and the signature gate then
+  // told the attester to sign on a pad that is hidden on that route. It is a bare
+  // `var` in signer.html like the two maps, not a property of either, so it has to
+  // be declared here too or the extracted function throws on a free variable.
+  const wrapped = 'var pendingIdUploads={}; var pendingLawyerStamp={}; var pendingPaperScan=null; var FileReader=MOCK_FR; var tHe=function(s){return s;}; ' + src;
   const factory = new Function('MOCK_FR', wrapped);
   const api = factory(makeMockFileReaderCtor(queue));
   assertFn(api, queue);
@@ -126,3 +132,27 @@ runCase('clearing mid-read removes the slot, no stale reading:true left behind',
 
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
+
+// ---- 4. The attester paper scan is the third holder and must gate the submit
+//         exactly like the other two (2026-08-24). Before this, the scan was
+//         only assigned inside FileReader.onload, so a submit that raced the
+//         pick saw pendingPaperScan === null, the signature gate fired, and the
+//         CPA was told to add a signature while the pad was hidden on that
+//         route. uploadsReading() ignoring this holder is what let that happen.
+runCase('paper-scan: an in-flight scan holds the submit', function (api) {
+  ok('nothing in flight to start with', api.uploadsReading() === false);
+  api.setPaper({ slot: 'signedQualification', fileName: 'signed.pdf', mimeType: 'application/pdf', fileSizeBytes: 4000, base64: '', reading: true });
+  ok('uploadsReading() is TRUE while the scan is still being read', api.uploadsReading() === true);
+  api.setPaper({ slot: 'signedQualification', fileName: 'signed.pdf', mimeType: 'application/pdf', fileSizeBytes: 4000, base64: 'ZmFrZQ==', reading: false });
+  ok('uploadsReading() is false once the scan has landed', api.uploadsReading() === false);
+});
+
+// ---- 5. A dropped scan (read failed, or resolved with no payload) must leave
+//         nothing in flight, or the submit would hang forever waiting on a
+//         holder that is never going to complete. --------------------------
+runCase('paper-scan: a dropped scan does not hang the submit', function (api) {
+  api.setPaper({ slot: 'signedQualification', fileName: 'signed.pdf', mimeType: 'application/pdf', fileSizeBytes: 4000, base64: '', reading: true });
+  ok('in flight before the failure', api.uploadsReading() === true);
+  api.setPaper(null); // what onerror / an empty-payload onload now does
+  ok('nothing in flight after the holder is dropped', api.uploadsReading() === false);
+});
