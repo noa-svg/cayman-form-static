@@ -1326,7 +1326,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-1-qual-multi-select';
+      window.__BUILD_TAG = 'israel-2026-08-25-2-reveal-scroll';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -2219,7 +2219,38 @@
         else { var eq = cond.indexOf('='); path = cond.slice(0, eq); want = cond.slice(eq + 1); }
         cur = resolveTrigger(path);
         var match = String(cur) === String(want);
+        var wasHidden = el.hidden;
         el.hidden = neg ? match : !match;
+        // 2026-08-25: bring a NEWLY revealed field to the signer.
+        //
+        // Answering a question can reveal a required follow-up further down the
+        // page. On ind.qualification, ticking a criterion reveals the signed-
+        // certificate question, which lands BELOW THE FOLD. The signer's next
+        // action is the next button, so they pressed it, were rejected, and only
+        // then discovered a question that had appeared underneath them while they
+        // were looking elsewhere. The form was telling them off for not answering
+        // something it had only just asked, off screen.
+        //
+        // Scrolling the revealed field into view removes the whole loop at its
+        // cause rather than making the rejection prettier. Guarded three ways:
+        // only on a real hidden -> visible transition (never on every pass, which
+        // would fight the signer's own scrolling), only once the LP has actually
+        // interacted (so the initial render and a resume restore, which reveal many
+        // fields at once, never move the page), and never for something already on
+        // screen.
+        if (wasHidden && !el.hidden && AUTOSCROLL_ARMED) {
+          (function (target) {
+            setTimeout(function () {
+              try {
+                if (target.hidden) return;
+                var r = target.getBoundingClientRect();
+                var onScreen = r.top >= 0 && r.bottom <= (window.innerHeight || 0);
+                if (onScreen) return;
+                if (target.scrollIntoView) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              } catch (e) { /* scrolling is a nicety, never break the form for it */ }
+            }, 60);
+          })(el);
+        }
       });
       // Element-level co-holder scoping (mirror of the page-level data-primary-only
       // drop in visiblePages). A joint co-holder inherits the primary's
@@ -2295,6 +2326,7 @@
       // A trusted change = the LP answered this control themselves: the
       // inferred-defaults engine must never override it again.
       if (e.isTrusted && e.target && e.target.name) TOUCHED[e.target.name] = true;
+      if (e.isTrusted) AUTOSCROLL_ARMED = true;   // see the flag's declaration
       var qualGroup = e.target.getAttribute && (e.target.getAttribute('data-qual-group') || e.target.getAttribute('data-qual-none'));
       if (qualGroup) {
         // CORRECTED 2026-08-25 (Noa: "but they can chose more than one", "let them").
@@ -2660,6 +2692,12 @@
     // derived mark flips when its source answer flips, but a manual edit
     // sticks. Values are existing options/data only, so no new copy.
     var TOUCHED = {};   // name -> true once the LP changed the control themselves
+    // Armed on the LP's FIRST trusted interaction (see the change handler below).
+    // applyConditionals reads it before scrolling a newly revealed field into view,
+    // so the initial render and a resume restore - both of which flip many fields
+    // from hidden to visible in one pass - never yank the page around. Only an
+    // answer the LP just gave can move the viewport.
+    var AUTOSCROLL_ARMED = false;
     var SNAP = {};      // name -> true when the resume snapshot carried the key
     function markSnapFromPrefill() {
       var pf = (CFG && CFG.prefill && typeof CFG.prefill === 'object') ? CFG.prefill : null;
