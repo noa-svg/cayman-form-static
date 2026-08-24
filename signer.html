@@ -362,7 +362,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-8-paper-disclosure';
+    window.__BUILD_TAG = 'signer-2026-08-24-9-paper-stamp-and-race';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -1629,17 +1629,31 @@
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-paper-upload')) return;
           var f = inp.files && inp.files[0];
           if (!f) { pendingPaperScan = null; return; }
+          // Mark the read IN FLIGHT before it starts (2026-08-24), so
+          // uploadsReading() can hold the submit until the bytes are actually
+          // here. Without this the submit ran while pendingPaperScan was still
+          // null and the signature gate fired, telling the attester to sign on a
+          // pad that is hidden on this route. Mirrors the stamp handler above,
+          // which has carried the same reading flag since it was fixed.
+          pendingPaperScan = {
+            slot: 'signedQualification',
+            fileName: f.name,
+            mimeType: f.type,
+            fileSizeBytes: f.size,
+            base64: '',
+            reading: true
+          };
           var rdr = new FileReader();
           rdr.onload = function () {
             var res = String(rdr.result || '');
             var comma = res.indexOf(',');
-            pendingPaperScan = {
-              slot: 'signedQualification',
-              fileName: f.name,
-              mimeType: f.type,
-              fileSizeBytes: f.size,
-              base64: comma > -1 ? res.slice(comma + 1) : ''
-            };
+            // A read that resolves with no payload is a FAILED read, not an empty
+            // file. Dropping the holder here keeps the submit gates honest rather
+            // than posting a zero-byte scan that looks like a successful upload.
+            var b64 = comma > -1 ? res.slice(comma + 1) : '';
+            if (!b64) { pendingPaperScan = null; return; }
+            pendingPaperScan.base64 = b64;
+            pendingPaperScan.reading = false;
           };
           rdr.onerror = function () { pendingPaperScan = null; };
           rdr.readAsDataURL(f);
@@ -1989,6 +2003,13 @@
       function uploadsReading() {
         for (var k in pendingIdUploads) { if (pendingIdUploads[k] && pendingIdUploads[k].reading) return true; }
         for (var k2 in pendingLawyerStamp) { if (pendingLawyerStamp[k2] && pendingLawyerStamp[k2].reading) return true; }
+        // The paper scan is a third pending-upload holder and was missing here
+        // (2026-08-24). Submitting before its FileReader resolved left
+        // pendingPaperScan null, so the signature gate fired and told the attester
+        // to add a signature while the pad was hidden - an instruction pointing at
+        // a control not on screen. This is the same race already fixed for the two
+        // maps above; a multi-MB scan just widens the window.
+        if (pendingPaperScan && pendingPaperScan.reading) return true;
         return false;
       }
       // Run cb once no upload read is in flight, or after a hard ceiling (a read
@@ -2147,8 +2168,17 @@
         // Stamp gate (lawyer only): a lawyer must attach the required stamp before
         // submitting. Non-lawyer roles skip this entirely (pendingLawyerStamp is
         // empty and the section never renders for them).
+        //
+        // EXEMPT THE PAPER ROUTE (2026-08-24). An attester who printed the form,
+        // signed AND stamped it in their own office, then uploaded the scan, was
+        // still blocked here and scrolled ~700px back up to a digital stamp field,
+        // with nothing in the paper panel warning a separate stamp image was needed.
+        // The scan already carries the wet stamp; demanding a second, digital one
+        // contradicts the premise of the route. Same reasoning as the signature gate
+        // above, which already exempts pendingPaperScan: on this route the scan IS
+        // the signed and stamped instrument.
         var isLawyer = CTX && CTX.role === 'lawyer';
-        if (isLawyer && !pendingLawyerStamp.lawyer_stamp) {
+        if (isLawyer && !pendingPaperScan && !pendingLawyerStamp.lawyer_stamp) {
           errEl.textContent = tHe('Please upload the stamp before submitting.');
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
