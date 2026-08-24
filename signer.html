@@ -268,6 +268,9 @@
         <!-- Lawyer stamp upload: rendered ONLY for the 'lawyer' role by
              renderLawyerStamp(ctx). Empty + hidden for every other signer role. -->
         <div id="lawyer-stamp-upload" hidden></div>
+        <!-- Paper return: the attester downloads the form, signs it by hand and
+             uploads the scan instead of signing on screen. Lawyer role only. -->
+        <div id="lawyer-paper-return" hidden></div>
 
         <!-- Inline doc preview -->
         <div class="doc-preview">
@@ -344,7 +347,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-1-qualification-terms';
+    window.__BUILD_TAG = 'signer-2026-08-24-2-paper-return';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -580,7 +583,7 @@
         // Re-translate the dynamically built sections (locked context, field
         // labels, doc titles) that applyLang's static selector does not cover,
         // so a foreign signer can toggle EN<->HE cleanly. F5.
-        if (CTX) { renderDynamic(CTX, false); renderIdUploads(CTX, false); renderLawyerStamp(CTX, false); }
+        if (CTX) { renderDynamic(CTX, false); renderIdUploads(CTX, false); renderLawyerStamp(CTX, false); renderLawyerPaperReturn(CTX); }
       });
     });
 
@@ -874,6 +877,7 @@
     // renders the section and posts no stamp. Keyed by the single 'lawyer_stamp' slot
     // and merged into the SAME payload.uploads object the CP path uses.
     var pendingLawyerStamp = {};
+    var pendingPaperScan = null;
 
     // The ID slots a controlling person uploads on their signing page, mirroring
     // the individual ID block on index.html (labels / hints / accept / order).
@@ -1006,6 +1010,37 @@
     // renderIdUploads: `isInitial=false` re-translates the label in place on a
     // language toggle WITHOUT rebuilding the <input>, so a picked file (and its
     // captured base64) survives an EN<->HE flip. accept is JPG/PNG only (no PDF).
+    // Paper return. Rendered only for the attester, only when the server actually sent a
+    // printable (signerform emits printableDocs solely on that leg), so every other signer
+    // and every failed render simply never sees the block.
+    function renderLawyerPaperReturn(ctx) {
+      var host = document.getElementById('lawyer-paper-return');
+      if (!host) return;
+      var printable = (ctx && ctx.printableDocs) || [];
+      if (!(ctx && ctx.role === 'lawyer') || !printable.length) {
+        pendingPaperScan = null;
+        host.hidden = true; host.innerHTML = '';
+        return;
+      }
+      host.innerHTML =
+        '<div class="field" data-paper-return>' +
+          '<button type="button" id="paper-download" class="signer-linkbtn">' + esc(tHe('Download the form to sign by hand')) + '</button>' +
+          '<label for="paper-scan">' + esc(tHe('Upload the signed form')) + '</label>' +
+          '<input type="file" id="paper-scan" data-paper-upload="signedQualification" accept="application/pdf,image/jpeg,image/png">' +
+          '<span class="signer-note" id="paper-note">' + esc(tHe('Upload a signed copy here, or sign below. Either one.')) + '</span>' +
+        '</div>';
+      host.hidden = false;
+      var dl = document.getElementById('paper-download');
+      if (dl) dl.addEventListener('click', function () {
+        // Same HTML the signing pane renders, opened for the browser to print or save.
+        var html = printable.map(function (d) { return d.html || ''; }).join('<hr>');
+        var w = window.open('', '_blank');
+        if (!w) return;
+        w.document.write(html);
+        w.document.close();
+      });
+    }
+
     function renderLawyerStamp(ctx, isInitial) {
       var host = document.getElementById('lawyer-stamp-upload');
       if (!host) return;
@@ -1482,6 +1517,7 @@
       renderDynamic(ctx, true);
       renderIdUploads(ctx, true);
       renderLawyerStamp(ctx, true);
+      renderLawyerPaperReturn(ctx);
       applyLeanReview_(ctx);
       prefillSavedData(ctx.savedData);
       show('form');
@@ -1532,6 +1568,32 @@
           var inp = e.target;
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-stamp-upload')) return;
           handleLawyerStamp(inp.getAttribute('data-stamp-upload'), inp, errEl);
+        });
+      }
+      // Paper return: same base64 read as the stamp above. The scan REPLACES the drawn
+      // signature rather than accompanying it, so choosing a file relaxes the signature
+      // gate below and clearing the field restores it.
+      var paperHost = document.getElementById('lawyer-paper-return');
+      if (paperHost) {
+        paperHost.addEventListener('change', function (e) {
+          var inp = e.target;
+          if (!inp || !inp.getAttribute || !inp.getAttribute('data-paper-upload')) return;
+          var f = inp.files && inp.files[0];
+          if (!f) { pendingPaperScan = null; return; }
+          var rdr = new FileReader();
+          rdr.onload = function () {
+            var res = String(rdr.result || '');
+            var comma = res.indexOf(',');
+            pendingPaperScan = {
+              slot: 'signedQualification',
+              fileName: f.name,
+              mimeType: f.type,
+              fileSizeBytes: f.size,
+              base64: comma > -1 ? res.slice(comma + 1) : ''
+            };
+          };
+          rdr.onerror = function () { pendingPaperScan = null; };
+          rdr.readAsDataURL(f);
         });
       }
       function size() {
@@ -1976,7 +2038,9 @@
         }
 
         // The signature itself is the agreement; no separate consent checkbox.
-        if (!dirty || points < MIN_POINTS) {
+        // Unless the attester attached a form they signed by hand: then the scan IS the
+        // signature and the pad is deliberately left empty.
+        if (!pendingPaperScan && (!dirty || points < MIN_POINTS)) {
           errEl.textContent = tHe('Please add your signature before submitting.');
           if (canvas.scrollIntoView) canvas.scrollIntoView({ block: 'center' });
           return;
@@ -1993,7 +2057,7 @@
         var png = canvas.toDataURL('image/png');
         // Hard gate: a blank signature must be impossible to seal. If the canvas carries no
         // ink, block the submit and ask the LP to re-sign (never POST a blank signature).
-        if (!canvasHasInk(canvas)) {
+        if (!pendingPaperScan && !canvasHasInk(canvas)) {
           errEl.textContent = tHe('Please add your signature before submitting.');
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
@@ -2058,9 +2122,15 @@
         // base64 blob as a form field. Only cp* roles ever carry uploads.
         var payloadObj = {
           signToken: TOKEN,
-          pngBase64: png,
           signerFormData: formData
         };
+        // Exactly one of the two ever goes up. The server refuses both together rather
+        // than merging, so sending a pad image beside a scan would just be rejected.
+        if (pendingPaperScan) {
+          payloadObj.signedOnPaper = true;
+        } else {
+          payloadObj.pngBase64 = png;
+        }
         // Israeli lawyer leg (2026-07-21): the seal-time signerFormData merge
         // (caymanApplySignerField_'s lawyer branch) routes only name/email/phone/
         // idUploads and silently DROPS the evidence fields + license number, so a
@@ -2101,6 +2171,9 @@
         var mergedUploads = {};
         if (isCp) {
           Object.keys(pendingIdUploads).forEach(function (k) { mergedUploads[k] = pendingIdUploads[k]; });
+        }
+        if (isLawyer && pendingPaperScan) {
+          mergedUploads.signedQualification = pendingPaperScan;
         }
         if (isLawyer && pendingLawyerStamp.lawyer_stamp) {
           mergedUploads.lawyer_stamp = pendingLawyerStamp.lawyer_stamp;
