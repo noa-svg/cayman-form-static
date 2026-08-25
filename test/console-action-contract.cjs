@@ -43,7 +43,16 @@ const MONO_ROOT = process.env.JU_MONO_ROOT || path.join(os.homedir(), 'Desktop',
 const GATEWAY = path.join(MONO_ROOT, 'apps', 'ju-cayman', 'src', 'server', 'CaymanGateway.ts');
 let gw = '';
 try { gw = fs.readFileSync(GATEWAY, 'utf8'); } catch (e) { gw = ''; }
+// The console talks to TWO backends, and has since the 2026-08-08 ju-service flip.
+// Checking only GAS made this contract half-blind: a route that ships ju-service-only
+// (consoledispatch.ts) reads here as a dead button when it is a live one, and - the
+// direction that actually bites - a route deleted from ju-service would NOT be caught
+// at all. Read both, and let a handler in either satisfy the contract.
+const DISPATCH = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'routes', 'consoledispatch.ts');
+let jd = '';
+try { jd = fs.readFileSync(DISPATCH, 'utf8'); } catch (e) { jd = ''; }
 ok('A2 mono gateway source present (absent = vacuous contract, hard fail)', gw.length > 0, GATEWAY);
+ok('A2b ju-service dispatch source present (absent = half-blind contract, hard fail)', jd.length > 0, DISPATCH);
 
 // ---- collect every route the console references ----
 // Literal '?admin=x' / '?api=x' strings:
@@ -90,8 +99,13 @@ if (gw) {
   refs.forEach((ref) => {
     const parts = ref.split(':');
     const needle = "p." + parts[0] + " === '" + parts[1] + "'";
-    ok('A1 gateway handles ' + ref, gw.indexOf(needle) >= 0,
-      'console references ?' + parts[0] + '=' + parts[1] + ' but CaymanGateway.ts has no `' + needle + '` - a one-sided add/removal (the dead-button class)');
+    // consoledispatch.ts destructures the param bag, so its handlers read
+    // `admin === 'x'` / `api === 'x'` rather than GAS's `p.admin === 'x'`.
+    const needleJu = parts[0] + " === '" + parts[1] + "'";
+    const inGas = gw.indexOf(needle) >= 0;
+    const inJu = jd.indexOf(needleJu) >= 0;
+    ok('A1 a backend handles ' + ref, inGas || inJu,
+      'console references ?' + parts[0] + '=' + parts[1] + ' but NEITHER CaymanGateway.ts (`' + needle + '`) NOR ju-service consoledispatch.ts (`' + needleJu + '`) handles it - a one-sided add/removal (the dead-button class)');
   });
 }
 
