@@ -996,8 +996,8 @@
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
-          <label class="lvp-field" data-optional><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
-          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
+          <label class="lvp-field" data-optional data-on-certificate><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
+          <label class="lvp-field" data-on-certificate><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
         </section>
 
         <!-- ============================================================== -->
@@ -1252,6 +1252,21 @@
         <section class="lvp-page" data-page="lawyer.details" data-lawyer-only hidden>
           <h2 class="lvp-page__title">אישור כשירות</h2>
           <p class="lvp-page__hint"><span data-lawyer-investors></span> מבקש/ת את חתימתך על אישור הכשירות במסגרת ההצטרפות לקרן לגאסי.</p>
+          <!-- PAPER RETURN, moved here 2026-08-25.
+               Shipping this on lawyer.evidence (page 2) was wrong: page 1 demanded a
+               stamp image, a licence number and a phone BEFORE the attester could reach
+               the upload. An attester uploading a certificate they already signed has
+               supplied all three ON that certificate. Worse, the SERVER never wanted
+               them: caymanValidateIsraeliLawyerLeg_ requires only a name, one contact,
+               and one evidence box. The client was gating on three fields the server
+               does not ask for.
+               So the choice comes first, and taking it hides exactly the fields the
+               signed certificate already carries. Name and email stay (seeded from what
+               the LP gave, and the server wants one contact). -->
+          <label class="lvp-checkbox lvp-checkbox--lead"><input type="checkbox" data-paper-toggle> <span>העלאת האישור החתום</span></label>
+          <div data-paper-slot hidden>
+            <label class="lvp-field" data-optional><span class="lvp-field__label">העלאת האישור החתום</span><input class="lvp-file-input" type="file" data-upload="signedQualification" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+          </div>
           <h3 class="lvp-subhead">פרטי עו"ד / רו"ח</h3>
           <div class="lvp-grid-2">
             <label class="lvp-field"><span class="lvp-field__label">שם פרטי</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.firstName"></label>
@@ -1264,7 +1279,7 @@
           <label class="lvp-field" data-optional><span class="lvp-field__label">כתובת דוא"ל</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="כתובת זו תשמש אותנו לתקשורת"></label>
           <label class="lvp-field" data-optional><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="lawyerDetails.phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
           <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
-          <label class="lvp-field"><span class="lvp-field__label">חותמת</span><input class="lvp-file-input" type="file" data-upload="lawyer.stamp" accept="image/jpeg,image/png,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span><p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p></label>
+          <label class="lvp-field" data-on-certificate><span class="lvp-field__label">חותמת</span><input class="lvp-file-input" type="file" data-upload="lawyer.stamp" accept="image/jpeg,image/png,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span><p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p></label>
         </section>
 
         <!-- PAGE: lawyer evidence (כשירות המשקיע/ה). The attester marks WHICH evidence
@@ -1387,7 +1402,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-14-entity-attest-wording';
+      window.__BUILD_TAG = 'israel-2026-08-25-16-attester-paper-first';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1817,6 +1832,8 @@
       "סכום השקעה":"Investment amount",
       "לדוגמה: 500,000":"e.g., 500,000",
       "תאריך השקעה":"Investment date",
+      "העלאת האישור החתום":"Upload the signed form",
+      "ניתן לחתום כאן, או להעלות אישור כשירות חתום שכבר ברשותך.":"Sign here, or upload a qualification certificate you have already signed.",
       "נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב":"Please state the first business day of the upcoming calendar month",
       "המוסד ממנו יועברו הכספים":"The institution the funds will be transferred from",
       "שם הבנק":"Bank name",
@@ -3657,10 +3674,43 @@
           files.entity[m[1]] = u;
         } else if ((m = slot.match(/^lawyer\.(.+)$/))) {
           files.lawyer[m[1]] = u;
+        } else {
+          // UNPREFIXED slot: rides at the top level of the uploads bag, because
+          // routeSignatureUploads (ju-service recordSignature.ts) iterates top-level
+          // keys and requires base64/driveId AT that level. The nested
+          // investors./entity./lawyer. shapes match neither and are skipped. The
+          // attester's signedQualification scan uses this path (2026-08-25).
+          files[slot] = u;
         }
       });
       return files;
     }
+
+    // ---- attester paper return: the certificate carries stamp/licence/phone ----
+    // Hiding is deliberately the mechanism: validateCurrentPage walks only VISIBLE
+    // required fields, so hidden ones are skipped without touching the validator.
+    // Server-side this is already legal - caymanValidateIsraeliLawyerLeg_ asks for a
+    // name, one contact and one evidence box, and nothing else.
+    function applyPaperMode() {
+      var tgl = form.querySelector('[data-paper-toggle]');
+      if (!tgl) return;
+      var on = !!tgl.checked;
+      var slot = form.querySelector('[data-paper-slot]');
+      if (slot) slot.hidden = !on;
+      form.querySelectorAll('[data-on-certificate]').forEach(function (el) {
+        el.hidden = on;
+        if (on) {
+          // drop a half-typed value so it cannot ride along invisibly
+          el.querySelectorAll('input').forEach(function (i) {
+            if (i.type !== 'file') i.value = '';
+          });
+        }
+      });
+      if (!on && pendingUploads) delete pendingUploads.signedQualification;
+    }
+    form.addEventListener('change', function (e) {
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-paper-toggle')) applyPaperMode();
+    });
 
     // ---- validation: required visible fields on the current page ----
     function isValidIlId(v) {
@@ -4217,6 +4267,18 @@
       // Read the pad NOW (finding #30): captureSig writes sigPadPng, which doSubmit
       // and every retry attempt below then read, so the posted signaturePng is the
       // canvas as it stands at submit, not a stale mid-stroke snapshot.
+      // PAPER RETURN (2026-08-25): an attester who uploaded a certificate they had
+      // already signed does not draw on the pad. The scan IS the signed instrument,
+      // exactly as on signer.html's paper route, and the server enforces the same
+      // rule from the other side: recordSignature.ts accepts uploads.signedQualification
+      // in place of pngBase64, and refuses BOTH together. So the pad requirement must
+      // lift here, or the client blocks a submit the server would have accepted.
+      var paperScan_ = !!(pendingUploads && pendingUploads.signedQualification);
+      if (paperScan_ && LAWYER) {
+        sigPadPng = '';           // never post both; the server refuses that pair
+        doSubmit();
+        return;
+      }
       if (!(sigPadCapture ? sigPadCapture() : sigPadPng)) {
         setStatus(displayFor('יש לשרטט חתימה לפני השליחה.', curLang), true);
         var pages = visiblePages();
@@ -4817,6 +4879,9 @@
               role: 'lawyer',
               lawyer: submission.lawyerDetails || {},
               signaturePng: sigPadPng || '',
+              // 2026-08-25: mirrors signer.html's paper route. Exactly one of the two
+              // ever goes up; the server refuses a signature and a scan together.
+              signedOnPaper: !!(files && files.signedQualification),
               uploads: files
             })
           : CO_HOLDER
