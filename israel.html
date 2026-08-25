@@ -1387,7 +1387,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-13-second-signatory';
+      window.__BUILD_TAG = 'israel-2026-08-25-14-entity-attest-wording';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -2036,7 +2036,19 @@
     // force individual + onboarding_individual (the applicant is irrelevant since
     // visiblePages returns only the lawyer-only pages + sign in this mode).
     var LAWYER = (URL_ROLE === 'lawyer');
-    var APPLICANT = (CO_HOLDER || LAWYER) ? 'individual'
+      // 2026-08-25 (Noa: "Show the entity wording"). LAWYER no longer forces the
+      // individual applicant. It used to, and the stated reason was "so entity pages
+      // can never enter visiblePages()" - but visiblePages() RETURNS EARLY for LAWYER
+      // and only ever yields data-lawyer-only pages plus ind.sign; it never consults
+      // data-applicant at all. So the force was redundant for its stated purpose, and
+      // it had a side effect nobody wanted: APPLICANT also drives the ELEMENT-level
+      // [data-applicant] spans, so a corporation's עו"ד/רו"ח was shown the INDIVIDUAL
+      // evidence wording and legally attested to examining "the investor's bank
+      // statements" and "the investor's payslips or annual tax returns". The correct
+      // entity wording (financial statements showing equity over 50M, shareholder
+      // register) sat at israel.html:1278-1280 as dead code nobody had ever seen.
+      // CO_HOLDER still forces individual: a co-holder genuinely is one.
+    var APPLICANT = CO_HOLDER ? 'individual'
       : ((URL_TYPE === 'entity' || CFG.applicantType === 'entity') ? 'entity' : 'individual');
     var FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
 
@@ -2084,8 +2096,11 @@
       // enter visiblePages(), re-clamp to page 0, and (re)fill the intro investor name.
       if (cfg.role === 'lawyer') {
         LAWYER = true;
-        APPLICANT = 'individual';
-        FLOW_TYPE = 'onboarding_individual';
+        // APPLICANT deliberately NOT forced here (2026-08-25); see the note on its
+        // declaration. Page scoping for the attester is handled by visiblePages()'s
+        // own LAWYER branch, not by the applicant type.
+        APPLICANT = (cfg.applicantType === 'entity') ? 'entity' : 'individual';
+        FLOW_TYPE = (APPLICANT === 'entity') ? 'onboarding_entity' : 'onboarding_individual';
         idx = 0;
         applyConditionals();
         populateLawyerIntro_();
@@ -2106,7 +2121,9 @@
       }
       // A co-holder is always an individual; never let the primary session's
       // applicantType flip a co-holder form to the entity sequence.
-      var ap = (CO_HOLDER || LAWYER) ? 'individual'
+      // See the note on the APPLICANT declaration: LAWYER must NOT force individual,
+      // or the entity certifier reads the individual's evidence wording.
+      var ap = CO_HOLDER ? 'individual'
         : ((cfg.applicantType === 'entity') ? 'entity' : (cfg.applicantType === 'individual' ? 'individual' : ''));
       if (ap && ap !== APPLICANT) {
         APPLICANT = ap;
