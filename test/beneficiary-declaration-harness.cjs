@@ -120,7 +120,7 @@ async function main() {
     const labels = Array.prototype.map.call(section.querySelectorAll('fieldset.lvp-fieldset label.lvp-radio'), (l) => l.textContent.trim());
     ok('B2 self-option copy exact', labels.indexOf('אני פועל/ת עבור עצמי בלבד') !== -1, labels.join(' | '));
     ok('B2 unknown-option copy exact', labels.indexOf('יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים') !== -1, labels.join(' | '));
-    ok('B2 named-option copy exact', labels.indexOf('הנהנים בפעולה הם:') !== -1, labels.join(' | '));
+    ok('B2 named-option copy exact', labels.indexOf('הנהנים בפעולה הם המפורטים להלן') !== -1, labels.join(' | '));
     const title = section.querySelector('h2.lvp-page__title').textContent.trim();
     ok('B2 section title unchanged', title === 'הצהרה על נהנים ובעלי שליטה', title);
 
@@ -129,7 +129,7 @@ async function main() {
     const html = fs.readFileSync(path.join(__dirname, '..', 'israel.html'), 'utf8');
     ok('B3 self EN copy wired', html.indexOf('"אני פועל/ת עבור עצמי בלבד":"I am acting on my own behalf only"') !== -1);
     ok('B3 unknown EN copy wired', html.indexOf('"יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים":"There is a beneficiary or beneficiaries in the said rights, but their identifying details are not yet known"') !== -1);
-    ok('B3 named EN copy wired', html.indexOf('"הנהנים בפעולה הם:":"The beneficiaries of the transaction are:"') !== -1);
+    ok('B3 named EN copy wired', html.indexOf('"הנהנים בפעולה הם המפורטים להלן":"The beneficiaries of the transaction are those listed below"') !== -1);
   }
 
   // B4: "self" - no extra fields required, advances immediately.

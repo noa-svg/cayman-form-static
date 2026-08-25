@@ -1064,7 +1064,7 @@
             <legend class="lvp-fieldset__legend">המשקיע/ה מצהיר/ה בזאת:</legend>
             <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="self" data-show-when-trigger="beneficiaryStatement.statement"> אני פועל/ת עבור עצמי בלבד</label>
             <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="unknown" data-show-when-trigger="beneficiaryStatement.statement"> יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים</label>
-            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> הנהנים בפעולה הם:</label>
+            <label class="lvp-radio"><input type="radio" name="beneficiaryStatement.statement" value="named" data-show-when-trigger="beneficiaryStatement.statement"> הנהנים בפעולה הם המפורטים להלן</label>
           </fieldset>
           <label class="lvp-field" data-show-when="beneficiaryStatement.statement=unknown"><span class="lvp-field__label">הסיבה לכך</span><input class="lvp-input" type="text" data-script="he" name="beneficiaryStatement.reasonUnknown"></label>
           <div data-show-when="beneficiaryStatement.statement=named">
@@ -1326,7 +1326,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-5-rule-rename';
+      window.__BUILD_TAG = 'israel-2026-08-25-6-beneficiary-option';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1777,7 +1777,7 @@
       "המשקיע/ה מצהיר/ה בזאת:":"The investor hereby declares:",
       "אני פועל/ת עבור עצמי בלבד":"I am acting on my own behalf only",
       "יש נהנה/ים בזכויות כאמור, אולם פרטי הזיהוי שלו/שלהם טרם ידועים":"There is a beneficiary or beneficiaries in the said rights, but their identifying details are not yet known",
-      "הנהנים בפעולה הם:":"The beneficiaries of the transaction are:",
+      "הנהנים בפעולה הם המפורטים להלן":"The beneficiaries of the transaction are those listed below",
       "הוספת נהנה/ית +":"Add a beneficiary +",
       "נהנה/ית":"Beneficiary",
       "שם מלא":"Full name",
