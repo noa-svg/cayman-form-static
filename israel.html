@@ -1281,21 +1281,6 @@
             <label class="lvp-checkbox"><input type="checkbox" name="lawyerDetails.checkOther" value="true" data-show-when-trigger="lawyerDetails.checkOther"> בחינת אסמכתאות ו/או אמצעים אחרים</label>
             <label class="lvp-field" data-show-when="lawyerDetails.checkOther=true"><span class="lvp-field__label">בחינת אסמכתאות ו/או אמצעים אחרים</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.otherEvidence"></label>
           </fieldset>
-          <!-- PAPER RETURN for the attester, 2026-08-25.
-               An attester whose office does not sign digitally had NO way to hand over
-               a certificate they had already signed: this leg is lawyer.details ->
-               lawyer.evidence -> ind.sign, and the only upload on it was their stamp.
-               The paper route built earlier today lives on signer.html, a DIFFERENT
-               surface, so it never reached this link. A real LP (money already wired)
-               sat blocked on exactly this.
-               The SERVER already supports it and has since this morning: the shared
-               gate in recordSignature.ts takes uploads.signedQualification in place of
-               a signature, applyIsraeliLawyerLeg carries a signedOnPaper flag, and the
-               scan is kept out of signature placements. Only the UI was missing.
-               Slot name is UNPREFIXED on purpose: routeSignatureUploads reads TOP-LEVEL
-               keys of the uploads bag, so investors./entity./lawyer.-prefixed slots
-               never reach it. See collectFiles below. -->
-          <label class="lvp-field" data-optional><span class="lvp-field__label">העלאת האישור החתום</span><input class="lvp-file-input" type="file" data-upload="signedQualification" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
         </section>
 
         <!-- PAGE: inline signature. No data-applicant, so visiblePages() shows it
@@ -1402,7 +1387,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-15-attester-paper-return';
+      window.__BUILD_TAG = 'israel-2026-08-25-14-entity-attest-wording';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1832,8 +1817,6 @@
       "סכום השקעה":"Investment amount",
       "לדוגמה: 500,000":"e.g., 500,000",
       "תאריך השקעה":"Investment date",
-      "העלאת האישור החתום":"Upload the signed form",
-      "ניתן לחתום כאן, או להעלות אישור כשירות חתום שכבר ברשותך.":"Sign here, or upload a qualification certificate you have already signed.",
       "נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב":"Please state the first business day of the upcoming calendar month",
       "המוסד ממנו יועברו הכספים":"The institution the funds will be transferred from",
       "שם הבנק":"Bank name",
@@ -3674,13 +3657,6 @@
           files.entity[m[1]] = u;
         } else if ((m = slot.match(/^lawyer\.(.+)$/))) {
           files.lawyer[m[1]] = u;
-        } else {
-          // UNPREFIXED slot: rides at the top level of the uploads bag, because
-          // routeSignatureUploads (ju-service recordSignature.ts) iterates top-level
-          // keys and requires base64/driveId AT that level. The nested
-          // investors./entity./lawyer. shapes match neither and are skipped. The
-          // attester's signedQualification scan uses this path (2026-08-25).
-          files[slot] = u;
         }
       });
       return files;
@@ -4241,18 +4217,6 @@
       // Read the pad NOW (finding #30): captureSig writes sigPadPng, which doSubmit
       // and every retry attempt below then read, so the posted signaturePng is the
       // canvas as it stands at submit, not a stale mid-stroke snapshot.
-      // PAPER RETURN (2026-08-25): an attester who uploaded a certificate they had
-      // already signed does not draw on the pad. The scan IS the signed instrument,
-      // exactly as on signer.html's paper route, and the server enforces the same
-      // rule from the other side: recordSignature.ts accepts uploads.signedQualification
-      // in place of pngBase64, and refuses BOTH together. So the pad requirement must
-      // lift here, or the client blocks a submit the server would have accepted.
-      var paperScan_ = !!(pendingUploads && pendingUploads.signedQualification);
-      if (paperScan_ && LAWYER) {
-        sigPadPng = '';           // never post both; the server refuses that pair
-        doSubmit();
-        return;
-      }
       if (!(sigPadCapture ? sigPadCapture() : sigPadPng)) {
         setStatus(displayFor('יש לשרטט חתימה לפני השליחה.', curLang), true);
         var pages = visiblePages();
@@ -4853,9 +4817,6 @@
               role: 'lawyer',
               lawyer: submission.lawyerDetails || {},
               signaturePng: sigPadPng || '',
-              // 2026-08-25: mirrors signer.html's paper route. Exactly one of the two
-              // ever goes up; the server refuses a signature and a scan together.
-              signedOnPaper: !!(files && files.signedQualification),
               uploads: files
             })
           : CO_HOLDER
