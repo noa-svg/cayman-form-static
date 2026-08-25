@@ -1295,7 +1295,13 @@
           <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
           <template data-row-template="email">
             <div class="lvp-email-row" data-row-index="${i}">
-              <div class="lvp-field" style="flex:1;margin:0"><input class="lvp-input" type="email" name="contactArray[${i}].finalEmail" placeholder="name@example.com"></div>
+              <!-- Label added 2026-08-25. This row had only a placeholder, so the
+                   required-marker rule (.lvp-field:not([data-optional]) > .lvp-field__label)
+                   had nothing to attach to and the ONE address the fund uses forever -
+                   monthly return confirmations included - was the only mandatory field in
+                   the form with no marker. Reuses the label already approved and used
+                   eight times elsewhere in this file, so no new LP copy. -->
+              <div class="lvp-field" style="flex:1;margin:0"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="contactArray[${i}].finalEmail" placeholder="name@example.com"></div>
               <button type="button" class="lvp-btn--link" data-action="remove-row">מחיקה</button>
             </div>
           </template>
@@ -1339,7 +1345,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-7-joint-explainer';
+      window.__BUILD_TAG = 'israel-2026-08-25-8-review-page';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -2602,7 +2608,25 @@
     }
     // Disable an add-row button once its list is at data-repeating-max (the click
     // silently no-opped before, so the LP got no feedback).
+    // 2026-08-25: a remove button on a row that cannot be removed is a control
+    // offered and then refused. The remove handler already blocks below
+    // data-repeating-min and shows "יש להזין לפחות רשומה אחת כאן", so the LP
+    // clicks מחיקה on the only contact-email row and gets an error instead of an
+    // action. Hide it at the minimum rather than explaining it afterwards.
+    function refreshRemoveButtons() {
+      form.querySelectorAll('[data-repeating-typed-path]').forEach(function (host) {
+        var min = parseInt(host.getAttribute('data-repeating-min'), 10) || 0;
+        var rows = host.querySelectorAll('[data-row-index]');
+        var atMin = rows.length <= min;
+        rows.forEach(function (row) {
+          row.querySelectorAll('[data-action="remove-row"]').forEach(function (btn) {
+            btn.hidden = atMin;
+          });
+        });
+      });
+    }
     function refreshAddButtons() {
+      refreshRemoveButtons();
       form.querySelectorAll('[data-action="add-row"]').forEach(function (btn) {
         var host = repeatHost(btn.getAttribute('data-target'));
         if (!host) return;
