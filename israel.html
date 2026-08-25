@@ -734,6 +734,15 @@
             <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="כן" data-show-when-trigger="isSecondAuthorized"> כן</label>
             <label class="lvp-radio"><input type="radio" name="isSecondAuthorized" value="לא" data-show-when-trigger="isSecondAuthorized"> לא</label>
           </fieldset>
+          <!-- Explainer added 2026-08-25, Noa-approved. Third instance of the same
+               pattern today (attester page, joint page, here): answering כן puts a
+               SECOND person on the critical path. They get their own link, they must
+               sign, and the pack cannot seal until they do. The page collected a name
+               and an email and never said so. Shown only on the כן branch, so the
+               entity that needs one signatory never reads it. No "please inform them"
+               line, same reasoning as the joint page: a company's own second
+               signatory is named off its signing protocol and already expects this. -->
+          <p class="lvp-page__hint" data-show-when="isSecondAuthorized=כן">נשלח קישור לנציג/ה המורשה הנוסף/ת לחתימה על מסמכי ההצטרפות. ההצטרפות תושלם לאחר החתימה.</p>
 
           <div data-show-when="isSecondAuthorized=כן">
             <h3 class="lvp-subhead">פרטי הנציג/ה המורשה הנוסף/ת</h3>
@@ -1378,7 +1387,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-12-coholder-contact';
+      window.__BUILD_TAG = 'israel-2026-08-25-13-second-signatory';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
