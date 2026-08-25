@@ -44,6 +44,18 @@ function extractVar(name) {
   if (!m) throw new Error('var not found: ' + name);
   return m[0];
 }
+// Same brace-counting technique as extractFn, for a multi-line `var NAME=[...];`
+// array literal (the RECOVERY_ACTIONS registry).
+function extractVarArr(name) {
+  const start = html.indexOf('var ' + name + '=[');
+  if (start < 0) throw new Error('array var not found: ' + name);
+  let i = html.indexOf('[', start), depth = 0;
+  for (; i < html.length; i++) {
+    if (html[i] === '[') depth++;
+    else if (html[i] === ']') { depth--; if (depth === 0) return html.slice(start, i + 1) + ';'; }
+  }
+  throw new Error('unbalanced brackets for ' + name);
+}
 // Same brace-counting technique as extractFn, for a multi-line `var NAME={...};`
 // object literal (extractVar's single-line regex can't span these).
 function extractVarObj(name) {
@@ -116,11 +128,17 @@ function extractVarObj(name) {
 
 // ---- K4: drawer signer truth + current-signer block ---------------------------
 (function () {
+  // currentSignerHtml delegates its recovery controls to recoveryHtml, which
+  // reads the RECOVERY_ACTIONS registry - pull all three in, or the block
+  // throws on the first call.
   const src = extractFn('esc2') + ';' + extractFn('fmtTs') + ';' + extractFn('signerTsLine') + ';'
     + extractFn('signerReminders') + ';' + extractFn('reminderHistLine') + ';'
+    + extractFn('sinceDur') + ';' + extractFn('signerWaitLine') + ';'
+    + extractVarArr('RECOVERY_ACTIONS')
+    + extractFn('recoveryActionByKey') + ';' + extractFn('recoveryHtml') + ';'
     + extractFn('currentSignerHtml')
-    + '; return { signerTsLine: signerTsLine, currentSignerHtml: currentSignerHtml, fmtTs: fmtTs, reminderHistLine: reminderHistLine };';
-  const { signerTsLine, currentSignerHtml, fmtTs, reminderHistLine } = new Function(src)();
+    + '; return { signerTsLine: signerTsLine, currentSignerHtml: currentSignerHtml, fmtTs: fmtTs, reminderHistLine: reminderHistLine, recoveryHtml: recoveryHtml, RECOVERY_ACTIONS: RECOVERY_ACTIONS };';
+  const { signerTsLine, currentSignerHtml, fmtTs, reminderHistLine, recoveryHtml, RECOVERY_ACTIONS } = new Function(src)();
   ok('K4 signed signer shows signed-at', /^Signed 2026-06-26/.test(signerTsLine({ state: 'done', signedAt: '2026-06-26T14:20:00Z', sentAt: '2026-06-25T09:00:00Z' })));
   ok('K4 awaited signer shows invited-at', /^Invited 2026-06-25/.test(signerTsLine({ state: 'current', sentAt: '2026-06-25T09:00:00Z' })));
   ok('K4 no timestamps -> empty line', signerTsLine({ state: 'waiting' }) === '');
@@ -133,6 +151,38 @@ function extractVarObj(name) {
   ok('K4 block carries the nudge action', cs.includes('data-act="nudge"'));
   ok('K4 no signer -> empty block', currentSignerHtml(null) === '');
   ok('K4 html-escapes the name', currentSignerHtml({ name: '<img>', signerIndex: 1, signerCount: 1 }).includes('&lt;img&gt;'));
+  // K4b: the recovery-control component. Same registry renders every control,
+  // so the per-role visibility rules are now assertable in one place - and the
+  // attester's paper-qualification button, the one that shipped rendering but
+  // not wired, is a first-class case here.
+  const keysFor = (cs) => (recoveryHtml(cs).match(/data-recov="([A-Za-z]+)"/g) || []).map(x => x.slice(12, -1));
+  const lawyerKeys = keysFor({ role: 'lawyer', name: 'A B', email: 'a@b.com' });
+  ok('K4b attester card offers reassign + stamp + paper qualification',
+    lawyerKeys.join(',') === 'reassign,lawyerStamp,paperQualification', lawyerKeys.join(','));
+  const doneLawyerKeys = keysFor({ role: 'lawyer', name: 'A B', email: 'a@b.com', done: true });
+  ok('K4b a signed attester loses the paper-qualification control',
+    doneLawyerKeys.indexOf('paperQualification') === -1, doneLawyerKeys.join(','));
+  const subKeys = keysFor({ role: 'subscriber', name: 'A B', email: 'a@b.com' });
+  ok('K4b subscriber card offers reassign + company stamp + address fix',
+    subKeys.join(',') === 'reassign,companyStamp,fixSecondaryAddress', subKeys.join(','));
+  ok('K4b every role gets Reassign', keysFor({ role: 'signatory', name: 'A B' }).join(',') === 'reassign');
+  ok('K4b controls render inside one labelled group, not five loose buttons',
+    (recoveryHtml({ role: 'lawyer', name: 'A B' }).match(/class="recovs"/g) || []).length === 1);
+  ok('K4b no recovery control is left with the old per-action class families',
+    !cs.includes('cs-attach-toggle') && !cs.includes('cs-paperq-toggle') && !cs.includes('cs-at-save'));
+  ok('K4b registry rows all carry a label, a cta and a run',
+    RECOVERY_ACTIONS.every(a => a.key && a.label && a.cta && typeof a.run === 'function'));
+  // K4c: signer state is told by three DIFFERENT materials, not three tints of
+  // one. "Current" is the filled chip; "Signed" is a check; "Waiting" a ring.
+  const stateSrc = extractFn('signerStateHtml');
+  const st = new Function(stateSrc + '; return signerStateHtml;')();
+  ok('K4c current signer is the filled chip', st('current') === '<span class="pstate cur">Current</span>');
+  ok('K4c signed signer is a check, not a dot', st('done').includes('ptick') && st('done').includes('Signed'));
+  ok('K4c waiting signer keeps the hollow ring', st('waiting').includes('pdot') && st('waiting').includes('Waiting'));
+  ok('K4c the three states share no glyph', st('current') !== st('done') && st('done') !== st('waiting'));
+  ok('K4c unknown state still renders nothing', st('') === '' && st('weird') === '');
+  ok('K4c signerTsLine stays clock-free (purity: no sinceDur/Date.now inside it)',
+    !/sinceDur|Date\.now/.test(extractFn('signerTsLine')));
   // Reminder history (2026-07-20, Noa: "it's not appearing that we already
   // reminded him"): the block must say whether, when, and how a reminder went.
   const csNoRem = currentSignerHtml({ name: 'A', signerIndex: 2, signerCount: 2 }, []);
@@ -283,13 +333,15 @@ function extractVarObj(name) {
     + extractVar('RAIL_MILESTONES') + ';' + extractVarObj('STAGE_WORD') + ';' + extractVarObj('FLOW_CHIP_WORD') + ';'
     + extractFn('humanKey') + ';' + extractFn('stageWord') + ';' + extractFn('sinceDur') + ';'
     + extractFn('isAttnStage') + ';' + extractFn('isCanceledStage') + ';'
-    + extractFn('flowChipHtml') + ';' + extractFn('waitLineHtml') + ';' + extractFn('attnBadgeHtml') + ';'
+    + extractFn('flowChipHtml') + ';' + extractFn('waitLineHtml') + ';'
+    + extractFn('attnWhyText') + ';' + extractFn('attnBadgeHtml') + ';'
+    + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml') + ';'
     + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
-    + extractFn('rowHtml') + '; return rowHtml;';
-  const rowHtml = new Function(src)();
+    + extractFn('rowHtml') + '; return { rowHtml: rowHtml, foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
+  const { rowHtml, foldedRowsHtml, foldRuns } = new Function(src)();
 
   // ---- K12: redesigned row content (2026-08-06) -----------------------------
   const signingRow = rowHtml({ pid: 's1', name: 'Daniel Rosen', he: 'דניאל רוזן', stage: 'signing',
@@ -412,6 +464,123 @@ function extractVarObj(name) {
   ok('K13 the mapper reads a field the server actually emits (updatedAt / lastTouchedAt)',
     !!mapper && /it\.(updatedAt|lastTouchedAt)/.test(mapper[1]),
     mapper && mapper[1]);
+})();
+
+// ---- K13: the two compressions (2026-08-25 design-tighten) -----------------
+// Both fold repeated content. Both must be provably lossless: nothing that had
+// a row before may lose its meaning, and nothing distinct may be merged.
+(function () {
+  const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
+    + extractVar('RAIL_MILESTONES') + ';' + extractFn('humanKey') + ';'
+    + extractFn('stageMilestone') + ';' + extractFn('eventLabel') + ';' + extractFn('collapseEvents')
+    + '; return { collapseEvents: collapseEvents, eventLabel: eventLabel };';
+  const { collapseEvents } = new Function(src)();
+  const ev = (stage, ts, detail) => ({ stage, ts, detail });
+  const run12 = [];
+  for (let i = 0; i < 12; i++) run12.push(ev('in_progress', '2026-08-2' + (i % 5) + 'T09:0' + (i % 9) + ':00Z'));
+  const c = collapseEvents(run12);
+  ok('K13 twelve identical events collapse to one line', c.length === 1, JSON.stringify(c.map(x => x.label + 'x' + x.n)));
+  ok('K13 the collapsed line keeps the count', c[0].n === 12);
+  ok('K13 the collapsed line keeps first AND last, so the span is still readable',
+    c[0].first === run12[0] && c[0].last === run12[11]);
+  // A stage the process genuinely RETURNED to is a different fact from one it
+  // sat in, and must survive as its own line.
+  const bounced = [ev('signing', '2026-08-01T09:00:00Z'), ev('needs_attention', '2026-08-02T09:00:00Z'), ev('signing', '2026-08-03T09:00:00Z')];
+  ok('K13 a returned-to stage stays a separate line (only CONSECUTIVE runs fold)',
+    collapseEvents(bounced).length === 3, collapseEvents(bounced).map(x => x.label).join('|'));
+  ok('K13 a run of one renders exactly as before (n === 1)', collapseEvents([ev('signing', '2026-08-01T09:00:00Z')])[0].n === 1);
+  ok('K13 no events -> no lines', collapseEvents([]).length === 0 && collapseEvents(null).length === 0);
+  // Reminder events keep their own label, so they never fold into the stage
+  // line they used to be indistinguishable from.
+  const mixed = [ev('signing', '2026-08-01T09:00:00Z'), ev('signing', '2026-08-02T09:00:00Z', '{"nudge":true}'), ev('signing', '2026-08-03T09:00:00Z')];
+  ok('K13 a reminder does not fold into the surrounding stage run',
+    collapseEvents(mixed).length === 3, collapseEvents(mixed).map(x => x.label).join('|'));
+})();
+(function () {
+  const src = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
+    + extractVar('RAIL_MILESTONES') + ';' + extractVarObj('STAGE_WORD') + ';' + extractVarObj('FLOW_CHIP_WORD') + ';'
+    + extractFn('humanKey') + ';' + extractFn('stageWord') + ';' + extractFn('sinceDur') + ';'
+    + extractFn('isAttnStage') + ';' + extractFn('isCanceledStage') + ';'
+    + extractFn('flowChipHtml') + ';' + extractFn('waitLineHtml') + ';'
+    + extractFn('attnWhyText') + ';' + extractFn('attnBadgeHtml') + ';'
+    + extractFn('railHtml') + ';' + extractFn('isTerminalStage') + ';'
+    + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
+    + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
+    + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
+    + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml')
+    + '; return { foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
+  const { foldedRowsHtml, foldRuns } = new Function(src)();
+  const WHY = 'Bank details could not be written to the tracker. Needs bank recovery.';
+  const bank = (n) => ({ pid: 'p' + n, name: 'LP ' + n, stage: 'needs_attention', attnWhy: WHY, age: '3d' });
+  const five = [bank(1), bank(2), bank(3), bank(4), bank(5)];
+  const out = foldedRowsHtml(five);
+  // VISIBLE text only: tooltips are not what the eye is reading five times.
+  const visible = out.replace(/title="[^"]*"/g, '');
+  ok('K13 five same-reason rows state the reason ONCE on screen',
+    (visible.match(/Needs bank recovery/g) || []).length === 1,
+    String((visible.match(/Needs bank recovery/g) || []).length));
+  ok('K13 the fold header names the reason and the count',
+    out.includes('bsub-why') && out.includes('>5 processes<'));
+  ok('K13 every folded row still shows it needs her',
+    (out.match(/battn-tag/g) || []).length === 5);
+  ok('K13 folded rows drop the repeated sentence element',
+    (out.match(/battn-why/g) || []).length === 0);
+  // Nothing is LOST by folding: the header states it, and every folded row
+  // still carries the full sentence as its own tooltip.
+  ok('K13 the full sentence survives as a title on the header and on all 5 rows',
+    (out.match(/title="Needs bank recovery/g) || []).length === 0
+    && (out.split('title="' + WHY).length - 1) === 6,
+    String(out.split('title="' + WHY).length - 1));
+  // A lone problem must still state itself on its own row.
+  const lone = foldedRowsHtml([bank(1)]);
+  const mixedRowsForClose = [bank(1), bank(2), bank(3), { pid: 'q', name: 'Tal Amir', stage: 'needs_attention', attnWhy: 'Seal quarantined.', age: '3d' }];
+  ok('K13 a run of ONE is not folded', lone.includes('battn-why') && !lone.includes('bsub'));
+  // The fold must be a CLOSED group. Without a wrapper it was only a header,
+  // and the next attention row - same coral treatment, different reason - sat
+  // flush underneath and read as the sixth member of it (2026-08-25 pixels).
+  ok('K13 the fold is a wrapped group, not an open-ended header',
+    (out.match(/<div class="bfold">/g) || []).length === 1);
+  const mixedOut = foldedRowsHtml(mixedRowsForClose);
+  ok('K13 the group closes BEFORE a differently-reasoned row follows it',
+    mixedOut.indexOf('</div><div class="row') > 0
+    && mixedOut.indexOf('Seal quarantined') > mixedOut.lastIndexOf('<div class="bfold">'),
+    mixedOut.slice(0, 0));
+  // The wrapper holds exactly the rows that share the reason - no more.
+  // lastIndexOf, not indexOf: every row boundary is also a '</div><div class="row'
+  // seam, and the LAST one in this fixture is the wrapper closing before the
+  // one differently-reasoned row.
+  const closeAt = mixedOut.lastIndexOf('</div><div class="row');
+  const inside = mixedOut.slice(mixedOut.indexOf('<div class="bfold">'), closeAt);
+  ok('K13 the wrapper holds exactly the 3 same-reason rows, and the 4th is outside',
+    (inside.match(/class="row/g) || []).length === 3 && inside.indexOf('Seal quarantined') === -1,
+    String((inside.match(/class="row/g) || []).length));
+  // Different reasons never merge.
+  const mixedRows = [bank(1), bank(2), { pid: 'x', name: 'Other', stage: 'needs_attention', attnWhy: 'Seal quarantined.', age: '1d' }];
+  const runs = foldRuns(mixedRows);
+  ok('K13 different reasons stay separate runs', runs.length === 2 && runs[0].rows.length === 2 && runs[1].rows.length === 1,
+    runs.map(r => r.rows.length).join(','));
+  // Non-attention rows must never fold - they have no reason to share.
+  const calm = [{ pid: 'c1', name: 'A', stage: 'signing', age: '1d' }, { pid: 'c2', name: 'B', stage: 'signing', age: '2d' }];
+  ok('K13 rows with no attention reason are never folded', !foldedRowsHtml(calm).includes('bsub'));
+  ok('K13 folding preserves row count', (foldedRowsHtml(five).match(/class="row/g) || []).length === 5);
+})();
+
+// ---- K14: .person is shared by THREE lists, so roster-only rules must be scoped.
+// The signers roster, the pre-submit People list and the Also-cc'd list all
+// render .person. A min-height added for the roster's vertical rhythm was first
+// written unscoped and left the cc rows - which carry an email and nothing else
+// - sitting in 26px of dead space. Caught in pixels 2026-08-25; locked here.
+(function () {
+  ok('K14 the roster-only wrap floor is scoped to .person.sgr',
+    /\.person\.sgr \.pn-wrap \{[^}]*min-height/.test(html));
+  ok('K14 no UNSCOPED .person .pn-wrap min-height exists',
+    !/\.person \.pn-wrap \{[^}]*min-height/.test(html));
+  const drawerSrc = extractFn('renderDrawer');
+  ok('K14 the signers roster tags its rows .sgr', drawerSrc.includes('class="person sgr'));
+  // The other two lists must NOT carry it - that is what makes the scoping real.
+  const peopleAndCc = drawerSrc.split('class="person sgr').join('');
+  ok('K14 the People and Also-cc\'d lists stay untagged',
+    peopleAndCc.includes('<div class="person">') && !peopleAndCc.includes('sgr'));
 })();
 
 console.log(pass + ' pass, ' + fail + ' fail');

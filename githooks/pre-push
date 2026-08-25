@@ -104,6 +104,7 @@ HARNESSES=(
   signer-lane-gate-bypass-harness
   drawer-race-harness
   console-action-contract
+  console-recovery-contract
   board-search-lp-directory-harness
   pilot-fallback-harness
   signer-sticky-token-key-harness
