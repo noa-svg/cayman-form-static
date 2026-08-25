@@ -21,7 +21,11 @@
 // Run: node test/test-adversarial.cjs
 'use strict';
 const { loadForm } = require('./rig.cjs');
-const SLOTS = ['articlesOfIncorporation', 'bankAccountConfirmation', 'certificateOfIncorporation', 'corporateResolution', 'listOfAuthorizedSignatories', 'partnershipAgreement', 'proofOfRegisteredAddress', 'trustAgreement', 'passportPrimary', 'proofOfAddress'];
+// 'qualification.preSignedUpload' (added 2026-08-25): the qualification
+// pre-signed radio became data-required, so the generic walker now answers it,
+// picks the first option ('Yes, I will upload it') and reveals this upload
+// holder. Without a stub for the slot the walk stalls on the qualification page.
+const SLOTS = ['articlesOfIncorporation', 'bankAccountConfirmation', 'certificateOfIncorporation', 'corporateResolution', 'listOfAuthorizedSignatories', 'partnershipAgreement', 'proofOfRegisteredAddress', 'trustAgreement', 'passportPrimary', 'proofOfAddress', 'qualification.preSignedUpload'];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let pass = 0, fail = 0;

@@ -59,6 +59,21 @@
       border-color: var(--lvp-error);
       box-shadow: 0 0 0 3px rgba(192,57,43,0.10);
     }
+    /* CAUSE (live 2026-08-24, both lanes): an amount row is NOT a .lvp-field and NOT a
+       .lvp-upload. validateRowsBlock puts is-invalid on the .lvp-amount-row itself, and
+       the row's .lvp-field__error span is a grid child of the ROW, not of a .lvp-field.
+       So the two reveal rules above never matched it: the span was populated with the
+       right message and its computed display stayed 'none'. Every amount error on this
+       page was invisible. The border rule missed for the same reason. The border here
+       keys on [aria-invalid], which validateRowsBlock sets on the exact offending
+       control, so a duplicate-currency error reddens the select and never the disabled
+       currency display input on a redemption row. */
+    .lvp-amount-row.is-invalid .lvp-field__error { display: block; }
+    .lvp-amount-row.is-invalid .lvp-input[aria-invalid="true"],
+    .lvp-amount-row.is-invalid .lvp-select[aria-invalid="true"] {
+      border-color: var(--lvp-error);
+      box-shadow: 0 0 0 3px rgba(192,57,43,0.10);
+    }
     .lvp-error-summary {
       background: #FBECEA; border: 1px solid var(--lvp-error); color: var(--lvp-error);
       padding: 12px 16px; border-radius: 8px; margin: 0 0 16px;
@@ -413,7 +428,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-08-23-1-account-rule-and-errors';
+      window.__BUILD_TAG = 'flow-2026-08-25-1-amount-error-visibility';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -1533,8 +1548,40 @@
       function fieldWrap(name) {
         // name = field id ('ind-firstName') or radio-group name ('wd-mode') or
         // upload slot ('accountManagementApproval'). Resolves to the wrapper.
+        // CAUSE: the amount block's pseudo-names ('__rows-increase'/'__rows-redemption')
+        // have NO [data-field] wrapper in the markup, so this returned null for them and
+        // every consumer (summary jump link, first-error focus) silently no-oped. The
+        // rows host IS their wrapper; resolve it explicitly.
+        if (name === '__rows-increase' || name === '__rows-redemption') {
+          return document.getElementById('amount-rows-' + name.split('-')[1]);
+        }
         return document.querySelector('[data-field="' + name + '"]');
       }
+      // Resolve an element to the control that should take focus. An anchor may already
+      // BE the control (validateRowsBlock anchors every amount error on the amount input
+      // or the currency select itself), in which case querySelector('input,select') on it
+      // returns null -- an element never matches its own descendant query. That is exactly
+      // why amount errors focused and scrolled nothing: the recovery path was looking
+      // INSIDE an <input>. Check the element itself first, then look inside it.
+      function focusTargetIn(el) {
+        if (!el || !el.tagName) return null;
+        var tag = String(el.tagName).toLowerCase();
+        if (tag === 'input' || tag === 'select' || tag === 'textarea') return el;
+        return el.querySelector ? el.querySelector('input,select,textarea') : null;
+      }
+      function focusAndReveal(el) {
+        var inp = focusTargetIn(el);
+        if (!inp || !inp.focus) return false;
+        setTimeout(function () {
+          inp.focus({ preventScroll: false });
+          if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 0);
+        return true;
+      }
+      // A summary line carries only a field NAME, which cannot address one specific amount
+      // row (every row shares the '__rows-*' pseudo-name). Each rendered link stores its
+      // own anchor element here, keyed by the link id, so 'שורה 2' jumps to row 2.
+      var summaryAnchors = {};
       function fieldLabel(name) {
         var w = fieldWrap(name); if (!w) return '';
         var lab = w.querySelector('.lvp-field__label, legend.lvp-field__label, .lvp-upload__label');
@@ -1737,6 +1784,11 @@
           rows[i].classList.remove('is-invalid');
           if (errSpan) errSpan.textContent = '';
           amtInp.removeAttribute('aria-invalid');
+          // The duplicate-currency branch below sets aria-invalid on the SELECT, so the
+          // per-run reset has to clear it there too. It never did, which was harmless only
+          // while the row's error styling was dead; now that the border rule keys on
+          // [aria-invalid], a corrected duplicate would have kept a stale red select.
+          if (curSel) curSel.removeAttribute('aria-invalid');
           if (!a) {
             rows[i].classList.add('is-invalid');
             if (errSpan) errSpan.textContent = 'נא להזין סכום בשורה ' + (i + 1) + '.';
@@ -1819,16 +1871,19 @@
           var html = '<p class="lvp-error-summary__title">' + (verbose.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + verbose.length + ' שגיאות:') + '</p><ul>';
           verbose.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
+            if (e.anchor) summaryAnchors[id] = e.anchor;
+            else delete summaryAnchors[id];
             html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</button></li>';
           });
           html += '</ul>';
           summary.innerHTML = html;
           summary.hidden = false;
         }
-        // Focus the first invalid field for a one-thumb keyboard user.
-        var firstWrap = errs[0].anchor || fieldWrap(errs[0].name);
-        var firstInp = firstWrap ? (firstWrap.tagName ? (firstWrap.querySelector ? firstWrap.querySelector('input,select') : firstWrap) : null) : null;
-        if (firstInp && firstInp.focus) { setTimeout(function () { firstInp.focus({ preventScroll: false }); if (firstInp.scrollIntoView) firstInp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 0); }
+        // Focus the first invalid field for a one-thumb keyboard user. focusAndReveal
+        // handles the case where the anchor IS the control (see focusTargetIn); the old
+        // inline version only ever looked inside it, which is why pressing הבא with a bad
+        // amount moved nothing at all and read as a dead button.
+        focusAndReveal(errs[0].anchor || fieldWrap(errs[0].name));
         return false;
       }
       function validateCurrentPage() { return validatePage(getCurrentPage()); }
@@ -1866,9 +1921,10 @@
         if (!a) return;
         e.preventDefault();
         var name = a.getAttribute('data-jump');
-        var w = fieldWrap(name);
-        var inp = w && w.querySelector ? w.querySelector('input,select') : null;
-        if (inp) { inp.focus(); if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+        // Prefer the exact anchor this summary line was built from (the specific amount
+        // row's input), falling back to the field wrapper. Before this, a '__rows-*' link
+        // resolved through fieldWrap to null and the click did nothing at all.
+        focusAndReveal(summaryAnchors[a.id] || fieldWrap(name));
       });
 
       // ---- submit -----------------------------------------------------------

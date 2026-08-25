@@ -170,7 +170,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // ---- I5: end-to-end submit honesty (jsdom, REAL form) ------------------------
 // Drives the real form to review (test-positive-submit.cjs pattern), signs via
 // the typed-name pad, then scripts the gateway submit responses.
-const SLOTS = ['articlesOfIncorporation', 'bankAccountConfirmation', 'certificateOfIncorporation', 'corporateResolution', 'listOfAuthorizedSignatories', 'partnershipAgreement', 'proofOfRegisteredAddress', 'trustAgreement', 'passportPrimary', 'proofOfAddress'];
+// 'qualification.preSignedUpload' (added 2026-08-25): the qualification
+// pre-signed radio became data-required, so the generic walker now answers it,
+// picks the first option ('Yes, I will upload it') and reveals this upload
+// holder. Without a stub for the slot the walk stalls on the qualification page.
+const SLOTS = ['articlesOfIncorporation', 'bankAccountConfirmation', 'certificateOfIncorporation', 'corporateResolution', 'listOfAuthorizedSignatories', 'partnershipAgreement', 'proofOfRegisteredAddress', 'trustAgreement', 'passportPrimary', 'proofOfAddress', 'qualification.preSignedUpload'];
 function cur(d) { const p = d.querySelector('.lvp-page:not([hidden])'); return p ? p.getAttribute('data-page') : null; }
 function fh(h) { let el = h; while (el && el.nodeType === 1) { if (el.hasAttribute && el.hasAttribute('hidden')) return true; if (el.style && el.style.display === 'none') return true; el = el.parentElement; } return false; }
 function visReq(d) { const p = d.querySelector('.lvp-page:not([hidden])'); if (!p) return []; return Array.from(p.querySelectorAll('[data-required]')).filter(h => !fh(h)); }

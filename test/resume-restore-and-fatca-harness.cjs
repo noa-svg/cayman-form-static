@@ -48,12 +48,16 @@ function fh(h) { let el = h; while (el && el.nodeType === 1) { if (el.hasAttribu
   ok('resume: a field absent from prefill is left alone, not blanked or errored', !!untouched && untouched.value === '');
 
   // ---- Part 2: FATCA/CRS conditional reveal, individual lane ---------------
+  // 'qualification.preSignedUpload' in __testUploads (2026-08-25): the qualification
+  // pre-signed radio became data-required, so this walk now answers it, picks the
+  // first option ('Yes, I will upload it') and reveals a required upload holder.
+  // Without the stub the walk stalls on qualification and never reaches fatcaCrs.
   // The reveal must be checked with the pager actually ON the fatcaCrs page:
   // fh() walks the FULL ancestor chain, and the page itself starts hidden
   // (pager defaults to 'welcome') independent of the conditional's own
   // hidden state, so checking without navigating there first would report
   // "hidden" regardless of what the conditional engine actually does.
-  const { document: id } = await loadForm({ cfg: { applicantType: 'individual', prefill: { __testUploads: ['passportPrimary', 'proofOfAddress', 'bankAccountConfirmation'], _pad: '1' } } });
+  const { document: id } = await loadForm({ cfg: { applicantType: 'individual', prefill: { __testUploads: ['passportPrimary', 'proofOfAddress', 'bankAccountConfirmation', 'qualification.preSignedUpload'], _pad: '1' } } });
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   function fire(el, t) { el.dispatchEvent(new (el.ownerDocument.defaultView.Event)(t, { bubbles: true })); }
   function setV(i, v) { i.value = v; fire(i, 'input'); fire(i, 'change'); }

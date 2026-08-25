@@ -1111,7 +1111,20 @@
 
           <div data-show-when="qualification.noneOfTheAbove=false">
             <p class="lvp-page__hint">A verifying party (lawyer or CPA) must approve the qualification form. They will receive a link to sign the qualification form after your documents are completed. Please notify them.</p>
-            <fieldset class="lvp-fieldset">
+            <!-- data-required is load-bearing here, not cosmetic. validatePage only
+                 walks [data-required] holders, so without it Continue advanced with
+                 this radio still blank. The server does NOT read blank as blank:
+                 sanitize runs preSignedAvailable through caymanBool_
+                 (ju-cayman/src/server/CaymanValidation.ts:229, caymanBool_ at :763),
+                 which maps undefined to false, i.e. the "No, I will provide lawyer
+                 details" branch. A blank signer therefore lands on the lawyer path
+                 with no lawyer name, email or upload ever captured, so no verifier
+                 link can be minted, and the miss only surfaces at final submit on
+                 CaymanValidation.ts:562 ("Lawyer or CPA email is required...") many
+                 pages after the mistake. Requiring the answer at the point of the
+                 question is what makes the client agree with the boolean the server
+                 has already decided. -->
+            <fieldset class="lvp-fieldset" data-required>
               <legend class="lvp-fieldset__legend">Do you already have a signed qualification form from the past 12 months?</legend>
               <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="true" data-show-when-trigger="qualification.preSignedAvailable"> Yes, I will upload it</label>
               <label class="lvp-radio"><input type="radio" name="qualification.preSignedAvailable" value="false" data-show-when-trigger="qualification.preSignedAvailable"> No, I will provide lawyer details</label>
@@ -1450,7 +1463,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-08-25-1-reveal-scroll';
+    window.__BUILD_TAG = 'index-2026-08-25-6-il-subaccount';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -2876,12 +2889,33 @@
         if (/^[A-Za-z0-9-]{4,20}$/.test(v)) return '';
         return 'Enter a valid registration number (Israeli ח.פ 9 digits or 4-20 character foreign reference).';
       } },
-      // Bank account number: 4-34 chars alphanumeric + spaces. If it looks like an
-      // IBAN by pattern, run mod-97 check and reject hard if it fails.
+      // Bank account number: 4-34 chars alphanumeric + spaces, PLUS the Israeli
+      // sub-account suffix nnnnnn/nn. If it looks like an IBAN by pattern, run
+      // mod-97 check and reject hard if it fails.
+      //
+      // CAUSE (2026-08-25). The alphanumeric-only gate below was a third independent
+      // re-introduction of one already-fixed defect: a digits/letters-only account rule
+      // rejects the sub-account notation an Israeli bank confirmation letter actually
+      // prints (740800/88). It was fixed on the shared rule in the 2026-07-18 parity
+      // audit (validation-rules.js ACCOUNT_RE, and its comment records the incident),
+      // and again on flow.html on 2026-08-23 (CTO review finding #10). This lane never
+      // picked either fix up, so a Cayman-lane LP typing exactly what their letter says
+      // was refused with no bypass. The Cayman lane's subscribers wire from Israeli
+      // accounts (ju-cayman/CaymanTestLinks.js fixtures are Leumi / Hapoalim), so the
+      // notation reaches THIS field too.
+      //
+      // Scoped deliberately, NOT swapped to LVPRules.ACCOUNT_RE: that rule is
+      // digits-only and would reject the IBANs and foreign alphanumeric account numbers
+      // this lane legitimately accepts (index.html asks for SWIFT and a bank address
+      // "including city and country"; israel.html does not). Only the Israeli
+      // sub-account SHAPE is added, so '/' remains illegal in every other position.
+      // Server-side there is no format rule for this field (ju-cayman/CaymanValidation.js
+      // carries none), so accepting more here cannot produce a downstream bounce.
       { match: /lpBank\.accountNumber$/, validate: function (v) {
         var s = v.replace(/\s+/g, '').toUpperCase();
         if (s.length < 4 || s.length > 34) return 'Bank account number must be 4-34 characters.';
         if (/^[A-Z]{2}\d{2}/.test(s) && !isValidIban_(s)) return 'IBAN check digit is invalid; please re-check.';
+        if (/^\d{4,13}\/\d{1,3}$/.test(s)) return '';
         if (!/^[A-Z0-9]+$/.test(s)) return 'Bank account number must contain only digits and letters.';
         return '';
       } },
@@ -3626,7 +3660,10 @@
       }, 4000);
     }
 
-    function loadDocPreview() {
+    // attempt is the render_preview try counter (1-based), set only by the retry
+    // in the catch below. Every other caller invokes loadDocPreview() bare.
+    function loadDocPreview(attempt) {
+      attempt = attempt || 1;
       var wrap = form.querySelector('[data-doc-preview]');
       var loading = form.querySelector('[data-doc-preview-loading]');
       var docsHost = form.querySelector('[data-doc-preview-docs]');
@@ -3738,18 +3775,36 @@
         }
         submitBtn.hidden = false;
       }).catch(function (err) {
+        if (window.console) console.log('preview error:', err && err.message || err);
+        // CAUSE (fixed 2026-08-25): this branch used to reveal the signature pad
+        // and Sign-and-submit on a failed render_preview, reasoning "do NOT strand
+        // the LP". The intent was right, the effect was not: with the preview
+        // failed there is nothing on screen, so the LP could execute the
+        // subscription agreement, the W-8BEN and the self-certification without
+        // ever seeing a line of any of them. A blind signature on the fund's
+        // binding pack is worse than a dead end, and the signature attaches to
+        // the pack, not to the preview. So the reveal is now strictly
+        // conditional on documents having actually rendered: this branch never
+        // unhides sigSection/submitBtn, both of which were hidden in lockstep
+        // above before the fetch started.
+        //
+        // The way forward is a retry, mirroring fetchCfg(attempt) in the
+        // bootstrap above (same 3 attempts, same attempt * 2500 backoff): a cold
+        // GAS start is the common cause here and it clears on a later try.
+        // previewFetch is cleared first so a retry can never re-consume the
+        // stale prefetch promise that just failed.
+        if (attempt < 3) {
+          previewFetch = null; previewFetchHash = null;
+          loading.hidden = false;
+          setTimeout(function () { loadDocPreview(attempt + 1); }, attempt * 2500);
+          return;
+        }
         loading.hidden = true;
         docsHost.innerHTML = '<p style="color:var(--lvp-error);font-size:14px;">' +
-          displayFor('We could not load the document preview right now. You can still review the summary above and sign below; your signed copy will be emailed to you.', curLang) + '</p>';
-        if (window.console) console.log('preview error:', err && err.message || err);
-        // Do NOT strand the LP at the final step: reveal the signature section even
-        // when the rich doc preview fails, so a transient render_preview error never
-        // blocks signing. The sealed PDF is built server-side from the submission.
-        if (sigSection) {
-          sigSection.hidden = false;
-          if (!sigPadReady) initSigPad();
-        }
-        submitBtn.hidden = false;
+          displayFor('Could not load document preview. Please try going back and returning to this page.', curLang) + '</p>';
+        // Retries exhausted. previewLoaded is still false (it is only set on a
+        // successful render), so Back-and-return re-runs this whole function
+        // from a fresh fetch, which is the recovery the message names.
       });
     }
 
