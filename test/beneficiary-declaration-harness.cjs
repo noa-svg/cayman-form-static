@@ -51,7 +51,7 @@ const LP = {
 const BANK = bankRegistry.banks.find((b) => b.c === 10);
 const BRANCH = BANK.br[0];
 function investmentDate() {
-  const d = LVPRules.firstBusinessDayNextMonth();
+  const d = LVPRules.firstOfNextMonth();
   const p2 = (n) => (n < 10 ? '0' : '') + n;
   return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear();
 }
