@@ -307,6 +307,22 @@
     .lvp-fieldset:not([data-optional]):not(.lvp-fieldset--error) > .lvp-fieldset__legend::after {
       content: " *"; color: var(--lvp-error); font-weight: 400; opacity: 0.75;
     }
+    /* An EMPTY legend must not sprout a lone asterisk (2026-08-25). A fieldset
+       that is the whole page carries no legend text, because it would just repeat
+       the page title beneath itself; the element still exists so the required
+       marker and the " חובה" error suffix have an anchor. With no text there is
+       nothing to mark, so suppress the marker rather than float a bare *. The
+       error suffix is deliberately NOT suppressed: once the field has actually
+       failed, " חובה" on its own line is the point. */
+    .lvp-fieldset__legend:empty::after { content: none; }
+    /* When the fieldset IS the whole page, the page TITLE is the question, so the
+       required marker belongs on it. Putting the word in the legend instead (the
+       first attempt, 2026-08-25) printed the page title twice, one line apart;
+       emptying the legend then left the page with no required marker at all.
+       Marking the title is the structure that was right from the start. */
+    .lvp-page[data-required-page] > .lvp-page__title::after {
+      content: " *"; color: var(--lvp-error); font-weight: 400; opacity: 0.75;
+    }
     .lvp-fieldset--error .lvp-fieldset__legend::after, .lvp-field--error .lvp-field__label::after { content: " חובה"; font-weight: 400; opacity: 0.85; }
     [dir="ltr"] .lvp-fieldset--error .lvp-fieldset__legend::after, [dir="ltr"] .lvp-field--error .lvp-field__label::after { content: " required"; }
     /* Per-field format-error message (invalid ID / date / amount / email). Rendered
@@ -551,7 +567,7 @@
         </section>
 
         <!-- PAGE: qualification (investorsArray[0].qualification) -->
-        <section class="lvp-page" data-page="ind.qualification" data-applicant="individual" hidden>
+        <section class="lvp-page" data-page="ind.qualification" data-applicant="individual" data-required-page hidden>
           <h2 class="lvp-page__title">כשירות</h2>
           <!-- FL1 fix: the 4 qualification boxes were standalone labels validatePage
                never enforced (page advanced with nothing selected). Wrapped in the
@@ -571,7 +587,13 @@
                renderErrorSummary builds its jump-list label from the legend text,
                falling back to the meaningless generic "שדה" when there is none. Same
                word as the page title above, no new LP copy. -->
-          <legend class="lvp-fieldset__legend">כשירות</legend>
+          <!-- Legend text intentionally EMPTY (2026-08-25). This fieldset IS the
+               page, so a legend saying כשירות just repeated the page title
+               directly beneath itself. The element stays because the required
+               marker and the " חובה" error suffix both land on it, and
+               renderErrorSummary now falls back to the page title for its jump
+               label rather than the generic שדה. -->
+          <legend class="lvp-fieldset__legend"></legend>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isLiquidAssets" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isIncomeLevel" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.</label>
           <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].qualification.isBoth" value="true" data-qual-group="indQual" data-show-when-trigger="__indQual"> השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.</label>
@@ -1345,7 +1367,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-8-review-page';
+      window.__BUILD_TAG = 'israel-2026-08-25-10-title-marker';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -4423,7 +4445,17 @@
         // was rendering as the meaningless generic «שדה» - Noa 2026-07-07).
         var lab = h.querySelector('.lvp-field__label, .lvp-fieldset__legend') ||
                   h.querySelector('.lvp-checkbox');
-        var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim() || 'שדה';
+        var txt = (lab ? lab.textContent : '').replace(/\s*\*?\s*$/, '').trim();
+        // 2026-08-25: fall back to the PAGE TITLE before the generic 'שדה'. A
+        // fieldset that is the page's only question does not need a legend
+        // repeating the page title back at the LP, but the jump list still needs
+        // to name something. Generic 'שדה' remains the last resort.
+        if (!txt) {
+          var pgTitle = h.closest('.lvp-page');
+          pgTitle = pgTitle ? pgTitle.querySelector('.lvp-page__title') : null;
+          txt = pgTitle ? (pgTitle.textContent || '').trim() : '';
+        }
+        if (!txt) txt = 'שדה';
         h.setAttribute('data-err-idx', i);
         return '<li><button type="button" data-err-jump="' + i + '">' + esc(txt) + '</button></li>';
       }).join('');
