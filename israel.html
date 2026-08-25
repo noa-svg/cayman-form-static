@@ -287,6 +287,12 @@
     .lvp-note strong { color: var(--lvp-navy); }
 
     [data-show-when][hidden] { display: none !important; }
+    /* Same reason as the line above: a bare `hidden` attribute loses to
+       `.lvp-field { display: block }`, so the attester's stamp/licence/phone stayed
+       on screen when the paper route hid them and the fields were still required.
+       Caught on the live link, not in a harness. 2026-08-25. */
+    [data-on-certificate][hidden] { display: none !important; }
+    [data-paper-slot][hidden] { display: none !important; }
     .lvp-page[hidden] { display: none !important; }
 
     .lvp-field--error .lvp-input, .lvp-field--error .lvp-input--select { border-bottom-color: var(--lvp-error); border-bottom-width: 2px; padding-bottom: 7px; }
@@ -1402,7 +1408,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-16-attester-paper-first';
+      window.__BUILD_TAG = 'israel-2026-08-25-17-attester-paper-hide-fix';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
