@@ -1002,8 +1002,8 @@
             <label class="lvp-field"><span class="lvp-field__label">שם משפחה</span><input class="lvp-input" type="text" data-script="he" name="lawyerDetails.lastName"></label>
           </div>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="לכתובת זו יישלח קישור החתימה"></label>
-          <label class="lvp-field" data-optional data-on-certificate><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
-          <label class="lvp-field" data-on-certificate><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
+          <label class="lvp-field" data-optional><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" name="lawyerDetails.phoneNumber" data-validate="cell-il"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
         </section>
 
         <!-- ============================================================== -->
@@ -1283,8 +1283,8 @@
                check in validatePage requires at least ONE of the two. Phone is NOT
                independently required (Noa 2026-07-08). -->
           <label class="lvp-field" data-optional><span class="lvp-field__label">כתובת דוא"ל</span><input class="lvp-input" type="email" name="lawyerDetails.email" data-help="כתובת זו תשמש אותנו לתקשורת"></label>
-          <label class="lvp-field" data-optional><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="lawyerDetails.phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
-          <label class="lvp-field"><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
+          <label class="lvp-field" data-optional data-on-certificate><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="lawyerDetails.phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567"></label>
+          <label class="lvp-field" data-on-certificate><span class="lvp-field__label">מספר רישיון</span><input class="lvp-input" type="text" name="lawyerDetails.licenseNumber" inputmode="numeric" data-digits></label>
           <label class="lvp-field" data-on-certificate><span class="lvp-field__label">חותמת</span><input class="lvp-file-input" type="file" data-upload="lawyer.stamp" accept="image/jpeg,image/png,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span><p class="lvp-hint-small">נא להעלות קובץ בפורמט JPG או PNG בלבד.</p></label>
         </section>
 
@@ -1408,7 +1408,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-17-attester-paper-hide-fix';
+      window.__BUILD_TAG = 'israel-2026-08-25-18-attester-paper-right-page';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
