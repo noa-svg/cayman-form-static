@@ -1127,10 +1127,23 @@
         <!-- PAGE: additional investors gate (additionalInvestors) - individual only -->
         <section class="lvp-page" data-page="ind.additional" data-applicant="individual" data-primary-only hidden>
           <h2 class="lvp-page__title">משקיעים נוספים</h2>
+          <!-- Explainer added 2026-08-25, Noa-approved, mirroring the attester page's
+               approved sentence: answering כן makes this a JOINT subscription. The
+               co-holder gets their own scoped link, their own KYC pages and their own
+               signature, and the pack cannot seal until they sign. The page collected
+               a name and an email and never said any of that.
+               NO "please inform them" line here, unlike the attester page: Noa,
+               2026-08-25, "They don't need to update since they're expecting it".
+               A spouse or partner joining the subscription already knows; an
+               accountant being volunteered by their client does not. -->
+          <p class="lvp-page__hint">נשלח קישור למשקיע/ה הנוסף/ת לחתימה על מסמכי ההצטרפות. ההצטרפות תושלם לאחר החתימה.</p>
           <fieldset class="lvp-fieldset">
             <legend class="lvp-fieldset__legend">האם יהיו שותפים להשקעתך בקרן (כולל בן/בת זוג)?</legend>
-            <label class="lvp-radio"><input type="radio" name="additionalInvestors" value="כן" data-show-when-trigger="additionalInvestors"> כן</label>
+            <!-- לא first, matching every other yes/no pair in this form (the money
+                 page's political-activity and legal-proceedings questions). The
+                 branching answer should not sit in the default-scan position. -->
             <label class="lvp-radio"><input type="radio" name="additionalInvestors" value="לא" data-show-when-trigger="additionalInvestors"> לא</label>
+            <label class="lvp-radio"><input type="radio" name="additionalInvestors" value="כן" data-show-when-trigger="additionalInvestors"> כן</label>
           </fieldset>
           <fieldset class="lvp-fieldset" data-show-when="additionalInvestors=כן">
             <legend class="lvp-fieldset__legend">מספר משקיעים נוספים</legend>
@@ -1326,7 +1339,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-6-beneficiary-option';
+      window.__BUILD_TAG = 'israel-2026-08-25-7-joint-explainer';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
