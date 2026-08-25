@@ -6281,6 +6281,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // docRef.companyStampDriveId (opAttachCompanyStamp). Offered on the
     // subscriber role (harmless no-op for an individual applicant, who simply
     // never has a reason to use it).
+    // PAPER-SIGNED ATTESTER (2026-08-25). An attester whose office does not sign
+    // digitally signs the qualification form by hand and mails the PDF to the fund.
+    // ju-service 33cad31 added ?admin=attachPaperQualification for exactly that, but
+    // shipped it server-only, so the sole way to call it was the browser JS console.
+    // This is the door. It rides ju-service (JU_API), NOT GAS: unlike
+    // opAttachCompanyStamp above, this route exists only in consoledispatch.ts.
+    if(String(cs.role||'')==='lawyer' && !cs.done){
+      h+='<div class="cs-attach-toggle-wrap"><button class="cs-paperq-toggle" type="button">Attach signed qualification</button></div>'
+        +'<div class="cs-paperqform" hidden>'
+        +'<div class="cs-line"><input class="cs-pq-file" type="file" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif"></div>'
+        +'<div class="cs-line"><button class="cs-pq-save" type="button">Attach</button><button class="cs-pq-cancel" type="button">Cancel</button></div>'
+        +'<div class="cs-pq-status" hidden></div>'
+        +'</div>';
+    }
     if(String(cs.role||'')==='subscriber'){
       h+='<div class="cs-attach-toggle-wrap"><button class="cs-attach2-toggle" type="button">Attach company stamp</button></div>'
         +'<div class="cs-attach2form" hidden>'
@@ -6762,6 +6776,56 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       if(!atoggle2||!aform2)return;
       var driveEl2=aform2.querySelector(".cs-at2-drive"),asaveEl2=aform2.querySelector(".cs-at2-save"),
           acancelEl2=aform2.querySelector(".cs-at2-cancel"),astatusEl2=aform2.querySelector(".cs-at2-status");
+      // ---- paper-signed qualification attach (2026-08-25) ----
+      var pqToggle=document.querySelector("#drawer .cs-paperq-toggle");
+      var pqForm=document.querySelector("#drawer .cs-paperqform");
+      var pqFile=document.querySelector("#drawer .cs-pq-file");
+      var pqSave=document.querySelector("#drawer .cs-pq-save");
+      var pqCancel=document.querySelector("#drawer .cs-pq-cancel");
+      var pqStatusEl=document.querySelector("#drawer .cs-pq-status");
+      function pqstatus(msg,kind){
+        if(!pqStatusEl)return;
+        if(!msg){pqStatusEl.hidden=true;pqStatusEl.textContent="";pqStatusEl.className="cs-pq-status";return;}
+        pqStatusEl.hidden=false;pqStatusEl.textContent=msg;pqStatusEl.className="cs-pq-status"+(kind?(" "+kind):"");
+      }
+      if(pqToggle)pqToggle.onclick=function(){
+        var opening=pqForm.hidden;
+        pqForm.hidden=!opening;
+        pqToggle.textContent=opening?"Cancel":"Attach signed qualification";
+      };
+      if(pqCancel)pqCancel.onclick=function(){pqForm.hidden=true;pqToggle.textContent="Attach signed qualification";pqstatus("",null);};
+      if(pqSave)pqSave.onclick=function(){
+        var f=pqFile&&pqFile.files&&pqFile.files[0];
+        if(!f){pqstatus("Choose the signed form first.","error");return;}
+        pqSave.disabled=true;pqstatus("Reading file...",null);
+        var rd=new FileReader();
+        rd.onerror=function(){pqSave.disabled=false;pqstatus("Could not read that file.","error");};
+        rd.onload=function(){
+          // strip the data: prefix - the route wants raw base64
+          var b64=String(rd.result||"");
+          var comma=b64.indexOf(",");
+          if(comma>-1)b64=b64.slice(comma+1);
+          pqstatus("Attaching...",null);
+          var q="?admin=attachPaperQualification&processId="+encodeURIComponent(currentPid)
+               +"&scanBase64="+encodeURIComponent(b64)
+               +"&fileName="+encodeURIComponent(f.name||"qualification-signed.pdf")
+               +"&mimeType="+encodeURIComponent(f.type||"application/pdf");
+          apiFetch(q, false, JU_API).then(function(r){
+            if(r&&r.ok){
+              pqstatus("Attached. The attester's leg is closed; the pack seals on the next worker tick.","ok");
+              setTimeout(function(){if(currentPid)openDrawer(currentPid);},1200);
+            }else{
+              pqSave.disabled=false;
+              pqstatus("Could not attach"+((r&&r.error)?(": "+r.error):". Try again."),"error");
+            }
+          }).catch(function(err){
+            pqSave.disabled=false;
+            pqstatus("Could not attach"+((err&&err.serverError)?(": "+err.serverError):". Try again."),"error");
+          });
+        };
+        rd.readAsDataURL(f);
+      };
+
       function astatus2(msg,kind){
         if(!astatusEl2)return;
         if(!msg){astatusEl2.hidden=true;astatusEl2.textContent="";astatusEl2.className="cs-at2-status";return;}
