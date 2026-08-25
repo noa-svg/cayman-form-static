@@ -131,13 +131,13 @@
   // The subscription is booked to a MONTH, so the skip bought nothing and made the
   // date the LP was told to enter differ from the one they would naturally pick.
   // Name kept so all three implementations and the parity suite move together.
-  function firstBusinessDayNextMonth(ref) {
+  function firstOfNextMonth(ref) {
     var r = ref || new Date();
     return new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 1));
   }
-  function isFirstBusinessDayNextMonth(v, ref) {
+  function isFirstOfNextMonth(v, ref) {
     var d = parseDate(v); if (!d) return false;
-    return d.getTime() === firstBusinessDayNextMonth(ref).getTime();
+    return d.getTime() === firstOfNextMonth(ref).getTime();
   }
 
   function amountGt50k(v) {
@@ -164,7 +164,7 @@
       case 'date-past':        return validDate(v) && isPast(v);
       case 'date-past-18':     return validDate(v) && isPast(v) && minAge18(v);
       case 'within-3-months':  return within3Months(v);
-      case 'first-business-day': return isFirstBusinessDayNextMonth(v);
+      case 'first-of-month': return isFirstOfNextMonth(v);
       case 'hebrew-name':      return nameOk(v, HE_RE);
       case 'english-name':     return nameOk(v, EN_RE);
       default:                 return true;   // unknown rule = no format constraint
@@ -178,8 +178,8 @@
     validCompanyNumber: validCompanyNumber, validOwnership: validOwnership,
     sanPhone: sanPhone, validIlPhone: validIlPhone,
     parseDate: parseDate, validDate: validDate, isPast: isPast, minAge18: minAge18,
-    within3Months: within3Months, firstBusinessDayNextMonth: firstBusinessDayNextMonth,
-    isFirstBusinessDayNextMonth: isFirstBusinessDayNextMonth, amountGt50k: amountGt50k,
+    within3Months: within3Months, firstOfNextMonth: firstOfNextMonth,
+    isFirstOfNextMonth: isFirstOfNextMonth, amountGt50k: amountGt50k,
     validateFormat: validateFormat
   };
 }));

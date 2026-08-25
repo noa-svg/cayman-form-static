@@ -400,7 +400,7 @@
     .lvp-card[dir="rtl"] .lvp-input[type="tel"],
     .lvp-card[dir="rtl"] .lvp-input[data-validate="date-past"],
     .lvp-card[dir="rtl"] .lvp-input[data-validate="date-future"],
-    .lvp-card[dir="rtl"] .lvp-input[data-validate="first-business-day"] { direction: ltr; text-align: left; }
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="first-of-month"] { direction: ltr; text-align: left; }
     /* RTL pager: forward (הבא/סיום) belongs on the LEFT, back (הקודם) on the RIGHT
        -- the mirror of LTR. The default `row` in an RTL flex container already
        places the first DOM child (prev) on the right and the last (next/submit)
@@ -988,7 +988,7 @@
             </label>
             <label class="lvp-field"><span class="lvp-field__label">סכום השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investedAmount" data-amount data-validate="gt50000" inputmode="numeric" placeholder="לדוגמה: 500,000"></label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-business-day" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב"></label>
+          <label class="lvp-field"><span class="lvp-field__label">תאריך השקעה</span><input class="lvp-input" type="text" name="moneyInvestedInFund.investmentDate" data-validate="first-of-month" inputmode="numeric" placeholder="dd/mm/yyyy" data-help="נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב"></label>
 
           <!-- Bank section header = פרטי חשבון (Noa's standing house standard,
                feedback_bank_section_header_pratei_cheshbon; was המוסד ממנו יועברו הכספים). -->
@@ -1326,7 +1326,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-4-first-of-month';
+      window.__BUILD_TAG = 'israel-2026-08-25-5-rule-rename';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -2444,7 +2444,7 @@
       var el = e.target;
       if (!el || !el.getAttribute) return;
       var rule = el.getAttribute('data-validate');
-      if (rule === 'date-past' || rule === 'date-future' || rule === 'first-business-day' || rule === 'date-within-12m') maskDate(el);
+      if (rule === 'date-past' || rule === 'date-future' || rule === 'first-of-month' || rule === 'date-within-12m') maskDate(el);
       else if (rule === 'ssn') maskSsn(el);
       else if (el.hasAttribute('data-digits')) maskDigits(el);
     });
@@ -3586,21 +3586,21 @@
     }
     // First business day (Sun-Thu) of next month, as a LOCAL-midnight Date comparable
     // to parseDdMmYyyy output. The y/m/d themselves are computed on the UTC calendar
-    // to mirror the server's israeliFirstBusinessDayOfNextMonth_ exactly (Israel local
+    // to mirror the server's israeliFirstOfNextMonth_ exactly (Israel local
     // runs 2-3h ahead of UTC; near midnight on the 1st the local month is already
     // next month while the server's UTC ref is not. UTC is the contract.)
     // CHANGED 2026-08-25 (Noa): the FIRST OF NEXT MONTH, not the first business day.
     // This is the THIRD copy of this rule (the others are validation-rules.js and the
-    // server's israeliFirstBusinessDayOfNextMonth_) and it is the one that PREFILLS
+    // server's israeliFirstOfNextMonth_) and it is the one that PREFILLS
     // the field, so it has to move with them or the form offers a date the server
     // then rejects.
-    function firstBusinessDayNextMonth() {
+    function firstOfNextMonth() {
       var now = new Date();
       var d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
       return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     }
-    function firstBusinessDayNextMonthDdMmYyyy() {
-      var d = firstBusinessDayNextMonth();
+    function firstOfNextMonthDdMmYyyy() {
+      var d = firstOfNextMonth();
       var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
       return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear();
     }
@@ -3650,12 +3650,12 @@
         var t0 = new Date(); t0.setHours(0, 0, 0, 0);
         if (!dtf || dtf <= t0) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
       }
-      if (rule === 'first-business-day') {
+      if (rule === 'first-of-month') {
         // investmentDate: must be EXACTLY the first business day (Sun-Thu) of next month,
         // mirroring the server so the LP never hits the opaque must_be_first_business_day
         // bounce. Two-message UX preserved (unparseable vs wrong-day).
         if (R && !R.validDate(v)) return 'תאריך לא תקין. נא להזין dd/mm/yyyy.';
-        if (R && !R.isFirstBusinessDayNextMonth(v)) return 'נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב';
+        if (R && !R.isFirstOfNextMonth(v)) return 'נא לנקוב ביום הראשון לחודש הקלנדרי הקרוב';
       }
       if (rule === 'gt50000') { if (R && !R.validateFormat('gt50000', v)) return 'סכום ההשקעה חייב להיות גדול מ-50,000.'; }
       // Audit #7/#8 messages (Noa-approved 2026-07-03). cell-il/ssn/pct now match the
@@ -5048,7 +5048,7 @@
     // editable; the first-business-day validator gates edits). Snapshot wins.
     (function () {
       var inv = form.querySelector('[name="moneyInvestedInFund.investmentDate"]');
-      if (inv && !inv.value) inv.value = firstBusinessDayNextMonthDdMmYyyy();
+      if (inv && !inv.value) inv.value = firstOfNextMonthDdMmYyyy();
     })();
     renderHelpHints();      // surface the approved data-help strings under their fields
     applyInputmodes();      // numeric keypad on ID + SSN fields
