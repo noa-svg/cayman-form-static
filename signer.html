@@ -367,7 +367,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-24-12-paper-placement-and-print';
+    window.__BUILD_TAG = 'signer-2026-08-25-1-accept-heic';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -467,8 +467,8 @@
       "Biometric cards only.": "לכרטיסים ביומטריים בלבד.",
       "Please upload your passport or national ID before submitting.": "נא להעלות דרכון או תעודת זהות לפני השליחה.",
       "Lawyer / accountant stamp": "חותמת עו״ד / רו״ח",
-      "Please upload a JPG or PNG file only.": "נא להעלות קובץ בפורמט JPG או PNG בלבד",
-      "Please upload a PDF, JPG or PNG file only.": "נא להעלות קובץ בפורמט PDF, JPG או PNG בלבד.",
+      "Please upload a JPG or PNG file only.": "נא להעלות קובץ בפורמט JPG, PNG או HEIC בלבד",
+      "Please upload a PDF, JPG or PNG file only.": "נא להעלות קובץ בפורמט PDF, JPG, PNG או HEIC בלבד.",
       "Please upload the stamp before submitting.": "נא להעלות את החותמת לפני השליחה",
       "A file is larger than 10 MB. Please upload a smaller file.": "קובץ גדול מ-10MB. יש להעלות קובץ קטן יותר.",
       "We could not read that file. Please try again.": "לא ניתן לקרוא את הקובץ. נא לנסות שוב.",
@@ -1000,7 +1000,14 @@
     function handleLawyerStamp(slot, input, errEl) {
       var f = input.files && input.files[0];
       if (!f) { delete pendingLawyerStamp[slot]; return; }
-      if (f.type !== 'image/jpeg' && f.type !== 'image/png') {
+      // HEIC/HEIF added 2026-08-25 (Noa: "let's accept iPhone photos", "For ALL
+      // file upload blocks"). An iPhone photographs in HEIC by default, so this
+      // gate refused the most common way an LP or an attester supplies a document.
+      // The SERVER already accepts it: sniffUploadMime returns image/heic off the
+      // ftyp brand (apps/ju-service/src/domain/kyc.ts:80), so this was a
+      // client-only refusal of bytes the backend stores happily.
+      if (f.type !== 'image/jpeg' && f.type !== 'image/png' &&
+          f.type !== 'image/heic' && f.type !== 'image/heif') {
         if (errEl) errEl.textContent = tHe('Please upload a JPG or PNG file only.');
         input.value = '';
         delete pendingLawyerStamp[slot];
@@ -1063,7 +1070,7 @@
         '<div id="paper-controls" role="region" aria-live="polite" hidden>' +
           '<button type="button" id="paper-download" class="signer-linkbtn">' + esc(tHe('Download to print')) + '</button>' +
           '<label for="paper-scan" class="paper-drop">' + esc(tHe('Upload the signed form')) +
-            '<input type="file" id="paper-scan" data-paper-upload="signedQualification" accept="application/pdf,image/jpeg,image/png">' +
+            '<input type="file" id="paper-scan" data-paper-upload="signedQualification" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif">' +
           '</label>' +
           // The paper input was the only upload on this page with nowhere to put
           // an error (2026-08-24), so an oversize file or a failed read produced
@@ -1153,7 +1160,7 @@
       pendingLawyerStamp = {};
       var html = '<div class="field" data-stamp-slot="lawyer_stamp">' +
         '<label for="stamp-lawyer_stamp">' + esc(tHe('Lawyer / accountant stamp')) + '</label>' +
-        '<input type="file" id="stamp-lawyer_stamp" data-stamp-upload="lawyer_stamp" accept="image/jpeg,image/png">' +
+        '<input type="file" id="stamp-lawyer_stamp" data-stamp-upload="lawyer_stamp" accept="image/jpeg,image/png,image/heic,image/heif">' +
         '<span class="signer-note">' + esc(tHe('Please upload a JPG or PNG file only.')) + '</span>' +
         '</div>';
       host.innerHTML = html;
@@ -1682,7 +1689,11 @@
           // the success screen and the fund would have received a Word file where a
           // signed PDF or image must be. Unlike the stamp control this one legitimately
           // takes PDF, so it needs its own string rather than the JPG/PNG-only sibling.
-          if (f.type !== 'application/pdf' && f.type !== 'image/jpeg' && f.type !== 'image/png') {
+          // HEIC/HEIF added 2026-08-25, same reason as the stamp gate above. This
+          // is the one that actually bit: Noa could not upload the qualification
+          // form on the attester's own link, and an iPhone photo was why.
+          if (f.type !== 'application/pdf' && f.type !== 'image/jpeg' &&
+              f.type !== 'image/png' && f.type !== 'image/heic' && f.type !== 'image/heif') {
             if (perr) perr.textContent = tHe('Please upload a PDF, JPG or PNG file only.');
             inp.value = '';
             pendingPaperScan = null;
