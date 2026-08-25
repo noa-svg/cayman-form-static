@@ -1311,10 +1311,21 @@
              lives on the final page, above the summary. Same fields + approved copy. -->
         <section class="lvp-page" data-page="review">
           <h2 class="lvp-page__title">סיום ושליחה</h2>
-          <h3 class="lvp-subhead">פרטי התקשרות</h3>
-          <p class="lvp-page__hint">כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.</p>
-          <div data-repeating-typed-path="contactArray" data-repeating-min="1" data-repeating-template="email"></div>
-          <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
+          <!-- PRIMARY ONLY since 2026-08-25. contactArray is a SUBMISSION-level
+               field: the addresses the fund uses for this subscription. The
+               co-holder leg deep-copies the primary's submission and replaces only
+               additionalInvestors[idx] (recordSignature.ts:225), so anything a
+               co-holder typed here was silently discarded - a required-looking
+               field that went nowhere. Same data-primary-only treatment the money,
+               beneficiary and additional-investors PAGES already get; here it is
+               element-level because this page also carries the submit button.
+               applyConditionals hides it AND clears its inputs for a co-holder. -->
+          <div data-primary-only>
+            <h3 class="lvp-subhead">פרטי התקשרות</h3>
+            <p class="lvp-page__hint">כתובות המייל שישמשו לתקשורת שוטפת מול הקרן ונותני השירות שלה, לרבות שליחת אישורי תשואה חודשיים.</p>
+            <div data-repeating-typed-path="contactArray" data-repeating-min="1" data-repeating-template="email"></div>
+            <button type="button" class="lvp-btn lvp-btn--secondary lvp-btn--small" data-action="add-row" data-target="contactArray">ברצוני להוסיף מייל +</button>
+          </div>
           <template data-row-template="email">
             <div class="lvp-email-row" data-row-index="${i}">
               <!-- Label added 2026-08-25. This row had only a placeholder, so the
@@ -1367,7 +1378,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-08-25-11-qual-title';
+      window.__BUILD_TAG = 'israel-2026-08-25-12-coholder-contact';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
