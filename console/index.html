@@ -6770,12 +6770,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // ?api=opAttachCompanyStamp instead. Distinct class names throughout
     // (cs-attach2-*/cs-at2-*) so this querySelector never collides with the
     // lawyer-stamp editor's when both controls exist in the same drawer.
+    // Its OWN IIFE, deliberately. The first draft lived inside the company-stamp
+    // block below, behind that block's `if(!atoggle2||!aform2)return;`. The stamp
+    // control only renders for role==='subscriber', so on the attester card - the
+    // ONLY card this button appears on - the guard returned early and the wiring
+    // never ran. The button rendered and did nothing.
     (function(){
-      var atoggle2=document.querySelector("#drawer .cs-attach2-toggle");
-      var aform2=document.querySelector("#drawer .cs-attach2form");
-      if(!atoggle2||!aform2)return;
-      var driveEl2=aform2.querySelector(".cs-at2-drive"),asaveEl2=aform2.querySelector(".cs-at2-save"),
-          acancelEl2=aform2.querySelector(".cs-at2-cancel"),astatusEl2=aform2.querySelector(".cs-at2-status");
       // ---- paper-signed qualification attach (2026-08-25) ----
       var pqToggle=document.querySelector("#drawer .cs-paperq-toggle");
       var pqForm=document.querySelector("#drawer .cs-paperqform");
@@ -6783,6 +6783,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var pqSave=document.querySelector("#drawer .cs-pq-save");
       var pqCancel=document.querySelector("#drawer .cs-pq-cancel");
       var pqStatusEl=document.querySelector("#drawer .cs-pq-status");
+      // Own guard, mirroring the blocks around it: this control only renders on an
+      // unsigned attester card, so every other drawer must no-op rather than throw.
+      if(!pqToggle||!pqForm)return;
       function pqstatus(msg,kind){
         if(!pqStatusEl)return;
         if(!msg){pqStatusEl.hidden=true;pqStatusEl.textContent="";pqStatusEl.className="cs-pq-status";return;}
@@ -6826,6 +6829,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         rd.readAsDataURL(f);
       };
 
+    })();
+
+    (function(){
+      var atoggle2=document.querySelector("#drawer .cs-attach2-toggle");
+      var aform2=document.querySelector("#drawer .cs-attach2form");
+      if(!atoggle2||!aform2)return;
+      var driveEl2=aform2.querySelector(".cs-at2-drive"),asaveEl2=aform2.querySelector(".cs-at2-save"),
+          acancelEl2=aform2.querySelector(".cs-at2-cancel"),astatusEl2=aform2.querySelector(".cs-at2-status");
       function astatus2(msg,kind){
         if(!astatusEl2)return;
         if(!msg){astatusEl2.hidden=true;astatusEl2.textContent="";astatusEl2.className="cs-at2-status";return;}
