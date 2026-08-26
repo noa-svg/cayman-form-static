@@ -801,5 +801,41 @@ function extractVarObj(name) {
     && /\.bfold \{ border-bottom: 2px solid var\(--color-coral\)/.test(html));
 })();
 
+// ---- K17: the W-8 tab opens a process (2026-08-26 review, item 2).
+// The rows carried no processId at all: ju-service's w8renewals route mapped
+// `name: lpDisplayName || name || partyKey` and a W-8 record has neither of the
+// first two, so the NAME column was showing "<processId>:<role>" in production
+// and there was nothing to click through to. Fixed server-side (af41194) by
+// joining the registry, which also supplies processId and lane.
+(function () {
+  ok('K17 a W-8 row is interactive ONLY when the feed sent a processId',
+    /var pid=String\(r\.processId\|\|''\)\.trim\(\);/.test(html)
+    && /var act=pid\?\(' data-pid="'/.test(html));
+  ok('K17 the openable class rides the same condition, so it cannot look clickable while inert',
+    /'<div class="w8row'\+\(pid\?' is-openable':''\)\+'"'\+act\+'>'/.test(html));
+  ok('K17 rows are wired by delegation over data-pid, click and keyboard',
+    /wl\.querySelectorAll\('\.w8row\[data-pid\]'\)/.test(html)
+    && /if\(e\.key==='Enter'\|\|e\.key===' '\)/.test(html));
+  // The demo fixture MUST keep a row with no processId. That row is the only
+  // thing standing between this console and shipping a button that does
+  // nothing when an older engine (or the GAS fallback) omits the field.
+  ok('K17 the demo fixture still carries a row with NO processId',
+    /\{name:'Aurelie Marchand',variant:'W-9'/.test(html));
+
+  // Order matters: switchView('board') calls dclose() on entry, so opening the
+  // drawer first would immediately close it.
+  const openFrom = extractFn('openProcessFromView');
+  ok('K17 the view switch precedes the drawer open',
+    openFrom.indexOf("switchView('board')") < openFrom.indexOf('openDrawer(pid)'));
+  ok('K17 a cross-lane row switches lane through the real switcher, not by setting state',
+    /window\.__consoleSetLane\(want\)/.test(openFrom) && !/state\.lane=/.test(openFrom));
+  ok('K17 and defers the open to the next completed board load, not a timer',
+    /__pendingDrawerPid=pid;/.test(openFrom) && !/setTimeout/.test(openFrom));
+  const laneNorm = new Function(extractFn('laneToConsole_') + '; return laneToConsole_;')();
+  ok('K17 the registry lane string is normalised (it says israeli, this console says israel)',
+    laneNorm('israeli') === 'israel' && laneNorm('israel') === 'israel'
+    && laneNorm('cayman') === 'cayman' && laneNorm('') === '' && laneNorm(undefined) === '');
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

@@ -1418,6 +1418,11 @@ body.side-coll .ss-row.ss-total { display: none; }
   padding: 0 0 var(--space-2);
 }
 
+/* An openable W-8 row (data-pid present) gets the affordance; a row without a
+   processId stays exactly as read-only as it was (2026-08-26). */
+.w8row.is-openable { cursor: pointer; border-radius: var(--radius-sm); transition: background var(--dur-fast); }
+.w8row.is-openable:hover { background: var(--color-bg-hover); }
+.w8row.is-openable:focus-visible { outline: 2px solid var(--color-atrium); outline-offset: 2px; }
 /* Read-only W-8 row primitive (NOT the clickable board .row) */
 .w8row {
   display: flex;
@@ -4097,7 +4102,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-4-modal-registers';
+  window.__BUILD_TAG = 'console-2026-08-26-5-w8-openable';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4590,11 +4595,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       };
       return {ok:true,rows:det};
     }
+    // Carries processId + lane, matching what ju-service sends since
+    // 2026-08-26, so the demo exercises the openable path. The LAST row
+    // deliberately omits both: an older engine (or the GAS fallback) sends
+    // neither, and that row must stay non-interactive rather than render a
+    // button that does nothing.
+    //
+    // A note for whoever edits this next: this fixture is why the party-key
+    // defect survived in production for so long. The server was sending
+    // "<processId>:<role>" in `name`, and this fixture's real human names meant
+    // every local run of the W-8 tab looked correct. A fixture prettier than
+    // production hides exactly the bug it should surface.
     if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
-      {name:'Daniel Rosen',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
-      {name:'מ ארקין בעמ',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
-      {name:'Helena Brandt',variant:'W-8BEN-E',status:'expiring',expiry:'2026-07-22'},
-      {name:'Tomer Shapira',variant:'W-8BEN',status:'expiring',expiry:'2026-08-15'},
+      {name:'Daniel Rosen',processId:'p1',lane:'cayman',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
+      {name:'מ ארקין בעמ',processId:'p2',lane:'israeli',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
+      {name:'Helena Brandt',processId:'p3',lane:'cayman',variant:'W-8BEN-E',status:'expiring',expiry:'2026-07-22'},
+      {name:'Tomer Shapira',processId:'p6',lane:'cayman',variant:'W-8BEN',status:'expiring',expiry:'2026-08-15'},
       {name:'Aurelie Marchand',variant:'W-9',status:'expiring',expiry:'2026-09-04'}
     ]};
     if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
@@ -5743,11 +5759,43 @@ document.addEventListener('keydown',function(e){
     }
     el.hidden=false;
   }
+  // Set by openProcessFromView when a lane switch has to happen first. The
+  // drawer opens on the NEXT completed board load rather than on a timer, so it
+  // can never open against a half-switched lane.
+  var __pendingDrawerPid=null;
   function render(rows){
     allRows=rows;
     setBoardBadge(allRows);
     setSideStats(allRows);
     applySearch();
+    if(__pendingDrawerPid){
+      var pid=__pendingDrawerPid;__pendingDrawerPid=null;
+      switchView('board');
+      openDrawer(pid);
+    }
+  }
+  // The registry says 'israeli'; this console says 'israel'. Documented
+  // mismatch, normalised in one place rather than at each call site.
+  function laneToConsole_(lane){
+    var l=String(lane||'').toLowerCase();
+    if(l==='israeli'||l==='israel')return 'israel';
+    if(l==='cayman')return 'cayman';
+    return '';
+  }
+  // Open a process from a view that is not the board (today: the W-8 tab).
+  // No such helper existed; the closest thing was a DEMO-only pair of
+  // setTimeouts. Order matters: switchView('board') calls dclose() on entry, so
+  // the view switch has to come BEFORE the drawer opens, never after.
+  function openProcessFromView(pid,lane){
+    if(!pid)return;
+    var want=laneToConsole_(lane);
+    if(want&&want!==state.lane&&window.__consoleSetLane){
+      __pendingDrawerPid=pid;
+      window.__consoleSetLane(want);
+      return;
+    }
+    switchView('board');
+    openDrawer(pid);
   }
   (function(){
     var si=document.getElementById("boardSearch");
@@ -7552,6 +7600,12 @@ document.addEventListener('keydown',function(e){
       var vw=document.getElementById('v-w8');if(vw&&!vw.hidden)loadW8();
       var vm=document.getElementById('v-messages');if(vm&&!vm.hidden)loadMsgs();
     }
+    // Exposed so openProcessFromView can switch lanes through the SAME path the
+    // switcher uses. syncFund resets every per-lane cache and reloads the board;
+    // anything that sets state.lane without going through it leaves the console
+    // half-switched, and a drawer opened in that state sends the OLD lane on
+    // every action inside it, money actions included.
+    window.__consoleSetLane=syncFund;
     fs.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
     if(mf)mf.onclick=function(e){var b=e.target.closest("button");if(!b)return;syncFund(b.getAttribute("data-v"));};
     // Open on the operator's last fund, defaulting to Israel (Omri's lane). This sets
@@ -8264,7 +8318,14 @@ document.addEventListener('keydown',function(e){
     function rowHtmlW8(o){
       var r=o.r, rel=w8RelTime(o.days);
       var chipc=(r.status==='expired')?'w8-expired':'w8-expiring';
-      return '<div class="w8row">'
+      // Interactive ONLY when the feed carried a processId. ju-service started
+      // sending processId + lane on 2026-08-26; an older engine, or the GAS
+      // fallback, sends neither, and a row that LOOKS clickable and is not is
+      // the exact defect this console shipped on 2026-08-25. So the attributes
+      // go on together or not at all.
+      var pid=String(r.processId||'').trim();
+      var act=pid?(' data-pid="'+esc2(pid)+'" data-lane="'+esc2(r.lane||'')+'" tabindex="0" role="button" title="Open this process"'):'';
+      return '<div class="w8row'+(pid?' is-openable':'')+'"'+act+'>'
         +'<span class="w8nm" dir="ltr"><span class="w8nmtxt" dir="auto">'+esc2(r.name)+'</span><span class="w8var" dir="ltr">'+esc2(r.variant)+'</span></span>'
         +'<span class="w8when"><span class="w8rel '+rel.cls+'">'+esc2(rel.txt)+'</span><span class="w8iso">'+esc2(r.expiry)+'</span></span>'
         +'<span class="w8tag '+chipc+'">'+esc2(r.status)+'</span>'
@@ -8279,6 +8340,13 @@ document.addEventListener('keydown',function(e){
     if(expired.length)h+='<div class="w8group overdue"><div class="w8grouplbl">overdue</div>'+expired.map(rowHtmlW8).join('')+'</div>';
     if(expiring.length)h+='<div class="w8group"><div class="w8grouplbl">expiring soon</div>'+expiring.map(rowHtmlW8).join('')+'</div>';
     wl.innerHTML=h;
+    // Delegated per render, click AND Enter/Space, the same idiom the board row
+    // uses. Only rows the renderer marked openable carry data-pid at all.
+    Array.prototype.forEach.call(wl.querySelectorAll('.w8row[data-pid]'),function(el){
+      var go=function(){ openProcessFromView(el.getAttribute('data-pid'), el.getAttribute('data-lane')); };
+      el.onclick=go;
+      el.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } };
+    });
   }
   // Skeleton: readout bar + a few ghost rows (geometry, not "Loading...").
   function w8Skeleton(){
