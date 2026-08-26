@@ -31,9 +31,22 @@ function lastFetch() { return pending[pending.length - 1]; }
 const rendered = [];
 function renderDrawer(d) { rendered.push(d); }
 
-const openDrawer = (new Function('drawer', 'dscrim', 'document', 'allRows', 'esc2', 'stageMilestone', 'apiFetch', 'state', 'renderDrawer', 'GW',
+// setShellInert: a no-op stub, NOT a product fix. This harness EXTRACTS openDrawer
+// and runs it in a synthetic scope, so every symbol the extracted function reaches
+// for has to be injected here by hand. openDrawer gained a setShellInert() call
+// (it toggles inert on the shell behind the drawer, defined at console/index.html
+// top level where it resolves fine), and the harness had no stub, so it died with
+// "setShellInert is not defined" and read like a product break. It is not: the
+// page is fine, the EXTRACT was missing a dependency.
+// This is the standing cost of testing an extract instead of the real file - the
+// stub list is a second copy of the function's dependencies and it drifts silently
+// the moment someone edits openDrawer. If this bites a third time, the fix is to
+// drive the real page, not to add another stub.
+function setShellInert() { /* no-op: the harness has no shell to make inert */ }
+
+const openDrawer = (new Function('drawer', 'dscrim', 'document', 'allRows', 'esc2', 'stageMilestone', 'apiFetch', 'state', 'renderDrawer', 'GW', 'setShellInert',
   'var currentPid=null, currentEngine=GW, drawerOpener=null;' + src + '; return openDrawer;'
-))(drawer, dscrim, dom, allRows, esc2, stageMilestone, apiFetch, state, renderDrawer, 'https://gas.example/exec');
+))(drawer, dscrim, dom, allRows, esc2, stageMilestone, apiFetch, state, renderDrawer, 'https://gas.example/exec', setShellInert);
 
 const flush = () => new Promise((res) => { let n = 0; (function f() { if (++n > 8) return res(); Promise.resolve().then(f); })(); });
 
