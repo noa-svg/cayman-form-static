@@ -55,6 +55,8 @@ function investmentDate() {
 }
 const PREFILL_UPLOADS = {
   'investors.0.idPhoto': { fileName: 'teudat-zehut.pdf' },
+  // 2026-08-26: the ספח is now a required upload; seed it or the flow stalls on uploads.
+  'investors.0.idAppendix': { fileName: 'sefach.pdf' },
   'investors.0.passport': { fileName: 'passport.pdf' },
   'investors.0.accountManagementApproval': { fileName: 'ishur-nihul-cheshbon.pdf' },
   'investors.0.qualification': { fileName: 'tofes-kshirut-chatum.pdf' }

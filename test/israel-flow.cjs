@@ -58,6 +58,9 @@ function investmentDate() {
 // -> preAttached, the production path for docs the fund already holds).
 const PREFILL_UPLOADS = {
   'investors.0.idPhoto': { fileName: 'teudat-zehut.pdf' },
+  // 2026-08-26: the ספח joined the required set (it used to hide behind an opt-in
+  // checkbox and two live LPs sealed without one), so the happy path needs it seeded.
+  'investors.0.idAppendix': { fileName: 'sefach.pdf' },
   'investors.0.passport': { fileName: 'passport.pdf' },
   'investors.0.accountManagementApproval': { fileName: 'ishur-nihul-cheshbon.pdf' },
   'investors.0.qualification': { fileName: 'tofes-kshirut-chatum.pdf' }

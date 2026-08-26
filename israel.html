@@ -249,6 +249,15 @@
 
     .lvp-fieldset { border: none; padding: 0; margin: 0 0 20px; }
     .lvp-fieldset__legend { color: var(--lvp-text-muted); font-size: 13px; margin-bottom: 8px; font-weight: 500; padding: 0; }
+    /* 2026-08-26 (Noa): the ID-document group. The ספח kept being skipped while it
+       sat loose in a flat list of upload fields, so the ID uploads are boxed as one
+       document set and the ספח carries a start-edge accent to read as its own
+       physical document rather than a third photo of the same card. The wrapper is
+       data-optional so validatePage skips the GROUP holder; the .lvp-field holders
+       nested inside it are still each required on their own. */
+    .lvp-fieldset--group { border: 1px solid var(--lvp-input-line); border-radius: 6px; padding: 6px 16px 14px; margin: 0 0 20px; }
+    .lvp-fieldset--group > .lvp-fieldset__legend { color: var(--lvp-navy); font-size: 14px; font-weight: 700; padding: 0 6px; margin-bottom: 0; }
+    .lvp-field--accent { border-inline-start: 3px solid var(--lvp-yellow); padding-inline-start: 12px; }
     .lvp-radio, .lvp-checkbox { display: flex; align-items: flex-start; gap: 8px; padding: 10px 0; min-height: 44px; cursor: pointer; font-size: 14px; line-height: 1.5; }
     .lvp-radio input, .lvp-checkbox input { margin-top: 3px; flex-shrink: 0; accent-color: var(--lvp-navy); width: 18px; height: 18px; }
 
@@ -1219,12 +1228,24 @@
 
           <!-- INDIVIDUAL uploads (investor[0].fileUpload) -->
           <div data-applicant="individual">
+            <fieldset class="lvp-fieldset lvp-fieldset--group" data-optional>
+            <legend class="lvp-fieldset__legend">תעודת זהות</legend>
             <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isBiometric" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isBiometric"> ברשותי תעודת זהות ביומטרית</label>
             <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=false"><span class="lvp-field__label">צילום תעודת הזהות</span><input class="lvp-file-input" type="file" data-upload="investors.0.idPhoto" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
             <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד קדמי</span><input class="lvp-file-input" type="file" data-upload="investors.0.idFront" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
             <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isBiometric=true"><span class="lvp-field__label">תעודת זהות, צד אחורי</span><input class="lvp-file-input" type="file" data-upload="investors.0.idBack" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
-            <label class="lvp-checkbox"><input type="checkbox" name="investorsArray[0].fileUpload.isSeparateAppendix" value="true" data-show-when-trigger="investorsArray[0].fileUpload.isSeparateAppendix"> ברצוני להעלות ספח תעודת זהות כצרופה נפרדת</label>
-            <label class="lvp-field" data-show-when="investorsArray[0].fileUpload.isSeparateAppendix=true"><span class="lvp-field__label">ספח תעודת הזהות</span><input class="lvp-file-input" type="file" data-upload="investors.0.idAppendix" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            <!-- The ספח is NOT optional and never was (2026-08-26, Noa). It used to sit
+                 behind an opt-in checkbox ("ברצוני להעלות ספח תעודת זהות כצרופה נפרדת") on
+                 the assumption that the ID scan already contained it. On the biometric
+                 branch that cannot be true: the card is plastic, the ספח is a separate
+                 paper booklet, so front+back photos can never contain it. Two live LPs
+                 completed onboarding with no ספח in the pack because the field never
+                 rendered and nothing downstream asked. The field is now unconditional, so
+                 validatePage's "every visible field with no data-optional is required"
+                 rule enforces it on BOTH branches. Server-side twin: the unconditional
+                 check in packages/ju-israeli-domain/src/validate.ts. -->
+            <label class="lvp-field lvp-field--accent"><span class="lvp-field__label">ספח תעודת הזהות</span><input class="lvp-file-input" type="file" data-upload="investors.0.idAppendix" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif"><span class="lvp-file"><span class="lvp-file__trigger" aria-hidden="true"><span class="lvp-file__label--upload">העלאת קובץ</span><span class="lvp-file__label--replace">החלף קובץ</span></span><span class="lvp-file-success"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12.5l4.5 4.5L20 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lvp-file__name"></span></span><button type="button" class="lvp-file__remove" data-file-remove>הסר</button></span></label>
+            </fieldset>
             <!-- Passport for EVERYONE (Noa 2026-07-04): every shipped accepted pack carries
      passport + ת"ז for Israelis too, and the bank checklist says both. Was gated
      __nonIsrael (pack-parity finding M7). -->
