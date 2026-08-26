@@ -82,10 +82,20 @@ ok('R2 no hand-written data-recov literal anywhere', literalRecov.length === 0, 
 // ---- R3: the wirer resolves through the registry, and fails loudly ----
 ok('R3 wirer looks the rendered key back up in the registry',
   /var a=recoveryActionByKey\(key\);/.test(html));
-ok('R3 an unresolvable key disables the control instead of leaving it dead',
-  /if\(!a\)\{[\s\S]{0,400}toggle\.disabled=true/.test(html));
-ok('R3 an unresolvable key is reported, not swallowed',
-  /console\.error\("recovery action rendered with no registry entry:"/.test(html));
+// Both bail-outs route through one unwired() helper, which must BOTH disable the
+// control and report it. A control that cannot be wired has to look unusable and
+// say why; the whole point is that it never again just sits there looking live.
+ok('R3 unwired() disables the control',
+  /function unwired\(why\)\{[\s\S]{0,300}toggle\.disabled=true/.test(html));
+ok('R3 unwired() reports rather than swallowing',
+  /function unwired\(why\)\{[\s\S]{0,400}console\.error\("recovery control not wired/.test(html));
+ok('R3 an unresolvable registry key bails through unwired()',
+  /if\(!a\)\{unwired\("no registry entry"\);return;\}/.test(html));
+// Added after the 2026-08-26 review: dereferencing toggle/body unguarded threw
+// inside the forEach callback, which aborts the WHOLE loop and strands every
+// later .recov in the drawer. One broken control must not take its siblings.
+ok('R3 a control missing its own parts bails per element, not per drawer',
+  /if\(!toggle\|\|!body\)\{unwired\("missing toggle or body"\);return;\}/.test(html));
 ok('R3 the wirer binds by walking the RENDERED nodes (not per-control querySelector)',
   html.indexOf('document.querySelectorAll("#drawer .recov")') >= 0);
 

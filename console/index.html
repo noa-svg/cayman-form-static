@@ -2521,6 +2521,13 @@ input:focus {
    cannot be armed over the first. None of the five copies had this; each only
    disabled its own Go button, leaving the inputs live mid-request. */
 .cursig .recov.is-busy .recov-body { pointer-events: none; }
+/* Cancel is the ESCAPE and must stay reachable while the lock is on. apiFetch
+   is a bare fetch with no timeout, so a request that hangs never resolves and
+   never rejects: busy(false) is never reached, and locking the whole body
+   (Cancel included) left the operator with a frozen form and no way out but
+   reopening the drawer. The lock exists to stop a SECOND write, not to trap
+   them. Go stays disabled; Cancel does not. */
+.cursig .recov.is-busy .recov-cancel { pointer-events: auto; }
 .cursig .recov.is-busy .recov-body > *:not(.recov-status) { opacity: 0.55; }
 /* The status line is the ONE thing that must NOT dim - it is the only element
    saying "busy", and dimming it made the whole control read as disabled
@@ -4000,7 +4007,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-1-attn-row-contrast';
+  window.__BUILD_TAG = 'console-2026-08-26-2-review-fixes';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5490,7 +5497,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var html=anyRows?bhead:'';
     html+=inflight.length?foldedRowsHtml(inflight):'<div class="empty">'+emptyMsg+'</div>';
     if(showDone&&completed.length)html+=completedByMonthHtml(completed);
-    if(showCanceled&&canceled.length)html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(rowHtml).join("");
+    // The wrapper below is deliberate. rowHtml's second parameter is `folded`,
+    // and Array.prototype.map calls back with (element, index, array), so
+    // passing rowHtml straight to .map hands it the index: every row after the
+    // first would be told it sits inside a fold group that does not exist and
+    // would drop its reason sentence with no header stating it even once.
+    if(showCanceled&&canceled.length){
+      html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(function(r){return rowHtml(r);}).join("");
+    }
     document.getElementById("list").innerHTML=html;
     // Three independent filter chips: completed (complete/sealed), canceled
     // (voided/expired) and test rows, each filtering separately. The board
@@ -6436,7 +6450,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       label:'Attach signed qualification',
       cta:'Attach',
       working:'Attaching...',
-      when:function(cs){return String(cs.role||'')==='lawyer'&&!cs.done;},
+      // Role only. This carried a `&& !cs.done` clause that could never be
+      // false: nothing anywhere sets .done on a current-signer object, and
+      // d.currentSigner is by construction the FIRST signer whose state is not
+      // 'done', so the card never describes a signed attester in the first
+      // place. Dropped rather than left reading as a live condition.
+      when:function(cs){return String(cs.role||'')==='lawyer';},
       fields:function(){return [{name:'scan',type:'file',attrs:'accept="application/pdf,image/jpeg,image/png,image/heic,image/heif"'}];},
       validate:function(v){return v.scan?'':'Choose the signed form first.';},
       run:function(v,ctx){
@@ -6609,7 +6628,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var prev=out.length?out[out.length-1]:null;
       if(prev&&prev.label===lbl){
         prev.n++;prev.last=ev;
-        if(prev.actor&&ev.actor&&prev.actor!==ev.actor)prev.actor='';
+        // Compare against the ABSENT actor too. The old test short-circuited on
+        // a falsy ev.actor, so a run whose first event named an actor and whose
+        // remaining events named none kept that name and claimed all of them.
+        if(prev.actor!==(ev.actor||''))prev.actor='';
         return;
       }
       out.push({label:lbl,n:1,first:ev,last:ev,actor:ev.actor||''});
@@ -6924,14 +6946,20 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var goEl=el.querySelector(".recov-go");
         var cancelEl=el.querySelector(".recov-cancel");
         var statusEl=el.querySelector(".recov-status");
-        if(!a){
-          // A rendered control the registry does not know. Say so instead of
-          // leaving a button that silently does nothing - the exact failure
-          // this component exists to end.
+        function unwired(why){
           if(toggle){toggle.disabled=true;toggle.title="This control is not wired. Tell the developer.";}
-          if(window.console&&console.error)console.error("recovery action rendered with no registry entry:",key);
-          return;
+          if(window.console&&console.error)console.error("recovery control not wired ("+why+"):",key);
         }
+        // A rendered control the registry does not know. Say so instead of
+        // leaving a button that silently does nothing - the exact failure this
+        // component exists to end.
+        if(!a){unwired("no registry entry");return;}
+        // Missing parts: bail out of THIS element only. Dereferencing toggle or
+        // body unguarded would throw, and a throw inside a forEach callback
+        // aborts the whole loop - which would leave every LATER .recov in the
+        // drawer rendered and unbound. One broken control must not take its
+        // siblings with it.
+        if(!toggle||!body){unwired("missing toggle or body");return;}
         function status(msg,kind){
           if(!statusEl)return;
           if(!msg){statusEl.hidden=true;statusEl.textContent="";statusEl.className="recov-status";return;}
@@ -6946,7 +6974,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         // state IS the proof, not a toast claiming one) for every action.
         function send(opt){
           busy(true);status(opt.working||a.working||"Working...",null);
+          // Watchdog. apiFetch has no timeout, so a hung request would otherwise
+          // sit under the working message forever with no way to tell a slow
+          // server from a dead one. This does NOT claim the action failed - it
+          // cannot know that - and it deliberately leaves Go disabled so a
+          // duplicate write is still impossible. Cancel remains reachable.
+          var settled=false;
+          var watchdog=setTimeout(function(){
+            if(settled)return;
+            status("No answer from the server yet. The action may still be running. Close this and reopen the drawer to see whether it landed.",null);
+          },30000);
+          function settle(){settled=true;clearTimeout(watchdog);}
           apiFetch(opt.q,false,opt.base).then(function(r){
+            settle();
             if(r&&r.ok){
               status(opt.ok?opt.ok(r):"Done.","ok");
               setTimeout(function(){if(currentPid)openDrawer(currentPid);},opt.reloadMs||900);
@@ -6955,6 +6995,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
               status(opt.errPrefix+((r&&r.error)?(": "+r.error):". Try again."),"error");
             }
           }).catch(function(err){
+            settle();
             busy(false);
             status(opt.errPrefix+((err&&err.serverError)?(": "+err.serverError):(opt.catchTail||". Check the connection and try again.")),"error");
           });

@@ -159,9 +159,24 @@ function extractVarObj(name) {
   const lawyerKeys = keysFor({ role: 'lawyer', name: 'A B', email: 'a@b.com' });
   ok('K4b attester card offers reassign + stamp + paper qualification',
     lawyerKeys.join(',') === 'reassign,lawyerStamp,paperQualification', lawyerKeys.join(','));
+  // The paper-qualification control is ROLE-gated only. It used to also carry
+  // `&& !cs.done`, and this assertion used to prove that clause worked - but it
+  // only passed because the fixture below hand-set done:true. Nothing anywhere
+  // sets .done on a current-signer object, and d.currentSigner is by
+  // construction the first signer whose state is not 'done', so the clause
+  // could never be false against real data. The test was proving a fiction.
+  // What is actually true, and now asserted: the control is offered on every
+  // attester card the drawer can render, and the not-yet-signed guarantee comes
+  // from how currentSigner is chosen, not from a condition in the registry.
   const doneLawyerKeys = keysFor({ role: 'lawyer', name: 'A B', email: 'a@b.com', done: true });
-  ok('K4b a signed attester loses the paper-qualification control',
-    doneLawyerKeys.indexOf('paperQualification') === -1, doneLawyerKeys.join(','));
+  ok('K4b the paper-qualification control is role-gated, not done-gated',
+    doneLawyerKeys.indexOf('paperQualification') !== -1, doneLawyerKeys.join(','));
+  // Comments stripped first: the registry's own prose explains why the .done
+  // clause was removed, and an unstripped scan matches that explanation rather
+  // than any live code.
+  const registryCode = extractVarArr('RECOVERY_ACTIONS').replace(/\/\/[^\n]*/g, '');
+  ok('K4b no registry row reads a .done flag the server never sends',
+    !/cs\.done/.test(registryCode));
   const subKeys = keysFor({ role: 'subscriber', name: 'A B', email: 'a@b.com' });
   ok('K4b subscriber card offers reassign + company stamp + address fix',
     subKeys.join(',') === 'reassign,companyStamp,fixSecondaryAddress', subKeys.join(','));
@@ -172,6 +187,28 @@ function extractVarObj(name) {
     !cs.includes('cs-attach-toggle') && !cs.includes('cs-paperq-toggle') && !cs.includes('cs-at-save'));
   ok('K4b registry rows all carry a label, a cta and a run',
     RECOVERY_ACTIONS.every(a => a.key && a.label && a.cta && typeof a.run === 'function'));
+  // K4d: the in-flight lock must not become a trap. apiFetch has no timeout, so
+  // a hung request never runs .then or .catch and busy(false) is never reached.
+  ok('K4d Cancel stays clickable while the control is busy',
+    /\.recov\.is-busy \.recov-cancel \{[^}]*pointer-events:\s*auto/.test(html));
+  ok('K4d a hung request eventually says so instead of sitting silent',
+    /var watchdog=setTimeout\(/.test(html) && /No answer from the server yet/.test(html));
+  ok('K4d the watchdog is cleared once the request settles (no message after success)',
+    /function settle\(\)\{settled=true;clearTimeout\(watchdog\);\}/.test(html));
+  // Scope this to the watchdog CALLBACK, not to a window after the word
+  // "watchdog": clearTimeout(watchdog) is followed a few lines later by the
+  // legitimate busy(false) on the error path, which a loose window matches.
+  const wdBody = (html.match(/var watchdog=setTimeout\(function\(\)\{([\s\S]*?)\},\s*\d+\);/) || [])[1] || '';
+  ok('K4d the watchdog callback was found', wdBody.length > 0);
+  ok('K4d the watchdog does not re-enable Go (no duplicate write)',
+    wdBody.indexOf('busy(') === -1, wdBody);
+  ok('K4d the watchdog does not claim the action failed',
+    wdBody.indexOf("'error'") === -1 && wdBody.indexOf('"error"') === -1);
+  // K4e: one malformed control must not abort the forEach and strand its siblings.
+  ok('K4e the wirer bails per element when toggle or body is missing',
+    /if\(!toggle\|\|!body\)\{unwired\(/.test(html));
+  ok('K4e both bail-outs report rather than silently skipping',
+    (html.match(/unwired\("/g) || []).length >= 2);
   // K4c: signer state is told by three DIFFERENT materials, not three tints of
   // one. "Current" is the filled chip; "Signed" is a check; "Waiting" a ring.
   const stateSrc = extractFn('signerStateHtml');
@@ -490,6 +527,25 @@ function extractVarObj(name) {
     collapseEvents(bounced).length === 3, collapseEvents(bounced).map(x => x.label).join('|'));
   ok('K13 a run of one renders exactly as before (n === 1)', collapseEvents([ev('signing', '2026-08-01T09:00:00Z')])[0].n === 1);
   ok('K13 no events -> no lines', collapseEvents([]).length === 0 && collapseEvents(null).length === 0);
+  // K13 actor honesty (2026-08-26 review). The old test was
+  // `prev.actor && ev.actor && prev.actor !== ev.actor`, which short-circuited
+  // whenever a later event carried NO actor, so a run whose first event named
+  // one kept that name and claimed every event in the run. On a console used
+  // for incident triage that is a fabricated attribution.
+  const runFirstActorOnly = [ev('in_progress', '2026-08-13T09:10:00Z')];
+  runFirstActorOnly[0].actor = 'system';
+  for (let i = 1; i < 12; i++) runFirstActorOnly.push(ev('in_progress', '2026-08-' + (13 + i) + 'T09:10:00Z'));
+  const collapsedRun = collapseEvents(runFirstActorOnly);
+  ok('K13 a run does not inherit an actor the later events never recorded',
+    collapsedRun.length === 1 && collapsedRun[0].n === 12 && collapsedRun[0].actor === '',
+    JSON.stringify({ n: collapsedRun[0].n, actor: collapsedRun[0].actor }));
+  const allSameActor = [ev('signing', '2026-08-01T09:00:00Z'), ev('signing', '2026-08-02T09:00:00Z')];
+  allSameActor.forEach(e => { e.actor = 'noa@legacyvpartners.com'; });
+  ok('K13 a run where EVERY event names the same actor still keeps it',
+    collapseEvents(allSameActor)[0].actor === 'noa@legacyvpartners.com');
+  const noneHaveActor = [ev('signing', '2026-08-01T09:00:00Z'), ev('signing', '2026-08-02T09:00:00Z')];
+  ok('K13 a run where no event names an actor claims none',
+    collapseEvents(noneHaveActor)[0].actor === '');
   // Reminder events keep their own label, so they never fold into the stage
   // line they used to be indistinguishable from.
   const mixed = [ev('signing', '2026-08-01T09:00:00Z'), ev('signing', '2026-08-02T09:00:00Z', '{"nudge":true}'), ev('signing', '2026-08-03T09:00:00Z')];
@@ -508,8 +564,8 @@ function extractVarObj(name) {
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
     + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml')
-    + '; return { foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
-  const { foldedRowsHtml, foldRuns } = new Function(src)();
+    + '; return { foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns, rowHtml: rowHtml };';
+  const { foldedRowsHtml, foldRuns, rowHtml } = new Function(src)();
   const WHY = 'Bank details could not be written to the tracker. Needs bank recovery.';
   const bank = (n) => ({ pid: 'p' + n, name: 'LP ' + n, stage: 'needs_attention', attnWhy: WHY, age: '3d' });
   const five = [bank(1), bank(2), bank(3), bank(4), bank(5)];
@@ -563,6 +619,24 @@ function extractVarObj(name) {
   const calm = [{ pid: 'c1', name: 'A', stage: 'signing', age: '1d' }, { pid: 'c2', name: 'B', stage: 'signing', age: '2d' }];
   ok('K13 rows with no attention reason are never folded', !foldedRowsHtml(calm).includes('bsub'));
   ok('K13 folding preserves row count', (foldedRowsHtml(five).match(/class="row/g) || []).length === 5);
+  // K13 arity coupling (2026-08-26 review). rowHtml grew a second parameter,
+  // `folded`. Array.prototype.map calls back with (element, index, array), so
+  // passing rowHtml straight to .map hands it the index: every row after the
+  // first is told it sits inside a fold group that does not exist and drops its
+  // reason sentence, with no header stating that reason even once. Verified
+  // live in the browser: 3 attention rows through .map(rowHtml) render 1 reason
+  // and 2 silently folded badges with no .bsub header; through the fixed form,
+  // all 3 render their reason.
+  // Comments stripped: renderRows explains this exact hazard in prose directly
+  // above the call site, and an unstripped scan matches the explanation.
+  const htmlCode = html.replace(/^\s*\/\/[^\n]*$/gm, '');
+  ok('K13 rowHtml is never passed bare to .map (it would receive the index as `folded`)',
+    !/\.map\(rowHtml\)/.test(htmlCode));
+  const bare = [bank(1), bank(2), bank(3)].map(rowHtml).join('');
+  const wrapped = [bank(1), bank(2), bank(3)].map(function (r) { return rowHtml(r); }).join('');
+  ok('K13 the coupling is real, not theoretical: bare .map loses 2 of 3 reasons',
+    (bare.match(/battn-why/g) || []).length === 1 && (wrapped.match(/battn-why/g) || []).length === 3,
+    (bare.match(/battn-why/g) || []).length + ' vs ' + (wrapped.match(/battn-why/g) || []).length);
 })();
 
 // ---- K14: .person is shared by THREE lists, so roster-only rules must be scoped.
