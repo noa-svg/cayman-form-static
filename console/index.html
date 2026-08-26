@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&family=Permanent+Marker&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
 /* ============================================================
@@ -1069,7 +1069,10 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   font-size: 11px;
   cursor: pointer;
 }
-.rnote-pop-actions .rnote-save { background: var(--color-coral); color: #fff; }
+/* Green, like every other Save in the console. Coral belongs to attention, and
+   a benign private note used to save in the same paint the board uses for a
+   failed seal (2026-08-26 review, finding 17). */
+.rnote-pop-actions .rnote-save { background: var(--color-green); color: #fff; }
 
 /* Who cell: EN name over Hebrew name (RTL-safe via dir=auto). */
 .rn {
@@ -2788,7 +2791,11 @@ body.side-coll #side-collapse { padding: 4px 0; text-align: center; font-size: 1
 body.side-coll .nav { padding: var(--space-2) 0; justify-content: center; font-size: 0; gap: 0; }
 body.side-coll .nav::before { display: none !important; }
 body.side-coll .nav .nav-ic { font-size: 18px; }
-body.side-coll .nav .badge { display: none; }
+/* Was display:none, which hid the attention count at exactly the width a laptop
+   uses. Keep it as a dot: the number is nice, knowing there IS something is
+   essential (2026-08-26 review, finding 19). */
+body.side-coll .nav { position: relative; }
+body.side-coll .nav .badge { font-size: 0; min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; position: absolute; top: 6px; right: 8px; }
 body.side-coll .side-foot .auth-email,
 body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
@@ -2802,7 +2809,12 @@ body.side-coll .ss-row { justify-content: center; padding: 6px 0; }
 body.side-coll .ss-lbl { display: none; }
 
 /* Tablet-width board: drop the flow column first, keep money + status. */
-@media (max-width: 980px) and (min-width: 601px) {
+/* Was max-width:980px, keyed on the VIEWPORT and never subtracting the 210px
+   sidebar plus gutters. At a 1024 viewport the content pane is ~764px against a
+   ~776px grid, so the board overflowed and the per-row copy/note buttons
+   rendered past the card's right edge, on a laptop, daily (2026-08-26 review,
+   finding 19). 1250 is the width at which the pane can actually hold the grid. */
+@media (max-width: 1250px) and (min-width: 601px) {
   :root { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
   .rflow, .bhead .h-flow { display: none; }
 }
@@ -3205,7 +3217,12 @@ body.side-coll .ss-lbl { display: none; }
 .gmk.t{width:0;height:0;border:none;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid var(--color-gold)}
 
 /* ---- focus: red construction ring, no soft glow ---- */
-input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-color:var(--color-border-focus)!important;box-shadow:var(--shadow-card)!important}
+/* The focus "ring" here used to be var(--shadow-card), the RESTING card shadow,
+   so a focused field was pixel-identical to an unfocused one and a 20-field
+   money form had no keyboard cue but the caret (2026-08-26 review, finding 18).
+   A real ring, and no !important arms race with the base rule at :1659. */
+input:focus,textarea:focus,select:focus,.board-search:focus{outline:none;border-color:var(--color-border-focus)!important;box-shadow:0 0 0 3px var(--color-atrium-tint-md)!important}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--color-atrium);outline-offset:2px}
 
 /* ---- SIDEBAR ---- */
 .side{border-right:var(--bw-heavy) solid var(--color-ink)}
@@ -3320,6 +3337,16 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .btn{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
 .btn:hover{background:var(--color-gold);box-shadow:var(--shadow-card);transform:translate(-1px,-1px)}
 .btn:active{transform:translate(2px,2px);box-shadow:none}
+/* A disabled .btn had NO rule at all, so a gated Generate rendered identically
+   to the live Review beside it (2026-08-26 review, finding 9): white ground,
+   full ink, opacity 1, cursor pointer. The gate was invisible even when it was
+   working. Also kills the gold hover on a dead control. */
+/* Verification copy neither settles nor drafts, so it must not wear the same
+   material as the button that does (2026-08-26 review, finding 10). */
+.btn.btn-quiet{background:transparent;border-color:var(--color-border);color:var(--color-ink-sub);font-weight:600;box-shadow:none}
+.btn.btn-quiet:hover{background:var(--color-bg-hover);color:var(--color-ink);transform:none;box-shadow:none}
+.btn:disabled,.btn[disabled]{background:var(--color-neutral-bg);color:var(--color-ink-muted);border-color:var(--color-border);box-shadow:none;cursor:not-allowed;transform:none}
+.btn:disabled:hover,.btn[disabled]:hover{background:var(--color-neutral-bg);color:var(--color-ink-muted);transform:none;box-shadow:none}
 
 /* ---- inputs ---- */
 input,textarea,select{border-radius:var(--radius-md)!important}
@@ -3467,8 +3494,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div class="brand">
       <span class="brand-chip"><img src="/brand-logo.png" alt="Legacy Value Partners" style="height:26px;width:auto;display:block"></span>
       <div class="sub">Console</div>
-      <div class="fundsw" id="fundsw"><button data-v="cayman">Cayman</button><button class="on" data-v="israel">Israel</button></div>
-      <button id="side-collapse">&#171; collapse</button>
+      <!-- This control decides which FUND a new process is created against, and
+           selection used to be carried by colour alone: no role, no aria-pressed,
+           no aria-current (2026-08-26 review, finding 15). Fails WCAG 1.4.1. -->
+      <div class="fundsw" id="fundsw" role="radiogroup" aria-label="Fund"><button data-v="cayman" role="radio" aria-checked="false">Cayman</button><button class="on" data-v="israel" role="radio" aria-checked="true">Israel</button></div>
+      <button id="side-collapse" aria-label="Collapse the sidebar" aria-expanded="true" title="Collapse the sidebar">&#171; collapse</button>
     </div>
     <nav>
       <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
@@ -3518,7 +3548,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
                panel. -->
           <button class="cmd-btn" id="newProcBtn" type="button">+ New process</button>
           <div class="new-wrap" id="newWrap">
-            <input class="board-search" id="boardSearch" type="search" placeholder="Search by name" autocomplete="off" aria-haspopup="menu" aria-expanded="false">
+            <input class="board-search" id="boardSearch" type="search" placeholder="Search by name" autocomplete="off" aria-haspopup="menu" aria-expanded="false" aria-label="Search processes by name">
             <!-- LP directory results (2026-08-02, Noa: don't bury Increase/Withdrawal
                  search behind the NEW menu; redesigned as a floating popover so it
                  never shoves the board below it - .new-wrap is already
@@ -3593,26 +3623,45 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           </div>
           <div id="wlAwaiting" style="margin-top:16px"></div>
           <div id="wlRows" style="margin-top:16px"></div>
+          <!-- Findings sit ABOVE the buttons on purpose. They used to render
+               below, so Review armed Generate and the operator's pointer was
+               already past the warnings she had been told to read before
+               signing (2026-08-26 review, finding 7). -->
+          <div id="wlFindings" role="status" aria-live="polite" aria-label="Review findings" style="margin-top:12px"></div>
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button id="wlReviewBtn" class="btn">Review</button>
-            <button id="wlGenerateBtn" class="btn" disabled>Generate</button>
-            <button id="wlVerifyBtn" class="btn">Verification copy</button>
+            <button id="wlGenerateBtn" class="btn" disabled>Generate + settle</button>
+            <button id="wlVerifyBtn" class="btn btn-quiet">Verification copy</button>
             <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
-            <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
+          </div>
+          <!-- Why the gate note exists: the disabled Generate button had no
+               :disabled style and no adjacent copy, so a closed gate looked
+               exactly like an open one (2026-08-26 review, findings 1 and 9). -->
+          <div id="wlGateNote" role="status" aria-live="polite" style="margin-top:8px;font-size:var(--text-xs);color:var(--color-ink-sub)"></div>
+          <!-- Generate is NOT a preview: it stamps SETTLED_AT and advances
+               EXECUTION_STATUS to a terminal value on every row of the batch.
+               Void, which only stops signer links, has had a confirm since
+               2026-07; the ledger write had none. -->
+          <div id="wlConfirm" hidden style="margin-top:10px;padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--color-danger);background:var(--color-danger-bg)">
+            <div id="wlConfirmMsg" style="font-size:var(--text-sm);color:var(--color-ink)"></div>
+            <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+              <button id="wlConfirmGo" class="btn" type="button">Settle</button>
+              <button id="wlConfirmCancel" class="btn" type="button">Cancel</button>
+            </div>
+          </div>
+          <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
               <span style="color:var(--color-ink)">Letter template</span>
               &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
               &nbsp;<input id="tplWidths" type="text" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
               <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
-            </div>
           </div>
-          <div id="wlFindings" style="margin-top:12px"></div>
-          <div id="wlResult" style="margin-top:12px"></div>
+          <div id="wlResult" role="status" aria-live="polite" aria-label="Transfer form result" style="margin-top:12px"></div>
         </div>
 
         <details id="tfCorrections" style="max-width:900px;margin-top:var(--space-4)">
-          <summary style="cursor:pointer;font-size:var(--text-sm);color:var(--color-ink-muted);padding:10px 0;list-style:none">
-            Corrections
+          <summary style="cursor:pointer;font-size:var(--text-sm);color:var(--color-ink);padding:10px 0;list-style:none">
+            <span aria-hidden="true" style="display:inline-block;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px;vertical-align:middle"></span>Corrections
             <span style="color:var(--color-ink-faint)">&nbsp;for a row the flow could not produce</span>
           </summary>
           <div style="font-size:var(--text-xs);color:var(--color-ink-muted);margin:0 0 12px;line-height:1.7">
@@ -3632,6 +3681,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <div class="mr-field">
               <label>Type</label>
               <select id="mrType">
+                <option value="">Pick a type</option>
                 <option value="Redemption">Redemption</option>
                 <option value="Join">Join</option>
                 <option value="Increase">Increase</option>
@@ -3649,7 +3699,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div class="mr-section-lbl">Transaction</div>
           <div class="mr-field mr-optional">
             <label>Amount (optional)</label>
-            <input id="mrAmount" type="text" placeholder="להשלים מהנאב">
+            <input id="mrAmount" type="text" inputmode="decimal" placeholder="להשלים מהנאב">
           </div>
           <div class="mr-field mr-optional" style="margin-top:12px">
             <label>Bank details (optional)</label>
@@ -3663,7 +3713,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div style="margin-top:14px">
             <button id="mrAddBtn" class="btn">Add row</button>
           </div>
-          <div id="mrResult" style="margin-top:12px"></div>
+          <div id="mrResult" role="status" aria-live="polite" aria-label="Manual row result" style="margin-top:12px"></div>
         </div>
 
         <div class="set-card tf-card" style="max-width:900px;margin-top:var(--space-4)">
@@ -3698,7 +3748,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div style="margin-top:14px">
             <button id="sraSetBtn" class="btn">Fill amount</button>
           </div>
-          <div id="sraResult" style="margin-top:12px"></div>
+          <div id="sraResult" role="status" aria-live="polite" aria-label="Result" style="margin-top:12px"></div>
         </div>
 
         <div class="set-card" style="max-width:900px;margin-top:20px">
@@ -3725,7 +3775,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div style="margin-top:14px">
             <button id="sbdSetBtn" class="btn">Fill bank details</button>
           </div>
-          <div id="sbdResult" style="margin-top:12px"></div>
+          <div id="sbdResult" role="status" aria-live="polite" aria-label="Result" style="margin-top:12px"></div>
         </div>
         </details>
       </div>
@@ -4007,7 +4057,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-2-review-fixes';
+  window.__BUILD_TAG = 'console-2026-08-26-3-settle-gate';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -5369,7 +5419,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Small inline popover anchored under the clicked .rnote button - lowest
   // friction, matches nothing else in this file needing a modal system.
   // Operator-private: never rendered anywhere an LP could see it.
-  function closeAnyNotePopover(){ var ex=document.querySelector('.rnote-pop'); if(ex) ex.remove(); }
+  // Was: remove unconditionally, so ANY outside click silently discarded typed
+// text with no warning (2026-08-26 review, finding 12). A dirty popover now
+// survives an outside click; Escape and Cancel are the ways out.
+function closeAnyNotePopover(force){
+  var ex=document.querySelector('.rnote-pop'); if(!ex) return;
+  var ta=ex.querySelector('textarea');
+  var dirty=ta&&String(ta.value||'')!==String(ex.getAttribute('data-orig')||'');
+  if(dirty&&!force) return;
+  ex.remove();
+}
+// Escape closes it even when dirty, and is the documented way out. The global
+// Escape handler never knew this popover existed (finding 24).
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var ex=document.querySelector('.rnote-pop');
+  if(ex){e.stopPropagation();closeAnyNotePopover(true);}
+},true);
   function toggleNotePopover(btn){
     var wasOpenForThisBtn=btn.parentNode&&btn.parentNode.querySelector('.rnote-pop');
     closeAnyNotePopover();
@@ -5377,6 +5443,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var pid=btn.getAttribute('data-pid'); if(!pid) return;
     var rowBase=btn.getAttribute('data-base')||GW;
     var pop=document.createElement('div'); pop.className='rnote-pop';
+    pop.setAttribute('role','dialog'); pop.setAttribute('aria-label','Operator note');
+    pop.setAttribute('data-orig', btn.getAttribute('data-note')||'');
     pop.innerHTML='<textarea maxlength="240" placeholder="Private note (not visible to LPs)">'+esc2(btn.getAttribute('data-note')||'')+'</textarea>'
       +'<div class="rnote-pop-actions"><span class="rnote-count"></span><button type="button" class="rnote-clear">Clear</button><button type="button" class="rnote-save">Save</button></div>';
     btn.parentNode.style.position='relative';
@@ -5387,6 +5455,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     ta.oninput=updCount; updCount(); ta.focus();
     pop.querySelector('.rnote-save').onclick=function(e){
       e.stopPropagation();
+      var saveBtn=pop.querySelector('.rnote-save');
+      if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Saving...';}
       apiFetch('?admin=saveNote&processId='+encodeURIComponent(pid)+'&text='+encodeURIComponent(ta.value),false,rowBase).then(function(r){
         var text=(r&&r.text)||'';
         btn.setAttribute('data-note',text);
@@ -5396,7 +5466,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(text&&!dot){btn.insertAdjacentHTML('beforeend','<span class="rnote-dot"></span>');}
         else if(!text&&dot){dot.remove();}
         pop.remove();
-      }).catch(function(){ pop.remove(); });
+      }).catch(function(err){
+        // A FAILED save used to close the popover exactly like a successful one,
+        // so the operator walked away believing the note landed, and the typed
+        // text was gone (2026-08-26 review, finding 12). Stay open, say so.
+        if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save';}
+        var e2=pop.querySelector('.rnote-err')||document.createElement('div');
+        e2.className='rnote-err';
+        e2.style.cssText='margin-top:6px;font-size:11px;color:var(--color-danger)';
+        e2.textContent='Could not save'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,70)):'. Your note is still here, try again.');
+        if(!e2.parentNode)pop.appendChild(e2);
+      });
     };
     pop.querySelector('.rnote-clear').onclick=function(e){
       e.stopPropagation();
@@ -5852,7 +5932,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       render(rows);
-      if(latestGeneratedAt){var t=latestGeneratedAt.replace('T',' ').slice(0,16);var vl=document.getElementById('ver-line');if(vl)vl.textContent='synced · '+t;}
+      if(latestGeneratedAt){
+        var t=latestGeneratedAt.replace('T',' ').slice(0,16);
+        var vl=document.getElementById('ver-line');
+        if(vl){
+          // Absolute-only meant the operator had to diff the stamp against her
+          // own clock to notice a dead cron, on the ONLY live view of in-flight
+          // money (2026-08-26 review, finding 16).
+          var age=sinceDur(latestGeneratedAt);
+          var stale=false;
+          try{ stale=(Date.now()-Date.parse(latestGeneratedAt))>6*3600000; }catch(e){}
+          vl.textContent='synced '+(age?(age+' ago'):('· '+t));
+          vl.title='Last synced '+t;
+          vl.style.color=stale?'var(--color-danger)':'';
+          if(stale)vl.textContent='last synced '+age+' ago · the board may be stale';
+        }
+      }
     }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
       // C5 (2026-07-19): the board error state gets an in-place Retry and the real
       // cause in small print, instead of a dead-end "refresh or check auth" guess.
@@ -6395,7 +6490,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         ];
       },
       validate:function(v){
-        if(!v.email||v.email.indexOf('@')===-1)return 'A valid email is required.';
+        // Was `indexOf('@')===-1`, so `a@b` passed and the signing link
+        // redirected to it (2026-08-26 review, finding 13). Same shape the
+        // board search already uses.
+        if(!v.email||!/^\S+@\S+\.\S+$/.test(v.email))return 'A valid email address is required, for example name@firm.co.il.';
         if(!v.firstName&&!v.lastName)return 'A name is required.';
         return '';
       },
@@ -6757,7 +6855,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var dactHtml = '<div class="dact">'+dactInner
       + '<div class="dact-confirm" id="dactConfirm" hidden>'
       +   '<span class="dac-msg" id="dacMsg"></span>'
-      +   '<div class="dac-btns"><button type="button" class="dac-cancel" id="dacCancel">Cancel</button><button type="button" class="dac-go" id="dacGo"></button></div>'
+      +   '<div class="dac-btns"><button type="button" class="dac-cancel" id="dacCancel">Cancel</button><button type="button" class="dac-go" id="dacGo" aria-describedby="dacMsg"></button></div>'
       + '</div>'
       + '<div class="dact-status" id="dactStatus" role="status" aria-live="polite" hidden></div>'
       + '</div>';
@@ -7084,10 +7182,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
     var ACT_CONFIRM={
+      // The message used to name no LP at all, and this strip renders at the
+      // BOTTOM of a long scrolled drawer, far from the header carrying the name
+      // (2026-08-26 review, finding 11). dactWho_ is filled at arm time.
       void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
       reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'},
       markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'}
     };
+    // Whoever the drawer is currently about, for the confirm copy.
+    var dactWho_=(function(){
+      var n=(d&&(d.displayName||d.name))?String(d.displayName||d.name).trim():'';
+      var amt=(d&&d.fields)?fmtAmount(d.fields.investmentAmount,d.fields.investmentCurrency):'';
+      return n?(n+(amt?(', '+amt):'')):'';
+    })();
     var confEl=document.getElementById('dactConfirm'),msgEl=document.getElementById('dacMsg'),
         goEl=document.getElementById('dacGo'),cancelEl=document.getElementById('dacCancel'),
         statusEl=document.getElementById('dactStatus');
@@ -7152,11 +7259,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         var c=ACT_CONFIRM[act];if(!c||!confEl)return;
         if(dactBusy)return; // an action is already running; do not re-arm mid-flight
         pendingAct=act;dStatus('',null);
-        msgEl.textContent=c.msg;
+        // Name WHO. "Void this process?" at the foot of a scrolled drawer said
+        // nothing about which LP was about to lose their signer links.
+        msgEl.textContent=(dactWho_&&c.danger)?(c.msg.replace(/^Void this process\?/,'Void '+dactWho_+'?')):c.msg;
         goEl.textContent=c.cta;goEl.className='dac-go'+(c.danger?' danger':'');
         goEl.disabled=false;cancelEl.disabled=false;
         confEl.hidden=false;
-        goEl.focus();
+        // Focus CANCEL, not Go. Focusing the destructive button meant Enter to
+        // arm, Enter again out of habit, process gone (2026-08-26 finding 11).
+        if(cancelEl)cancelEl.focus(); else goEl.focus();
       };
     });
     if(cancelEl)cancelEl.onclick=function(){dHideConfirm();};
@@ -8214,10 +8325,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return yr+'-'+(mo<10?'0':'')+mo;
     }
     var WL_MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    // A REAL month, not just four digits, a dash and two digits. The old test
+    // was the bare shape, so 1999-13 passed the Review guard AND the Generate
+    // guard, reached the server, and rendered back to the operator as
+    // "Verified against the undefined 1999 close" - WL_MONTH_NAMES_[12] is
+    // undefined (2026-08-26 review, finding 6).
+    function wlValidNavMonth(v){
+      var m=/^(\d{4})-(\d{2})$/.exec(String(v||'').trim());
+      if(!m)return false;
+      var yr=parseInt(m[1],10),mo=parseInt(m[2],10);
+      return mo>=1&&mo<=12&&yr>=2000&&yr<=2100;
+    }
     function wlMonthWords(ym){
       var m=/^(\d{4})-(\d{2})$/.exec(String(ym||''));
       if(!m)return ym||'';
-      return WL_MONTH_NAMES_[parseInt(m[2],10)-1]+' '+m[1];
+      var name=WL_MONTH_NAMES_[parseInt(m[2],10)-1];
+      return name?(name+' '+m[1]):(ym||'');
     }
     // The value actually sent: an explicit override if the operator typed one,
     // otherwise the derived prior close. Never empty, so the server-side
@@ -8225,7 +8348,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     function wlEffectiveNavMonth(){
       var el=document.getElementById('wlNavMonth');
       var v=(el&&el.value||'').trim();
-      if(v)return /^\d{4}-\d{2}$/.test(v)?v:'';
+      if(v)return wlValidNavMonth(v)?v:'';
       return wlPrevMonthOf(monthEl&&monthEl.value);
     }
     function wlRenderNavLine(){
@@ -8234,10 +8357,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var eff=wlEffectiveNavMonth();
       var el=document.getElementById('wlNavMonth');
       var overridden=!!(el&&(el.value||'').trim());
+      // If the OVERRIDE is what is malformed, say so against the override.
+      // Blaming the Month select, which is correctly set, sent the operator to
+      // the wrong control.
+      if(!eff&&overridden){
+        lineEl.innerHTML='<span style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</span>';
+        return;
+      }
       lineEl.innerHTML=eff
         ? 'Verified against the <span style="color:var(--color-ink)">'+esc2(wlMonthWords(eff))+'</span> close'
           +(overridden?' <span style="color:var(--color-ink-muted)">(overridden)</span>':'')
-        : '<span style="color:var(--color-danger)">Pick a month to derive the struck NAV.</span>';
+        : '<span style="color:var(--color-ink-muted)">Pick a month to derive the struck NAV.</span>';
     }
     function wlNavMonthQs(){
       var eff=wlEffectiveNavMonth();
@@ -8247,9 +8377,38 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     function wlNavMonthInvalid(){
       var el=document.getElementById('wlNavMonth');
       var v=(el&&el.value||'').trim();
-      return !!v && !/^\d{4}-\d{2}$/.test(v);
+      return !!v && !wlValidNavMonth(v);
     }
-    var lastGo=false,peekSeq=0,wlLastTransfers=null,awaitSeq=0;
+    // lastGo was a BOOLEAN, which is why the gate could go stale without
+    // closing (2026-08-26 review, finding 1). Review set it true; changing the
+    // Month, the Currency or the NAV override afterwards left it true, so
+    // Generate stayed armed and settled a batch nobody had reviewed. It is now a
+    // SNAPSHOT of the exact inputs that were reviewed. Generate builds its query
+    // from the snapshot, never from the live controls, and refuses if the two
+    // have diverged. Only the empty-month path used to clear it; every input
+    // now clears it.
+    var lastGo=null,peekSeq=0,wlLastTransfers=null,awaitSeq=0;
+    var gateNoteEl=document.getElementById('wlGateNote'),
+        confirmEl=document.getElementById('wlConfirm'),
+        confirmMsgEl=document.getElementById('wlConfirmMsg'),
+        confirmGoEl=document.getElementById('wlConfirmGo'),
+        confirmCancelEl=document.getElementById('wlConfirmCancel');
+    function wlDisarmConfirm(){ if(confirmEl)confirmEl.hidden=true; }
+    function wlInputs(){
+      var nm=document.getElementById('wlNavMonth');
+      return {month:(monthEl.value||'').trim(),currency:ccyEl.value,navMonth:(nm&&nm.value||'').trim()};
+    }
+    function wlSameInputs(a,b){
+      return !!a&&!!b&&a.month===b.month&&a.currency===b.currency&&a.navMonth===b.navMonth;
+    }
+    // One place that closes the gate, so a new input can never be added without
+    // it. Says WHY, because a silently dead button is the defect one level down.
+    function wlCloseGate(why){
+      lastGo=null;
+      if(genBtn)genBtn.disabled=true;
+      wlDisarmConfirm();
+      if(why&&gateNoteEl)gateNoteEl.textContent=why;
+    }
     function peekAwaiting(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){awaitEl.innerHTML='';return;}
@@ -8304,8 +8463,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var empty=!transfers||!transfers.length;
       if(reviewBtn)reviewBtn.disabled=empty;
       if(empty){
-        lastGo=false;
-        if(genBtn)genBtn.disabled=true;
+        wlCloseGate('Nothing to wire this month.');
         if(findEl)findEl.innerHTML='';
         rowsEl.innerHTML='<div style="padding:14px 0;font-size:var(--text-sm);color:var(--color-ink-muted)">'
           +'<span style="color:var(--color-ink)">Nothing to wire this month.</span><br>'
@@ -8313,6 +8471,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           +'</div>';
       }
     }
+    // Finding 8: both failure branches below used to leave lastGo and genBtn
+    // exactly as the last successful Review left them, so the operator saw
+    // "Could not load rows" beside a live Generate button.
     function peekRows(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
@@ -8320,13 +8481,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, GAS_ONLY_).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
         renderWlRows();
         wlApplyEmptyBatchState(r.transfers);
       }).catch(function(err){
         if(rid!==peekSeq)return;
         wlLastTransfers=null;
+        wlCloseGate('Rows could not be loaded. Review again before generating.');
         rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     }
@@ -8341,12 +8503,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }).catch(function(){
       monthEl.innerHTML='<option value="">Could not load months</option>';
     });
-    monthEl.onchange=function(){wlRenderNavLine();peekRows();peekAwaiting();};
-    ccyEl.onchange=peekRows;
+    // Every input that feeds the letter closes the gate. peekRows() alone did
+    // NOT: it only reset the gate when the newly picked month was empty, which
+    // is the one case where no money moves.
+    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlRenderNavLine();peekRows();peekAwaiting();};
+    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');peekRows();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
-    (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=wlRenderNavLine;})();
+    (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=function(){wlCloseGate('Struck-NAV month changed. Review again before generating.');wlRenderNavLine();};})();
     // Letter-template maintenance. Column widths, fonts and the total-row
     // wording are ALL inherited from the template document - docFill only
     // clones protoRow and never sets a width - so a cramped amount column has
@@ -8410,9 +8575,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     wlRenderNavLine();
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('Month must be MM/YYYY.','');return;}
-      if(wlNavMonthInvalid()){setResult('NAV month must be YYYY-MM. Clear it to use the tracker tab month.','');return;}
-      reviewBtn.disabled=true;genBtn.disabled=true;lastGo=false;
+      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Choose a month first.</div>','');return;}
+      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
+      reviewBtn.disabled=true;wlCloseGate('');
       findEl.innerHTML='<div style="color:var(--color-ink-muted)">Reviewing...</div>';
       setResult('','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, GAS_ONLY_).then(function(r){
@@ -8420,37 +8585,74 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
-          lastGo=false;genBtn.disabled=true;
+          wlCloseGate('Blocking findings. Generate stays off until they clear.');
           return;
         }
         if(!r.ok){findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(r.error||'Review failed.')+'</div>';return;}
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
-        lastGo=true;genBtn.disabled=false;
+        lastGo=wlInputs();lastGo.counts=r.counts||null;
+        genBtn.disabled=false;
+        if(gateNoteEl){
+          var c=r.counts;
+          gateNoteEl.textContent='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
+            +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
+            +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
+        }
       }).catch(function(err){
         reviewBtn.disabled=false;
         findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
+    // Generate ARMS a confirm; it no longer commits on the first click. The
+    // query is built from the REVIEWED SNAPSHOT, not from the live controls, so
+    // a control changed after Review cannot reach the server even if some future
+    // edit forgets to close the gate.
     genBtn.onclick=function(){
       if(!lastGo)return;
-      var month=(monthEl.value||'').trim();
-      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
-      genBtn.disabled=true;reviewBtn.disabled=true;
-      setResult('<div style="color:var(--color-ink-muted)">Generating...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&createDraft='+(draftEl.checked?'true':'false'), false, GAS_ONLY_).then(function(r){
-        genBtn.disabled=false;reviewBtn.disabled=false;
-        if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
-        var h='<div style="color:var(--color-green)">Candidate doc generated (labeled "not for sending" until the parallel diff is verified).</div>'
+      var now=wlInputs();
+      if(!wlSameInputs(lastGo,now)){
+        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        return;
+      }
+      var c=lastGo.counts;
+      confirmMsgEl.innerHTML='<strong>Settle '+(c?(c.total+' row'+(c.total===1?'':'s')):'this batch')+' on '+esc2(lastGo.month)+' ('+esc2(lastGo.currency)+')?</strong>'
+        +(c?('<br>Incoming '+c.incoming+', outgoing '+c.outgoing+'.'):'')
+        +'<br>This stamps SETTLED_AT and moves each row to a terminal execution status on the tracker. It cannot be undone from here.'
+        +(draftEl.checked?'<br>A covering email will also be drafted in Gmail (drafted, never sent).':'');
+      confirmEl.hidden=false;
+      confirmGoEl.focus();
+    };
+    if(confirmCancelEl)confirmCancelEl.onclick=function(){wlDisarmConfirm();};
+    function wlDoGenerate(){
+      if(!lastGo)return;
+      var snap=lastGo;
+      if(!wlSameInputs(snap,wlInputs())){
+        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        return;
+      }
+      wlDisarmConfirm();
+      genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
+      setResult('<div style="color:var(--color-ink-muted)">Generating and settling...</div>','');
+      var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, GAS_ONLY_).then(function(r){
+        reviewBtn.disabled=false;confirmGoEl.disabled=false;
+        if(!r||!r.ok){genBtn.disabled=false;setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
+        // Finding 4: this used to re-enable Generate and leave the gate open, so
+        // a second click returned the identical green message and the operator
+        // could not tell a fresh settle from a no-op.
+        wlCloseGate('Settled '+snap.month+'. Review again to re-run.');
+        var h='<div style="color:var(--color-green)">Rows settled on the tracker. The document itself is still labeled "not for sending" until the parallel diff is verified.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
         if(r.draftId)h+='<div style="margin-top:4px">Draft created in Gmail (id '+esc2(r.draftId)+').</div>';
         if(r.missingBankDetailsMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.missingBankDetailsMessage)+'</div>';
         if(r.overflowMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.overflowMessage)+'</div>';
         setResult(h,'');
       }).catch(function(err){
-        genBtn.disabled=false;reviewBtn.disabled=false;
+        genBtn.disabled=false;reviewBtn.disabled=false;confirmGoEl.disabled=false;
         setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
-    };
+    }
+    if(confirmGoEl)confirmGoEl.onclick=wlDoGenerate;
     // Verification copy (2026-08-12). Produces the real document for this month
     // and currency WITHOUT stamping settlement, so the retirement diff against
     // the old transfer-forms path can be run as often as it needs to without
@@ -8462,7 +8664,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(verifyBtn)verifyBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>','');return;}
-      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">NAV month must be YYYY-MM. Clear it to use the tracker tab month.</div>','');return;}
+      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
       verifyBtn.disabled=true;
       setResult('<div style="color:var(--color-ink-muted)">Generating verification copy (nothing will be settled)...</div>','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true', false, GAS_ONLY_).then(function(r){
@@ -8715,6 +8917,30 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // MESSAGES - lifecycle spine + node-detail panel
   // ============================================================
   var MSGS=null, curMsg=null, curLang="he";
+  // PRISTINE server copy, keyed key|lang. The dirty gate used to diff the editor
+  // against curMsg[curLang], but openMsg() calls captureEditor() FIRST, which
+  // writes the unsaved text into that very object. So editing a subject,
+  // switching message and switching back left the edit on screen with Save
+  // DISABLED, which reads as "saved" to any operator, while nothing had reached
+  // the server. Every LP email then kept going out with the old copy
+  // (2026-08-26 review, finding 3). Diff against this instead: it is only
+  // written when the server confirms.
+  var MSG_BASELINE={};
+  function msgBaselineKey_(key,lang){return String(key)+'|'+String(lang);}
+  function msgSetBaseline_(key,lang,subject,body){
+    MSG_BASELINE[msgBaselineKey_(key,lang)]={subject:subject||'',body:body||''};
+  }
+  function msgBaseline_(key,lang){
+    return MSG_BASELINE[msgBaselineKey_(key,lang)]||{subject:'',body:''};
+  }
+  function msgSeedBaselines_(list){
+    MSG_BASELINE={};
+    (list||[]).forEach(function(m){
+      ['he','en'].forEach(function(lang){
+        if(m&&m[lang])msgSetBaseline_(m.key,lang,m[lang].subject,m[lang].body);
+      });
+    });
+  }
   // Representative token fill so the preview reads like a real email. Block tokens
   // get sample copy (they are server-computed at send time).
   var SAMPLE_VARS={
@@ -8756,7 +8982,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(sp)sp.innerHTML=msgSkeleton();
     apiFetch('?api=messages&lane='+state.lane, false, consoleMessagesBase_()).then(function(d){
       if(rid!==MSG_SEQ)return;
-      MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];renderSpine();
+      MSGS=(d&&d.messages&&d.messages.length)?d.messages:[];msgSeedBaselines_(MSGS);renderSpine();
       // Default-select the first message so the editor + preview are never an empty half-screen.
       if(!curMsg){var f0=document.querySelector('#msgspine .node');if(f0)openMsg(f0.getAttribute('data-k'));}
     }).catch(function(){
@@ -8941,9 +9167,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var save=document.getElementById('m-save'), reset=document.getElementById('m-reset');
     var se=document.getElementById('m-sub'), be=document.getElementById('m-body');
     if(!save||!se||!be)return;
-    var L=curMsg[curLang]||{subject:'',body:''};
+    // Against the SERVER copy, never against curMsg, which captureEditor mutates.
+    var L=msgBaseline_(curMsg.key,curLang);
     var dirty=(edGet(se)!==(L.subject||''))||(edGet(be)!==(L.body||''));
     save.disabled=!dirty;
+    // Say it outright, so unsaved work never has to be inferred from a button.
+    var sv=document.getElementById('m-saved');
+    if(sv&&dirty&&sv.textContent!=='Saving...')sv.textContent='Unsaved changes';
+    if(sv&&!dirty&&sv.textContent==='Unsaved changes')sv.textContent='';
     if(reset)reset.disabled=(covState(curMsg,curLang)!=='custom');
   }
   // Friendly chip label = the token name, spaced + capitalised (safe formatting only,
@@ -9025,7 +9256,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var L2=curMsg[curLang]||(curMsg[curLang]={subject:'',body:''});
       L2.subject=sub;L2.body=body;L2.overridden=true;renderSpine();
       sv.textContent="Saving...";
-      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane, false, consoleMessagesBase_()).then(function(){sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(err){sv.textContent='Save failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
+      apiFetch('?admin=saveMessage&key='+encodeURIComponent(m.key)+'&lang='+curLang+'&subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)+'&lane='+state.lane, false, consoleMessagesBase_()).then(function(){msgSetBaseline_(m.key,curLang,sub,body);sv.textContent='Saved';refreshDirtyGate();renderSpine();}).catch(function(err){sv.textContent='Save failed'+((err&&err.serverError)?(': '+String(err.serverError).slice(0,80)):'');});
     };
     document.getElementById('m-reset').onclick=function(){
       if(document.getElementById('m-reset').disabled)return;

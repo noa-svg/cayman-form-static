@@ -657,5 +657,53 @@ function extractVarObj(name) {
     peopleAndCc.includes('<div class="person">') && !peopleAndCc.includes('sgr'));
 })();
 
+// ---- K15: the Transfer Form settle gate (2026-08-26 review, findings 1/4/8).
+// The gate was a BOOLEAN. Review set it true; changing the Month, the Currency
+// or the Struck-NAV override afterwards left it true, so Generate stayed armed
+// and would settle a batch nobody had reviewed. Only the empty-month path ever
+// closed it, which is the one case where no money moves. Proven live before the
+// fix: reviewing 07/2026 then switching to 08/2026 sent
+// monthTab=08/2026&currency=USD&navMonth=1999-13.
+// This is a ledger write: it stamps SETTLED_AT and advances EXECUTION_STATUS to
+// a terminal value on every row of the batch.
+(function () {
+  ok('K15 the gate holds the reviewed INPUTS, not a boolean',
+    /var lastGo=null,/.test(html) && /lastGo=wlInputs\(\);/.test(html));
+  ok('K15 there is exactly one function that closes the gate',
+    (html.match(/function wlCloseGate\(/g) || []).length === 1);
+  ['monthEl.onchange', 'ccyEl.onchange'].forEach(function (h) {
+    const m = html.indexOf(h);
+    ok('K15 ' + h + ' closes the gate', m > 0 && html.slice(m, m + 220).indexOf('wlCloseGate(') > 0);
+  });
+  ok('K15 the Struck-NAV override closes the gate',
+    /nm\.oninput=function\(\)\{wlCloseGate\(/.test(html));
+  ok('K15 a failed rows-peek closes the gate (it used to leave Generate live)',
+    (html.match(/wlCloseGate\('Rows could not be loaded/g) || []).length === 2);
+  // The belt to the braces: even if a future input forgets to close the gate,
+  // the settle must not be able to use it.
+  ok('K15 the settle refuses when the live inputs differ from the reviewed ones',
+    (html.match(/if\(!wlSameInputs\(/g) || []).length >= 2);
+  ok('K15 the settle query is built from the SNAPSHOT, not the live controls',
+    /encodeURIComponent\(snap\.month\)/.test(html) && /encodeURIComponent\(snap\.currency\)/.test(html));
+  ok('K15 Generate arms a confirm instead of committing on the first click',
+    /confirmEl\.hidden=false;/.test(html) && /confirmGoEl\.onclick=wlDoGenerate/.test(html));
+  ok('K15 the confirm states the consequence in the operator\'s own terms',
+    /stamps SETTLED_AT and moves each row to a terminal execution status/.test(html));
+  ok('K15 the button says what it does', />Generate \+ settle</.test(html));
+  ok('K15 a successful settle CLOSES the gate rather than re-arming',
+    /wlCloseGate\('Settled '\+snap\.month/.test(html));
+  // Finding 6: the NAV override guard was the bare digit shape, so 1999-13
+  // passed both guards, reached the server, and rendered back as
+  // "Verified against the undefined 1999 close".
+  const navValid = new Function(extractFn('wlValidNavMonth') + '; return wlValidNavMonth;')();
+  ok('K15 a real month is required, not four digits and two digits',
+    navValid('2026-07') === true && navValid('1999-13') === false && navValid('2026-00') === false);
+  ok('K15 the year must be plausible', navValid('0001-05') === false && navValid('2099-12') === true);
+  ok('K15 an empty or malformed override is rejected',
+    navValid('') === false && navValid('2026-7') === false && navValid('nope') === false);
+  // Finding 9: a disabled .btn had no rule at all, so a closed gate looked open.
+  ok('K15 a disabled .btn is visually distinct', /\.btn:disabled,\.btn\[disabled\]\{background:var\(--color-neutral-bg\)/.test(html));
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
