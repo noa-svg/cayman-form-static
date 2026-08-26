@@ -705,5 +705,101 @@ function extractVarObj(name) {
   ok('K15 a disabled .btn is visually distinct', /\.btn:disabled,\.btn\[disabled\]\{background:var\(--color-neutral-bg\)/.test(html));
 })();
 
+// ---- K16: modal shell, drawer registers, colour semantics (2026-08-26 items 1/3/4).
+(function () {
+  // Item 1. The overlays are modal now. There is NO app-shell wrapper in this
+  // file - #drawer and #panel are siblings of aside.side and div.main - so the
+  // inert marking has to cover THREE elements, and #tab-bar is the one that is
+  // easy to miss because it lives outside .main.
+  ok('K16 the shell-inert helper marks all three shell elements',
+    /var SHELL_SEL_=\['aside\.side','div\.main','#tab-bar'\];/.test(html));
+  ok('K16 it sets inert AND aria-hidden (inert alone is not universally supported)',
+    /setAttribute\('inert',''\)/.test(html) && /setAttribute\('aria-hidden','true'\)/.test(html));
+  // Every lifecycle point, including the one that bypasses close()/dclose().
+  ['function open(){', 'function close(){', 'function dclose(){'].forEach(function (fn) {
+    const i = html.indexOf(fn);
+    ok('K16 ' + fn + ' toggles the shell', i > 0 && /setShellInert\(/.test(html.slice(i, i + 700)));
+  });
+  ok('K16 openDrawer marks the shell inert',
+    /drawer\.classList\.add\("on"\); document\.body\.style\.overflow='hidden'; setShellInert\(true\)/.test(html));
+  ok('K16 signOut clears it, or the shell stays inert behind the login screen',
+    /try\{setShellInert\(false\);\}catch\(e\)\{\}/.test(html));
+  ok('K16 both overlays carry dialog semantics',
+    (html.match(/role="dialog" aria-modal="true"/g) || []).length === 2);
+  // The trap must filter on real visibility: syncPanelFields hides most of the
+  // create panel's 27 controls at any moment, and a selector-only trap parks
+  // focus on a hidden field.
+  // offsetParent alone is not enough: a visibility:hidden element still has one
+  // and is NOT focusable, so an offsetParent-only filter puts the trap's "last"
+  // element on something focus() silently refuses and Tab stops wrapping. Found
+  // in the keyboard walk, not in the code review.
+  ok('K16 the tab trap filters on real visibility, not just offsetParent',
+    /function trapCandidates_\(root\)/.test(html)
+    && /el\.offsetParent===null\)return false;/.test(html)
+    && /cs\.visibility==='hidden'/.test(html)
+    && /r\.width>0&&r\.height>0/.test(html));
+  // And the one no style check can catch: content inside a CLOSED <details>
+  // reports visibility:visible with a real rect, but the browser refuses focus.
+  // The panel's #langRow and the Transfer Form's #tfCorrections are both closed
+  // by default, so without this the trap's last element was unfocusable and Tab
+  // stopped wrapping. Found in the keyboard walk, not in review.
+  ok('K16 the trap skips content inside a closed <details>',
+    /el\.closest\('details:not\(\[open\]\)'\)\)return false;/.test(html));
+  ok('K16 the drawer history rows are keyboard-reachable',
+    /class="kv hist" data-pid="'\+esc2\(p\.processId\)\+'" tabindex="0" role="button"/.test(html));
+  ok('K16 and they answer Enter and Space like the board row does',
+    /rw\.onkeydown=function\(e\)\{if\(e\.key==='Enter'\|\|e\.key===' '\)/.test(html));
+
+  // Item 3. Two registers, applied by modifier class so .dsec h3 stays reusable.
+  ok('K16 the reference register exists', /\.dsec h3\.dsec-ref \{/.test(html));
+  // It must be QUIETER than the actionable heading but still outrank the body it
+  // labels. The first cut used --color-ink-muted, which put these headings below
+  // their own content (Also cc'd / Details / Timeline render their body in that
+  // same hue at a LARGER size) and took text from 18.42:1 to 3.84:1. ink-sub is
+  // 5.69:1 and stays above the body.
+  ok('K16 the reference register does not use the faint tone its own body uses',
+    !/\.dsec h3\.dsec-ref \{[^}]*--color-ink-muted/.test(html));
+  ok('K16 the reference register clears the contrast floor (ink-sub, 5.69:1)',
+    /\.dsec h3\.dsec-ref \{[^}]*color: var\(--color-ink-sub\)/.test(html));
+  ok('K16 outgoing and incoming transfer badges occupy the same box',
+    /\.wl-type-in\{border:1px solid transparent\}/.test(html));
+  // Parse the ACTUAL <h3> tags rather than searching for the word anywhere:
+  // "People", "Details" and "Documents" all appear in comments in this function.
+  const drawerSrc = extractFn('renderDrawer');
+  const headings = {};
+  const h3Re = /<h3(\s+class="([^"]*)")?>([A-Za-z][^'<+]*)/g;
+  let hm;
+  while ((hm = h3Re.exec(drawerSrc)) !== null) {
+    headings[hm[3].trim().replace(/\\'/g, "'")] = hm[2] || '';
+  }
+  ok('K16 all drawer headings were parsed', Object.keys(headings).length >= 8, Object.keys(headings).join('|'));
+  // Match on prefix: the cc heading is written 'Also cc\\'d' in the source, so its
+  // parsed label carries the backslash rather than the apostrophe.
+  const headingClass = (prefix) => {
+    const k = Object.keys(headings).filter((h) => h.indexOf(prefix) === 0)[0];
+    return k === undefined ? null : headings[k];
+  };
+  ['Signers', 'People', 'Also cc', 'Details', 'Timeline'].forEach(function (sec) {
+    const cls = headingClass(sec);
+    ok('K16 "' + sec + '" is a REFERENCE section',
+      cls !== null && cls.indexOf('dsec-ref') >= 0, JSON.stringify(cls));
+  });
+  ['Current signer', 'Quick links', 'Documents'].forEach(function (sec) {
+    ok('K16 "' + sec + '" stays ACTIONABLE',
+      sec in headings && (headings[sec] || '').indexOf('dsec-ref') === -1, JSON.stringify(headings[sec]));
+  });
+
+  // Item 4. Coral is attention. Routine outgoing money is not an alert, and an
+  // active tab is "you are here", not a warning.
+  ok('K16 the board flow chip is off coral', !/\.flowchip\.f-out \{ background: rgba\(216,94,76/.test(html));
+  ok('K16 the transfer-form outgoing badge moved with it',
+    !/\.wl-type-out\{background:rgba\(216,94,76/.test(html));
+  ok('K16 the active mobile tab uses the accent, not the alert colour',
+    /\.tab\.on \{ color: var\(--color-atrium\)/.test(html));
+  ok('K16 coral still carries the attention row and its fold group',
+    /\.row\.attn \{ box-shadow: inset 3px 0 0 0 var\(--color-coral\)/.test(html)
+    && /\.bfold \{ border-bottom: 2px solid var\(--color-coral\)/.test(html));
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

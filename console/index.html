@@ -1127,7 +1127,11 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   white-space: nowrap;
 }
 .flowchip.f-in  { background: rgba(46,133,64,0.12); color: var(--color-green); }
-.flowchip.f-out { background: rgba(216,94,76,0.14); color: var(--color-coral); }
+/* Was coral. Coral is the board's ATTENTION colour (row ground, row rule,
+   Needs-you tag, sidebar count, nav badge), and a routine outgoing withdrawal is
+   not an alert. The chip already says the literal word "Withdrawal", so
+   direction never needed the alert hue to carry it (2026-08-26 review, item 4). */
+.flowchip.f-out { background: var(--color-bg-hover); color: var(--color-ink); border: 1px solid var(--color-border); }
 .flowchip.f-neutral { background: var(--color-bg-hover); color: var(--color-ink-sub); }
 /* Status cell: plain-words stage + mini rail on line 1, waiting-on line 2. */
 .rstat { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -2280,6 +2284,32 @@ input:focus {
   font-weight: var(--weight-medium);
   color: var(--color-ink-muted);
 }
+/* DRAWER SECTION REGISTERS (2026-08-26 review, item 3). Every drawer heading
+   used to render at one weight, so Documents (which holds actions) and Timeline
+   (immutable history) carried identical visual weight, and both competed with
+   the data beneath them at full ink. Two registers now:
+     - ACTIONABLE, the default .dsec h3: Current signer, Quick links, Documents,
+       Links. Something on these sections can be done.
+     - REFERENCE, .dsec h3.dsec-ref: Signers, People, Also cc'd, Details,
+       Timeline. These are read, not acted on.
+   .recovs-lbl (600/10px/muted) was already this reference register; it is the
+   model the rest converges on rather than a new invention. */
+/* First cut of this register used --color-ink-muted at 600. Pixel pass caught
+   two things wrong with that, both mine:
+   1. It dropped these headings BELOW their own content. In Also cc'd, Details
+      and Timeline the body is 12-13px in that SAME ink-muted, so a 10px heading
+      in the same hue was the smallest and no darker than the thing it labels.
+      A heading that ranks under its own body is not a quieter heading, it is a
+      broken one.
+   2. It took text I touched from 18.42:1 to 3.84:1, under the 4.5 floor.
+   ink-sub (5.4:1) with 700 keeps the register genuinely quieter than the
+   actionable 11px/800 near-black, while still outranking the body beneath it. */
+.dsec h3.dsec-ref {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-ink-sub);
+}
+
 /* Signer state told by MATERIAL, not by tint (2026-08-25). "current" and
    "signed" were previously the same dot and the same lowercase word in two
    hues, so the roster's most important fact - which single person the process
@@ -2874,13 +2904,16 @@ body.side-coll .ss-lbl { display: none; }
     transition: color var(--dur-base) var(--ease-out);
   }
   .tab:active { transform: scale(0.94); }
-  .tab.on { color: var(--color-coral); background: transparent; }
+  /* Active tab is "you are here", which is the accent's job. It was coral, the
+     board's attention colour, so the current tab read as an alert and competed
+     with the real attention badge sitting on it (2026-08-26 review, item 4). */
+  .tab.on { color: var(--color-atrium); background: transparent; }
   .tab-icon {
     font-size: 15px; line-height: 1; display: block;
     padding: 5px 18px; border-radius: 100px;
     transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
   }
-  .tab.on .tab-icon { background: var(--color-coral-tint); color: var(--color-coral); }
+  .tab.on .tab-icon { background: var(--color-atrium-tint); color: var(--color-atrium); }
   .tab-lbl { font-size: 11px; font-weight: 500; letter-spacing: 0.01em; text-transform: none; line-height: 1; display: block; }
   .tab-badge {
     position: absolute;
@@ -3056,7 +3089,14 @@ body.side-coll .ss-lbl { display: none; }
 .wl-row-nm-en{font-weight:400;color:var(--color-ink-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;direction:ltr;text-align:left}
 .wl-type-badge{display:inline-block;padding:2px 8px;border-radius:var(--radius-pill);font-size:11px;font-weight:700}
 .wl-type-in{background:rgba(46,133,64,0.12);color:var(--color-green)}
-.wl-type-out{background:rgba(216,94,76,0.14);color:var(--color-coral)}
+/* Twin of .flowchip.f-out on the board, changed with it: an outgoing
+   redemption is routine money movement, not an alert. The badge already prints
+   the word (2026-08-26 review, item 4). */
+.wl-type-out{background:var(--color-bg-hover);color:var(--color-ink);border:1px solid var(--color-border)}
+/* Matching TRANSPARENT border so an outgoing badge and an incoming one occupy
+   the same box. .wl-row has no fixed height, so the border alone made a
+   Redemption row 1.5px taller than a Join row. */
+.wl-type-in{border:1px solid transparent}
 .wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
 .wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
 .wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
@@ -3816,10 +3856,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   </div>
 
   <div class="scrim" id="dscrim"></div>
-  <div class="panel" id="drawer"><button class="x" id="dclose" aria-label="Close">&times;</button><div id="dbody"></div></div>
+  <div class="panel" id="drawer" role="dialog" aria-modal="true" aria-label="Process details"><button class="x" id="dclose" aria-label="Close">&times;</button><div id="dbody"></div></div>
 
   <div class="scrim" id="scrim"></div>
-  <div class="panel" id="panel">
+  <div class="panel" id="panel" role="dialog" aria-modal="true" aria-label="New process">
     <button class="x" id="closeBtn" aria-label="Close">&times;</button>
     <h2 id="panelTitle">New process</h2>
     <div class="lead" id="panelLead">Creates the Monday item, emails the investor, and notifies the team.</div>
@@ -4057,7 +4097,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-3-settle-gate';
+  window.__BUILD_TAG = 'console-2026-08-26-4-modal-registers';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4876,6 +4916,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       var pn=document.getElementById('panel'),sc=document.getElementById('scrim');
       if(pn)pn.classList.remove('on');if(sc)sc.classList.remove('on');
       document.body.style.overflow='';
+      // Mirror the overlay teardown: signOut force-removes .on without going
+      // through close()/dclose(), so the shell would stay inert behind the
+      // login screen and nothing on it could be focused.
+      try{setShellInert(false);}catch(e){}
       allRows=[];W8=null;MSGS=null;curMsg=null;currentPid=null;
     }catch(e){}
   }
@@ -6259,6 +6303,71 @@ document.addEventListener('keydown',function(e){
     // create starts clean. Draft survives click-out/reopen/reload; only submit clears it.
     if(window.__clearCreateDraft)window.__clearCreateDraft();
   }
+  // ---------------------------------------------------------------------
+  // MODAL SHELL. The drawer and the create panel are overlays, but nothing
+  // behind them was ever made unreachable: with the drawer open the document
+  // had 139 tabbable elements, 21 of them inside the drawer, and the ten board
+  // rows behind the scrim kept role="button" tabindex="0". Tab past Void and
+  // you walked into invisible rows under the scrim; Enter there swapped the
+  // drawer to a different LP mid-confirm (2026-08-26 review, finding 14).
+  //
+  // There is no app-shell wrapper to mark: #drawer and #panel are SIBLINGS of
+  // aside.side and div.main, all direct children of <body>. So three elements
+  // get marked, not one, and nav#tab-bar is easy to miss because it lives
+  // outside .main. Both `inert` and `aria-hidden` are set: inert does the real
+  // work where supported, aria-hidden covers assistive tech regardless.
+  var SHELL_SEL_=['aside.side','div.main','#tab-bar'];
+  function setShellInert(on){
+    SHELL_SEL_.forEach(function(sel){
+      var el=document.querySelector(sel);
+      if(!el)return;
+      if(on){el.setAttribute('inert','');el.setAttribute('aria-hidden','true');}
+      else{el.removeAttribute('inert');el.removeAttribute('aria-hidden');}
+    });
+  }
+  // Tab candidates INSIDE an overlay. Filtered on real visibility, not just the
+  // selector: the create panel has 27 static controls and syncPanelFields hides
+  // most of them at any moment, so a selector-only trap parks focus on a hidden
+  // field and looks broken.
+  function trapCandidates_(root){
+    var sel='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    return Array.prototype.filter.call(root.querySelectorAll(sel),function(el){
+      if(el.hasAttribute('inert'))return false;
+      // Inside a CLOSED <details> (the panel's #langRow, the Transfer Form's
+      // #tfCorrections): the browser refuses focus there, but the element still
+      // reports visibility:visible with a non-zero rect, so no amount of style
+      // checking catches it. Without this the trap's "last" element was the
+      // English button in the collapsed language row, focus() silently no-opped
+      // and Tab stopped wrapping. Found in the keyboard walk.
+      if(el.closest&&el.closest('details:not([open])'))return false;
+      // offsetParent alone is NOT enough: a visibility:hidden element still has
+      // one, and is not focusable. The create panel has several (the result
+      // card and the fields syncPanelFields hides), so an offsetParent-only
+      // filter put the trap's "last" element on something focus() silently
+      // refuses, and Tab then failed to wrap. Caught in the keyboard walk.
+      if(el.offsetParent===null)return false;
+      var cs=window.getComputedStyle(el);
+      if(cs.visibility==='hidden'||cs.display==='none')return false;
+      var r=el.getBoundingClientRect();
+      return r.width>0&&r.height>0;
+    });
+  }
+  // One Tab handler for both overlays, bound once. Cycles within whichever
+  // overlay is open; does nothing when neither is.
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Tab')return;
+    var root=null;
+    if(panel&&panel.classList.contains('on'))root=panel;
+    else if(drawer&&drawer.classList.contains('on'))root=drawer;
+    if(!root)return;
+    var items=trapCandidates_(root);
+    if(!items.length){e.preventDefault();return;}
+    var first=items[0],last=items[items.length-1],act=document.activeElement;
+    if(!root.contains(act)){e.preventDefault();(e.shiftKey?last:first).focus();return;}
+    if(e.shiftKey&&act===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&act===last){e.preventDefault();first.focus();}
+  },true);
+
   function open(){
     panelOpener=document.activeElement;
     // Preserve in-progress entries across an accidental close/reopen. Only the result
@@ -6269,9 +6378,9 @@ document.addEventListener('keydown',function(e){
     // Rehydrate any persisted draft for this lane+process (survives reload/crash).
     if(window.__restoreCreateDraft)window.__restoreCreateDraft();
     updateCreateCta();
-    scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
+    scrim.classList.add("on");panel.classList.add("on");document.body.style.overflow='hidden';setShellInert(true);setTimeout(function(){var f=document.getElementById("name");if(f)f.focus();},150);
   }
-  function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
+  function close(){scrim.classList.remove("on");panel.classList.remove("on");document.body.style.overflow='';setShellInert(false);if(panelOpener&&panelOpener.focus){try{panelOpener.focus();}catch(e){}}panelOpener=null;}
   document.getElementById("closeBtn").onclick=close;
   scrim.onclick=close;
   // Onboarding menu (2026-08-02: the standalone "New" button that used to open
@@ -6351,7 +6460,7 @@ document.addEventListener('keydown',function(e){
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
   var drawerOpener=null;
-  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
   // desktop sidebar collapse
   (function(){
@@ -6889,7 +6998,7 @@ document.addEventListener('keydown',function(e){
     if(d.signers&&d.signers.length){
       // X of Y off the run record when present (signersDone/signersPlanned).
       var sxy=(d.signersDone!=null&&d.signersPlanned)?(' <span class="frac">- '+esc2(d.signersDone+' of '+d.signersPlanned+' signed')+'</span>'):'';
-      h+='<div class="dsec"><h3>Signers'+sxy+'</h3>';
+      h+='<div class="dsec"><h3 class="dsec-ref">Signers'+sxy+'</h3>';
       d.signers.forEach(function(s){
         var stc=(s.state==='done')?' is-done':(s.state==='current'?' is-current':'');
         var ts=signerTsLine(s);
@@ -6904,7 +7013,7 @@ document.addEventListener('keydown',function(e){
     } else if(d.people&&d.people.length){
       // Pre-submit there is no signing roster yet; show who was invited
       // (review P1 #6: d.people was returned by the server but never rendered).
-      h+='<div class="dsec"><h3>People</h3>';
+      h+='<div class="dsec"><h3 class="dsec-ref">People</h3>';
       d.people.forEach(function(p){
         h+='<div class="person"><div class="pn-wrap"><div class="pn">'+esc2(p.name||'?')+'</div><div class="pe">'+esc2(p.email||'')+'</div></div><div class="pright"><span class="pr">'+esc2(p.roleLabel||p.role||'')+'</span></div></div>';
       });
@@ -6915,7 +7024,7 @@ document.addEventListener('keydown',function(e){
     // is only the addresses on the thread that AREN'T a named party - the
     // family-office cc and the standing operator cc - so nothing repeats.
     if(d.commsExtra&&d.commsExtra.length){
-      h+='<div class="dsec"><h3>Also cc\'d</h3>';
+      h+='<div class="dsec"><h3 class="dsec-ref">Also cc\'d</h3>';
       d.commsExtra.forEach(function(c){
         h+='<div class="person"><div class="pn-wrap"><div class="pe">'+esc2(c.email||'')+'</div></div><div class="pright"><span class="pr">'+esc2(c.label||'')+'</span></div></div>';
       });
@@ -6963,7 +7072,7 @@ document.addEventListener('keydown',function(e){
     }
     if(d.links&&d.links.length){h+='<div class="dsec"><h3>Links</h3>';d.links.forEach(function(l){h+='<div class="dlink"><a class="lk" href="'+esc2(l.url)+'" target="_blank" rel="noopener">'+esc2(l.label||l.url)+'</a><button class="cp" data-c="'+esc2(l.url)+'">Copy</button></div>';});h+='</div>';}
     if(d.fields||d.createdAt||d.updatedAt){
-      h+='<div class="dsec"><h3>Details</h3>';
+      h+='<div class="dsec"><h3 class="dsec-ref">Details</h3>';
       if(d.fields){
         // 2026-07-19: investmentAmount/investmentCurrency used to dump as two
         // bare raw fields ("Investment Amount: 250000", "Investment Currency:
@@ -6993,7 +7102,7 @@ document.addEventListener('keydown',function(e){
     // Stage timeline (wiring item 1): the real state-log events (findStateRows_
     // server-side), newest last. Compact; capped server-side at the last 12.
     if(d.events&&d.events.length){
-      h+='<div class="dsec"><h3>Timeline</h3>';
+      h+='<div class="dsec"><h3 class="dsec-ref">Timeline</h3>';
       collapseEvents(d.events).forEach(function(r){
         // A run of the same event is ONE line with its span, not N lines
         // saying the same word (2026-08-25: twelve consecutive "In progress"
@@ -7341,7 +7450,7 @@ document.addEventListener('keydown',function(e){
           var label=FLOW_LABEL[p.flowType]||p.flowType||'Process';
           var dot=STAGE_DOT[p.currentStage]||'var(--color-amber)';
           var when=p.daysAgo!=null?(p.daysAgo===0?'today':p.daysAgo+'d ago'):'';
-          rows+='<div class="kv hist" data-pid="'+esc2(p.processId)+'" style="cursor:pointer;border-radius:6px;padding: 4px 8px;transition:background .12s">'
+          rows+='<div class="kv hist" data-pid="'+esc2(p.processId)+'" tabindex="0" role="button" style="cursor:pointer;border-radius:6px;padding: 4px 8px;transition:background .12s">'
             +'<span class="k" style="display:flex;align-items:center;gap: 8px"><span style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;display:inline-block"></span>'+esc2(label)+'</span>'
             +'<span class="v" style="display:flex;align-items:center;gap: 8px"><span style="color:var(--color-ink-muted)">'+esc2(stageMilestone(p.currentStage))+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
             +'</div>';
@@ -7350,14 +7459,19 @@ document.addEventListener('keydown',function(e){
         el.style.opacity='1';
         // F12: no value ever flows into executable JS; data-pid + listener instead of inline onclick.
         Array.prototype.forEach.call(el.querySelectorAll('.kv.hist[data-pid]'),function(rw){
-          rw.onclick=function(){var p2=rw.getAttribute('data-pid');if(p2)openDrawer(p2);};
+          // Same idiom as the board row (see the #list .row wiring): click AND
+          // Enter/Space. These were onclick-only, so a keyboard operator could
+          // see them and never reach them.
+          var go=function(){var p2=rw.getAttribute('data-pid');if(p2)openDrawer(p2);};
+          rw.onclick=go;
+          rw.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};
         });
       }).catch(function(){var el=document.getElementById('dhist');if(el)el.remove();});
     }
   }
   function openDrawer(pid){
     if(!drawer.classList.contains("on"))drawerOpener=document.activeElement;
-    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden';
+    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
     // Instant header from the board row already in memory (Noa 2026-07-20: the
     // drawer "takes forever to load"). The GAS round-trip still runs, but the
     // panel opens showing WHO and WHERE immediately instead of a bare Loading.
