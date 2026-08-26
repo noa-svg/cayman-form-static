@@ -1401,6 +1401,17 @@ body.side-coll .ss-row.ss-total { display: none; }
 .w8readout .w8-x { color: var(--color-coral); }
 .w8readout .w8-g { color: var(--color-amber); }
 .w8readout .w8-sep { color: var(--color-ink-muted); font-weight: var(--weight-normal); }
+/* Provenance line: how many rows the engine dropped before counting. Quiet,
+   below the counts, because it explains them rather than competing with them. */
+.w8readout .w8-line3 {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  /* ink-sub (5.69:1), not ink-muted (3.84:1). Third time today I reached for
+     the faint tone on text that has to be read; it is quiet enough at 12px
+     without going under the contrast floor. */
+  color: var(--color-ink-sub);
+  margin-top: 2px;
+}
 .w8readout .w8-line2 {
   font-size: 13px;
   color: var(--color-ink-muted);
@@ -4102,7 +4113,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-5-w8-openable';
+  window.__BUILD_TAG = 'console-2026-08-26-6-w8-test-rows';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -4606,7 +4617,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // "<processId>:<role>" in `name`, and this fixture's real human names meant
     // every local run of the W-8 tab looked correct. A fixture prettier than
     // production hides exactly the bug it should surface.
-    if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},due:[
+    if(qs.indexOf('?api=w8renewals')===0) return {counts:{valid:18,expiring:3,expired:2},testExcluded:74,due:[
       {name:'Daniel Rosen',processId:'p1',lane:'cayman',variant:'W-8BEN',status:'expired',expiry:'2026-05-30'},
       {name:'מ ארקין בעמ',processId:'p2',lane:'israeli',variant:'W-8BEN-E',status:'expired',expiry:'2026-06-12'},
       {name:'Helena Brandt',processId:'p3',lane:'cayman',variant:'W-8BEN-E',status:'expiring',expiry:'2026-07-22'},
@@ -8304,12 +8315,21 @@ document.addEventListener('keydown',function(e){
     // ONE weighted readout reading the same counts. When nothing is due, read
     // "All current" in ink with no coral / no second line (no false alarm).
     var ro=document.getElementById("w8readout");
+    // ju-service excludes test processes from these counts since 2026-08-26.
+    // Say so on the surface: before that filter this readout was reporting 99
+    // records as if they were the real corpus when 74 of them were nightly
+    // proof rows, and a number that silently got smaller is its own puzzle.
+    // Older engines send no testExcluded at all, so the note simply does not
+    // render there rather than claiming zero.
+    var te=(typeof d.testExcluded==='number')?d.testExcluded:null;
+    var teNote=(te&&te>0)?('<div class="w8-line3">'+te+' test row'+(te===1?'':'s')+' excluded</div>'):'';
     if(x===0&&g===0){
-      ro.innerHTML='<div class="w8-line1">All current</div>';
+      ro.innerHTML='<div class="w8-line1">All current</div>'
+        +'<div class="w8-line2">'+v+' current</div>'+teNote;
     } else {
       ro.innerHTML='<div class="w8-line1"><span class="w8-x">'+x+' expired</span>'
         +'<span class="w8-sep"> · </span><span class="w8-g">'+g+' expiring</span></div>'
-        +'<div class="w8-line2">'+v+' current</div>';
+        +'<div class="w8-line2">'+v+' current</div>'+teNote;
     }
     // Group + sort: EXPIRED on top (most-overdue first), then EXPIRING (soonest first).
     var due=(d.due||[]).map(function(r){var dl=w8DaysLeft(r.expiry);return {r:r,days:dl};});

@@ -837,5 +837,24 @@ function extractVarObj(name) {
     && laneNorm('cayman') === 'cayman' && laneNorm('') === '' && laneNorm(undefined) === '');
 })();
 
+// ---- K18: the W-8 readout says what it excluded (2026-08-26).
+// ju-service now drops test processes from the W-8 counts. Production held 99
+// records of which 74 were nightly-proof rows, so those counts are about to get
+// much smaller; a number that silently shrinks is its own puzzle.
+(function () {
+  ok('K18 the readout renders the exclusion note when the engine reports one',
+    /var te=\(typeof d\.testExcluded==='number'\)\?d\.testExcluded:null;/.test(html)
+    && /test row'\+\(te===1\?'':'s'\)\+' excluded/.test(html));
+  ok('K18 an engine that sends NO testExcluded shows no note rather than claiming zero',
+    /var teNote=\(te&&te>0\)\?/.test(html));
+  ok('K18 the note clears the contrast floor (ink-sub, not the faint tone)',
+    /\.w8readout \.w8-line3 \{[\s\S]*?color: var\(--color-ink-sub\)/.test(html)
+    && !/\.w8readout \.w8-line3 \{[^}]*--color-ink-muted/.test(html));
+  ok('K18 the current count is shown even when nothing is due',
+    /'<div class="w8-line1">All current<\/div>'\s*\+'<div class="w8-line2">'\+v\+' current<\/div>'\+teNote/.test(html));
+  ok('K18 the demo fixture carries testExcluded, so the note path is exercised locally',
+    /testExcluded:74/.test(html));
+})();
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
