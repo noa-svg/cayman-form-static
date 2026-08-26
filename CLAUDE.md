@@ -41,8 +41,26 @@ repo's full pre-push gate and pushed clean, and the breakage only surfaced when
 ju-cayman's suite was run for an unrelated reason.
 
 **After any push that touches a vendored file, copy it across and commit that in the
-mono repo** (on the branch ju actually ships from, currently
-`drift-guards-doc-assertions-coverage-floor`, NOT `main`):
+mono repo.** CORRECTED 2026-08-26: this used to name
+`drift-guards-doc-assertions-coverage-floor` as the branch ju ships from. It is not,
+and the identical stale claim in `apps/ju-cayman/CLAUDE.md` was corrected the same
+day (`7081f07`) after it was found to carry ZERO of the ten functions live on
+2026-08-24.
+
+**Do not trust ANY branch name written in a doc, including a replacement.** There are
+TWO productions with independent lineages and both moved several times on
+2026-08-26 alone:
+- **ju-cayman** (GAS): read `?api=config` on the prod `/exec`. A build older than
+  `ac89682` answers the fallback literal `2026-07-15-hermetic` instead of a sha.
+- **ju-service** (Cloud Run): `curl 'https://ju-api.legacyvpartners.com/?api=config'`.
+
+Then `git merge-base --is-ancestor <that sha> HEAD` before you push or deploy, read
+in the SAME breath as the action, never from a value cached minutes earlier. On
+2026-08-26 ju-service prod read `57a9bde` at 15:55 and `b643bbd` at 16:10, and a
+ju-cayman deploy from a branch that forked on 2026-08-19 and never rejoined reverted
+34 commits in production, including the closure of unauthenticated diag routes.
+
+Vendor the snapshots onto whatever that check says is live:
 
 ```bash
 cp index.html israel.html <mono>/apps/ju-cayman/tests/form-snapshots/
