@@ -933,7 +933,14 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  /* ink-sub, not ink-muted: on the coral tint this label paints, ink-muted
+     measures 3.41:1 and ink-sub 5.06:1, both measured composited rather than
+     against the paper. Scoped to this one label, which this pass introduced. The
+     console's other 10px ink-muted headers are deliberately left alone: that
+     tone is Atrium's --ink-faint, locked to it by test/atrium-palette-sync.cjs
+     and used identically across 13 operator tools, so changing it HERE would
+     manufacture exactly the fleet drift that check exists to prevent. */
+  color: var(--color-ink-sub);
 }
 /* The fold is a closed group, not an open-ended header. Without the bottom
    rule the next attention row - same coral gutter, same coral tint, DIFFERENT
@@ -1128,7 +1135,16 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   color: var(--color-ink);
   white-space: nowrap;
 }
-.rword.warn { color: var(--color-coral); }
+/* --color-danger, not --color-coral. The attention row paints its own
+   --color-coral-tint ground, and coral-on-coral-tint measured 3.32:1 in the
+   2026-08-25 pixel pass: the status WORD of a row that needs her was the least
+   legible text on it. Danger red measures 5.35:1 on that same composited
+   ground (NOT the 5.76:1 it scores on the page paper: this text never sits on
+   the paper, and quoting the paper figure would repeat the exact mistake this
+   change fixes). It is already this console's semantic for a state that needs action. The coral
+   stays where it carries meaning without carrying text: the gutter bar, the
+   Needs-you tag and the fold rules. */
+.rword.warn { color: var(--color-danger); }
 .rword.muted { color: var(--color-ink-muted); font-weight: 600; }
 .rwait {
   font-size: var(--text-xs);
@@ -3984,7 +4000,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-25-1-recovery-component';
+  window.__BUILD_TAG = 'console-2026-08-26-1-attn-row-contrast';
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
