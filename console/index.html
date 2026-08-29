@@ -3925,7 +3925,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     <div id="classRow" style="display:none">
       <label id="segClassLbl">Entity classification <span class="opt">optional</span></label>
       <div class="seg" id="segClass" role="radiogroup" aria-labelledby="segClassLbl"><button data-v="active" role="radio" aria-checked="false">Active</button><button data-v="passive" role="radio" aria-checked="false">Passive</button></div>
-      <div class="hint">Leave unset if you're not sure - the LP's own form answer decides for real. Click a selected option again to clear it.</div>
+      <div class="hint">Leave unset if you're not sure. The LP's own form answer decides for real. Click a selected option again to clear it.</div>
     </div>
 
     <div id="manualLpFields">
@@ -6329,7 +6329,7 @@ document.addEventListener('keydown',function(e){
       // lane check classRow already uses a few lines up.
       var inviteWord=(state.lane==="israel")?"Hebrew invite":"invite";
       return lp
-        ? "Send creates the "+word+" request and emails the "+inviteWord+" to "+lp+", cc Omri."
+        ? "Send creates the "+word+" request and emails the "+inviteWord+" to "+lp+", cc Omri. You cannot unsend it."
         : "Pick the LP above. Send will create the "+word+" request and email them the "+inviteWord+", cc Omri.";
     }
     var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
@@ -6341,15 +6341,32 @@ document.addEventListener('keydown',function(e){
     if(state.lpKind==="existing"){
       if(!onbPickedItemId_())return "Pick the existing LP above. Without a pick the process would be created with no Monday record behind it, so Send stays off.";
       if(!transferAmountQs_())return "Enter the existing position and its currency from the administrator certificate. The subscription agreement prints that figure, so Send stays off until it is there.";
-      return "Send binds to the picked Monday LP (no new item), carries "+transferAmountText_()+" as the existing position, and emails the transfer invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+".";
+      return "Send binds to the picked Monday LP (no new item), carries "+transferAmountText_()+" as the existing position, and emails the transfer invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+". You cannot unsend it.";
     }
-    return "Send creates the Monday item, emails the invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+", and notifies the team.";
+    return "Send creates the Monday item, emails the invite to "+(em||"the investor")+(fo?(", cc "+fo):"")+", and notifies the team. You cannot unsend it.";
+  }
+  // The button names who it reaches (2026-08-29). The address is already read
+  // back above it; the name on the button is the last thing under the cursor at
+  // the moment of clicking, which is where a wrong pick is cheapest to notice.
+  function createCtaIdleLabel(){
+    var f=document.getElementById("name");
+    var nm=f?f.value.trim():"";
+    if(!nm){
+      var lp=state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name);
+      nm=lp||"";
+    }
+    return nm ? ("Send invite to "+nm) : "Send invite";
+  }
+  function createCtaIsIdle(b){
+    // Prefix, not equality: the label now varies with the name, and an equality
+    // check would silently stop managing disabled the moment a name was typed.
+    return String(b.textContent||"").indexOf("Send invite")===0;
   }
   function updateCreateCta(){
     var b=document.getElementById("createBtn");
     if(!b)return;
     // Never fight the in-flight submit states ("Creating..."/"Sending...").
-    if(b.textContent==="Send invite")b.disabled=!createFormValid();
+    if(createCtaIsIdle(b)){ b.disabled=!createFormValid(); b.textContent=createCtaIdleLabel(); }
     var ex=document.getElementById("ctaExplain");
     if(ex)ex.textContent=ctaExplainText();
   }
