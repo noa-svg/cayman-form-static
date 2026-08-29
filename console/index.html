@@ -2827,6 +2827,7 @@ input:focus {
 #side-collapse:hover { color: var(--color-sidebar-ink); border-color: var(--color-sidebar-ink-sub); }
 
 /* Collapsed state */
+.fo-hint-swap { color: var(--color-sidebar-ink, inherit); font-weight: 600; }
 body.side-coll .side { width: var(--sidebar-w-coll); }
 body.side-coll .brand .sub,
 body.side-coll .fundsw { display: none; }
@@ -3557,10 +3558,10 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <button id="side-collapse" aria-label="Collapse the sidebar" aria-expanded="true" title="Collapse the sidebar">&#171; collapse</button>
     </div>
     <nav>
-      <button class="nav on" data-view="board" aria-current="page"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
-      <button class="nav" data-view="messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
-      <button class="nav" data-view="w8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
-      <button class="nav" data-view="wireletter"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Transfer Form</span></button>
+      <button class="nav on" data-view="board" aria-current="page" title="Board"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
+      <button class="nav" data-view="messages" title="Messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
+      <button class="nav" data-view="w8" title="W-8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
+      <button class="nav" data-view="wireletter" title="Transfer Form"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Transfer Form</span></button>
     </nav>
     <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
          of data we need to see"). Filled from the SAME allRows the board already
@@ -3891,7 +3892,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <div class="proc-grid" id="procGrid" role="radiogroup" aria-label="Process kind">
         <button type="button" data-proc="subscription" role="radio" aria-checked="false"><span class="pg-t">Onboarding</span><span class="pg-s">New investor joins</span></button>
         <button type="button" data-proc="increase" role="radio" aria-checked="false"><span class="pg-t">Increase</span><span class="pg-s">Existing LP adds money</span></button>
-        <button type="button" data-proc="withdrawal" role="radio" aria-checked="false"><span class="pg-t">Withdrawal</span><span class="pg-s">Existing LP redeems</span></button>
+        <button type="button" data-proc="withdrawal" role="radio" aria-checked="false"><span class="pg-t">Redemption</span><span class="pg-s">Existing LP redeems</span></button>
       </div>
       <div id="procTypeRow">
         <label id="procTypeLbl">Applicant</label>
@@ -4812,11 +4813,39 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(idx>=0){foShareSelected.splice(idx,1);}
     else{
       var prefixes=foShareTokenPrefixes(entry.tokens);
+      // SAY WHAT WAS REPLACED (2026-08-29). The mutual-exclusion rule below is
+      // correct and has always been enforced, but it fired SILENTLY: picking
+      // Ashri33% removed an already-chosen Ashri25% with no feedback at all, so
+      // the only way to notice was to re-read the chip list. The rule was
+      // documented in grey hint text under the field, which is not where anyone
+      // looks at the moment it matters. Name the swap when it happens instead.
+      var dropped=foShareSelected.filter(function(c){return foShareSetsIntersect(foShareTokenPrefixes(c.tokens),prefixes);});
       foShareSelected=foShareSelected.filter(function(c){return !foShareSetsIntersect(foShareTokenPrefixes(c.tokens),prefixes);});
       foShareSelected.push(entry);
+      if(dropped.length){foShareNoteSwap(dropped.map(function(c){return c.label;}),entry.label);}
     }
     foShareRenderSel();foShareRenderList();
   }
+  // The swap notice. Replaces the static hint for a few seconds, then restores
+  // it, so the field still explains itself to someone who never triggers a swap.
+  var foShareHintDefault='';
+  var foShareNoteTimer=null;
+  function foShareNoteSwap(droppedLabels,keptLabel){
+    var h=document.getElementById('foShareHint');
+    if(!h)return;
+    if(!foShareHintDefault)foShareHintDefault=h.innerHTML;
+    var many=droppedLabels.length>1;
+    h.textContent='Replaced '+droppedLabels.join(' and ')+' with '+keptLabel+'. '+
+      (many?'Those are':'That is')+' the same family office at a different tier, so only one can apply.';
+    h.classList.add('fo-hint-swap');
+    if(foShareNoteTimer)clearTimeout(foShareNoteTimer);
+    foShareNoteTimer=setTimeout(function(){
+      if(!foShareHintDefault)return;
+      h.innerHTML=foShareHintDefault;
+      h.classList.remove('fo-hint-swap');
+    },6000);
+  }
+
   function foShareRenderSel(){
     var sel=document.getElementById('foShareSel'),open=document.getElementById('foShareOpenBtn');
     if(!sel||!open)return;
@@ -5924,7 +5953,7 @@ document.addEventListener('keydown',function(e){
       box.innerHTML='<div class="board-lp-hdr">LP directory</div>'+matches.map(function(m,i){
         var actions=(m.type==='pending')
           ?'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="onboard">Start onboarding</button></div>'
-          :'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Withdrawal</button></div>';
+          :'<div class="board-lp-actions"><button type="button" data-i="'+i+'" data-proc="increase">Increase</button><button type="button" data-i="'+i+'" data-proc="withdrawal">Redemption</button></div>';
         return '<div class="board-lp-row"><div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(typeLabel(m))+'</div></div>'+actions+'</div>';
       }).join('')+footer();
       box.hidden=false;
