@@ -453,6 +453,12 @@
         { code: 'יורו', symbol: '€' }
       ];
       var PAGE_ORDER = ['start', 'request', 'uploads'];
+      // Rebuilt once flowType is known (bootstrapForm): a transfer has no
+      // request page at all, so it must not appear in the sequence, the
+      // progress count, or validation.
+      function rebuildPageOrder_() {
+        PAGE_ORDER = isTransferFlow() ? ['start', 'uploads'] : ['start', 'request', 'uploads'];
+      }
 
       // Flow-type predicates. The IL lane gateway may report a flow under either
       // its cayman_* identifier or the israeli_* one (see console FLOW_LABEL map).
@@ -460,6 +466,11 @@
       // literal — the raw flowType is still echoed back to the gateway verbatim.
       function isIncreaseFlow()   { return flowType === 'cayman_increase'   || flowType === 'israeli_increase'; }
       function isRedemptionFlow() { return flowType === 'cayman_withdrawal' || flowType === 'israeli_withdrawal'; }
+      // A migration's transfer instruction. The investor is asked NOTHING on
+      // this form: the amount is their end-of-December balance, not knowable at
+      // signing, and the document defers to the administrator's certificate.
+      // So the request page is skipped rather than shown empty.
+      function isTransferFlow()   { return flowType === 'cayman_transfer'   || flowType === 'israeli_transfer'; }
 
       var $loading = document.getElementById('lvp-loading');
       var $form = document.getElementById('lvp-form');
@@ -948,6 +959,10 @@
       function bootstrapForm() {
         var isIncrease = isIncreaseFlow();
         var isRedemption = isRedemptionFlow();
+        var isTransfer = isTransferFlow();
+        // flowType is known by now, so the page sequence can drop the request
+        // page for a transfer before anything counts or renders it.
+        rebuildPageOrder_();
 
         // Page-1 title per Noa: plain "form" titles for both flows.
         document.getElementById('welcome-title').textContent = isIncrease
@@ -965,6 +980,9 @@
         // Page 3 block.
         document.getElementById('block-increase').hidden = !isIncrease;
         document.getElementById('block-redemption').hidden = !isRedemption;
+        // Nothing on page 3 belongs to a transfer, and the page itself is gone
+        // from PAGE_ORDER above. Hiding both blocks here too keeps the DOM
+        // honest if anything ever renders the page directly.
 
         // Build the redemption day radios up front (every option is a valid
         // 1st-of-month, computed relative to today). No "future" toggle now.
@@ -1750,6 +1768,10 @@
           return f.concat(['lp-email']);
         }
         if (page === 'request') {
+          // Unreachable on a transfer (the page is not in PAGE_ORDER), but a
+          // belt: an empty hidden host would otherwise raise "נא להזין סכום."
+          // anchored to a div the investor cannot see.
+          if (isTransferFlow()) return [];
           var bank = ['bank-name', 'bank-branch', 'bank-account'];
           if (isRedemptionFlow()) {
             var fs = ['wd-mode', 'wd-date'];
@@ -2155,7 +2177,16 @@
           email: val('lp-email')
         };
         var isIncrease = isIncreaseFlow();
-        if (isIncrease) {
+        if (isTransferFlow()) {
+          // A transfer carries neither an investment amount nor a withdrawal
+          // block, and no remitting bank account: the position already stands
+          // to the LP's name and the amount is the administrator's certificate
+          // as of the transfer date. Falling into the else below attached an
+          // empty withdrawal shape and an lpBank the flow does not use, and
+          // attached no `dates`, which is what handed the three document dates
+          // to a server-side default.
+          s.dates = {};
+        } else if (isIncrease) {
           s.investment = { amounts: collectAmounts('amount-rows-increase') };
         } else {
           var mode = (document.querySelector('input[name="wd-mode"]:checked') || {}).value || '';
@@ -2170,7 +2201,7 @@
           };
         }
         var bankEl = document.getElementById('bank-name');
-        s.lpBank = {
+        if (!isTransferFlow()) s.lpBank = {
           bankName: val('bank-name'),
           bankCode: (bankEl && bankEl.getAttribute('data-bank-code')) || '',
           branch: val('bank-branch'),
