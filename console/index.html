@@ -6140,7 +6140,7 @@ document.addEventListener('keydown',function(e){
       // leaves this button hidden (the card-open handler sets display:none and only
       // Cancel/Go restore it) - syncPanelFields runs on every open(), so reset it here
       // too, or the NEXT panel open (any process) inherits a permanently invisible CTA.
-      el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
+      el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";el.disabled=false;}
       updateCreateCta();
       return;
     }
@@ -6208,7 +6208,7 @@ document.addEventListener('keydown',function(e){
     if(!isTransferIn)loadFoShareLabels();
     el=document.getElementById("panelLead");if(el){el.style.display="";el.textContent="Three steps, one send at the end. Nothing happens before you press Send invite.";}
     el=document.getElementById("panelTitle");if(el)el.textContent=(isTransferIn?"Transfer in · ":"Onboarding · ")+_typeLabel();
-    el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";}
+    el=document.getElementById("createBtn");if(el){el.style.display="";el.textContent="Send invite";el.disabled=false;}
     updateCreateCta();
   }
   // Reflect state.lpKind back onto the segLpKind control (class + aria-checked).
@@ -8107,7 +8107,13 @@ document.addEventListener('keydown',function(e){
         if(!res||!res.ok){btn.disabled=false;btn.textContent="Send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
         var processId=res.processId||'', link=res.url||res.signerLink||"";
         return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId), false, moneyBase_).then(function(sr){
-          btn.disabled=false;btn.textContent="Send invite";
+          // The send is DONE, so the button that starts one must not sit there
+          // looking untouched. It used to be re-enabled and relabelled "Send
+          // invite", and pressing it again does not resend: it mints a SECOND
+          // process for the same investor. The result panel below carries the
+          // correct next action (Resend invite), which is bound to this
+          // process id and this engine.
+          btn.disabled=true;btn.textContent="Invite sent";btn.style.display='none';
           showMsg("",false);
           document.getElementById("res").classList.add("on");
           document.getElementById("lk").textContent=link;
