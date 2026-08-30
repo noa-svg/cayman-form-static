@@ -3893,6 +3893,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <button type="button" data-proc="subscription" role="radio" aria-checked="false"><span class="pg-t">Onboarding</span><span class="pg-s">New investor joins</span></button>
         <button type="button" data-proc="increase" role="radio" aria-checked="false"><span class="pg-t">Increase</span><span class="pg-s">Existing LP adds money</span></button>
         <button type="button" data-proc="withdrawal" role="radio" aria-checked="false"><span class="pg-t">Redemption</span><span class="pg-s">Existing LP redeems</span></button>
+        <button type="button" data-proc="transfer" role="radio" aria-checked="false"><span class="pg-t">Transfer to Cayman</span><span class="pg-s">Existing Israeli LP moves their holding across</span></button>
       </div>
       <div id="procTypeRow">
         <label id="procTypeLbl">Applicant</label>
@@ -4115,6 +4116,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
   window.__BUILD_TAG = 'console-2026-08-26-6-w8-test-rows';
+
+  // An "existing LP" flow: the operator picks a live LP rather than typing a
+  // new one, so the applicant toggle is hidden, the LP picker is shown, and a
+  // Monday pick is required before minting. increase / withdrawal / transfer
+  // all behave this way. Defined once because this condition was repeated at
+  // four call sites, and the fourth flow (transfer, added 2026-08-30) would
+  // otherwise have had to be remembered in each of them.
+  function isExistingLpFlow_(p){ return p==="increase"||p==="withdrawal"||p==="transfer"; }
 
   // Theme: single light editorial identity. The dark CRT theme was removed
   // (Noa 2026-06-28); data-theme="light" is pinned on <html> so the navy+gold
@@ -6120,7 +6129,7 @@ document.addEventListener('keydown',function(e){
     // Existing-LP increase/withdrawal: pick an existing LP by name, mint a link (no manual
     // identity fields, no language toggle - the Israeli flow is Hebrew). The onboarding
     // subscription path keeps all its fields.
-    var isExisting=(state.process==="increase"||state.process==="withdrawal");
+    var isExisting=isExistingLpFlow_(state.process);
     // The applicant toggle only matters for onboarding (increase/withdrawal
     // derive type from the picked LP's own Monday group, never ask).
     el=document.getElementById("procTypeRow");if(el)el.style.display=isExisting?"none":"";
@@ -6288,7 +6297,7 @@ document.addEventListener('keydown',function(e){
   // (2026-08-06 guided create). The button is disabled until the form is
   // genuinely sendable; the explain line always says exactly what happens.
   function createFormValid(){
-    if(state.process==="increase"||state.process==="withdrawal")return !!state.selectedPeopleId;
+    if(isExistingLpFlow_(state.process))return !!state.selectedPeopleId;
     var g=function(id){var f=document.getElementById(id);return f?f.value.trim():"";};
     var hasName=!!(g("name")||g("nameHebrew"));
     var emailOk=/\S+@\S+\.\S+/.test(g("email"));
@@ -6321,9 +6330,9 @@ document.addEventListener('keydown',function(e){
     return hasName&&emailOk;
   }
   function ctaExplainText(){
-    if(state.process==="increase"||state.process==="withdrawal"){
+    if(isExistingLpFlow_(state.process)){
       var lp=state.selectedLp&&(state.selectedLp.nameHe||state.selectedLp.nameEn||state.selectedLp.name);
-      var word=(state.process==="increase")?"increase":"withdrawal";
+      var word=(state.process==="increase")?"increase":(state.process==="transfer")?"transfer to Cayman":"withdrawal";
       // 2026-08-10 (pixel-review finding): this hardcoded "Hebrew invite" even on
       // the Cayman lane, where the real LP invite is English-only. Mirrors the
       // lane check classRow already uses a few lines up.
@@ -8065,7 +8074,7 @@ document.addEventListener('keydown',function(e){
     // Existing-LP increase/withdrawal: pick by name -> mint by the linked People id. No
     // auto-send; the operator tests the link then sends it (withdrawal is always manual,
     // increase has a Send-to-LP action server-side).
-    if(state.process==="increase"||state.process==="withdrawal"){
+    if(isExistingLpFlow_(state.process)){
       if(!state.selectedPeopleId){showMsg("Pick the LP filing the request.",true);return;}
       // C3 (2026-07-19): this money path used to mint AND auto-send with no
       // confirmation at all - the weakest guard on the highest-stakes send. One
