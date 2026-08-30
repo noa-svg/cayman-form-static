@@ -965,11 +965,16 @@
         rebuildPageOrder_();
 
         // Page-1 title per Noa: plain "form" titles for both flows.
-        document.getElementById('welcome-title').textContent = isIncrease
-          ? 'טופס הגדלת השקעה'
-          : 'טופס בקשת פדיון';
+        // Approved by Noa 2026-08-30. A two-way increase/else ternary meant a
+        // transfer greeted the investor with the redemption title.
+        document.getElementById('welcome-title').textContent = isTransfer
+          ? 'טופס העברה לקרן הקיימנית'
+          : isIncrease
+            ? 'טופס הגדלת השקעה'
+            : 'טופס בקשת פדיון';
 
-        // Request-page title.
+        // Request-page title. A transfer has no request page (removed from
+        // PAGE_ORDER), so this only ever matters for the other two.
         document.getElementById('request-title').textContent = isIncrease
           ? 'פרטי בקשת ההגדלה' : 'פרטי הפדיון';
 
