@@ -1629,6 +1629,26 @@
         if (tokenish && !fixtureParam && cfg && !cfg.completed && !cfg.flowType) {
           document.documentElement.classList.add('lvp-gate-mode');
         }
+        // WRONG-FORM GUARD (2026-08-30). This page renders Cayman ONBOARDING
+        // only. It had no flowType check at all, so a link for any non-empty
+        // flowType rendered a full new-investor subscription: a migrating LP
+        // whose resend resolved here (resendInvite's formPath fell through to
+        // '/') was shown the wrong form entirely. israel.html has carried the
+        // equivalent guard since the money lanes shipped; this is its twin.
+        if (cfg && !cfg.completed && /_(increase|withdrawal|transfer)$/.test(String(cfg.flowType || ''))) {
+          if (window.console) {
+            try {
+              console.error('index.html: refusing to render flowType "' + cfg.flowType
+                + '" - this page renders Cayman ONBOARDING only. A money or transfer flow belongs on flow.html.');
+            } catch (e) { /* console unavailable */ }
+          }
+          var wrongForm = document.getElementById('lvp-loading');
+          if (wrongForm) {
+            wrongForm.textContent = 'This link belongs to a different form. Please use the link sent to you, or contact us.';
+            wrongForm.hidden = false;
+          }
+          return;
+        }
         if (cfg.language === 'en' || cfg.language === 'he') {
           var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
           if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();

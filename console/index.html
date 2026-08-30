@@ -6137,7 +6137,7 @@ document.addEventListener('keydown',function(e){
     if(isExisting){
       state.lpKind="existing"; // increase/withdrawal are necessarily an existing LP
       ["classRow","manualLpFields","foRow","langRow","foShareSection","emailsStep"].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display="none";});
-      var ttl=(state.process==="increase")?"Increase":"Withdrawal";
+      var ttl=(state.process==="increase")?"Increase":(state.process==="transfer")?"Transfer to Cayman":"Withdrawal";
       // 2026-08-04, Noa: the lead line only restated the panel title - deleted,
       // not just emptied, so a stale value from a prior Onboarding open can
       // never leak through (display:none, reset by the onboarding branch below).
@@ -8096,7 +8096,7 @@ document.addEventListener('keydown',function(e){
         // transfer-forms tracker write itself is untouched, still Redemption
         // (see tests/tracker-contract-parity.test.mjs). _typeLabel() instead
         // of raw state.type also fixes "individual" vs the title's "Individual".
-        ['Flow',(state.process==='increase'?'Increase':'Withdrawal')+' · '+_typeLabel()],
+        ['Flow',(state.process==='increase'?'Increase':state.process==='transfer'?'Transfer to Cayman':'Withdrawal')+' · '+_typeLabel()],
         // On a send confirmation the address is the one thing worth checking -
         // "the LP by email" told the operator nothing they could verify.
         ['Invite goes to',(state.selectedLp&&state.selectedLp.email)?(state.selectedLp.email+', cc Omri'):'the LP by email, cc Omri']

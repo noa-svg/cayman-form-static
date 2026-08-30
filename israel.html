@@ -1607,7 +1607,12 @@
         // MONEY set is small, closed, and the only thing this page genuinely
         // cannot render. An unrecognised flowType therefore renders as it always
         // did: this guard fails OPEN, never shut.
-        if (cfg && !cfg.completed && /_(increase|withdrawal)$/.test(String(cfg.flowType || ''))) {
+        // `transfer` added 2026-08-30 with the transfer lane. The denylist's own
+        // comment called the money set "small, closed", and it stopped being
+        // closed the moment cayman_transfer became mintable: without this a
+        // migrating investor following their transfer link landed on the full
+        // Israeli ONBOARDING sequence.
+        if (cfg && !cfg.completed && /_(increase|withdrawal|transfer)$/.test(String(cfg.flowType || ''))) {
           if (window.console) {
             try {
               console.error('israel.html: refusing to render flowType "' + cfg.flowType
