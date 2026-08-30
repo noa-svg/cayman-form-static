@@ -7556,7 +7556,7 @@ document.addEventListener('keydown',function(e){
         if(!hr||!hr.ok||!hr.processes||!hr.processes.length){el.remove();return;}
         var others=hr.processes.filter(function(p){return p.processId!==d.processId;});
         if(!others.length){el.remove();return;}
-        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
+        var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',cayman_transfer:'Transfer',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
         // Dot color from the design-system CSS vars (not raw hex), matching the board.
         var STAGE_DOT={complete:'var(--color-green)',sealed:'var(--color-green)',voided:'var(--color-ink-muted)',void:'var(--color-ink-muted)',needs_attention:'var(--color-red)'};
         var rows='';

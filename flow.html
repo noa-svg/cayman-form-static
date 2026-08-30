@@ -31,19 +31,30 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      font-family: 'Assistant', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-family: "Assistant", "Arimo", Arial, sans-serif;
       color: var(--lvp-text);
-      background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 60%);
+      background: #ffffff;
       min-height: 100vh;
+      position: relative;
     }
-    .lvp-app { max-width: 760px; margin: 0 auto; padding: 24px 16px 56px; }
+    /* Same brand backdrop as index.html and israel.html. A flat gradient here
+       made this read as a different product before a word had been read. */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: url("brand-bg.png") no-repeat center center;
+      background-size: cover; opacity: 0.5;
+    }
+    .lvp-app {
+      position: relative; z-index: 1;
+      max-width: 760px; margin: 0 auto; padding: 24px 16px 56px;
+    }
     .lvp-brand { display: flex; align-items: center; justify-content: center; padding: 8px 0 16px; }
     .lvp-brand img { max-width: 140px; height: auto; }
     .lvp-card {
-      background: var(--lvp-card-bg); width: 100%;
-      border-radius: 12px;
+      background: var(--lvp-card-bg); width: 100%; max-width: 760px;
+      border-radius: 6px;
       padding: 32px 32px 32px;
-      box-shadow: 0 1px 2px rgba(13,63,106,0.06), 0 8px 24px rgba(13,63,106,0.06);
+      box-shadow: 0 8px 32px rgba(13, 63, 106, 0.18), 0 2px 6px rgba(0,0,0,0.06);
     }
     @media (max-width: 540px) { .lvp-card { padding: 20px 16px 24px; } }
     .lvp-req { display: none; }
@@ -54,10 +65,15 @@
     }
     .lvp-field.is-invalid .lvp-field__error { display: block; }
     .lvp-upload.is-invalid .lvp-field__error { display: block; }
+    /* Underline error, matching index.html and israel.html. A box-shadow here
+       would draw a four-sided rectangle around a field that has three of its
+       borders removed, which is the boxed style coming back through the error
+       branch. Width and padding move together so the text does not jump. */
     .lvp-field.is-invalid .lvp-input,
     .lvp-field.is-invalid .lvp-select {
-      border-color: var(--lvp-error);
-      box-shadow: 0 0 0 3px rgba(192,57,43,0.10);
+      border-bottom-color: var(--lvp-error);
+      border-bottom-width: 2px;
+      padding-bottom: 7px;
     }
     /* CAUSE (live 2026-08-24, both lanes): an amount row is NOT a .lvp-field and NOT a
        .lvp-upload. validateRowsBlock puts is-invalid on the .lvp-amount-row itself, and
@@ -71,8 +87,9 @@
     .lvp-amount-row.is-invalid .lvp-field__error { display: block; }
     .lvp-amount-row.is-invalid .lvp-input[aria-invalid="true"],
     .lvp-amount-row.is-invalid .lvp-select[aria-invalid="true"] {
-      border-color: var(--lvp-error);
-      box-shadow: 0 0 0 3px rgba(192,57,43,0.10);
+      border-bottom-color: var(--lvp-error);
+      border-bottom-width: 2px;
+      padding-bottom: 7px;
     }
     .lvp-error-summary {
       background: #FBECEA; border: 1px solid var(--lvp-error); color: var(--lvp-error);
@@ -105,25 +122,52 @@
     .lvp-field { display: block; margin: 0 0 16px; }
     fieldset.lvp-field { border: 0; padding: 0; margin: 0 0 16px; }
     fieldset.lvp-field legend.lvp-field__label { padding: 0; }
-    .lvp-field__label { display: block; color: var(--lvp-text); font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+    /* Muted 500, as in index.html and israel.html. At --lvp-text/600 the labels
+       outweighed their own section headings. */
+    .lvp-field__label { display: block; color: var(--lvp-text-muted); font-size: 15px; font-weight: 500; margin: 0 0 8px; }
     .lvp-field__hint { display: block; color: var(--lvp-text-muted); font-size: 13px; margin: 4px 0 0; }
+    /* Underline field, matching index.html and israel.html. Same fund, same
+       field material: an LP who subscribes and later transfers must not meet
+       two different form languages. */
     .lvp-input, .lvp-select {
-      width: 100%; padding: 12px 12px; font-size: 15px; font-family: inherit;
-      border: 1px solid var(--lvp-input-line); border-radius: 8px;
-      background: #fff; color: var(--lvp-text);
+      width: 100%; padding: 8px 0; font-size: 15px; font-family: inherit;
+      border: none; border-bottom: 1px solid var(--lvp-input-line);
+      background: transparent; color: var(--lvp-text);
+      outline: none; transition: border-color 150ms ease;
       direction: rtl; text-align: right;
     }
     button:focus-visible, [data-action]:focus-visible, .lvp-amount-add:focus-visible, .lvp-amount-rm:focus-visible { outline: 3px solid var(--lvp-input-line-active); outline-offset: 2px; }
     .lvp-input:focus, .lvp-select:focus {
-      outline: none; border-color: var(--lvp-input-line-active);
-      box-shadow: 0 0 0 3px rgba(13,63,106,0.10);
+      outline: none; border-bottom-color: var(--lvp-input-line-active);
+      border-bottom-width: 2px; padding-bottom: 7px;
     }
     .lvp-input[readonly] {
-      background: #EDF0F4; color: var(--lvp-text-muted); cursor: default; border-color: #DCE1E8;
+      background: transparent; color: var(--lvp-text-muted); cursor: default;
+      border-bottom-style: dashed; border-bottom-color: var(--lvp-input-line);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A93A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: left 13px center; background-size: 15px; padding-left: 40px;
+      background-repeat: no-repeat; background-size: 15px;
+      /* Default RTL: the value is right-aligned, so the lock belongs on the
+         right, beside the text. Anchoring it left put it most of a field-width
+         away and it read as a stray glyph rather than a badge on that value. */
+      background-position: right 13px center; padding-right: 36px;
     }
-    .lvp-input[readonly]:focus { box-shadow: none; border-color: #DCE1E8; }
+    /* An LTR readonly field (ID, email) puts its value on the left, so the lock
+       follows it back. */
+    .lvp-input--ltr[readonly] {
+      background-position: left 13px center; padding-left: 36px; padding-right: 0;
+    }
+    /* A disabled control is not the same as a readonly one, and until now it had
+       no rule at all: the redemption currency rendered pixel-identical to the
+       editable amount beside it, so a tester taps it. Same locked material as
+       readonly, minus the lock glyph, which is reserved for values the form has
+       filled in for the LP. */
+    .lvp-input[disabled], .lvp-select[disabled] {
+      color: var(--lvp-text-muted); cursor: not-allowed;
+      border-bottom-style: dashed; border-bottom-color: var(--lvp-input-line);
+      opacity: 1;
+    }
+    .lvp-input[readonly]:focus { border-bottom-width: 1px; padding-bottom: 8px;
+      border-bottom-color: var(--lvp-input-line); }
     .lvp-input--ltr { direction: ltr; text-align: left; }
     /* Type-to-search combobox (bank + branch). The text input is unchanged; the
        suggestion list floats under it and matches the field tokens. */
@@ -171,11 +215,17 @@
        instead of reserving a hollow blank row (Ive pass 2026-06-27). */
     .lvp-upload__name:empty { display: none; }
     .lvp-nav { display: flex; gap: 12px; margin: 24px 0 0; justify-content: space-between; }
+    /* Pill, matching index.html and israel.html. This was a rounded rectangle
+       and it was the largest remaining seam between the three forms: side by
+       side they read as two different products. min-width and min-height stay,
+       they are this form's touch-target floor and cost nothing visually. */
     .lvp-btn {
-      font-family: inherit; font-size: 15px; font-weight: 700; padding: 12px 24px;
-      border-radius: 8px; border: none; cursor: pointer; min-width: 110px;
+      font: inherit; font-weight: 700; padding: 13px 36px;
+      transition: background 120ms ease, transform 60ms ease;
+      border-radius: 999px; border: none; cursor: pointer; min-width: 110px;
       min-height: 44px;
     }
+    .lvp-btn:active { transform: translateY(1px); }
     .lvp-amount-add { min-height: 44px; }
     .lvp-radio { min-height: 44px; padding: 8px 0; }
     @media (prefers-reduced-motion: reduce) {
@@ -588,6 +638,18 @@
       // Render-verify mode: ?mock=inc-ind | inc-ent | red-ind | red-ent bypasses
       // the GAS config fetch with a fixed stub. Do NOT return from the IIFE after
       // bootstrapping; the click/change handlers below still need to register.
+      // HOISTING. Both of these are read by populateRedemptionMonths, which
+      // bootstrapForm calls. They used to be declared several hundred lines
+      // below, so on any path that reaches bootstrapForm synchronously (the
+      // ?mock= preview lanes) `var` hoisting made them `undefined`:
+      // `i < undefined` wrote zero radios, and `REDEMPTION_MONTHS_HE[m]` threw
+      // and aborted the rest of bootstrapForm. Production's config fetch is
+      // async so it always initialised them in time, but nothing enforced that
+      // ordering. Declared here, before any caller, so neither can recur.
+      var REDEMPTION_MONTHS_AHEAD = 2;
+      var REDEMPTION_MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
       var mock = qs.get('mock') || '';
       if (mock) {
         CFG = stubConfigForMock(mock);
@@ -1483,9 +1545,7 @@
       // the first offered option IS today. An earlier version of this comment
       // claimed a 14-day server rule; it was never true of the shipped code.
       // 2 months horizon (Noa).
-      var REDEMPTION_MONTHS_AHEAD = 2;
-      var REDEMPTION_MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+      // Both moved above the first bootstrapForm() call. See the hoisting note there.
       // The redemption day is ALWAYS the 1st of a calendar month (Noa 2026-06-27).
       // The control is exactly REDEMPTION_MONTHS_AHEAD radio options, each a
       // 1st-of-month that is not in the past. There is no "immediate" path: every
@@ -1500,8 +1560,17 @@
         var today = new Date(); today.setHours(0, 0, 0, 0);
         var cursor = new Date(today.getFullYear(), today.getMonth(), 1);
         if (cursor < today) cursor.setMonth(cursor.getMonth() + 1);
+        // REDEMPTION_MONTHS_AHEAD and REDEMPTION_MONTHS_HE are now declared
+        // above the first bootstrapForm() call, so neither can be undefined
+        // here. They used to sit below it: `var` hoisting then made the bound
+        // undefined on any synchronous caller, `i < undefined` wrote no radios,
+        // and the LP got a heading, a label and a blank gap with no error.
+        // This local bound is belt-and-braces for a future caller that moves
+        // above the declaration again; it is not what makes the code correct.
+        var months = (typeof REDEMPTION_MONTHS_AHEAD === 'number' && REDEMPTION_MONTHS_AHEAD > 0)
+          ? REDEMPTION_MONTHS_AHEAD : 2;
         var html = '';
-        for (var i = 0; i < REDEMPTION_MONTHS_AHEAD; i++) {
+        for (var i = 0; i < months; i++) {
           var y = cursor.getFullYear();
           var m = cursor.getMonth();
           var iso = y + '-' + String(m + 1).padStart(2, '0') + '-01';

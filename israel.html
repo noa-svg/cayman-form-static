@@ -41,7 +41,7 @@
   -->
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap');
 
     :root {
       --lvp-navy: #0D3F6A;
@@ -431,7 +431,8 @@
     .lvp-card[dir="rtl"] .lvp-input[type="tel"],
     .lvp-card[dir="rtl"] .lvp-input[data-validate="date-past"],
     .lvp-card[dir="rtl"] .lvp-input[data-validate="date-future"],
-    .lvp-card[dir="rtl"] .lvp-input[data-validate="first-of-month"] { direction: ltr; text-align: left; }
+    .lvp-card[dir="rtl"] .lvp-input[data-validate="first-of-month"],
+    .lvp-card[dir="rtl"] .lvp-input--ltr { direction: ltr; text-align: left; }
     /* RTL pager: forward (הבא/סיום) belongs on the LEFT, back (הקודם) on the RIGHT
        -- the mirror of LTR. The default `row` in an RTL flex container already
        places the first DOM child (prev) on the right and the last (next/submit)
