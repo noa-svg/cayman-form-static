@@ -7742,12 +7742,19 @@ document.addEventListener('keydown',function(e){
     function resolveInvestmentsForPick(m){
       clearInvPick();
       var mySeq=++invSeq;
-      var term=(m.email||m.nameHe||m.nameEn||m.name||'').trim();
-      if(term.length<2)return;
-      apiFetch('?admin=searchInvestments&q='+encodeURIComponent(term)+'&limit=20', false, consoleMondayReadBase_()).then(function(d){
+      var pid=(m.itemId||'').trim();
+      if(!pid)return;
+      // 2026-08-31: resolve by the deal_contact RELATION, not by a text search.
+      // The old call searched email-first, but email__1 is empty on every row of
+      // the Investments board and nameHe is a mirror the server could not read,
+      // so the haystack was the deal row title alone and an email needle never
+      // matched. Zero hits left investmentsId blank on every mint and the sealed
+      // PDF never reached the deal row. The server now returns exactly the rows
+      // linked to this person, so zero here genuinely means "no deal row".
+      apiFetch('?admin=investmentsForPerson&peopleId='+encodeURIComponent(pid), false, consoleMondayReadBase_()).then(function(d){
         if(mySeq!==invSeq)return; // stale: pick changed or cleared while this was in flight
         if(state.selectedPeopleId!==(m.itemId||''))return;
-        var hits=((d&&d.matches)||[]).filter(function(x){return x.linkedPeopleItemId&&x.linkedPeopleItemId===state.selectedPeopleId;});
+        var hits=((d&&d.matches)||[]);
         if(hits.length===1){
           state.selectedInvestmentsId=hits[0].investmentsItemId||'';
         } else if(hits.length>1&&invBox){
