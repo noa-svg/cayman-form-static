@@ -458,6 +458,25 @@
       // progress count, or validation.
       function rebuildPageOrder_() {
         PAGE_ORDER = isTransferFlow() ? ['start', 'uploads'] : ['start', 'request', 'uploads'];
+        // The nav buttons carry a hardcoded data-go="request". Removing the
+        // request page from the sequence without repointing them left the
+        // transfer investor on page 1 with a Continue button that did nothing:
+        // goToPage returns early on an unknown page, silently, with no error.
+        // Repoint every nav target that no longer exists onto its neighbour.
+        if (!isTransferFlow()) return;
+        var fwd = document.querySelector('[data-page="start"] [data-go="request"]');
+        if (fwd) fwd.setAttribute('data-go', 'uploads');
+        var back = document.querySelector('[data-page="uploads"] [data-go="request"]');
+        if (back) back.setAttribute('data-go', 'start');
+        // The progress markup is static at three steps. A two-page flow must
+        // not tell the investor they are one of three.
+        var prog = document.querySelector('.lvp-progress');
+        if (prog) prog.setAttribute('aria-valuemax', String(PAGE_ORDER.length));
+        // goToPage computes the width from PAGE_ORDER.length, but bootstrapForm
+        // never calls it, so the static markup's 33% survives until the first
+        // navigation: a two-page flow greeted the investor claiming step 1 of 3.
+        var bar = document.getElementById('lvp-progress-bar');
+        if (bar) bar.style.width = ((1 / PAGE_ORDER.length) * 100) + '%';
       }
 
       // Flow-type predicates. The IL lane gateway may report a flow under either
@@ -555,7 +574,12 @@
           'inc-ind': { flowType: 'cayman_increase',   applicantType: 'individual', lp: ind },
           'inc-ent': { flowType: 'cayman_increase',   applicantType: 'entity',     lp: ent },
           'red-ind': { flowType: 'cayman_withdrawal', applicantType: 'individual', lp: ind },
-          'red-ent': { flowType: 'cayman_withdrawal', applicantType: 'entity',     lp: ent }
+          'red-ent': { flowType: 'cayman_withdrawal', applicantType: 'entity',     lp: ent },
+          // Added 2026-08-30 with the transfer lane. Without these the newest
+          // flow is the only one ?mock= cannot render, which is exactly the
+          // lane a design pass most needs to see.
+          'trn-ind': { flowType: 'cayman_transfer',   applicantType: 'individual', lp: ind },
+          'trn-ent': { flowType: 'cayman_transfer',   applicantType: 'entity',     lp: ent }
         }[m] || null;
         if (!pick) return { flowType: '' };
         return { flowType: pick.flowType, lane: 'israeli', language: 'he', applicantType: pick.applicantType, prefill: { lp: pick.lp } };
@@ -1036,7 +1060,7 @@
         prefillRO('lp-email', pre.email || '');
 
         // Seed one amount row per flow.
-        addAmountRow(isIncrease ? 'increase' : 'redemption');
+        if (!isTransfer) addAmountRow(isIncrease ? 'increase' : 'redemption');
 
         // Resume: apply the rich save_page snapshot (fields / radios / amounts /
         // uploadsMeta) if the LP had partially filled before. Identity prefill is
