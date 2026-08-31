@@ -3121,6 +3121,15 @@
     function placesCity_(components) {
       return placesComp_(components, 'locality') || placesComp_(components, 'postal_town') || placesComp_(components, 'sublocality') || '';
     }
+    // Google's geocode language option is a REQUEST, not a guarantee: a street
+    // with no English name on file comes back in Hebrew anyway even when asked
+    // for 'en'. Neither placesFillEnglish_ nor deriveEnglishFromHebrew_ checked
+    // that before offering the result as the "English" mirror, so a Hebrew
+    // result could pass straight through to a submit the server-side validator
+    // couldn't tell from a genuinely-filled field (server derive.ts has the
+    // matching, deliberately-independent guard) - 2026-08-31, Sharon Dagan's
+    // seal failed on exactly this. Gate both English-mirror offers on it.
+    function isHebrewText_(s) { return /[א-ת]/.test(String(s || '')); }
     // The LP explicitly picked this place, so the Hebrew fields are their
     // answer: set directly and mark touched (the infer engine backs off).
     function placesSetHe_(name, val) {
@@ -3153,8 +3162,9 @@
         // Hebrew-side house number (digits are script-neutral).
         var enNum = get('street_number') || (function () { var e = form.querySelector('[name="' + cssEsc(set.house) + '"]'); return e ? String(e.value || '').trim() : ''; })();
         var enRoute = get('route');
-        inferOffer(set.enStreet, enRoute ? (enRoute + (enNum ? ' ' + enNum : '')) : '');
-        inferOffer(set.enCity, get('locality') || get('postal_town') || get('sublocality'));
+        var enCity = get('locality') || get('postal_town') || get('sublocality');
+        if (enRoute && !isHebrewText_(enRoute)) inferOffer(set.enStreet, enRoute + (enNum ? ' ' + enNum : ''));
+        if (enCity && !isHebrewText_(enCity)) inferOffer(set.enCity, enCity);
       }
       function viaGeocoder() {
         try {
@@ -3200,8 +3210,9 @@
               var dComps = results[0].address_components;
               var dNum = placesComp_(dComps, 'street_number') || (hEl ? String(hEl.value || '').trim() : '');
               var dRoute = placesComp_(dComps, 'route');
-              inferOffer(set.enStreet, dRoute ? (dRoute + (dNum ? ' ' + dNum : '')) : '');
-              inferOffer(set.enCity, placesCity_(results[0].address_components));
+              var dCity = placesCity_(results[0].address_components);
+              if (dRoute && !isHebrewText_(dRoute)) inferOffer(set.enStreet, dRoute + (dNum ? ' ' + dNum : ''));
+              if (dCity && !isHebrewText_(dCity)) inferOffer(set.enCity, dCity);
             }
             resolve();
           });
