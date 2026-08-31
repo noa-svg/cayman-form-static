@@ -883,6 +883,30 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .bhead .h-amt { text-align: right; }
 .bhead .h-age { text-align: right; }
 /* Group divider between the in-flight block and the completed/canceled tails. */
+/* Month navigator on the completed lane (2026-08-31). Sits inside .bgroup so
+   it inherits the existing strip treatment and adds only the controls. */
+.bgroup-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+  padding-bottom: 3px;
+}
+.bmnav {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-input);
+  color: var(--color-ink);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 9px;
+}
+.bmnav:hover:not(:disabled) { background: var(--color-bg-strip); }
+.bmnav:disabled { opacity: 0.35; cursor: default; }
+.bmlabel { letter-spacing: 0.08em; }
+
 .bgroup {
   padding: 7px 14px 5px;
   border-top: 1px solid var(--color-border);
@@ -4600,6 +4624,30 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     // One phantom-complete row (registry complete, records write failed).
     cayman.forEach(function(r){if(r.processId==='p8'){r.stale=true;r.nextActionPhrase='Sealed, but a records write failed. Needs review';}});
+    // Completed lane, ledger-driven (2026-08-31). The fixture deliberately
+    // carries the two shapes that used to render NOWHERE - an old rid that
+    // matches no feed's prefix test, and a row with no rid at all - plus one
+    // row per execution status so the money words are all exercised. Generic
+    // names, never real LPs.
+    if(qs.indexOf('?api=listTrackerMonthTabs')===0) return {ok:true,months:['08/2026','07/2026','06/2026']};
+    if(qs.indexOf('?api=opListMonthCompleted')===0){
+      var wantMonth=(/monthTab=([^&]*)/.exec(qs)||[])[1];
+      wantMonth=wantMonth?decodeURIComponent(wantMonth):'08/2026';
+      var byMonth={
+        '08/2026':[
+          {processId:'manual__d1',displayName:'Ravid Holdings Ltd',typeWord:'onboarding',executionStatus:'Pending',investmentAmount:3000000,investmentCurrency:'NIS',startDate:'2026-09-01T00:00:00Z',updatedAt:'2026-08-30T21:15:00Z',ageDays:1,monthTab:'08/2026',lane:'unknown'},
+          {processId:'b-L06SCwQLI',displayName:'Yonatan Keren',typeWord:'onboarding',executionStatus:'Pending',investmentAmount:1000000,investmentCurrency:'NIS',startDate:'',updatedAt:'2026-04-20T19:05:00Z',ageDays:133,monthTab:'08/2026',lane:'unknown'},
+          {processId:'d3',displayName:'Noga Bar-Lev',typeWord:'increase',executionStatus:'Received in transit',investmentAmount:300000,investmentCurrency:'NIS',startDate:'2026-09-01T00:00:00Z',updatedAt:'2026-08-30T12:07:00Z',ageDays:1,monthTab:'08/2026',lane:'unknown'},
+          {processId:'d4',displayName:'Sagi Peretz',typeWord:'onboarding',executionStatus:'Moved to trading',investmentAmount:2000000,investmentCurrency:'NIS',startDate:'2026-08-01T00:00:00Z',updatedAt:'2026-08-16T15:14:00Z',ageDays:15,monthTab:'08/2026',lane:'unknown'},
+          {processId:'trackerrow__08-2026__9',displayName:'מס רווחי הון בעבור יורשי מ. ל. ז״ל',typeWord:'',executionStatus:'Pending',investmentAmount:13515,investmentCurrency:'NIS',startDate:'',updatedAt:'2026-08-15T23:06:00Z',ageDays:16,monthTab:'08/2026',lane:'unknown'},
+          {processId:'d6',displayName:'Tamar Elgrably',typeWord:'redemption',executionStatus:'Paid to client',investmentAmount:120000,investmentCurrency:'NIS',startDate:'2026-08-07T00:00:00Z',updatedAt:'2026-08-16T15:14:00Z',ageDays:15,monthTab:'08/2026',lane:'unknown'}
+        ],
+        '07/2026':[
+          {processId:'d7',displayName:'Idan Shafir',typeWord:'redemption',executionStatus:'Paid to client',investmentAmount:50000,investmentCurrency:'NIS',startDate:'2026-07-08T00:00:00Z',updatedAt:'2026-07-19T10:00:00Z',ageDays:43,monthTab:'07/2026',lane:'unknown'}
+        ],
+        '06/2026':[]
+      };
+      return {ok:true,monthTab:wantMonth,rows:byMonth[wantMonth]||[],testRowCount:0};
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-08-06T09:30',version:441};
     if(qs.indexOf('?api=opBoardDetail')===0){
       var det={
@@ -4670,6 +4718,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     ]};
     if(qs.indexOf('?admin=mintLink')===0) return {ok:true,processId:'demo-pid-1',url:'https://sign.legacyvpartners.com/flow.html?t=demo'};
     if(qs.indexOf('?admin=sendIsraeliInvite')===0) return {ok:true,sentTo:'lp@example.com',cc:'omri@legacyvpartners.com'};
+    }
     return {ok:true};
   }
   // 2026-08-04, a bug Noa hit herself: "Server error: Unexpected token '<',
@@ -5365,6 +5414,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // (Date.parse('') is NaN). The mapper now reads the names the server actually
   // sends. Keep the two legacy names first in the chain so a future server that
   // does emit them still wins.
+  var MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
       var an=(isAttnStage(a.stage)||(isCompletedStage(a.stage)&&a.stale))?1:0, bn=(isAttnStage(b.stage)||(isCompletedStage(b.stage)&&b.stale))?1:0;
@@ -5377,27 +5427,143 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return (a.ageNum||0)-(b.ageNum||0);
     });
   }
-  // Completed rows grouped by calendar month (2026-08-09, Noa: "separate them
-  // by month"). `rows` is already newest-first via sortRows, so this just
-  // walks it once inserting a month header whenever the month changes -
-  // never a second sort, never a second pass over the array.
-  var MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  function monthKeyAndLabel_(iso){
-    var t=iso?Date.parse(iso):NaN;
-    if(isNaN(t))return {key:'unknown',label:'Undated'};
-    var d=new Date(t);
-    return {key:d.getFullYear()+'-'+d.getMonth(),label:MONTH_NAMES_[d.getMonth()]+' '+d.getFullYear()};
+  // ---- Completed rows: ONE tracker month, navigable -----------------------
+  //
+  // Replaces the 2026-08-09 calendar-month grouping (Noa: "separate them by
+  // month"), which grouped registry rows by `lastActivityTs`. Two defects
+  // killed that approach, both found 2026-08-31:
+  //
+  //   1. lastActivityTs is a LAST-TOUCH timestamp, so a heal, resend or sync
+  //      moved a finished row into a different month heading. Maya Deco, whose
+  //      tracker Start Date is 08/08/2026, rendered under "July 2026".
+  //   2. It could only show what a feed claimed. A completed row that is
+  //      neither a Ju process nor a `manual__` tracker row was claimed by
+  //      nobody and rendered nowhere, while still being live money.
+  //
+  // The completed lane is now read from the tracker month tab itself
+  // (?api=opListMonthCompleted). The tab IS the month, so the heading cannot
+  // drift, and every row on it appears by construction.
+  //
+  // Stale-complete rows are NOT served here and must not be: they stay in the
+  // in-flight lane (C1, 2026-07-19) precisely because their records write
+  // failed, so the ledger is the wrong place to look for them.
+  var boardMonths=[];      // MM/YYYY, newest first, from the tracker's real tabs
+  var boardMonth='';       // the one being shown
+  var boardMonthRows=null; // null = not fetched yet, [] = fetched and empty
+  var boardMonthErr='';
+  var boardMonthSeq=0;
+
+  // Money-status vocabulary. English is canonical on the tracker since the
+  // 2026-05-31 one-grammar refactor; the Hebrew forms still exist on older
+  // rows, so both are recognised rather than one being rewritten in place.
+  function execIsPending_(v){return /^(Pending|טרם הועבר)?$/.test(String(v||'').trim());}
+  function execWord_(v){
+    var t=String(v||'').trim();
+    if(!t)return 'Awaiting money';
+    if(/^(Pending|טרם הועבר)$/.test(t))return 'Awaiting money';
+    if(/^(✓ )?(Received in transit|התקבל במעבר)$/.test(t))return 'Money in transit';
+    if(/^(✓ )?(Moved to trading|הועבר למסחר)$/.test(t))return 'Moved to trading';
+    if(/^(✓ )?(Paid to client|הועבר ללקוח)$/.test(t))return 'Paid to client';
+    return t; // an unrecognised value is shown verbatim, never normalised away
   }
-  function completedByMonthHtml(rows){
-    var html='',curKey=null,curLabel='',curCount=0,curRowsHtml='';
-    function flush(){if(curKey!==null)html+='<div class="bgroup">'+esc2(curLabel)+' &middot; '+curCount+'</div>'+curRowsHtml;}
-    for(var i=0;i<rows.length;i++){
-      var mk=monthKeyAndLabel_(rows[i].lastActivityTs);
-      if(mk.key!==curKey){flush();curKey=mk.key;curLabel=mk.label;curCount=0;curRowsHtml='';}
-      curCount++;curRowsHtml+=rowHtml(rows[i]);
+
+  function monthWords_(mmYyyy){
+    var m=/^(\d{2})\/(\d{4})$/.exec(String(mmYyyy||''));
+    if(!m)return String(mmYyyy||'');
+    return MONTH_NAMES_[parseInt(m[1],10)-1]+' '+m[2];
+  }
+
+  // Tracker row -> board row. Deliberately NOT the registry mapper: these rows
+  // have no process, no signer rail and no next action, and pretending
+  // otherwise is what produced a "Done" badge over unarrived money.
+  function mapMonthRow_(it){
+    var ex=it.executionStatus;
+    return {pid:it.processId||'',_engine:GW,name:it.displayName||'',he:it.nameHebrew||'',
+      stage:'complete',age:(it.ageDays!=null?it.ageDays+'d':''),ageNum:(it.ageDays!=null?it.ageDays:9999),
+      lastActivityTs:it.updatedAt||'',wait:'',stale:false,
+      type:'',typeLabel:it.typeWord||'',lane:it.lane||'',
+      amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',
+      note:'',monthTab:it.monthTab||'',
+      execStatus:ex,execWord:execWord_(ex),execPending:execIsPending_(ex),
+      startDate:it.startDate||'',isTestRow:!!it.isTestRow};
+  }
+
+  function fetchMonthCompleted_(){
+    if(!boardMonth)return;
+    var seq=++boardMonthSeq, month=boardMonth;
+    apiFetch('?api=opListMonthCompleted&monthTab='+encodeURIComponent(month)+(showTest?'&includeTest=1':''),false,GAS_ONLY_)
+      .then(function(r){
+        if(seq!==boardMonthSeq)return; // a later month click won
+        if(!r||!r.ok){boardMonthRows=[];boardMonthErr=(r&&r.error)||'could not load';}
+        else{boardMonthRows=(r.rows||[]).map(mapMonthRow_);boardMonthErr='';}
+        paintCompletedMonth_();
+      })
+      .catch(function(err){
+        if(seq!==boardMonthSeq)return;
+        boardMonthRows=[];
+        // apiFetch THROWS on any {ok:false} envelope, so this catch is the
+        // real error path, not just the transport one. serverError is set for
+        // non-JSON shapes; otherwise the thrown message names the server error.
+        boardMonthErr=(err&&(err.serverError||err.message))||'could not reach the server';
+        paintCompletedMonth_();
+      });
+  }
+
+  function completedMonthShellHtml(){
+    var i=boardMonths.indexOf(boardMonth);
+    var hasPrev=i>=0&&i<boardMonths.length-1; // list is newest-first
+    var hasNext=i>0;
+    var count=boardMonthRows?boardMonthRows.length:null;
+    return '<div class="bgroup bgroup-nav">'
+      +'<button type="button" class="bmnav" id="bmPrev" '+(hasPrev?'':'disabled ')+'aria-label="Previous month">&lsaquo;</button>'
+      +'<span class="bmlabel">'+esc2(monthWords_(boardMonth))+(count!=null?' &middot; '+count:'')+'</span>'
+      +'<button type="button" class="bmnav" id="bmNext" '+(hasNext?'':'disabled ')+'aria-label="Next month">&rsaquo;</button>'
+      +'</div><div id="completedMonthRows"></div>';
+  }
+
+  function paintCompletedMonth_(){
+    var host=document.getElementById('completedMonth');
+    if(!host)return;
+    host.innerHTML=completedMonthShellHtml();
+    var body=document.getElementById('completedMonthRows');
+    if(!body)return;
+    if(boardMonthErr){body.innerHTML='<div class="empty" style="color:var(--color-danger)">'+esc2(boardMonthErr)+'</div>';}
+    else if(boardMonthRows===null){body.innerHTML='<div class="empty">Loading '+esc2(monthWords_(boardMonth))+'&hellip;</div>';}
+    else if(!boardMonthRows.length){body.innerHTML='<div class="empty">Nothing completed in '+esc2(monthWords_(boardMonth))+'.</div>';}
+    else{
+      // Newest money first, by the tab's own Last Update. No cross-month sort
+      // exists here by construction: every row shares one tab.
+      var rows=boardMonthRows.slice().sort(function(a,b){
+        var ta=a.lastActivityTs?Date.parse(a.lastActivityTs):0;
+        var tb=b.lastActivityTs?Date.parse(b.lastActivityTs):0;
+        return tb-ta;
+      });
+      body.innerHTML=rows.map(function(r){return rowHtml(r);}).join('');
     }
-    flush();
-    return html;
+    var pv=document.getElementById('bmPrev'),nx=document.getElementById('bmNext');
+    if(pv)pv.onclick=function(){var i=boardMonths.indexOf(boardMonth);if(i>=0&&i<boardMonths.length-1){boardMonth=boardMonths[i+1];boardMonthRows=null;boardMonthErr='';paintCompletedMonth_();fetchMonthCompleted_();}};
+    if(nx)nx.onclick=function(){var i=boardMonths.indexOf(boardMonth);if(i>0){boardMonth=boardMonths[i-1];boardMonthRows=null;boardMonthErr='';paintCompletedMonth_();fetchMonthCompleted_();}};
+  }
+
+  // Month list comes from the tracker's real tabs, same source the Transfer
+  // Form tab's dropdown uses, so the two views can never disagree about which
+  // months exist.
+  function loadBoardMonths_(){
+    if(boardMonths.length)return;
+    apiFetch('?api=listTrackerMonthTabs',false,consoleReadBase_()).then(function(r){
+      boardMonths=(r&&r.ok&&r.months)?r.months:[];
+      if(!boardMonth&&boardMonths.length)boardMonth=boardMonths[0];
+      // No months means no ledger to show. Say so: leaving boardMonthRows null
+      // here parked the lane on "Loading ..." with no month name and no way out,
+      // which is indistinguishable from a hung fetch (found in the render pass,
+      // 2026-08-31).
+      if(!boardMonths.length){boardMonthRows=[];boardMonthErr='no month tabs found on the tracker';}
+      paintCompletedMonth_();
+      fetchMonthCompleted_();
+    }).catch(function(){
+      boardMonthErr='could not load the tracker month list';
+      paintCompletedMonth_();
+    });
   }
   // Amount display (wiring item 4): symbol for the currencies the fund actually
   // sees, code suffix otherwise, '' when no amount was captured yet.
@@ -5508,16 +5674,26 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // finished. Same exemption the renderRows filter applies.
     var stale=isCompletedStage(st)&&r.stale;
     var attn=isAttnStage(st)||stale;
-    var done=(isTerminalStage(st)&&!stale)?' done':'';
+    // A completed tracker row whose money is still Pending is NOT finished
+    // business - fading it to 50% is how millions in unarrived money read as
+    // "Done" on this board (2026-08-31). execPending exempts it, the same shape
+    // as the stale-complete exemption above it.
+    var done=(isTerminalStage(st)&&!stale&&!r.execPending)?' done':'';
     var dead=isCanceledStage(st)?' dead':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
-    var wordCls=attn?' warn':((dead||isCompletedStage(st))?' muted':'');
+    // Ledger rows report the EXECUTION status (Pending / Received in transit /
+    // Moved to trading / Paid to client). Once signing is done that is the only
+    // status that means anything, and it is what the wire letter gates on.
+    var statusWord=r.execWord||stageWord(st);
+    // The signer rail is process progress. A ledger row has no process and no
+    // signers, so drawing it there is invented progress over a money row.
+    var wordCls=attn?' warn':(r.execPending?'':((dead||isCompletedStage(st))?' muted':''));
     var statSecond=attn?attnBadgeHtml(r,folded):waitLineHtml(r);
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
       +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
-      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(stageWord(st))+'</span>'+railHtml(r)+'</span>'
+      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(statusWord)+'</span>'+(r.execWord?'':railHtml(r))+'</span>'
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
       +'<span class="ract">'
@@ -5681,11 +5857,14 @@ document.addEventListener('keydown',function(e){
       ?'No processes match "'+esc2(query)+'". <a href="#" id="emptyClearSearch">Clear search</a>'
       :'Nothing in flight.';
     // Column header (2026-08-06 table redesign) leads whenever any rows render.
-    var anyRows=inflight.length||(showDone&&completed.length)||(showCanceled&&canceled.length);
+    var anyRows=inflight.length||showDone||(showCanceled&&canceled.length);
     var bhead='<div class="bhead"><span>Investor</span><span class="h-flow">Type</span><span class="h-amt">Amount</span><span>Status</span><span class="h-age">Age</span><span></span></div>';
     var html=anyRows?bhead:'';
     html+=inflight.length?foldedRowsHtml(inflight):'<div class="empty">'+emptyMsg+'</div>';
-    if(showDone&&completed.length)html+=completedByMonthHtml(completed);
+    // The completed lane no longer comes from `rows` (the registry feed). It is
+    // read from the tracker month tab and painted asynchronously into this host,
+    // so `completed` above is now only used for the empty/any-rows accounting.
+    if(showDone)html+='<div id="completedMonth"></div>';
     // The wrapper below is deliberate. rowHtml's second parameter is `folded`,
     // and Array.prototype.map calls back with (element, index, array), so
     // passing rowHtml straight to .map hands it the index: every row after the
@@ -5695,6 +5874,7 @@ document.addEventListener('keydown',function(e){
       html+='<div class="bgroup">Canceled &middot; '+canceled.length+'</div>'+canceled.map(function(r){return rowHtml(r);}).join("");
     }
     document.getElementById("list").innerHTML=html;
+    if(showDone){paintCompletedMonth_();loadBoardMonths_();}
     // Three independent filter chips: completed (complete/sealed), canceled
     // (voided/expired) and test rows, each filtering separately. The board
     // loads includeDone=0 by default (wiring item 5) - terminal rows are
@@ -5857,7 +6037,10 @@ document.addEventListener('keydown',function(e){
     // Always refetches (unlike showDone/showCanceled's doneLoaded guard):
     // toggling this changes what the server sends, so there is no
     // already-fetched superset to filter client-side either way.
-    if(tt)tt.addEventListener("click",function(){showTest=!showTest;load(true);});
+    // Toggling test rows changes what the SERVER sends for the completed lane
+    // too (includeTest), so invalidate it rather than letting a stale month
+    // render beside a freshly-filtered in-flight list.
+    if(tt)tt.addEventListener("click",function(){showTest=!showTest;boardMonthRows=null;boardMonthErr='';fetchMonthCompleted_();load(true);});
   })();
   // Board-search LP directory results (2026-08-02, Noa: "search flow being
   // buried in a menu, i dont want that menu" / "dont show in the search non
@@ -7742,12 +7925,19 @@ document.addEventListener('keydown',function(e){
     function resolveInvestmentsForPick(m){
       clearInvPick();
       var mySeq=++invSeq;
-      var term=(m.email||m.nameHe||m.nameEn||m.name||'').trim();
-      if(term.length<2)return;
-      apiFetch('?admin=searchInvestments&q='+encodeURIComponent(term)+'&limit=20', false, consoleMondayReadBase_()).then(function(d){
+      var pid=(m.itemId||'').trim();
+      if(!pid)return;
+      // 2026-08-31: resolve by the deal_contact RELATION, not by a text search.
+      // The old call searched email-first, but email__1 is empty on every row of
+      // the Investments board and nameHe is a mirror the server could not read,
+      // so the haystack was the deal row title alone and an email needle never
+      // matched. Zero hits left investmentsId blank on every mint and the sealed
+      // PDF never reached the deal row. The server now returns exactly the rows
+      // linked to this person, so zero here genuinely means "no deal row".
+      apiFetch('?admin=investmentsForPerson&peopleId='+encodeURIComponent(pid), false, consoleMondayReadBase_()).then(function(d){
         if(mySeq!==invSeq)return; // stale: pick changed or cleared while this was in flight
         if(state.selectedPeopleId!==(m.itemId||''))return;
-        var hits=((d&&d.matches)||[]).filter(function(x){return x.linkedPeopleItemId&&x.linkedPeopleItemId===state.selectedPeopleId;});
+        var hits=((d&&d.matches)||[]);
         if(hits.length===1){
           state.selectedInvestmentsId=hits[0].investmentsItemId||'';
         } else if(hits.length>1&&invBox){
