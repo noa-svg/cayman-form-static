@@ -3138,9 +3138,22 @@ body.side-coll .ss-lbl { display: none; }
 .wl-await-btn:hover{background:var(--color-bg-hover)}
 .wl-await-acts{display:flex;gap:6px;align-items:center}
 .wl-await-btn.wl-await-park{font-weight:600;color:var(--color-ink-muted)}
-/* Parked is muted on purpose: present and reversible, never a call to action. */
-.wl-parked{opacity:0.78}
-.wl-parked .wl-await-hdr{font-weight:700}
+/* Parked is quieter than the awaiting list on purpose: present and reversible,
+   never a call to action. Expressed with the muted INK token and a tinted
+   surface rather than opacity (2026-08-31 review) - dimming the whole block
+   also dims the already-muted column headers and the small print, which drops
+   them below AA contrast. Colour choices stay explicit and legible. */
+.wl-parked{background:var(--color-bg-subtle,var(--color-bg-hover))}
+.wl-parked .wl-await-hdr{font-weight:700;color:var(--color-ink-muted)}
+.wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-muted)}
+.wl-await-note{font-size:11px;color:var(--color-ink-muted);font-style:italic;white-space:nowrap}
+.wl-park-form{padding:10px 14px 12px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-hover)}
+.wl-park-lbl{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
+.wl-park-in{width:100%;max-width:520px;padding:6px 9px;font:inherit;font-size:13px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
+.wl-park-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
+.wl-park-acts{display:flex;gap:6px;margin-top:8px}
+.wl-park-acts button[disabled]{opacity:0.5;cursor:not-allowed}
+.wl-park-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted);max-width:520px}
 .wl-await-btn:disabled{opacity:0.55;cursor:default}
 .wl-await-btn.wl-await-done{border-color:var(--color-green);background:var(--color-green);color:#fff;cursor:default}
 /* Manual-row form (2026-08-04 redesign): grouped sections instead of one
@@ -8569,7 +8582,11 @@ document.addEventListener('keydown',function(e){
         +'<div>'+wlTypeBadge(r.type)+'</div>'
         +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
         +'<div><span class="wl-await-exec" title="'+esc2(r.reason||'')+'">'+esc2(r.reason||'parked')+'</span></div>'
-        +'<div class="wl-await-acts"><button type="button" class="wl-await-btn" data-act="unparkRow" data-rid="'+esc2(r.masterRid)+'">Un-park</button></div>'
+        +'<div class="wl-await-acts">'
+          +(r.canUnpark===false
+            ? '<span class="wl-await-note" title="Un-park is keyed on Master RID, and this row has none. Fix it on the sheet.">no Master RID</span>'
+            : '<button type="button" class="wl-await-btn" data-act="unparkRow" data-rid="'+esc2(r.masterRid)+'">Un-park</button>')
+        +'</div>'
         +'</div>';
     }).join('');
     return '<div class="wl-await wl-parked"><div class="wl-await-hdr">Parked ('+rows.length+') &middot; not awaiting money, not deleted</div>'+hdr+body+'</div>';
@@ -8754,19 +8771,64 @@ document.addEventListener('keydown',function(e){
       var btn=e.target.closest('[data-act="parkRow"]');
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
-      var reason=window.prompt('Park this row: why is this money not coming?\n\nIt stays on its tab with all history, leaves the Awaiting-money list, and can be un-parked at any time.');
-      if(reason===null)return;
-      reason=String(reason).trim();
-      if(!reason){btn.title='A reason is required to park a row.';return;}
-      btn.disabled=true;btn.textContent='Parking...';
+      // An inline, styled two-step instead of window.prompt (2026-08-31
+      // review): prompt() is unstyleable next to the rest of this console,
+      // some browsers suppress it outright, and it enforced no length bound on
+      // a value that then travels in a query string. The row expands into a
+      // reason field; Park is armed only once something is typed.
+      var row=btn.closest('.wl-await-row');
+      if(!row)return;
+      if(row.querySelector('.wl-park-form'))return;   // already armed
+      var rid=btn.getAttribute('data-rid');
+      var form=document.createElement('div');
+      form.className='wl-park-form';
+      form.innerHTML='<label class="wl-park-lbl" for="wl-park-why">Why is this money not coming?</label>'
+        +'<input id="wl-park-why" class="wl-park-in" type="text" maxlength="'+PARK_REASON_MAX+'" '
+        +'placeholder="e.g. signed in April, never funded">'
+        +'<div class="wl-park-acts">'
+          +'<button type="button" class="wl-await-btn" data-park-go="1" disabled>Park</button>'
+          +'<button type="button" class="wl-await-btn wl-await-park" data-park-cancel="1">Cancel</button>'
+        +'</div>'
+        +'<p class="wl-park-hint">The row stays on its tab with all history. It leaves the Awaiting-money list and can be un-parked at any time.</p>';
+      row.insertAdjacentElement('afterend',form);
+      var input=form.querySelector('.wl-park-in');
+      var go=form.querySelector('[data-park-go]');
+      var cancel=form.querySelector('[data-park-cancel]');
+      input.addEventListener('input',function(){ go.disabled=!input.value.trim(); });
+      cancel.onclick=function(){ form.remove(); };
+      input.focus();
+      go.onclick=function(){
+        var reason=String(input.value||'').trim().slice(0,PARK_REASON_MAX);
+        if(!reason)return;
+        go.disabled=true;go.textContent='Parking...';
+        parkRow(rid,reason,form,go);
+      };
+    });
+    // The maximum reason length, enforced in THREE places on purpose: the
+    // input's maxlength (stops the typing), the slice (stops a paste), and the
+    // server. It travels as a query parameter, and an unbounded value fails on
+    // URL length as an opaque network error rather than as anything an
+    // operator could act on.
+    var PARK_REASON_MAX=200;
+    function parkRow(rid,reason,form,go){
       apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, GAS_ONLY_).then(function(r){
-        if(!r||!r.ok){btn.disabled=false;btn.textContent='Park';btn.title=(r&&r.error)||'Failed, try again';return;}
-        btn.textContent='Parked';
+        if(!r||!r.ok){go.disabled=false;go.textContent='Park';go.title=(r&&r.error)||'Failed, try again';return;}
+        form.remove();
+        wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
-        btn.disabled=false;btn.textContent='Park';btn.title=(err&&err.serverError)||'Could not reach the server';
+        go.disabled=false;go.textContent='Park';go.title=(err&&err.serverError)||'Could not reach the server';
       });
-    });
+    }
+    // Item 9: the write resolves a row ACROSS month tabs, this panel lists ONE
+    // month. Say where the row actually went, or a row parked on a tab the
+    // dropdown is not showing simply disappears with no explanation.
+    function wlNoteLandingTab(r){
+      var tab=r&&r.tab;
+      var shown=(monthEl.value||'').trim();
+      if(!tab||!shown||tab===shown)return;
+      setResult('<div style="color:var(--color-ink-muted)">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
+    }
     // Un-park returns the row to Pending - "the park was wrong", NOT "the money
     // arrived". Mark received is the other reversal and lands the row on
     // Received in transit; keeping them separate means correcting a mis-click
@@ -8779,6 +8841,7 @@ document.addEventListener('keydown',function(e){
       apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Un-parked';
+        wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Un-park';btn.title=(err&&err.serverError)||'Could not reach the server';
