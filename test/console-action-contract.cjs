@@ -67,7 +67,7 @@ while ((m = litRe.exec(html)) !== null) refs.add(m[1] + ':' + m[2]);
 // (same shape as the resendInvite/nudge ternary already carved out below via
 // their literal route strings). Those never actually hit '?admin=<act>', so
 // neither collection loop may manufacture a fake admin: ref for them.
-const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived']);
+const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived', 'rowNextMonth']);
 const actConfirm = html.match(/var ACT_CONFIRM=\{([\s\S]*?)\n\s*\};/);
 ok('dynamic-route source: ACT_CONFIRM found', !!actConfirm);
 if (actConfirm) {
@@ -121,6 +121,17 @@ if (gw) {
   ok('A1b gateway handles api:opMarkMoneyReceived (the real route markMoneyReceived hits)',
     gw.indexOf("p.api === 'opMarkMoneyReceived'") >= 0);
 }
+
+// ---- A3c: rowNextMonth is special-cased to ?api=diagCorrectTrackerDate, the
+// same shape as markMoneyReceived above. The carve-out is only safe while it
+// is paired with these assertions: the act must be handled before the generic
+// ?admin= fallback, AND the route it actually calls must be one a backend
+// answers. Without both, adding a name to DACT_SPECIAL_ROUTED would become a
+// way to silence exactly the dead-button class this file exists to catch.
+ok('A3c rowNextMonth special-cased before the generic ?admin= fallback',
+  /data-act="rowNextMonth"/.test(html) && /act="rowNextMonth"\]/.test(html));
+ok('A3c rowNextMonth routes to ?api=diagCorrectTrackerDate',
+  html.indexOf("apiFetch('?api=diagCorrectTrackerDate&masterRid='") >= 0);
 
 // ---- A3: stage-aware reminder routing ----
 ok('A3 drawer renders the pre-submit reminder as resendInvite, nudge only otherwise',
