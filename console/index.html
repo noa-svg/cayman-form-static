@@ -3146,6 +3146,20 @@ body.side-coll .ss-lbl { display: none; }
 .wl-parked{background:var(--color-bg-subtle,var(--color-bg-hover))}
 .wl-parked .wl-await-hdr{font-weight:700;color:var(--color-ink-muted)}
 .wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-muted)}
+/* Paused reminders. Quiet, never alarming: an LP who asked for time is a
+   normal state of affairs, not a fault, so no red and no warning tint. */
+.cs-remind{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rp-btn{padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
+.rp-btn:hover{background:var(--color-bg-hover);color:var(--color-ink)}
+.rp-btn[disabled]{opacity:0.5;cursor:not-allowed}
+.rp-note{font-size:11px;color:var(--color-ink-muted);line-height:1.5}
+.rp-note .rp-when{opacity:0.85}
+.rp-form{margin:8px 0 4px;padding:10px 12px;border:var(--bw) solid var(--color-border-subtle);border-radius:var(--radius-sm);background:var(--color-bg-hover)}
+.rp-lbl{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
+.rp-in{width:100%;padding:6px 9px;font:inherit;font-size:13px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
+.rp-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
+.rp-acts{display:flex;gap:6px;margin-top:8px}
+.rp-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted)}
 .wl-await-note{font-size:11px;color:var(--color-ink-muted);font-style:italic;white-space:nowrap}
 .wl-park-form{padding:10px 14px 12px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-hover)}
 .wl-park-lbl{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
@@ -6938,7 +6952,31 @@ document.addEventListener('keydown',function(e){
       h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">This signer\'s link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
     }
     h+=reminderHistLine(cs,rems);
-    h+='<div class="cs-line"><button class="nudge" data-act="nudge">'+(signerReminders(cs,rems).length?'Remind again':'Remind signer')+'</button></div>';
+    // Pause sits beside Remind on purpose (2026-09-01, Noa: "when Leo Levine
+    // tells us, wait, I won't make it for this month, and it keeps on sending
+    // her notifications even though she told us"). The moment you learn an LP
+    // needs time is the moment you are looking at this card, so the control
+    // belongs here rather than in a settings screen nobody opens mid-call.
+    //
+    // While paused the Remind button STAYS enabled: the pause stops the
+    // AUTOMATIC chase, and an operator deliberately clicking send is the same
+    // act that created the pause. It is relabelled so the override is obvious.
+    var isPaused=!!(cs&&cs.remindersPaused);
+    h+='<div class="cs-line cs-remind">'
+      +'<button class="nudge" data-act="nudge">'
+        +(isPaused?'Send anyway':(signerReminders(cs,rems).length?'Remind again':'Remind signer'))
+      +'</button>'
+      +(isPaused
+        ?'<button class="rp-btn" data-act="resumeReminders">Resume reminders</button>'
+        :'<button class="rp-btn" data-act="pauseReminders">Pause reminders</button>')
+      +'</div>';
+    if(isPaused){
+      var pr=cs.remindersPaused||{};
+      h+='<div class="cs-line rp-note">Automatic reminders paused'
+        +(pr.reason?': '+esc2(pr.reason):'')
+        +(pr.at?' <span class="rp-when">since '+esc2(String(pr.at).slice(0,10))+'</span>':'')
+        +'</div>';
+    }
     // Everything below Remind is a RECOVERY action - rare, deliberate, and
     // rendered from the RECOVERY_ACTIONS registry above so no control can
     // reach the page without the handler that the same registry binds.
@@ -7423,6 +7461,11 @@ document.addEventListener('keydown',function(e){
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
+    // Bounded in three places on purpose, same as the Park reason: the input's
+    // maxlength stops typing, the slice stops a paste, and the server checks
+    // again. It travels as a query parameter, where an unbounded value fails on
+    // URL length as an opaque network error rather than anything actionable.
+    var RP_REASON_MAX=200;
     var ACT_CONFIRM={
       // The message used to name no LP at all, and this strip renders at the
       // BOTTOM of a long scrolled drawer, far from the header carrying the name
@@ -7468,6 +7511,54 @@ document.addEventListener('keydown',function(e){
         // original invite, fresh token, lane-aware); at signing, ?admin=nudge
         // reminds the current signer. Before this, the pre-submit button hit the
         // nudge route and failed deterministically for every LP.
+        // Pause / resume the AUTOMATIC chase (2026-09-01). Pause asks for a
+        // reason inline, same shape as Park: this is the record of why an LP
+        // stopped being chased, and a pause with no stated reason is
+        // indistinguishable months later from a slipped click. Resume needs
+        // none - it restores the default behaviour rather than departing from
+        // it.
+        if(act==='pauseReminders'){
+          if(b.parentNode&&b.parentNode.querySelector('.rp-form'))return;   // already armed
+          var rpForm=document.createElement('div');
+          rpForm.className='rp-form';
+          rpForm.innerHTML='<label class="rp-lbl" for="rp-why">Why are we pausing?</label>'
+            +'<input id="rp-why" class="rp-in" type="text" maxlength="'+RP_REASON_MAX+'" placeholder="e.g. asked for more time, will confirm next month">'
+            +'<div class="rp-acts">'
+              +'<button type="button" class="rp-btn" data-rp-go="1" disabled>Pause</button>'
+              +'<button type="button" class="rp-btn rp-cancel" data-rp-cancel="1">Cancel</button>'
+            +'</div>'
+            +'<p class="rp-hint">Stops the automatic reminders only. You can still send one by hand, and the LP appears in the paused list until you resume.</p>';
+          b.parentNode.insertAdjacentElement('afterend',rpForm);
+          var rpIn=rpForm.querySelector('.rp-in'),rpGo=rpForm.querySelector('[data-rp-go]'),rpCancel=rpForm.querySelector('[data-rp-cancel]');
+          rpIn.addEventListener('input',function(){rpGo.disabled=!rpIn.value.trim();});
+          rpCancel.onclick=function(){rpForm.remove();};
+          rpIn.focus();
+          rpGo.onclick=function(){
+            var why=String(rpIn.value||'').trim().slice(0,RP_REASON_MAX);
+            if(!why)return;
+            rpGo.disabled=true;rpGo.textContent='Pausing...';
+            dStatus('Pausing reminders...','');
+            apiFetch('?api=opPauseReminders&processId='+encodeURIComponent(currentPid)+'&reason='+encodeURIComponent(why),false,currentEngine).then(function(r){
+              if(r&&r.ok){rpForm.remove();dStatus('Automatic reminders paused. Nothing further will be sent until you resume.','ok');setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);}
+              else{rpGo.disabled=false;rpGo.textContent='Pause';dStatus('Could not pause'+((r&&r.error)?(': '+r.error):'.'),'error');}
+            }).catch(function(err){
+              rpGo.disabled=false;rpGo.textContent='Pause';
+              dStatus('Could not pause'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection.'),'error');
+            });
+          };
+          return;
+        }
+        if(act==='resumeReminders'){
+          b.disabled=true;dStatus('Resuming reminders...','');
+          apiFetch('?api=opResumeReminders&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
+            if(r&&r.ok){dStatus('Automatic reminders resumed.','ok');setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);}
+            else{b.disabled=false;dStatus('Could not resume'+((r&&r.error)?(': '+r.error):'.'),'error');}
+          }).catch(function(err){
+            b.disabled=false;
+            dStatus('Could not resume'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection.'),'error');
+          });
+          return;
+        }
         if(act==='nudge'||act==='resendInvite'){
           b.disabled=true;dStatus('Sending the reminder...','');
           var remRoute=(act==='resendInvite')?'?admin=resendInvite&processId=':'?admin=nudge&processId=';
