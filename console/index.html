@@ -3136,6 +3136,38 @@ body.side-coll .ss-lbl { display: none; }
 .wl-await-exec.wl-await-invalid{background:rgba(216,94,76,0.14);color:var(--color-coral)}
 .wl-await-btn{padding:5px 10px;font-size:12px;font-weight:700;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
 .wl-await-btn:hover{background:var(--color-bg-hover)}
+.wl-await-acts{display:flex;gap:6px;align-items:center}
+.wl-await-btn.wl-await-park{font-weight:600;color:var(--color-ink-muted)}
+/* Parked is quieter than the awaiting list on purpose: present and reversible,
+   never a call to action. Expressed with the muted INK token and a tinted
+   surface rather than opacity (2026-08-31 review) - dimming the whole block
+   also dims the already-muted column headers and the small print, which drops
+   them below AA contrast. Colour choices stay explicit and legible. */
+.wl-parked{background:var(--color-bg-subtle,var(--color-bg-hover))}
+.wl-parked .wl-await-hdr{font-weight:700;color:var(--color-ink-muted)}
+.wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-muted)}
+/* Paused reminders. Quiet, never alarming: an LP who asked for time is a
+   normal state of affairs, not a fault, so no red and no warning tint. */
+.cs-remind{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rp-btn{padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
+.rp-btn:hover{background:var(--color-bg-hover);color:var(--color-ink)}
+.rp-btn[disabled]{opacity:0.5;cursor:not-allowed}
+.rp-note{font-size:11px;color:var(--color-ink-muted);line-height:1.5}
+.rp-note .rp-when{opacity:0.85}
+.rp-form{margin:8px 0 4px;padding:10px 12px;border:var(--bw) solid var(--color-border-subtle);border-radius:var(--radius-sm);background:var(--color-bg-hover)}
+.rp-lbl{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
+.rp-in{width:100%;padding:6px 9px;font:inherit;font-size:13px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
+.rp-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
+.rp-acts{display:flex;gap:6px;margin-top:8px}
+.rp-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted)}
+.wl-await-note{font-size:11px;color:var(--color-ink-muted);font-style:italic;white-space:nowrap}
+.wl-park-form{padding:10px 14px 12px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-hover)}
+.wl-park-lbl{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
+.wl-park-in{width:100%;max-width:520px;padding:6px 9px;font:inherit;font-size:13px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
+.wl-park-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
+.wl-park-acts{display:flex;gap:6px;margin-top:8px}
+.wl-park-acts button[disabled]{opacity:0.5;cursor:not-allowed}
+.wl-park-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted);max-width:520px}
 .wl-await-btn:disabled{opacity:0.55;cursor:default}
 .wl-await-btn.wl-await-done{border-color:var(--color-green);background:var(--color-green);color:#fff;cursor:default}
 /* Manual-row form (2026-08-04 redesign): grouped sections instead of one
@@ -3679,6 +3711,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             </div>
           </div>
           <div id="wlAwaiting" style="margin-top:16px"></div>
+          <div id="wlParked" style="margin-top:12px"></div>
           <div id="wlRows" style="margin-top:16px"></div>
           <!-- Findings sit ABOVE the buttons on purpose. They used to render
                below, so Review armed Generate and the operator's pointer was
@@ -6919,7 +6952,31 @@ document.addEventListener('keydown',function(e){
       h+='<div class="dlink"><a class="lk" href="'+esc2(cs.link)+'" target="_blank" rel="noopener">This signer\'s link</a><button class="cp" data-c="'+esc2(cs.link)+'">Copy</button></div>';
     }
     h+=reminderHistLine(cs,rems);
-    h+='<div class="cs-line"><button class="nudge" data-act="nudge">'+(signerReminders(cs,rems).length?'Remind again':'Remind signer')+'</button></div>';
+    // Pause sits beside Remind on purpose (2026-09-01, Noa: "when Leo Levine
+    // tells us, wait, I won't make it for this month, and it keeps on sending
+    // her notifications even though she told us"). The moment you learn an LP
+    // needs time is the moment you are looking at this card, so the control
+    // belongs here rather than in a settings screen nobody opens mid-call.
+    //
+    // While paused the Remind button STAYS enabled: the pause stops the
+    // AUTOMATIC chase, and an operator deliberately clicking send is the same
+    // act that created the pause. It is relabelled so the override is obvious.
+    var isPaused=!!(cs&&cs.remindersPaused);
+    h+='<div class="cs-line cs-remind">'
+      +'<button class="nudge" data-act="nudge">'
+        +(isPaused?'Send anyway':(signerReminders(cs,rems).length?'Remind again':'Remind signer'))
+      +'</button>'
+      +(isPaused
+        ?'<button class="rp-btn" data-act="resumeReminders">Resume reminders</button>'
+        :'<button class="rp-btn" data-act="pauseReminders">Pause reminders</button>')
+      +'</div>';
+    if(isPaused){
+      var pr=cs.remindersPaused||{};
+      h+='<div class="cs-line rp-note">Automatic reminders paused'
+        +(pr.reason?': '+esc2(pr.reason):'')
+        +(pr.at?' <span class="rp-when">since '+esc2(String(pr.at).slice(0,10))+'</span>':'')
+        +'</div>';
+    }
     // Everything below Remind is a RECOVERY action - rare, deliberate, and
     // rendered from the RECOVERY_ACTIONS registry above so no control can
     // reach the page without the handler that the same registry binds.
@@ -7404,6 +7461,11 @@ document.addEventListener('keydown',function(e){
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
+    // Bounded in three places on purpose, same as the Park reason: the input's
+    // maxlength stops typing, the slice stops a paste, and the server checks
+    // again. It travels as a query parameter, where an unbounded value fails on
+    // URL length as an opaque network error rather than anything actionable.
+    var RP_REASON_MAX=200;
     var ACT_CONFIRM={
       // The message used to name no LP at all, and this strip renders at the
       // BOTTOM of a long scrolled drawer, far from the header carrying the name
@@ -7449,6 +7511,54 @@ document.addEventListener('keydown',function(e){
         // original invite, fresh token, lane-aware); at signing, ?admin=nudge
         // reminds the current signer. Before this, the pre-submit button hit the
         // nudge route and failed deterministically for every LP.
+        // Pause / resume the AUTOMATIC chase (2026-09-01). Pause asks for a
+        // reason inline, same shape as Park: this is the record of why an LP
+        // stopped being chased, and a pause with no stated reason is
+        // indistinguishable months later from a slipped click. Resume needs
+        // none - it restores the default behaviour rather than departing from
+        // it.
+        if(act==='pauseReminders'){
+          if(b.parentNode&&b.parentNode.querySelector('.rp-form'))return;   // already armed
+          var rpForm=document.createElement('div');
+          rpForm.className='rp-form';
+          rpForm.innerHTML='<label class="rp-lbl" for="rp-why">Why are we pausing?</label>'
+            +'<input id="rp-why" class="rp-in" type="text" maxlength="'+RP_REASON_MAX+'" placeholder="e.g. asked for more time, will confirm next month">'
+            +'<div class="rp-acts">'
+              +'<button type="button" class="rp-btn" data-rp-go="1" disabled>Pause</button>'
+              +'<button type="button" class="rp-btn rp-cancel" data-rp-cancel="1">Cancel</button>'
+            +'</div>'
+            +'<p class="rp-hint">Stops the automatic reminders only. You can still send one by hand, and the LP appears in the paused list until you resume.</p>';
+          b.parentNode.insertAdjacentElement('afterend',rpForm);
+          var rpIn=rpForm.querySelector('.rp-in'),rpGo=rpForm.querySelector('[data-rp-go]'),rpCancel=rpForm.querySelector('[data-rp-cancel]');
+          rpIn.addEventListener('input',function(){rpGo.disabled=!rpIn.value.trim();});
+          rpCancel.onclick=function(){rpForm.remove();};
+          rpIn.focus();
+          rpGo.onclick=function(){
+            var why=String(rpIn.value||'').trim().slice(0,RP_REASON_MAX);
+            if(!why)return;
+            rpGo.disabled=true;rpGo.textContent='Pausing...';
+            dStatus('Pausing reminders...','');
+            apiFetch('?api=opPauseReminders&processId='+encodeURIComponent(currentPid)+'&reason='+encodeURIComponent(why),false,currentEngine).then(function(r){
+              if(r&&r.ok){rpForm.remove();dStatus('Automatic reminders paused. Nothing further will be sent until you resume.','ok');setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);}
+              else{rpGo.disabled=false;rpGo.textContent='Pause';dStatus('Could not pause'+((r&&r.error)?(': '+r.error):'.'),'error');}
+            }).catch(function(err){
+              rpGo.disabled=false;rpGo.textContent='Pause';
+              dStatus('Could not pause'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection.'),'error');
+            });
+          };
+          return;
+        }
+        if(act==='resumeReminders'){
+          b.disabled=true;dStatus('Resuming reminders...','');
+          apiFetch('?api=opResumeReminders&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
+            if(r&&r.ok){dStatus('Automatic reminders resumed.','ok');setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);}
+            else{b.disabled=false;dStatus('Could not resume'+((r&&r.error)?(': '+r.error):'.'),'error');}
+          }).catch(function(err){
+            b.disabled=false;
+            dStatus('Could not resume'+((err&&err.serverError)?(': '+err.serverError):'. Check the connection.'),'error');
+          });
+          return;
+        }
         if(act==='nudge'||act==='resendInvite'){
           b.disabled=true;dStatus('Sending the reminder...','');
           var remRoute=(act==='resendInvite')?'?admin=resendInvite&processId=':'?admin=nudge&processId=';
@@ -8525,7 +8635,12 @@ document.addEventListener('keydown',function(e){
     if(!rows||!rows.length)return '';
     var hdr='<div class="wl-await-cols"><span>Name</span><span>Type</span><span>Amount</span><span>Status</span><span></span></div>';
     var body=rows.map(function(r){
-      var validExec=/^(Pending|טרם הועבר)$/.test(r.execStatus||'');
+      // 'Parked' is a LEGITIMATE execution state (2026-08-31), not garbage.
+      // The server already excludes parked rows from this list, so one showing
+      // up here means the deployed GAS build predates the token - which is a
+      // reason to render it plainly and let the operator act, not to brand a
+      // deliberate decision red and " - invalid".
+      var validExec=/^(Pending|טרם הועבר|Parked)$/.test(r.execStatus||'');
       var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
         +(r.nameEn?'<span class="wl-row-nm-en">'+esc2(r.nameEn)+'</span>':'');
       return '<div class="wl-await-row">'
@@ -8533,10 +8648,39 @@ document.addEventListener('keydown',function(e){
         +'<div>'+wlTypeBadge(r.type)+'</div>'
         +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
         +'<div><span class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</span></div>'
-        +'<div><button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button></div>'
+        +'<div class="wl-await-acts">'
+          +'<button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button>'
+          +'<button type="button" class="wl-await-btn wl-await-park" data-act="parkRow" data-rid="'+esc2(r.masterRid)+'">Park</button>'
+        +'</div>'
         +'</div>';
     }).join('');
     return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+hdr+body+'</div>';
+  }
+  // The PARKED list (2026-08-31). Rows deliberately taken out of Awaiting
+  // money without being deleted, kept visible here so parking is not the same
+  // thing as disappearing: the only other route back would be hand-editing the
+  // tracker cell, which is exactly what the Mark-received button was built to
+  // stop. Renders nothing at all when there are no parked rows, so a normal
+  // month is not carrying a permanently empty box.
+  function wlParkedHtml(rows){
+    if(!rows||!rows.length)return '';
+    var hdr='<div class="wl-await-cols"><span>Name</span><span>Type</span><span>Amount</span><span>Reason</span><span></span></div>';
+    var body=rows.map(function(r){
+      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
+        +(r.nameEn?'<span class="wl-row-nm-en">'+esc2(r.nameEn)+'</span>':'');
+      return '<div class="wl-await-row">'
+        +'<div class="wl-row-nm">'+nmHtml+'</div>'
+        +'<div>'+wlTypeBadge(r.type)+'</div>'
+        +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
+        +'<div><span class="wl-await-exec" title="'+esc2(r.reason||'')+'">'+esc2(r.reason||'parked')+'</span></div>'
+        +'<div class="wl-await-acts">'
+          +(r.canUnpark===false
+            ? '<span class="wl-await-note" title="Un-park is keyed on Master RID, and this row has none. Fix it on the sheet.">no Master RID</span>'
+            : '<button type="button" class="wl-await-btn" data-act="unparkRow" data-rid="'+esc2(r.masterRid)+'">Un-park</button>')
+        +'</div>'
+        +'</div>';
+    }).join('');
+    return '<div class="wl-await wl-parked"><div class="wl-await-hdr">Parked ('+rows.length+') &middot; not awaiting money, not deleted</div>'+hdr+body+'</div>';
   }
   function wlTransfersHtml(transfers){
     var hdr='<div class="wl-rows-hdr">'
@@ -8560,8 +8704,11 @@ document.addEventListener('keydown',function(e){
   // re-enters it, so there is no second surface): ju-service has no handler for
   //   opPeekAwaitingMoney, opMarkMoneyReceived, opPeekMonthTransfers,
   //   opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
-  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails
-  // - none of those eight strings appears anywhere under ju-service/src. An
+  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails,
+  //   opPeekParked, opParkRow, opUnparkRow
+  // - none of those eleven strings appears anywhere under ju-service/src (the
+  // last three added 2026-08-31 with the Parked execution state; re-checked
+  // against consoledispatch.ts the same way). An
   // unknown api there returns {ok:false,error:'unknown route'}, which apiFetch
   // turns into a thrown server_error, so repointing any of these would break a
   // live operator panel that touches real money rows on the first click.
@@ -8573,7 +8720,8 @@ document.addEventListener('keydown',function(e){
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
         draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
         rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult'),
-        awaitEl=document.getElementById('wlAwaiting');
+        awaitEl=document.getElementById('wlAwaiting'),
+        parkedEl=document.getElementById('wlParked');
     if(!reviewBtn)return;
     // The struck-NAV month, appended to every generate/review/verify call.
     // Empty means "let the server default to the tracker tab's own month",
@@ -8657,7 +8805,7 @@ document.addEventListener('keydown',function(e){
     // from the snapshot, never from the live controls, and refuses if the two
     // have diverged. Only the empty-month path used to clear it; every input
     // now clears it.
-    var lastGo=null,peekSeq=0,wlLastTransfers=null,awaitSeq=0;
+    var lastGo=null,peekSeq=0,wlLastTransfers=null,awaitSeq=0,parkedSeq=0;
     var gateNoteEl=document.getElementById('wlGateNote'),
         confirmEl=document.getElementById('wlConfirm'),
         confirmMsgEl=document.getElementById('wlConfirmMsg'),
@@ -8688,12 +8836,108 @@ document.addEventListener('keydown',function(e){
         awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
       }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
     }
+    function peekParked(){
+      if(!parkedEl)return;
+      var month=(monthEl.value||'').trim();
+      if(!/^\d{2}\/\d{4}$/.test(month)){parkedEl.innerHTML='';return;}
+      var rid=++parkedSeq;
+      apiFetch('?api=opPeekParked&monthTab='+encodeURIComponent(month), false, GAS_ONLY_).then(function(r){
+        if(rid!==parkedSeq)return;
+        parkedEl.innerHTML=(r&&r.ok)?wlParkedHtml(r.rows):'';
+      }).catch(function(){ if(rid===parkedSeq)parkedEl.innerHTML=''; });
+    }
     // "Mark received" (2026-08-03/04, Noa: "can i edit it in console? itll be
     // easier") - same route the Board drawer's own button calls
     // (?api=opMarkMoneyReceived), keyed on masterRid instead of processId so
     // it also covers rows with no Ju registry entry. Idempotent + forward-
     // only server-side, so no confirm step here - a stray second click just
     // reports "already advanced".
+    // "Park" (2026-08-31). Unlike Mark received, this one CONFIRMS and demands
+    // a reason: it is the action that takes a real, signed money row out of
+    // every "still owed" list, and a row parked by a slipped click with no
+    // stated reason is indistinguishable later from one parked deliberately.
+    // The reason is appended to the row's NOTES on the sheet, so the tracker
+    // explains itself without the console.
+    awaitEl.addEventListener('click',function(e){
+      var btn=e.target.closest('[data-act="parkRow"]');
+      if(!btn||btn.disabled)return;
+      var rid=btn.getAttribute('data-rid');
+      // An inline, styled two-step instead of window.prompt (2026-08-31
+      // review): prompt() is unstyleable next to the rest of this console,
+      // some browsers suppress it outright, and it enforced no length bound on
+      // a value that then travels in a query string. The row expands into a
+      // reason field; Park is armed only once something is typed.
+      var row=btn.closest('.wl-await-row');
+      if(!row)return;
+      if(row.querySelector('.wl-park-form'))return;   // already armed
+      var rid=btn.getAttribute('data-rid');
+      var form=document.createElement('div');
+      form.className='wl-park-form';
+      form.innerHTML='<label class="wl-park-lbl" for="wl-park-why">Why is this money not coming?</label>'
+        +'<input id="wl-park-why" class="wl-park-in" type="text" maxlength="'+PARK_REASON_MAX+'" '
+        +'placeholder="e.g. signed in April, never funded">'
+        +'<div class="wl-park-acts">'
+          +'<button type="button" class="wl-await-btn" data-park-go="1" disabled>Park</button>'
+          +'<button type="button" class="wl-await-btn wl-await-park" data-park-cancel="1">Cancel</button>'
+        +'</div>'
+        +'<p class="wl-park-hint">The row stays on its tab with all history. It leaves the Awaiting-money list and can be un-parked at any time.</p>';
+      row.insertAdjacentElement('afterend',form);
+      var input=form.querySelector('.wl-park-in');
+      var go=form.querySelector('[data-park-go]');
+      var cancel=form.querySelector('[data-park-cancel]');
+      input.addEventListener('input',function(){ go.disabled=!input.value.trim(); });
+      cancel.onclick=function(){ form.remove(); };
+      input.focus();
+      go.onclick=function(){
+        var reason=String(input.value||'').trim().slice(0,PARK_REASON_MAX);
+        if(!reason)return;
+        go.disabled=true;go.textContent='Parking...';
+        parkRow(rid,reason,form,go);
+      };
+    });
+    // The maximum reason length, enforced in THREE places on purpose: the
+    // input's maxlength (stops the typing), the slice (stops a paste), and the
+    // server. It travels as a query parameter, and an unbounded value fails on
+    // URL length as an opaque network error rather than as anything an
+    // operator could act on.
+    var PARK_REASON_MAX=200;
+    function parkRow(rid,reason,form,go){
+      apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, GAS_ONLY_).then(function(r){
+        if(!r||!r.ok){go.disabled=false;go.textContent='Park';go.title=(r&&r.error)||'Failed, try again';return;}
+        form.remove();
+        wlNoteLandingTab(r);
+        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
+      }).catch(function(err){
+        go.disabled=false;go.textContent='Park';go.title=(err&&err.serverError)||'Could not reach the server';
+      });
+    }
+    // Item 9: the write resolves a row ACROSS month tabs, this panel lists ONE
+    // month. Say where the row actually went, or a row parked on a tab the
+    // dropdown is not showing simply disappears with no explanation.
+    function wlNoteLandingTab(r){
+      var tab=r&&r.tab;
+      var shown=(monthEl.value||'').trim();
+      if(!tab||!shown||tab===shown)return;
+      setResult('<div style="color:var(--color-ink-muted)">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
+    }
+    // Un-park returns the row to Pending - "the park was wrong", NOT "the money
+    // arrived". Mark received is the other reversal and lands the row on
+    // Received in transit; keeping them separate means correcting a mis-click
+    // never requires asserting that funds landed.
+    if(parkedEl)parkedEl.addEventListener('click',function(e){
+      var btn=e.target.closest('[data-act="unparkRow"]');
+      if(!btn||btn.disabled)return;
+      var rid=btn.getAttribute('data-rid');
+      btn.disabled=true;btn.textContent='Un-parking...';
+      apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
+        if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
+        btn.textContent='Un-parked';
+        wlNoteLandingTab(r);
+        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
+      }).catch(function(err){
+        btn.disabled=false;btn.textContent='Un-park';btn.title=(err&&err.serverError)||'Could not reach the server';
+      });
+    });
     awaitEl.addEventListener('click',function(e){
       var btn=e.target.closest('[data-act="markMoneyReceived"]');
       if(!btn||btn.disabled)return;
@@ -8702,7 +8946,7 @@ document.addEventListener('keydown',function(e){
       apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
-        setTimeout(function(){ peekAwaiting(); peekRows(); },600);
+        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Mark received';btn.title=(err&&err.serverError)||'Could not reach the server';
       });
@@ -8769,14 +9013,14 @@ document.addEventListener('keydown',function(e){
       var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
       if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
       monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
-      wlRenderNavLine();peekRows();peekAwaiting();
+      wlRenderNavLine();peekRows();peekAwaiting();peekParked();
     }).catch(function(){
       monthEl.innerHTML='<option value="">Could not load months</option>';
     });
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlRenderNavLine();peekRows();peekAwaiting();};
+    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlRenderNavLine();peekRows();peekAwaiting();peekParked();};
     ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');peekRows();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
