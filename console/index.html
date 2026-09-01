@@ -3124,6 +3124,14 @@ body.side-coll .ss-lbl { display: none; }
    ?api=opMarkMoneyReceived route the Board drawer already uses (idempotent,
    forward-only, Tier-1 auth) - no cell editing needed. */
 .wl-await{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-bottom:12px}
+.wl-await-acts{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.wl-await-btn--quiet{background:transparent;border:1px solid var(--color-border);color:var(--color-ink-muted);font-weight:600}
+.wl-await-btn--quiet:hover:not(:disabled){color:var(--color-ink);border-color:var(--color-ink-muted)}
+.wl-openmonth-host{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.wl-openmonth{border:1px solid var(--color-accent,#1F5DB0);background:var(--color-accent,#1F5DB0);color:#fff;border-radius:var(--radius-sm,4px);cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;letter-spacing:.02em}
+.wl-openmonth:hover:not(:disabled){filter:brightness(1.08)}
+.wl-openmonth:disabled{opacity:.55;cursor:default}
+.wl-openmonth-why{font-size:11px;color:var(--color-ink-muted)}
 .wl-await-hdr{padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
 .wl-await-cols{display:grid;grid-template-columns:minmax(140px,1fr) 90px 130px 150px 120px;gap:14px;padding:6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
 .wl-await-cols span:nth-child(3){text-align:right}
@@ -3664,6 +3672,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
               <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
                 <option value="">Loading...</option>
               </select>
+              <div id="wlOpenMonth" class="wl-openmonth-host"></div>
             </div>
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Struck NAV <span style="opacity:.7">(override)</span></label>
@@ -8533,7 +8542,17 @@ document.addEventListener('keydown',function(e){
         +'<div>'+wlTypeBadge(r.type)+'</div>'
         +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
         +'<div><span class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</span></div>'
-        +'<div><button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button></div>'
+        +'<div class="wl-await-acts">'
+          +'<button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button>'
+          // "Not this month" (2026-09-01). An LP who signs at month end has
+          // their money land in the NEXT month, so their row is sitting in a
+          // month whose letter will never carry it. The tab is chosen at seal
+          // time and nobody knows then when the money will arrive, so this is
+          // the operator saying what only she knows. One button: it sets the
+          // row's date to the next month's 1st, which is the only date the
+          // fund ever prices on.
+          +'<button type="button" class="wl-await-btn wl-await-btn--quiet" data-act="rowNextMonth" data-rid="'+esc2(r.masterRid)+'" title="Their money lands next month, not this one">Not this month</button>'
+        +'</div>'
         +'</div>';
     }).join('');
     return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+hdr+body+'</div>';
@@ -8695,6 +8714,31 @@ document.addEventListener('keydown',function(e){
     // only server-side, so no confirm step here - a stray second click just
     // reports "already advanced".
     awaitEl.addEventListener('click',function(e){
+      var nxt=e.target.closest('[data-act="rowNextMonth"]');
+      if(nxt){
+        var nrid=nxt.getAttribute('data-rid')||'';
+        if(!nrid)return;
+        // Next month relative to the month being VIEWED, not to today: the
+        // operator is looking at August's list in September and saying "this
+        // one is September", and today's date is not what decides that.
+        var viewing=(document.getElementById('wlMonth')||{}).value||'';
+        var mm=/^(\d{2})\/(\d{4})$/.exec(viewing);
+        if(!mm)return;
+        var m2=Number(mm[1])+1, y2=Number(mm[2]);
+        if(m2>12){m2=1;y2+=1;}
+        var target=(m2<10?'0':'')+m2+'/'+y2;
+        nxt.disabled=true;nxt.textContent='Moving\u2026';
+        apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,consoleReadBase_())
+          .then(function(res){
+            if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
+            peekAwaiting();peekRows();
+          })
+          .catch(function(err){
+            nxt.disabled=false;nxt.textContent='Not this month';
+            alert((err&&(err.serverError||err.message))||'Could not set the month.');
+          });
+        return;
+      }
       var btn=e.target.closest('[data-act="markMoneyReceived"]');
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
@@ -8765,14 +8809,71 @@ document.addEventListener('keydown',function(e){
     // Month dropdown (Noa, 2026-08-02: "it should have a dropdown for the
     // month i want to see") - populated from the tracker's real month tabs,
     // newest first. Defaults to the newest month, then peeks immediately.
-    apiFetch('?api=listTrackerMonthTabs', false, consoleReadBase_()).then(function(r){
-      var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
-      if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';return;}
-      monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
-      wlRenderNavLine();peekRows();peekAwaiting();
-    }).catch(function(){
-      monthEl.innerHTML='<option value="">Could not load months</option>';
-    });
+    // THE MISSING MONTH (2026-09-01, Noa: "wheres september?"). This dropdown
+    // lists the tracker's REAL month tabs, and until today the only things that
+    // could create one were the two seal-time writers - so a month with no
+    // completed subscription simply did not exist here, and the operator was
+    // waiting on a customer to be able to do her own job. If the CURRENT month
+    // has no tab, offer to open it right here rather than making her go
+    // somewhere else to find out why the month is absent.
+    function currentMonthMMYYYY(){
+      // Asia/Jerusalem, matching every tracker path. Never the browser's zone:
+      // near midnight on the 1st those disagree, and this decides a money month.
+      var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit'}).formatToParts(new Date());
+      var o={};p.forEach(function(x){o[x.type]=x.value;});
+      return o.month+'/'+o.year;
+    }
+    // wlMonthWords takes YYYY-MM (the struck-NAV shape). The month TABS are
+    // MM/YYYY, and feeding those to it silently returns the input unchanged -
+    // "Open 09/2026" instead of "Open September 2026". Its own guard makes that
+    // failure invisible, so this converts the tab shape explicitly.
+    function wlTabMonthWords(mmYyyy){
+      var m=/^(\d{2})\/(\d{4})$/.exec(String(mmYyyy||''));
+      if(!m)return mmYyyy||'';
+      var name=WL_MONTH_NAMES_[parseInt(m[1],10)-1];
+      return name?(name+' '+m[2]):(mmYyyy||'');
+    }
+    function renderOpenMonthOffer(months){
+      var host=document.getElementById('wlOpenMonth');
+      if(!host)return;
+      var cur=currentMonthMMYYYY();
+      if(months.indexOf(cur)>-1){host.innerHTML='';return;}
+      host.innerHTML='<button type="button" id="wlOpenMonthBtn" class="wl-openmonth">Open '+esc2(wlTabMonthWords(cur))+'</button>'
+        +'<span class="wl-openmonth-why">'+esc2(wlTabMonthWords(cur))+' has no tab yet, so it cannot be selected or generated.</span>';
+      var btn=document.getElementById('wlOpenMonthBtn');
+      if(!btn)return;
+      btn.onclick=function(){
+        btn.disabled=true;btn.textContent='Opening '+wlTabMonthWords(cur)+'\u2026';
+        // commit=1 straight away: the dry run exists for a scripted operator,
+        // and a button that asks "are you sure" about creating an empty tab is
+        // friction with nothing behind it. Opening the CURRENT month is inert
+        // (see routes/diagopenmonthtab.ts) and re-opening is a no-op.
+        apiFetch('?api=diagOpenMonthTab&month='+encodeURIComponent(cur)+'&commit=1',false,consoleReadBase_())
+          .then(function(res){
+            if(!res||res.ok===false){throw new Error((res&&res.error)||'could not open the month');}
+            loadMonths(cur);
+          })
+          .catch(function(err){
+            btn.disabled=false;btn.textContent='Open '+wlTabMonthWords(cur);
+            var why=document.querySelector('.wl-openmonth-why');
+            if(why){why.textContent=(err&&(err.serverError||err.message))||'Could not open the month.';why.style.color='var(--color-danger)';}
+          });
+      };
+    }
+
+    function loadMonths(selectAfter){
+      return apiFetch('?api=listTrackerMonthTabs', false, consoleReadBase_()).then(function(r){
+        var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
+        if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';renderOpenMonthOffer([]);return;}
+        monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
+        if(selectAfter&&months.indexOf(selectAfter)>-1)monthEl.value=selectAfter;
+        renderOpenMonthOffer(months);
+        wlRenderNavLine();peekRows();peekAwaiting();
+      }).catch(function(){
+        monthEl.innerHTML='<option value="">Could not load months</option>';
+      });
+    }
+    loadMonths();
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
