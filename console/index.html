@@ -5562,7 +5562,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var attn=isAttnRow(r);
     // An approved row says who cleared it, in place of the question it used to
     // ask. That sentence IS the answer to "why is this not flagged any more".
-    var reviewedLine=r.reviewApproved?('Reviewed by '+(r.reviewedBy||'an operator')):'';
+    var reviewedLine=r.reviewApproved?('Approved by '+(r.reviewedBy||'an operator')):'';
     var done=(isTerminalStage(st)&&!stale)?' done':'';
     var dead=isCanceledStage(st)?' dead':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
@@ -7189,9 +7189,9 @@ document.addEventListener('keydown',function(e){
     // NOTHING about whether the money moved - that is Mark money received, above,
     // and they are deliberately two buttons.
     if(d && d.reviewApproved){
-      dactBtns+='<button class="dreopen" data-act="rowReopen">Reopen for review</button>';
+      dactBtns+='<button class="dreopen" data-act="rowReopen">Undo approval</button>';
     } else {
-      dactBtns+='<button class="dreviewed" data-act="rowReviewed">Mark reviewed</button>';
+      dactBtns+='<button class="dreviewed" data-act="rowReviewed">Approved</button>';
     }
     if(!isTerminal){
       dactBtns+='<button class="dvoid" data-act="void">Void</button>';
