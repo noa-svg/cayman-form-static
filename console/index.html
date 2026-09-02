@@ -8750,6 +8750,7 @@ document.addEventListener('keydown',function(e){
           // row's date to the next month's 1st, which is the only date the
           // fund ever prices on.
           +'<button type="button" class="wl-await-btn wl-await-btn--quiet" data-act="rowNextMonth" data-rid="'+esc2(r.masterRid)+'" title="Their money lands next month, not this one">Not this month</button>'
+          +'<button type="button" class="wl-await-btn wl-await-park" data-act="parkRow" data-rid="'+esc2(r.masterRid)+'">Park</button>'
         +'</div>'
         +'</div>';
     }).join('');
