@@ -1033,7 +1033,12 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   position: absolute;
   top: 100%;
   right: 0;
-  z-index: 20;
+  /* 50, not 20: the JS now force-positions this via inline style (fixed,
+     appended to document.body) when a drawer is open, specifically so it
+     escapes the drawer's inert-marked board underneath it - z-index 20 sat
+     BELOW .scrim (40) and .panel (41), so it would have rendered invisibly
+     behind the drawer's overlay. 50 clears both. */
+  z-index: 50;
   width: 260px;
   background: #fff;
   border: var(--bw) solid var(--color-ink);
@@ -5633,18 +5638,33 @@ document.addEventListener('keydown',function(e){
   if(ex){e.stopPropagation();closeAnyNotePopover(true);}
 },true);
   function toggleNotePopover(btn){
-    var wasOpenForThisBtn=btn.parentNode&&btn.parentNode.querySelector('.rnote-pop');
+    var pid=btn.getAttribute('data-pid'); if(!pid) return;
+    // Popover now lives on document.body, not inside btn.parentNode (see the
+    // append below), so "is THIS button's popover already open" has to be
+    // tracked by pid rather than DOM containment.
+    var existing=document.querySelector('.rnote-pop');
+    var wasOpenForThisBtn=existing&&existing.getAttribute('data-pid')===pid;
     closeAnyNotePopover();
     if(wasOpenForThisBtn) return;
-    var pid=btn.getAttribute('data-pid'); if(!pid) return;
     var rowBase=btn.getAttribute('data-base')||GW;
     var pop=document.createElement('div'); pop.className='rnote-pop';
+    pop.setAttribute('data-pid',pid);
     pop.setAttribute('role','dialog'); pop.setAttribute('aria-label','Operator note');
     pop.setAttribute('data-orig', btn.getAttribute('data-note')||'');
     pop.innerHTML='<textarea maxlength="240" placeholder="Private note (not visible to LPs)">'+esc2(btn.getAttribute('data-note')||'')+'</textarea>'
       +'<div class="rnote-pop-actions"><span class="rnote-count"></span><button type="button" class="rnote-clear">Clear</button><button type="button" class="rnote-save">Save</button></div>';
-    btn.parentNode.style.position='relative';
-    btn.parentNode.appendChild(pop);
+    // Appended to document.body (fixed-positioned off the button's own rect),
+    // NOT btn.parentNode: when the process-details drawer is open,
+    // setShellInert(true) marks div.main (an ancestor of every row) inert,
+    // and a popover appended inside it inherits that inertness - rendered,
+    // but unfocusable, so the operator could see the textarea and still
+    // never type into it (2026-09-03, Noa hit this live). document.body is
+    // outside SHELL_SEL_, so it's never made inert by the drawer.
+    var btnRect=btn.getBoundingClientRect();
+    pop.style.position='fixed';
+    pop.style.top=(btnRect.bottom)+'px';
+    pop.style.right=(window.innerWidth-btnRect.right)+'px';
+    document.body.appendChild(pop);
     var ta=pop.querySelector('textarea');
     var cnt=pop.querySelector('.rnote-count');
     function updCount(){cnt.textContent=(240-ta.value.length)+' left';}
@@ -7929,7 +7949,12 @@ document.addEventListener('keydown',function(e){
       if(mf)Array.prototype.forEach.call(mf.children,function(x){x.classList.toggle("on",x.getAttribute("data-v")===v);});
       // F3: a lane switch resets every per-lane view state and cache so nothing
       // from the prior lane bleeds across (toggle, search, w8, messages).
-      showDone=false; showCanceled=false; doneLoaded=false;
+      // showTest was missing from this list (2026-09-03 finding, live repro:
+      // toggling "Show Test Rows" on Cayman and switching to Israel kept it on
+      // and surfaced the same lane-unknown orphan row on both boards) - F3's
+      // own stated intent ("every per-lane view state") already covers it,
+      // this was an omission, not a decision.
+      showDone=false; showCanceled=false; showTest=false; doneLoaded=false;
       // LP status is Cayman-only (see syncPanelFields). syncPanelFields already
       // forces it back on the next panel open, but reset it here too so the
       // window between a lane switch and that open cannot hold "existing" on the
