@@ -9075,8 +9075,22 @@ document.addEventListener('keydown',function(e){
     // URL length as an opaque network error rather than as anything an
     // operator could act on.
     var PARK_REASON_MAX=200;
+    // The tab the operator is LOOKING at travels with a park (2026-09-02).
+    // Both panels list ONE month, and the server resolves a Master RID across
+    // every month tab. That is fine while a rid is on one tab. It is not fine
+    // for a signed, never-funded row: the tracker carries those forward into
+    // each new month, so an old unpaid row exists on every tab since it was
+    // signed, and the server's "appears on N rows; refusing to guess which
+    // one" refusal made exactly those rows - the whole reason Park was built -
+    // the only ones that could never be parked. The operator already answered
+    // the question the server cannot: the row is the one in front of her, on
+    // the month she selected. So send it.
+    function wlParkTabQs(){
+      var m=(document.getElementById('wlMonth')||{}).value||'';
+      return m?'&tab='+encodeURIComponent(m):'';
+    }
     function parkRow(rid,reason,form,go){
-      apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason)+wlParkTabQs(), false, GAS_ONLY_).then(function(r){
         if(!r||!r.ok){go.disabled=false;go.textContent='Park';go.title=(r&&r.error)||'Failed, try again';return;}
         form.remove();
         wlNoteLandingTab(r);
@@ -9103,7 +9117,7 @@ document.addEventListener('keydown',function(e){
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
       btn.disabled=true;btn.textContent='Un-parking...';
-      apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid)+wlParkTabQs(), false, GAS_ONLY_).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Un-parked';
         wlNoteLandingTab(r);
