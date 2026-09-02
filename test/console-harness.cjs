@@ -865,5 +865,24 @@ function extractVarObj(name) {
     /testExcluded:74/.test(html));
 })();
 
+// ---------------------------------------------------------------------------
+// K-badge (2026-09-02): the nav badge must count with the SHARED predicate.
+// setBoardBadge was the FOURTH consumer of "does this row want her eyes" and
+// the one left behind when the other three moved onto isAttnRow, so approving
+// גלבוע dropped the sidebar count 2->1 and the row off the pin while the nav
+// badge still read 2. Found by clicking the live console, not by a test.
+//
+// This assertion reads the SOURCE rather than calling the function, because
+// setBoardBadge writes to the DOM and this harness has no DOM; the drift being
+// guarded is "which predicate is named", which the source answers exactly.
+// ---------------------------------------------------------------------------
+{
+  const badgeSrc = extractFn('setBoardBadge');
+  ok('K-badge nav badge counts with isAttnRow',
+    /rows\.filter\(isAttnRow\)/.test(badgeSrc), badgeSrc.slice(0, 200));
+  ok('K-badge nav badge no longer carries the old inline stage test',
+    !/isAttnStage\(r\.stage\)\s*\|\|/.test(badgeSrc), badgeSrc.slice(0, 200));
+}
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);

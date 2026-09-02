@@ -5860,7 +5860,13 @@ document.addEventListener('keydown',function(e){
   // zero pattern as the existing W-8 badge (2026-07-15, Noa: sidebar "isn't baked" -
   // the nav gave zero signal of what's waiting without opening the Board view first).
   function setBoardBadge(rows){
-    var n=rows.filter(function(r){return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}).length;
+    // isAttnRow, NOT the raw stage test this used until 2026-09-02. The nav
+    // badge was the FOURTH consumer of "does this row want her eyes", and the
+    // one I missed when the other three moved onto the shared predicate - so
+    // approving גלבוע dropped the sidebar count 2->1 and the row off the pin
+    // while this badge still read 2. The comment under isAttnRow says three
+    // consumers disagreeing is its own bug; this is that bug, found live.
+    var n=rows.filter(isAttnRow).length;
     var b=document.getElementById("nav-board-badge");
     if(!b)return;
     if(n>0){b.textContent=n;b.hidden=false;}
@@ -7579,7 +7585,7 @@ document.addEventListener('keydown',function(e){
       // or "Undo approval" armed nothing - the click handler's `if(!c||!confEl)
       // return;` guard silently no-opped on the missing key. Same shape as the
       // dvoid/reseal/nudge styling gap fixed alongside this in the CSS above.
-      rowReviewed:{msg:'Mark this row as reviewed? Records that a human checked it - it does not touch the money or the wire status.',cta:'Mark reviewed',danger:false,working:'Marking...'},
+      rowReviewed:{msg:'Approve this row? Records that you checked it - it does not touch the money or the wire status.',cta:'Approve',danger:false,working:'Approving...'},
       rowReopen:{msg:'Undo the approval on this row? It goes back to needing review.',cta:'Undo approval',danger:false,working:'Undoing...'}
     };
     // Whoever the drawer is currently about, for the confirm copy.
@@ -7749,7 +7755,7 @@ document.addEventListener('keydown',function(e){
         apiFetch('?api=opSetRowReview&masterRid='+encodeURIComponent(currentPid)+'&state='+wantState,false,consoleReadBase_()).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
-            if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.textContent=wantState==='approved'?('Marked reviewed by '+(r.actor||'you')):'Reopened for review';}
+            if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.textContent=wantState==='approved'?('Approved by '+(r.actor||'you')):'Reopened for review';}
             load(true);
           }else{
             dStatus('Could not save the review'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
