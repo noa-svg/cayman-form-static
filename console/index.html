@@ -9506,82 +9506,73 @@ document.addEventListener('keydown',function(e){
       });
     };
   })();
-  (function(){
-    // Fill one placeholder AMOUNT cell. The server refuses anything that is not
-    // a placeholder, so the worst a wrong RID here can do is a refusal - but
-    // exactly one locator must be sent, or the server refuses that too.
-    var setBtn=document.getElementById('sraSetBtn'),resEl=document.getElementById('sraResult');
+  // Shared shell for opSetRowAmount / opSetRowBankDetails (2026-09-02 CTO
+  // review finding 5): the two were near-identical IIFEs differing only in
+  // id prefix, the value field, the route name/param, and copy. One
+  // "fill this cell" locator+write shape, parameterized. cfg:
+  //   prefix - the DOM id prefix ('sra' / 'sbd')
+  //   api - the ?api= route name
+  //   valueField - the id suffix of the value input ('Amount' / 'Bank')
+  //   valueParam - the query param name for the value ('amount' / 'bankDetails')
+  //   valueLabel - human label for the "required" message
+  //   extraQs(vals) - optional, appends route-specific params (opSetRowAmount's expectCurrent)
+  //   successMsg(r) - builds the success line from the response
+  //   errorFallback - the generic failure message when the server gives no reason
+  function wireFillRowCell_(cfg){
+    var setBtn=document.getElementById(cfg.prefix+'SetBtn'),resEl=document.getElementById(cfg.prefix+'Result');
     if(!setBtn)return;
     setBtn.onclick=function(){
-      var rid=(document.getElementById('sraRid').value||'').trim();
-      var tab=(document.getElementById('sraTab').value||'').trim();
-      var row=(document.getElementById('sraRow').value||'').trim();
-      var name=(document.getElementById('sraName').value||'').trim();
-      var amount=(document.getElementById('sraAmount').value||'').trim();
+      var rid=(document.getElementById(cfg.prefix+'Rid').value||'').trim();
+      var tab=(document.getElementById(cfg.prefix+'Tab').value||'').trim();
+      var row=(document.getElementById(cfg.prefix+'Row').value||'').trim();
+      var name=(document.getElementById(cfg.prefix+'Name').value||'').trim();
+      var value=(document.getElementById(cfg.prefix+cfg.valueField).value||'').trim();
       var byRid=!!rid, byRowMatch=!!(tab&&row&&name);
       if(byRid&&byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give either a RID or the month/row/name, not both.</div>';return;}
       if(!byRid&&!byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give a RID, or all three of month, row number and exact name.</div>';return;}
       if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div style="color:var(--color-danger)">Month must be MM/YYYY.</div>';return;}
-      if(!amount){resEl.innerHTML='<div style="color:var(--color-danger)">Amount is required.</div>';return;}
+      if(!value){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(cfg.valueLabel)+' is required.</div>';return;}
       setBtn.disabled=true;
       resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
-      var expect=(document.getElementById('sraExpect').value||'').trim();
-      var qs='?api=opSetRowAmount&amount='+encodeURIComponent(amount);
-      if(expect)qs+='&expectCurrent='+encodeURIComponent(expect);
+      var qs='?api='+cfg.api+'&'+cfg.valueParam+'='+encodeURIComponent(value);
+      if(cfg.extraQs)qs+=cfg.extraQs();
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
       apiFetch(qs, false, GAS_ONLY_).then(function(r){
         setBtn.disabled=false;
-        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the amount.')+'</div>';return;}
-        resEl.innerHTML='<div style="color:var(--color-green)">Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').</div>';
-        document.getElementById('sraRid').value='';
-        document.getElementById('sraTab').value='';
-        document.getElementById('sraRow').value='';
-        document.getElementById('sraName').value='';
-        document.getElementById('sraAmount').value='';
-        document.getElementById('sraExpect').value='';
+        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
+        resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
+        ['Rid','Tab','Row','Name',cfg.valueField].concat(cfg.extraFields||[]).forEach(function(f){
+          var el=document.getElementById(cfg.prefix+f);
+          if(el)el.value='';
+        });
       }).catch(function(err){
         setBtn.disabled=false;
         resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
+  }
+  (function(){
+    // Fill one placeholder AMOUNT cell. The server refuses anything that is not
+    // a placeholder, so the worst a wrong RID here can do is a refusal - but
+    // exactly one locator must be sent, or the server refuses that too.
+    wireFillRowCell_({
+      prefix:'sra', api:'opSetRowAmount', valueField:'Amount', valueParam:'amount', valueLabel:'Amount',
+      extraFields:['Expect'],
+      extraQs:function(){var expect=(document.getElementById('sraExpect').value||'').trim();return expect?'&expectCurrent='+encodeURIComponent(expect):'';},
+      errorFallback:'Could not write the amount.',
+      successMsg:function(r){return 'Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').';}
+    });
   })();
   (function(){
     // Fill an EMPTY bank-details cell. The server is fill-blank-only, so the
     // worst a wrong RID can do here is a refusal - it cannot repoint an
     // account that is already on the sheet.
-    var setBtn=document.getElementById('sbdSetBtn'),resEl=document.getElementById('sbdResult');
-    if(!setBtn)return;
-    setBtn.onclick=function(){
-      var rid=(document.getElementById('sbdRid').value||'').trim();
-      var tab=(document.getElementById('sbdTab').value||'').trim();
-      var row=(document.getElementById('sbdRow').value||'').trim();
-      var name=(document.getElementById('sbdName').value||'').trim();
-      var bank=(document.getElementById('sbdBank').value||'').trim();
-      var byRid=!!rid, byRowMatch=!!(tab&&row&&name);
-      if(byRid&&byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give either a RID or the month/row/name, not both.</div>';return;}
-      if(!byRid&&!byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give a RID, or all three of month, row number and exact name.</div>';return;}
-      if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div style="color:var(--color-danger)">Month must be MM/YYYY.</div>';return;}
-      if(!bank){resEl.innerHTML='<div style="color:var(--color-danger)">Bank details are required.</div>';return;}
-      setBtn.disabled=true;
-      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
-      var qs='?api=opSetRowBankDetails&bankDetails='+encodeURIComponent(bank);
-      if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
-      else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
-      apiFetch(qs, false, GAS_ONLY_).then(function(r){
-        setBtn.disabled=false;
-        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||'Could not write the bank details.')+'</div>';return;}
-        resEl.innerHTML='<div style="color:var(--color-green)">Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.</div>';
-        document.getElementById('sbdRid').value='';
-        document.getElementById('sbdTab').value='';
-        document.getElementById('sbdRow').value='';
-        document.getElementById('sbdName').value='';
-        document.getElementById('sbdBank').value='';
-      }).catch(function(err){
-        setBtn.disabled=false;
-        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
-      });
-    };
+    wireFillRowCell_({
+      prefix:'sbd', api:'opSetRowBankDetails', valueField:'Bank', valueParam:'bankDetails', valueLabel:'Bank details',
+      errorFallback:'Could not write the bank details.',
+      successMsg:function(r){return 'Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.';}
+    });
   })();
 
   // Settings
