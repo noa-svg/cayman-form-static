@@ -7778,15 +7778,11 @@ document.addEventListener('keydown',function(e){
         }).catch(function(){dactBusy=false;dHideConfirm();dStatus('Could not save the review. Refresh and try again.','error');});
         return;
       }
+      // Hardcoded GAS_ONLY_ below (2026-09-02 CTO review, money-critical): opMarkMoneyReceived
+      // exists only on GAS; this drawer call used currentEngine and silently hit a route
+      // that never existed on ju-service for any Israeli-lane process. The Transfer Form's
+      // reuse of this same route already knew and hardcodes GAS_ONLY_.
       if(act==='markMoneyReceived'){
-        // CTO review finding, money-critical (2026-09-02): this was the one
-        // real live two-engine gap in the whole audit. opMarkMoneyReceived
-        // exists ONLY on GAS (never ported to ju-service) - the Transfer
-        // Form's later reuse of this same route (line ~9141) already knew
-        // that and hardcodes GAS_ONLY_. This drawer call still used
-        // currentEngine, so marking money received for any Israeli-lane
-        // process (currentEngine resolves to ju-service) silently hit a
-        // route that does not exist there.
         apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,GAS_ONLY_).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
@@ -9127,10 +9123,7 @@ document.addEventListener('keydown',function(e){
         if(m2>12){m2=1;y2+=1;}
         var target=(m2<10?'0':'')+m2+'/'+y2;
         nxt.disabled=true;nxt.textContent='Moving\u2026';
-        // CTO review finding 3 (2026-09-02): hardcoded to JU_API. This sits
-        // inside an otherwise deliberately GAS-only Transfer Form block, but
-        // diagCorrectTrackerDate exists ONLY on ju-service - it was the odd
-        // one out routing through a flag with nothing GAS-side to fall back to.
+        // Hardcoded JU_API (2026-09-02 CTO review): diagCorrectTrackerDate is ju-service-only.
         apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,JU_API)
           .then(function(res){
             if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
