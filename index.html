@@ -605,7 +605,12 @@
 
     /* Vestibular safety (WCAG 2.3.3): quiet continuous + entrance animations for
        users who ask the OS for reduced motion. The gate's floating logo + swinging
-       icon, the gradient shift, and the spinners are all reduced to no movement. */
+       icon and the gradient shift are reduced to no movement.
+       Friedman pass (2026-09-02): the blanket animation-duration:0.001ms used to
+       also freeze .lvp-saving/.lvp-result__spinner mid-frame. Those aren't
+       decoration, they're the ONLY signal a save/submit is in flight - a user
+       with reduced motion on would see the page look stuck rather than saving.
+       Excluded below and given a slower, calmer spin instead of none. */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.001ms !important;
@@ -615,6 +620,7 @@
       }
       #lvp-gate, #lvp-done { animation: none !important; background-position: 0% 50% !important; }
       .lvp-gate__logo, .lvp-gate__icon, .lvp-gate__msg, .lvp-gate__en, .lvp-gate__recover, .lvp-done__icon, .lvp-done__msg, .lvp-done__sub { animation: none !important; opacity: 1 !important; transform: none !important; }
+      .lvp-saving::before, .lvp-result__spinner { animation-duration: 1.4s !important; animation-iteration-count: infinite !important; }
     }
   </style>
   <script>(function(){var p=new URLSearchParams(location.search);if(!p.get('t')&&!p.get('token')&&!p.get('item')&&!p.get('sign')&&!p.get('api')&&!p.get('admin')&&!p.get('fixture'))document.documentElement.classList.add('lvp-gate-mode');})();</script>

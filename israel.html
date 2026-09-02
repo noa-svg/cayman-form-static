@@ -379,7 +379,10 @@
     /* Honor the OS reduce-motion setting (mirrors signer.html): no spinner spin,
        no progress-bar slide. Smooth scrolls are gated to 'auto' in JS. */
     @media (prefers-reduced-motion: reduce) {
-      .lvp-result__spinner { animation: none; }
+      /* Friedman pass (2026-09-02, matches the index.html fix): a spinner is
+         the only signal a save/submit is in flight, not decoration - freezing
+         it reads as the page being stuck, not saving. Slowed, not stopped. */
+      .lvp-result__spinner { animation-duration: 1.4s; animation-iteration-count: infinite; }
       .lvp-progress__bar > span { transition: none; }
     }
     .lvp-result__check { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--lvp-yellow); margin-bottom: 16px; }
@@ -1056,7 +1059,7 @@
               </div>
             </label>
           </div>
-          <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" name="moneyInvestedInFund.bankDetails.accountNumber" data-validate="il-account" inputmode="numeric"></label>
+          <label class="lvp-field"><span class="lvp-field__label">מספר חשבון</span><input class="lvp-input" type="text" dir="ltr" name="moneyInvestedInFund.bankDetails.accountNumber" data-validate="il-account" inputmode="numeric"></label>
 
           <label class="lvp-field"><span class="lvp-field__label">מקור הכספים</span>
             <select class="lvp-input--select" name="moneyInvestedInFund.moneySource" data-show-when-trigger="moneyInvestedInFund.moneySource">

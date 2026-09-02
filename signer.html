@@ -182,7 +182,11 @@
 
     /* Vestibular safety: quiet continuous animations for users who opt out (WCAG 2.3.3) */
     @media (prefers-reduced-motion: reduce) {
-      .spinner { animation:none; }
+      /* Friedman pass (2026-09-02): border-top-color differs from the rest of
+         the ring, so freezing it leaves a lopsided static shape that reads as
+         broken rather than busy - unlike flow.html's spinner, which matches
+         its colors before going static. Slowed, not stopped. */
+      .spinner { animation-duration:1.4s; animation-iteration-count:infinite; }
       .doc__title::after { transition:none; }
       .btn { transition:none; }
       .lvp-lang__btn { transition:none; }
