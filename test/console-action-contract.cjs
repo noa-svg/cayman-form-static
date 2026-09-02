@@ -67,7 +67,14 @@ while ((m = litRe.exec(html)) !== null) refs.add(m[1] + ':' + m[2]);
 // (same shape as the resendInvite/nudge ternary already carved out below via
 // their literal route strings). Those never actually hit '?admin=<act>', so
 // neither collection loop may manufacture a fake admin: ref for them.
-const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived', 'rowNextMonth', 'rowReviewed', 'rowReopen']);
+// Union of two sessions' additions (2026-09-02). Every name here is paired with
+// its own A3x assertions below; the set alone is not the exemption, the pairing
+// is.
+const DACT_SPECIAL_ROUTED = new Set([
+  'markMoneyReceived', 'rowNextMonth',
+  'pauseReminders', 'resumeReminders', 'parkRow', 'unparkRow',
+  'rowReviewed', 'rowReopen',
+]);
 const actConfirm = html.match(/var ACT_CONFIRM=\{([\s\S]*?)\n\s*\};/);
 ok('dynamic-route source: ACT_CONFIRM found', !!actConfirm);
 if (actConfirm) {
