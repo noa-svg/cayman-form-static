@@ -4609,6 +4609,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     });
     // One phantom-complete row (registry complete, records write failed).
     cayman.forEach(function(r){if(r.processId==='p8'){r.stale=true;r.nextActionPhrase='Sealed, but a records write failed. Needs review';}});
+    // Review state (2026-09-02). i5 is the demo's needs_attention row, so the
+    // fixture shows the case that matters: an approved row must lose the
+    // "NEEDS YOU" chrome AND stop being counted in the sidebar.
+    if(qs.indexOf('?api=opGetRowReview')===0){
+      return {ok:true, reviews:{ i5:{ masterRid:'i5', state:'approved', reviewedBy:'noa@legacyvpartners.com', reviewedAt:'2026-09-02T10:00:00Z', note:'evidence in Gmail' } }};
+    }
+    if(qs.indexOf('?api=opSetRowReview')===0){
+      var st=(/state=([a-z_]+)/.exec(qs)||[])[1]||'approved';
+      return {ok:true, masterRid:(/masterRid=([^&]*)/.exec(qs)||[])[1]||'', from:null, to:st, actor:'noa@legacyvpartners.com', at:new Date().toISOString()};
+    }
     if(qs.indexOf('?api=list')===0) return {processes:(L==='israel'?israel:cayman),generatedAt:'2026-08-06T09:30',version:441};
     if(qs.indexOf('?api=opBoardDetail')===0){
       var det={
@@ -5376,7 +5386,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // does emit them still wins.
   function sortRows(rows){
     return rows.slice().sort(function(a,b){
-      var an=(isAttnStage(a.stage)||(isCompletedStage(a.stage)&&a.stale))?1:0, bn=(isAttnStage(b.stage)||(isCompletedStage(b.stage)&&b.stale))?1:0;
+      var an=isAttnRow(a)?1:0, bn=isAttnRow(b)?1:0;
       if(an!==bn)return bn-an;
       if(a.lastActivityTs||b.lastActivityTs){
         var ta=a.lastActivityTs?Date.parse(a.lastActivityTs):0;
@@ -5516,12 +5526,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // get the .done 50%-opacity fade - the whole point is that it is NOT quietly
     // finished. Same exemption the renderRows filter applies.
     var stale=isCompletedStage(st)&&r.stale;
-    var attn=isAttnStage(st)||stale;
+    var attn=isAttnRow(r);
+    // An approved row says who cleared it, in place of the question it used to
+    // ask. That sentence IS the answer to "why is this not flagged any more".
+    var reviewedLine=r.reviewApproved?('Reviewed by '+(r.reviewedBy||'an operator')):'';
     var done=(isTerminalStage(st)&&!stale)?' done':'';
     var dead=isCanceledStage(st)?' dead':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
     var wordCls=attn?' warn':((dead||isCompletedStage(st))?' muted':'');
-    var statSecond=attn?attnBadgeHtml(r,folded):waitLineHtml(r);
+    var statSecond=attn?attnBadgeHtml(r,folded):(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r));
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
@@ -5796,12 +5809,28 @@ document.addEventListener('keydown',function(e){
     if(n>0){b.textContent=n;b.hidden=false;}
     else{b.textContent="";b.hidden=true;}
   }
+  // Does this row still want the operator's eyes? (2026-09-02)
+  //
+  // ONE predicate, used by the sidebar count, the sort pin and the row chrome,
+  // because those three disagreeing is its own bug: clearing a row and still
+  // being nagged by the number above it is the same failure in a smaller place.
+  //
+  // reviewApproved comes from ju-service (?api=opGetRowReview) and deliberately
+  // does NOT touch stage. The row is still not terminal - its money may not have
+  // moved - it just is not asking a question any more. Review and settlement are
+  // different facts; collapsing them is what put "Completed" in the execution
+  // column on three live rows.
+  function isAttnRow(r){
+    if(!r)return false;
+    if(r.reviewApproved)return false;
+    return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);
+  }
   function setSideStats(rows){
     var el=document.getElementById("sideStats");
     if(!el)return;
     if(!rows.length){el.hidden=true;return;}
     var active=rows.filter(function(r){return !isTerminalStage(r.stage);}).length;
-    var attn=rows.filter(function(r){return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}).length;
+    var attn=rows.filter(isAttnRow).length;
     var signing=rows.filter(function(r){return r.stage==='signing';}).length;
     document.getElementById("ss-active").textContent=active;
     document.getElementById("ss-attn").textContent=attn;
@@ -6081,7 +6110,30 @@ document.addEventListener('keydown',function(e){
         signerIndex:(x.signerIndex!=null?x.signerIndex:it.signerIndex),signerCount:(x.signerCount!=null?x.signerCount:it.signerCount),
         waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
-      render(rows);
+      // Review state lives on ju-service, but the manual rows that carry the
+      // "needs review" phrase are concatenated into ju-cayman's board response
+      // (CaymanGateway.ts:1640). Neither engine can read the other, so the
+      // console overlays it here - the same way it already merges board feeds
+      // from more than one engine. Without this the Approve button would write
+      // a record and change nothing on screen.
+      //
+      // Fail-soft on purpose: if the overlay cannot load, rows render exactly as
+      // they do today. A review is an annotation, and losing it must never cost
+      // the operator the board itself.
+      (function(){
+        var rids=rows.map(function(r){return r.pid;}).filter(Boolean);
+        if(!rids.length){render(rows);return;}
+        apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,consoleReadBase_())
+          .then(function(rv){
+            var map=(rv&&rv.ok&&rv.reviews)?rv.reviews:{};
+            rows.forEach(function(r){
+              var hit=map[r.pid];
+              if(hit&&hit.state==='approved'){r.reviewApproved=true;r.reviewedBy=hit.reviewedBy||'';}
+            });
+          })
+          .catch(function(){/* board still renders */})
+          .then(function(){render(rows);});
+      })();
       if(latestGeneratedAt){
         var t=latestGeneratedAt.replace('T',' ').slice(0,16);
         var vl=document.getElementById('ver-line');
@@ -7073,6 +7125,17 @@ document.addEventListener('keydown',function(e){
     if(isComplete){
       dactBtns+='<button class="markreceived" data-act="markMoneyReceived">Mark money received</button>';
     }
+    // Reviewed / Reopen (2026-09-02, Noa: "u need to let me manually update that
+    // its been approved"). A manual off-Ju row reads "needs review" until its
+    // money goes terminal, so גלבוע sat on "Stuck / Needs you" for days with
+    // nothing wrong with it. This records that a human checked it. It says
+    // NOTHING about whether the money moved - that is Mark money received, above,
+    // and they are deliberately two buttons.
+    if(d && d.reviewApproved){
+      dactBtns+='<button class="dreopen" data-act="rowReopen">Reopen for review</button>';
+    } else {
+      dactBtns+='<button class="dreviewed" data-act="rowReviewed">Mark reviewed</button>';
+    }
     if(!isTerminal){
       dactBtns+='<button class="dvoid" data-act="void">Void</button>';
     }
@@ -7529,6 +7592,25 @@ document.addEventListener('keydown',function(e){
       dactBusy=true;
       goEl.disabled=true;cancelEl.disabled=true;
       dStatus(c.working,'');
+      if(act==='rowReviewed'||act==='rowReopen'){
+        // Records that a human checked this row. Says NOTHING about the money -
+        // that is markMoneyReceived, deliberately a separate button.
+        //
+        // No actor is sent: ju-service takes it from the verified console
+        // identity. An approval anyone could sign with any name is not an
+        // accountability record.
+        var wantState=act==='rowReopen'?'needs_review':'approved';
+        apiFetch('?api=opSetRowReview&masterRid='+encodeURIComponent(currentPid)+'&state='+wantState,false,consoleReadBase_()).then(function(r){
+          dactBusy=false;dHideConfirm();
+          if(r&&r.ok){
+            if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.textContent=wantState==='approved'?('Marked reviewed by '+(r.actor||'you')):'Reopened for review';}
+            load(true);
+          }else{
+            dStatus('Could not save the review'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
+          }
+        }).catch(function(){dactBusy=false;dHideConfirm();dStatus('Could not save the review. Refresh and try again.','error');});
+        return;
+      }
       if(act==='markMoneyReceived'){
         apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
           dactBusy=false;dHideConfirm();

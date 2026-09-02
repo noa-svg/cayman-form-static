@@ -67,7 +67,7 @@ while ((m = litRe.exec(html)) !== null) refs.add(m[1] + ':' + m[2]);
 // (same shape as the resendInvite/nudge ternary already carved out below via
 // their literal route strings). Those never actually hit '?admin=<act>', so
 // neither collection loop may manufacture a fake admin: ref for them.
-const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived', 'rowNextMonth']);
+const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived', 'rowNextMonth', 'rowReviewed', 'rowReopen']);
 const actConfirm = html.match(/var ACT_CONFIRM=\{([\s\S]*?)\n\s*\};/);
 ok('dynamic-route source: ACT_CONFIRM found', !!actConfirm);
 if (actConfirm) {
@@ -132,6 +132,21 @@ ok('A3c rowNextMonth special-cased before the generic ?admin= fallback',
   /data-act="rowNextMonth"/.test(html) && /act="rowNextMonth"\]/.test(html));
 ok('A3c rowNextMonth routes to ?api=diagCorrectTrackerDate',
   html.indexOf("apiFetch('?api=diagCorrectTrackerDate&masterRid='") >= 0);
+
+// ---- A3d: rowReviewed / rowReopen are special-cased to ?api=opSetRowReview,
+// the same shape as markMoneyReceived and rowNextMonth. The exemption is only
+// safe paired with these: both acts must be handled in the drawer's act chain,
+// and the route they actually call must be one a backend answers. Adding a name
+// to DACT_SPECIAL_ROUTED without this pairing would turn the exemption set into
+// a way to silence the dead-button class this file exists to catch.
+ok('A3d rowReviewed / rowReopen handled in the drawer act chain',
+  /act==='rowReviewed'\|\|act==='rowReopen'/.test(html));
+ok('A3d both route to ?api=opSetRowReview',
+  html.indexOf("apiFetch('?api=opSetRowReview&masterRid='") >= 0);
+// And the read half the board overlay depends on: without it an approved row
+// still renders as "needs review" and the button looks broken.
+ok('A3d the board overlay reads ?api=opGetRowReview',
+  html.indexOf("apiFetch('?api=opGetRowReview&masterRids='") >= 0);
 
 // ---- A3: stage-aware reminder routing ----
 ok('A3 drawer renders the pre-submit reminder as resendInvite, nudge only otherwise',
