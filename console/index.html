@@ -6168,10 +6168,17 @@ document.addEventListener('keydown',function(e){
         if(d&&d.generatedAt&&d.generatedAt>latestGeneratedAt)latestGeneratedAt=d.generatedAt;
       });
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
-      var rows=src.map(function(it){var ft=it.flowType||'';var ad=(it.ageDays!=null?it.ageDays:null);var pid=it.processId||it.id||'';var n=notes[pid];var x=extras[pid]||{};
+      // CTO review finding 4 (2026-09-02): the same '' vs null hazard fixed
+      // in the drawer's Details section earlier today also lived here.
+      // `!=null` alone lets an empty string through, so a server that ever
+      // sends ageDays:'' (or signerIndex/signerCount:'') would have rendered
+      // the literal word "d", or a malformed "X of Y" fraction, instead of
+      // falling back cleanly. numOrNull_ is the one guard both uses share now.
+      function numOrNull_(v){return (v!=null&&v!=='')?v:null;}
+      var rows=src.map(function(it){var ft=it.flowType||'';var ad=numOrNull_(it.ageDays);var pid=it.processId||it.id||'';var n=notes[pid];var x=extras[pid]||{};
         return {pid:pid,_engine:it._engine,name:it.displayName||it.lpDisplayName||it.name||'',he:it.nameHebrew||x.nameHebrew||'',stage:it.currentStage||it.stage||'link_sent',lastStage:it.lastStage||it.priorStage||'',age:ad!=null?ad+'d':(it.age||''),ageNum:ad!=null?ad:9999,lastActivityTs:it.lastActivityTs||it.lastActivityAt||it.updatedAt||it.lastTouchedAt||'',wait:it.nextActionPhrase||it.nextAction||it.next||'',stale:!!it.stale,
-        signerIndex:(x.signerIndex!=null?x.signerIndex:it.signerIndex),signerCount:(x.signerCount!=null?x.signerCount:it.signerCount),
-        waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:(x.signerIndex!=null?x.signerIndex:null),waitCount:(x.signerCount!=null?x.signerCount:null),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
+        signerIndex:(numOrNull_(x.signerIndex)!=null?x.signerIndex:numOrNull_(it.signerIndex)),signerCount:(numOrNull_(x.signerCount)!=null?x.signerCount:numOrNull_(it.signerCount)),
+        waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:numOrNull_(x.signerIndex),waitCount:numOrNull_(x.signerCount),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
       // Review state lives on ju-service, but the manual rows that carry the
       // "needs review" phrase are concatenated into ju-cayman's board response
@@ -6186,7 +6193,13 @@ document.addEventListener('keydown',function(e){
       (function(){
         var rids=rows.map(function(r){return r.pid;}).filter(Boolean);
         if(!rids.length){render(rows);return;}
-        apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,consoleReadBase_())
+        // CTO review finding 3 (2026-09-02): hardcoded to JU_API, not
+        // consoleReadBase_() - GAS has no opGetRowReview handler at all, so
+        // routing this through a flag meant for genuinely dual-engine reads
+        // means a flag flip would make "Mark reviewed" go dead with nothing
+        // to catch it (the dead-button contract test only checks EITHER
+        // engine has a route, and GAS never will for this one).
+        apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,JU_API)
           .then(function(rv){
             var map=(rv&&rv.ok&&rv.reviews)?rv.reviews:{};
             rows.forEach(function(r){
@@ -7752,7 +7765,9 @@ document.addEventListener('keydown',function(e){
         // identity. An approval anyone could sign with any name is not an
         // accountability record.
         var wantState=act==='rowReopen'?'needs_review':'approved';
-        apiFetch('?api=opSetRowReview&masterRid='+encodeURIComponent(currentPid)+'&state='+wantState,false,consoleReadBase_()).then(function(r){
+        // CTO review finding 3 (2026-09-02): same reasoning as opGetRowReview
+        // above - GAS has no opSetRowReview handler, hardcode the engine.
+        apiFetch('?api=opSetRowReview&masterRid='+encodeURIComponent(currentPid)+'&state='+wantState,false,JU_API).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.textContent=wantState==='approved'?('Approved by '+(r.actor||'you')):'Reopened for review';}
@@ -7764,7 +7779,15 @@ document.addEventListener('keydown',function(e){
         return;
       }
       if(act==='markMoneyReceived'){
-        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,currentEngine).then(function(r){
+        // CTO review finding, money-critical (2026-09-02): this was the one
+        // real live two-engine gap in the whole audit. opMarkMoneyReceived
+        // exists ONLY on GAS (never ported to ju-service) - the Transfer
+        // Form's later reuse of this same route (line ~9141) already knew
+        // that and hardcodes GAS_ONLY_. This drawer call still used
+        // currentEngine, so marking money received for any Israeli-lane
+        // process (currentEngine resolves to ju-service) silently hit a
+        // route that does not exist there.
+        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,GAS_ONLY_).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
@@ -9104,7 +9127,11 @@ document.addEventListener('keydown',function(e){
         if(m2>12){m2=1;y2+=1;}
         var target=(m2<10?'0':'')+m2+'/'+y2;
         nxt.disabled=true;nxt.textContent='Moving\u2026';
-        apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,consoleReadBase_())
+        // CTO review finding 3 (2026-09-02): hardcoded to JU_API. This sits
+        // inside an otherwise deliberately GAS-only Transfer Form block, but
+        // diagCorrectTrackerDate exists ONLY on ju-service - it was the odd
+        // one out routing through a flag with nothing GAS-side to fall back to.
+        apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,JU_API)
           .then(function(res){
             if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
             peekAwaiting();peekRows();
@@ -9224,7 +9251,9 @@ document.addEventListener('keydown',function(e){
         // and a button that asks "are you sure" about creating an empty tab is
         // friction with nothing behind it. Opening the CURRENT month is inert
         // (see routes/diagopenmonthtab.ts) and re-opening is a no-op.
-        apiFetch('?api=diagOpenMonthTab&month='+encodeURIComponent(cur)+'&commit=1',false,consoleReadBase_())
+        // CTO review finding 3 (2026-09-02): hardcoded to JU_API, same
+        // reasoning as diagCorrectTrackerDate above - GAS has no handler.
+        apiFetch('?api=diagOpenMonthTab&month='+encodeURIComponent(cur)+'&commit=1',false,JU_API)
           .then(function(res){
             if(!res||res.ok===false){throw new Error((res&&res.error)||'could not open the month');}
             loadMonths(cur);

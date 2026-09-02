@@ -102,6 +102,8 @@ ok('route refs collected (sanity: includes nudge + resendInvite + void + reseal)
 // arms via litRe already, since each arm is a full '?admin=x' literal.
 
 // ---- A1: every referenced route has a gateway handler ----
+// (inGas / inJu computed per-ref and reused by A5 below, so A5 doesn't re-scan)
+const engineCoverage = {};
 if (gw) {
   refs.forEach((ref) => {
     const parts = ref.split(':');
@@ -111,10 +113,45 @@ if (gw) {
     const needleJu = parts[0] + " === '" + parts[1] + "'";
     const inGas = gw.indexOf(needle) >= 0;
     const inJu = jd.indexOf(needleJu) >= 0;
+    engineCoverage[ref] = { inGas, inJu };
     ok('A1 a backend handles ' + ref, inGas || inJu,
       'console references ?' + parts[0] + '=' + parts[1] + ' but NEITHER CaymanGateway.ts (`' + needle + '`) NOR ju-service consoledispatch.ts (`' + needleJu + '`) handles it - a one-sided add/removal (the dead-button class)');
   });
 }
+
+// ---- A5: cross-engine parity for routes the console calls with a VARIABLE
+// engine (2026-09-02 CTO review). A1 above is an OR - a route on either
+// engine "passes" - which is exactly right for a route the console always
+// sends to one named engine (GW / GAS_ONLY_ / JU_API literal) on purpose.
+// It is exactly WRONG for a route reached through a variable base
+// (currentEngine / consoleReadBase_() / an enginesForLane_ loop / a per-row
+// data-base attr): the SAME call site sends different requests to different
+// engines depending on which one the resolved process/lane lives on, so
+// BOTH engines must implement it or one population silently gets a dead
+// button. This bit twice on 2026-09-02 alone: opBoardDetail had no
+// ju-service handler (every Israeli-lane board row rendered with no
+// "Waiting on X"), and the drawer's markMoneyReceived called currentEngine
+// even though opMarkMoneyReceived exists on GAS only.
+//
+// Not auto-derived from source: reliably parsing "what base did THIS
+// apiFetch call use" needs a real JS parser (the base argument sits behind
+// arbitrary encodeURIComponent(...) calls, not a fixed offset). Hand-listed
+// instead, since the failure mode is rare enough that a maintained list is
+// safer than a regex likely to mis-parse silently. When you add a NEW
+// apiFetch call whose base is currentEngine / consoleReadBase_() /
+// consoleMondayReadBase_() / a rowBase-style per-row attr / an
+// enginesForLane_ loop, add its route here.
+const CROSS_ENGINE_REQUIRED = [
+  'api:foShareLabels', 'admin:saveNote', 'admin:clearNote', 'api:opprocess',
+  'admin:searchLps', 'api:opNotes', 'api:opBoardDetail', 'api:list',
+  'api:lpHistory', 'admin:nudge', 'admin:resendInvite',
+];
+CROSS_ENGINE_REQUIRED.forEach((ref) => {
+  const cov = engineCoverage[ref];
+  ok('A5 cross-engine parity for ' + ref + ' (console calls this with a variable engine)',
+    !!cov && cov.inGas && cov.inJu,
+    cov ? ('inGas=' + cov.inGas + ' inJu=' + cov.inJu + ' - a variable-engine call site needs BOTH, not either') : ref + ' not found in the collected refs at all - has the call site changed?');
+});
 
 // ---- A3b: markMoneyReceived is special-cased to ?api=opMarkMoneyReceived,
 // not the generic ?admin=markMoneyReceived - assert the special case itself
