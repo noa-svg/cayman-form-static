@@ -67,7 +67,7 @@ while ((m = litRe.exec(html)) !== null) refs.add(m[1] + ':' + m[2]);
 // (same shape as the resendInvite/nudge ternary already carved out below via
 // their literal route strings). Those never actually hit '?admin=<act>', so
 // neither collection loop may manufacture a fake admin: ref for them.
-const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived']);
+const DACT_SPECIAL_ROUTED = new Set(['markMoneyReceived', 'pauseReminders', 'resumeReminders', 'parkRow', 'unparkRow']);
 const actConfirm = html.match(/var ACT_CONFIRM=\{([\s\S]*?)\n\s*\};/);
 ok('dynamic-route source: ACT_CONFIRM found', !!actConfirm);
 if (actConfirm) {
