@@ -8787,7 +8787,6 @@ document.addEventListener('keydown',function(e){
         +'<div><span class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</span></div>'
         +'<div class="wl-await-acts">'
           +'<button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button>'
-          +'<button type="button" class="wl-await-btn wl-await-park" data-act="parkRow" data-rid="'+esc2(r.masterRid)+'">Park</button>'
           // "Not this month" (2026-09-01). An LP who signs at month end has
           // their money land in the NEXT month, so their row is sitting in a
           // month whose letter will never carry it. The tab is chosen at seal
