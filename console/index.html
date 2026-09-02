@@ -5558,6 +5558,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // it is the first fallback, never a raw code.
   function attnWhyText(r){
     var st=String(r.stage||'');
+    // An APPROVED row is not asking a question, so it has no attention reason -
+    // checked here rather than at each call site (2026-09-02). foldRuns() calls
+    // this ungated to group consecutive rows by shared reason, so without this
+    // an approved row still returned its old reason and could be folded into a
+    // "<reason> - N processes" run: cleared on the pin, on the sidebar count and
+    // on the nav badge, still counted in the fold. Fifth consumer of the same
+    // predicate; putting the check in the shared function is what stops a sixth.
+    if(r&&r.reviewApproved)return '';
     if(isAttnStage(st))return r.attnWhy||r.wait||'Needs your attention';
     if(isCompletedStage(st)&&r.stale)return r.wait||'Sealed, but a records write failed. Needs review';
     return '';

@@ -884,5 +884,24 @@ function extractVarObj(name) {
     !/isAttnStage\(r\.stage\)\s*\|\|/.test(badgeSrc), badgeSrc.slice(0, 200));
 }
 
+// ---- K-approved: an approved row has no attention reason -------------------
+// attnWhyText is the SHARED source of "why does this row want her eyes", and
+// foldRuns() calls it UNGATED to group consecutive rows by identical reason.
+// Before 2026-09-02 an approved row still returned its old reason there, so it
+// was cleared on the sort pin, the sidebar count and the nav badge, and still
+// folded into a "<reason> - N processes" run. Five consumers, one predicate.
+{
+  const src = extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';'
+    + extractFn('attnWhyText') + '; return attnWhyText;';
+  const attnWhyText = new Function(src)();
+  const pending = { stage: 'needs_attention', attnWhy: 'Manual entry, off Ju pipeline - needs review' };
+  const approved = { stage: 'needs_attention', attnWhy: 'Manual entry, off Ju pipeline - needs review',
+    reviewApproved: true, reviewedBy: 'noa@legacyvpartners.com' };
+  ok('K-approved an un-reviewed attention row still states its reason',
+    attnWhyText(pending) === 'Manual entry, off Ju pipeline - needs review', attnWhyText(pending));
+  ok('K-approved an approved row has NO attention reason (so it cannot fold into a run)',
+    attnWhyText(approved) === '', JSON.stringify(attnWhyText(approved)));
+}
+
 console.log(pass + ' pass, ' + fail + ' fail');
 process.exit(fail ? 1 : 0);
