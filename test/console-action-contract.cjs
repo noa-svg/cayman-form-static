@@ -51,8 +51,22 @@ try { gw = fs.readFileSync(GATEWAY, 'utf8'); } catch (e) { gw = ''; }
 const DISPATCH = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'routes', 'consoledispatch.ts');
 let jd = '';
 try { jd = fs.readFileSync(DISPATCH, 'utf8'); } catch (e) { jd = ''; }
+// ju-service has a SECOND route table, app.ts (2026-09-02 CTO review finding).
+// consoledispatch.ts is what the console's ?source=op POST tunnel reaches, so
+// checking only it is enough to know the console itself is wired - but
+// diagRegistryStats, diagRegistryEnum, flowSummary and the five proofMint*/
+// proofCaymanLiveE2E routes are real, live, ju-service-only routes that exist
+// ONLY in app.ts's apiHandlers map (object keys like `diagRegistryStats:
+// diagRegistryStatsHandler(...)`, not `api === 'x'` strings). Scanning only
+// consoledispatch.ts made those read as "neither engine handles it" even
+// though ju-service genuinely does - the same half-blind failure A2b's own
+// comment above already named for consoledispatch.ts alone.
+const APP_TS = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'app.ts');
+let appTs = '';
+try { appTs = fs.readFileSync(APP_TS, 'utf8'); } catch (e) { appTs = ''; }
 ok('A2 mono gateway source present (absent = vacuous contract, hard fail)', gw.length > 0, GATEWAY);
 ok('A2b ju-service dispatch source present (absent = half-blind contract, hard fail)', jd.length > 0, DISPATCH);
+ok('A2c ju-service app.ts source present (absent = blind to its second route table, hard fail)', appTs.length > 0, APP_TS);
 
 // ---- collect every route the console references ----
 // Literal '?admin=x' / '?api=x' strings:
@@ -112,10 +126,18 @@ if (gw) {
     // `admin === 'x'` / `api === 'x'` rather than GAS's `p.admin === 'x'`.
     const needleJu = parts[0] + " === '" + parts[1] + "'";
     const inGas = gw.indexOf(needle) >= 0;
-    const inJu = jd.indexOf(needleJu) >= 0;
+    let inJu = jd.indexOf(needleJu) >= 0;
+    // app.ts's apiHandlers map only ever answers ?api= (its dispatch is
+    // `if (api && apiHandlers[api])`, no admin-family equivalent), so only
+    // check it for api: refs. Object-key form (`name: handler(...)`) or the
+    // bare-string loop form (`'name'` inside the registration array).
+    if (!inJu && parts[0] === 'api' && appTs) {
+      const key = parts[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      inJu = new RegExp('(^|[\\s,{])' + key + '\\s*:|[\'"]' + key + '[\'"]').test(appTs);
+    }
     engineCoverage[ref] = { inGas, inJu };
     ok('A1 a backend handles ' + ref, inGas || inJu,
-      'console references ?' + parts[0] + '=' + parts[1] + ' but NEITHER CaymanGateway.ts (`' + needle + '`) NOR ju-service consoledispatch.ts (`' + needleJu + '`) handles it - a one-sided add/removal (the dead-button class)');
+      'console references ?' + parts[0] + '=' + parts[1] + ' but NEITHER CaymanGateway.ts (`' + needle + '`) NOR ju-service consoledispatch.ts/app.ts (`' + needleJu + '`) handles it - a one-sided add/removal (the dead-button class)');
   });
 }
 
