@@ -7335,7 +7335,12 @@ document.addEventListener('keydown',function(e){
         if(d.fields.entityName&&String(d.fields.entityName).trim().toLowerCase()===hdrName){
           fkeys=fkeys.filter(function(k){return k!=='entityName';});
         }
-        fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv)fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
+        // A manual/off-Ju row's ?api=opprocess response carries these keys as
+        // '' (not null) - lane, applicantType and entityName genuinely do not
+        // exist for a row with no Ju submission behind it. '' slid past the
+        // null/NaN guard below and rendered as a bare label with nothing
+        // after it, which reads as broken rather than as "not recorded".
+        fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv||fv==='')fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
       }
       // Process created/updated stamps (wiring item 1) - registry truth.
       if(d.createdAt)h+='<div class="kv"><span class="k">Created</span><span class="v">'+esc2(fmtTs(d.createdAt)||d.createdAt)+'</span></div>';
@@ -7807,6 +7812,16 @@ document.addEventListener('keydown',function(e){
       // paint over the drawer the operator has since opened. Same idiom as
       // the board's LOAD_SEQ guard above.
       if(currentPid!==pid)return;
+      // A manual/off-Ju row (data-pid starting 'manual__') has no process
+      // registry entry behind it - CaymanWireLetterManualRow.ts's own header
+      // calls this out explicitly ("sheet-owned, no Ju submission behind
+      // it"). ?api=opprocess for one of these comes back with no
+      // displayName/nameHebrew at all, so the drawer fell back to the
+      // generic "LP" even though the board row one click away already shows
+      // the real name. Backfill from the same `known` row the skeleton
+      // already used, never overwriting a real name the server DID send.
+      if(known&&!d.displayName&&!d.name)d.displayName=known.name;
+      if(known&&!d.nameHebrew&&known.he)d.nameHebrew=known.he;
       renderDrawer(d);
     }).catch(function(err){
       if(currentPid!==pid)return;
