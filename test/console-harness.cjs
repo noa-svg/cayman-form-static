@@ -71,7 +71,15 @@ function extractVarObj(name) {
 
 // ---- K1: sortRows attention-first -------------------------------------------
 (function () {
-  const sortRows = new Function(extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';' + extractFn('sortRows') + '; return sortRows;')();
+  // isAttnRow joined this composition on 2026-09-02: sortRows now asks it
+  // whether a row wants attention, rather than re-deriving that from the stage.
+  // The harness evaluates these functions in isolation, so a new dependency has
+  // to be named here - which is the point, and is how it caught the omission
+  // before the console shipped.
+  const sortRows = new Function(
+    extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';' +
+    extractFn('isAttnRow') + ';' + extractFn('sortRows') + '; return sortRows;',
+  )();
   const rows = [
     { pid: 'new', stage: 'signing', lastActivityTs: '2026-07-15T09:00:00Z' },
     { pid: 'attn-old', stage: 'needs_attention', lastActivityTs: '2026-07-01T09:00:00Z' },
@@ -377,7 +385,8 @@ function extractVarObj(name) {
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
-    + extractFn('rowHtml') + '; return { rowHtml: rowHtml, foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
+    + extractFn('isAttnRow') + ';'
+    + extractFn('isAttnRow') + ';' + extractFn('rowHtml') + '; return { rowHtml: rowHtml, foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
   const { rowHtml, foldedRowsHtml, foldRuns } = new Function(src)();
 
   // ---- K12: redesigned row content (2026-08-06) -----------------------------
@@ -563,7 +572,7 @@ function extractVarObj(name) {
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
-    + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml')
+    + extractFn('isAttnRow') + ';' + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml')
     + '; return { foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns, rowHtml: rowHtml };';
   const { foldedRowsHtml, foldRuns, rowHtml } = new Function(src)();
   const WHY = 'Bank details could not be written to the tracker. Needs bank recovery.';
