@@ -3508,6 +3508,30 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .dact .dvoid:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
 .dact .dvoid:active{transform:translate(2px,2px);box-shadow:none}
 
+/* ---- record-keeping actions (rowReviewed/rowReopen 2026-09-02,
+   markMoneyReceived 2026-09-01): added to dactBtns but never given a rule in
+   this block, so all three rendered as bare unstyled buttons - the exact
+   "added here, never styled here" gap this block's own header comment
+   already folded reseal/nudge/dvoid out of. Green mirrors the --color-green
+   "ok" semantic .dact-status.ok and #allowlist-save already use; dreopen is
+   a reversal, not a fresh record, so it stays quiet/ink instead of repeating
+   that color. ---- */
+.dact .dreviewed,.dact .markreceived{
+  border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);
+  background:var(--color-green);color:#fff;
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.dact .dreviewed:hover,.dact .markreceived:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
+.dact .dreviewed:active,.dact .markreceived:active{transform:translate(2px,2px);box-shadow:none}
+.dact .dreopen{
+  border:1px solid var(--color-border-strong);border-radius:var(--radius-md);
+  background:transparent;color:var(--color-ink-sub);box-shadow:none;
+  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  transition:color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.dact .dreopen:hover{color:var(--color-ink);border-color:var(--color-ink);background:rgba(20,20,20,0.05)}
+
 /* ---- confirm strip (dac-cancel/dac-go): bold-bordered structural treatment,
    unchanged from the 2026-07-19 Ive pass, just no longer bundled with the
    buttons above since they now use a different family ---- */
@@ -7549,7 +7573,14 @@ document.addEventListener('keydown',function(e){
       // (2026-08-26 review, finding 11). dactWho_ is filled at arm time.
       void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
       reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'},
-      markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'}
+      markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'},
+      // Added 2026-09-02: the buttons themselves (dactBtns, further down) shipped
+      // a few commits before this map got their entries, so clicking "Approved"
+      // or "Undo approval" armed nothing - the click handler's `if(!c||!confEl)
+      // return;` guard silently no-opped on the missing key. Same shape as the
+      // dvoid/reseal/nudge styling gap fixed alongside this in the CSS above.
+      rowReviewed:{msg:'Mark this row as reviewed? Records that a human checked it - it does not touch the money or the wire status.',cta:'Mark reviewed',danger:false,working:'Marking...'},
+      rowReopen:{msg:'Undo the approval on this row? It goes back to needing review.',cta:'Undo approval',danger:false,working:'Undoing...'}
     };
     // Whoever the drawer is currently about, for the confirm copy.
     var dactWho_=(function(){
