@@ -486,6 +486,15 @@
       var GW = '';   // gateway URL, filled from config
       var CFG = null;
       var flowType = '';
+      // lane (2026-09-03): every mutating call this page makes hardcoded the
+      // LITERAL 'israeli' regardless of what the server's own config actually
+      // said - the exact layer-2 gap named in domain/initiateCaymanMoneyFlow.ts's
+      // header (that Cayman-lane mint's own link points here, and would submit
+      // wrongly-labelled data the moment it is armed). Read from CFG.lane
+      // (?api=config already answers it - ju-api's own response carries
+      // "lane":"" for a Cayman-lane session, "lane":"israeli" for an Israeli
+      // one) the same way flowType already is, never hardcoded again below.
+      var lane = 'israeli';
       var applicantType = 'individual';
       var pendingUploads = {};
       // Double-submit belt (CTO review finding #5, ported from signer.html's
@@ -654,6 +663,7 @@
       if (mock) {
         CFG = stubConfigForMock(mock);
         flowType = CFG.flowType;
+        lane = CFG.lane || lane;
         applicantType = CFG.applicantType;
         bootstrapForm();
       } else {
@@ -716,7 +726,7 @@
             var payload = JSON.stringify({
               action: 'client_error',
               token: token,
-              lane: 'israeli',
+              lane: lane,
               payload: {
                 message: String(message || '').slice(0, 500),
                 where: String(where || '').slice(0, 120),
@@ -856,6 +866,7 @@
           CFG = cfg;
           if (!CFG || !CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
           flowType = CFG.flowType;
+        lane = CFG.lane || lane;
           applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
           bootstrapForm();
         }
@@ -903,7 +914,7 @@
         if (!token) { fin(); return; }
         var snap = buildPageSnapshot();
         snap.page = page || getCurrentPage();
-        var body = { action: 'save_page', token: token, lane: 'israeli',
+        var body = { action: 'save_page', token: token, lane: lane,
           payload: { flowType: flowType, snapshot: snap, page: snap.page } };
         var p = new XMLHttpRequest();
         p.open('POST', GW + '?source=lp', true);
@@ -2127,7 +2138,7 @@
           var body = {
             action: 'submit',
             token: token,
-            lane: 'israeli',
+            lane: lane,
             payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
           };
           function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || SUBMIT_FAIL_MSG); }
