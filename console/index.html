@@ -3493,17 +3493,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 .dact .reseal:active,.dact .nudge:active,.cursig .nudge:active{transform:scale(0.97)}
 .dact .nudge:disabled,.cursig .nudge:disabled{opacity:.5;cursor:default;background:var(--color-atrium-tint);color:var(--color-atrium)}
 
-/* ---- destructive (void): the one place solid red-fill is used, always -
-   folded in directly 2026-07-30, this used to be white/ink by default and
-   only forced red by the trailing !important block further down ---- */
+/* ---- void: the quietest control, on purpose (restored 2026-09-03).
+   The 2026-07-30 "fold-in" above (see this block's own prior comment,
+   removed here) consolidated a scattered !important override into this
+   base rule and, in doing so, silently overwrote void back to a solid,
+   bold, uppercase, shadowed red pill - the SAME visual weight as
+   .dreviewed/.markreceived (solid green) just below, and the exact
+   opposite of this file's own stated intent a few hundred lines down
+   ("Void is the quietest control; an irreversible action never leads the
+   panel"). A pixel audit (2026-09-03) caught the two now reading as
+   equal-weight opposite-hued pills, confirmed on screen at desktop and
+   mobile width. Restored to the original quiet/transparent treatment
+   (.dact .dvoid's OTHER, now-redundant rule earlier in this file), red
+   surfacing only on hover as a deliberate reveal, not a resting state. ---- */
 .dact .dvoid{
-  border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);
-  background:var(--color-red);color:#fff;
-  font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
-  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+  border:1px solid var(--color-border-strong);border-radius:var(--radius-md);box-shadow:none;
+  background:transparent;color:var(--color-ink-sub);
+  font-weight:400;text-transform:none;letter-spacing:normal;font-size:var(--text-sm);
+  transition:color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
 }
-.dact .dvoid:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
-.dact .dvoid:active{transform:translate(2px,2px);box-shadow:none}
+.dact .dvoid:hover{color:var(--color-red);border-color:var(--color-red);background:var(--color-red-tint)}
+.dact .dvoid:active{transform:scale(0.97)}
 
 /* ---- record-keeping actions (rowReviewed/rowReopen 2026-09-02,
    markMoneyReceived 2026-09-01): added to dactBtns but never given a rule in
