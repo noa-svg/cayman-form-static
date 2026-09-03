@@ -3015,7 +3015,6 @@ body.side-coll .ss-lbl { display: none; }
      rows they lead into were never in this list. */
   .new-dd-item { min-height: 44px; padding: 11px 12px; }
   .lp-row { min-height: 44px; }
-  .lp-inv-row { min-height: 40px; display: flex; align-items: center; }
   /* .rcopy/.rnote default to opacity:0, shown only on .row:hover or keyboard
      focus - meaningless on a touchscreen with no hover state, so a size bump
      alone would still leave them invisible. Force-visible + bigger together. */
@@ -3233,17 +3232,10 @@ body.side-coll .ss-lbl { display: none; }
 .board-lp-new-row{display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:none;font-size:13px;color:var(--color-atrium-deep);font-weight:600;cursor:pointer}
 .board-lp-new-row:hover{background:var(--color-atrium-tint)}
 .board-lp-new-row b{font-weight:700}
-/* Investments-deal disambiguation (2026-07-30): shown ONLY when a picked LP
-   resolves to 2+ linked Investments-board deals, so the operator picks the
-   right one instead of the mint silently guessing. Single-match resolves
-   silently (state.selectedInvestmentsId set, no UI); zero-match degrades to
-   today's blank/manual-attach behavior. See setPick()/resolveInvestmentsForPick(). */
-.lp-inv-pick[hidden]{display:none}
-.lp-inv-pick{margin-top:8px;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);overflow:hidden}
-.lp-inv-label{padding:8px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-ink-muted);background:var(--color-bg-card)}
-.lp-inv-row{padding: 8px 12px;font-size:13px;cursor:pointer;border-top:1px solid var(--color-border-subtle)}
-.lp-inv-row:hover{background:var(--color-bg-hover)}
-.lp-inv-row.active{background:var(--color-atrium-tint);font-weight:700}
+/* Investments-deal disambiguation picker removed 2026-09-03 (dead weight):
+   the Investments board (1606766158) it searched is archived, and the
+   backend routes it called (admin=searchInvestments, admin=investmentsForPerson)
+   are deleted on both engines. */
 /* C3 inline review confirm (send paths) */
 .crev{font-size:13px}
 .crev-line{display:flex;gap:8px;padding:2px 0}
@@ -3978,7 +3970,6 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div id="lpResults" class="lp-results" hidden></div>
       </div>
       <div id="lpPicked" class="lp-picked" hidden></div>
-      <div id="lpInvPick" class="lp-inv-pick" hidden></div>
       <div class="hint" id="lpSearchHint">Pick the LP filing the request. Type a name; no Monday id needed.</div>
     </div>
     <!-- Investor type (Individual/Entity) and status (New/Existing) are both fixed by the
@@ -4419,22 +4410,27 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
 
   // ---- MONDAY-BACKED CONSOLE READS (2026-08-23) -----------------------------
-  // searchLps (two call sites), searchInvestments, listOnboardingSubmissions.
-  // Its own flag rather than riding CONSOLE_READS_ON_JU_API above, because the
-  // two groups have different blast radii and must roll back separately: those
-  // are label/month pickers, these are the identity lookups the mint binds to.
+  // searchLps (two call sites), listOnboardingSubmissions. Its own flag rather
+  // than riding CONSOLE_READS_ON_JU_API above, because the two groups have
+  // different blast radii and must roll back separately: those are label/month
+  // pickers, these are the identity lookups the mint binds to.
+  //
+  // (searchInvestments removed 2026-09-03 with the Investments-board
+  // retirement - it read the SAME People boards this flag still covers, but
+  // also queried board 1606766158, now archived, so it is gone on both
+  // engines rather than kept behind this flag.)
   //
   // WHY THIS ONE IS SAFE TO ARM. Every route here reads MONDAY, not either
   // engine's own store, so there is no read/write split to create: ju-service's
-  // domain/mondaySearch.ts queries the SAME People/Investments boards through
-  // the same board-id props GAS reads, and returns the same match shape
+  // domain/mondaySearch.ts queries the SAME People board through the same
+  // board-id props GAS reads, and returns the same match shape
   // ({ok, matches:[{itemId,name,nameHe,nameEn,email,nickname}]} for searchLps /
   // {ok, submissions:[...]} for listOnboardingSubmissions). A wrong answer here
   // would be a wrong answer on both engines.
   //
   // Handlers verified present in the ju-service dispatch table before flipping
   // (routes/consoledispatch.ts, dispatchAdmin): admin==='searchLps',
-  // admin==='searchInvestments', admin==='listOnboardingSubmissions'.
+  // admin==='listOnboardingSubmissions'.
   //
   // ROLLBACK: set this to false. Nothing else changes.
   var CONSOLE_MONDAY_READS_ON_JU_API = true;
@@ -5217,7 +5213,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     }
   }
 
-  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",onbLpKind:"new",language:"he",classification:"",selectedMondayId:"",selectedInvestmentsId:"",selectedPeopleId:"",selectedLp:null};
+  var state={lane:"israel",process:"subscription",type:"individual",lpKind:"new",onbLpKind:"new",language:"he",classification:"",selectedMondayId:"",selectedPeopleId:"",selectedLp:null};
   // Israeli onboarding readiness flag: flip to true when the branded doc layer +
   // seal E2E are green (deploy gate). Gates the Onboarding menu group on the
   // Israel fund + the classification row.
@@ -8015,79 +8011,30 @@ document.addEventListener('keydown',function(e){
     };
   })();
   // ---- LP name-search picker (Israeli increase/withdrawal) ----
-  // Restored 2026-06-30: the existing-LP create path. Search the Investments board by
-  // name, pick the deal row (carries the linked People item = LP identity), and the mint
-  // routes process=increase|withdrawal -> caymanConsoleInitiateIsraeliFlow_ (no auto-send).
+  // Restored 2026-06-30: the existing-LP create path. Search the People board by
+  // name, pick the LP, and the mint routes process=increase|withdrawal ->
+  // caymanConsoleInitiateIsraeliFlow_ (no auto-send).
+  //
+  // The Investments-board deal-row resolution/disambiguation this used to do
+  // (resolveInvestmentsForPick, state.selectedInvestmentsId, the multi-deal
+  // picker) was removed 2026-09-03: board 1606766158 is archived, and
+  // ?admin=investmentsForPerson is gone on both engines. Nothing downstream
+  // reads an investmentsId any more (the writeback that consumed it is
+  // deleted too), so the mint below no longer sends one.
   (function(){
-    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked'),invBox=document.getElementById('lpInvPick');
+    var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
     if(!inp||!box||!picked)return;
-    var T=null,rows=[],active=-1,invSeq=0;
+    var T=null,rows=[],active=-1;
     function subline(m){var en=m.name||m.nameEn;return [(m.nameHe&&en&&en!==m.nameHe)?en:'',m.email,m.nickname?('“'+m.nickname+'”'):''].filter(Boolean).join('  ·  ');}
-    function clearInvPick(){invSeq++;if(invBox){invBox.hidden=true;invBox.innerHTML='';}}
-    function clearPick(){state.selectedMondayId='';state.selectedInvestmentsId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;clearInvPick();}
+    function clearPick(){state.selectedMondayId='';state.selectedPeopleId='';state.selectedLp=null;picked.hidden=true;picked.innerHTML='';inp.style.display='';inp.value='';box.hidden=true;rows=[];active=-1;}
     window.__lpClearPick=clearPick;
-    // Resolve the picked LP's linked Investments-board deal so the money-path mint
-    // carries a real investmentsId (2026-07-30 fix: this used to always send ''
-    // because nothing here ever called ?admin=searchInvestments). The Investments
-    // board only supports a NAME search, not a lookup by People id, so this
-    // searches by the picked LP's own name/email and then keeps only the results
-    // whose linkedPeopleItemId (resolved server-side from the deal_contact
-    // board_relation) matches the person just picked - that equality check is
-    // what makes this safe even if the name search also turns up someone else's
-    // similarly-named deal.
-    //   0 matches  -> leave selectedInvestmentsId blank (today's fail-soft
-    //                 behavior: seal-time falls back to the manual-attach
-    //                 needs_attention path, never guesses).
-    //   1 match    -> unambiguous; auto-fill silently, no extra operator step.
-    //   2+ matches -> a person CAN have more than one Investments deal row, so a
-    //                 blind auto-fill could route the signed PDF to the wrong
-    //                 deal (real money routing). Show a visible, resolvable
-    //                 picker instead of guessing; selectedInvestmentsId stays
-    //                 blank until the operator clicks one.
-    function resolveInvestmentsForPick(m){
-      clearInvPick();
-      var mySeq=++invSeq;
-      var pid=(m.itemId||'').trim();
-      if(!pid)return;
-      // 2026-08-31: resolve by the deal_contact RELATION, not by a text search.
-      // The old call searched email-first, but email__1 is empty on every row of
-      // the Investments board and nameHe is a mirror the server could not read,
-      // so the haystack was the deal row title alone and an email needle never
-      // matched. Zero hits left investmentsId blank on every mint and the sealed
-      // PDF never reached the deal row. The server now returns exactly the rows
-      // linked to this person, so zero here genuinely means "no deal row".
-      apiFetch('?admin=investmentsForPerson&peopleId='+encodeURIComponent(pid), false, consoleMondayReadBase_()).then(function(d){
-        if(mySeq!==invSeq)return; // stale: pick changed or cleared while this was in flight
-        if(state.selectedPeopleId!==(m.itemId||''))return;
-        var hits=((d&&d.matches)||[]);
-        if(hits.length===1){
-          state.selectedInvestmentsId=hits[0].investmentsItemId||'';
-        } else if(hits.length>1&&invBox){
-          state.selectedInvestmentsId='';
-          invBox.innerHTML='<div class="lp-inv-label">Multiple linked investment deals - pick one</div>'+hits.map(function(h,i){
-            return '<div class="lp-inv-row" data-i="'+i+'">'+esc2(h.name||'(unnamed deal)')+(h.email?(' · '+esc2(h.email)):'')+'</div>';
-          }).join('');
-          invBox.hidden=false;
-          Array.prototype.forEach.call(invBox.querySelectorAll('.lp-inv-row'),function(r){
-            r.onclick=function(){
-              state.selectedInvestmentsId=hits[+r.getAttribute('data-i')].investmentsItemId||'';
-              Array.prototype.forEach.call(invBox.querySelectorAll('.lp-inv-row'),function(x){x.classList.remove('active');});
-              r.classList.add('active');
-            };
-          });
-        }
-        // 0 matches: state.selectedInvestmentsId is already '' from setPick - leave it.
-      }).catch(function(){ /* fail-soft: a search error degrades to the blank/manual-attach path, never guesses */ });
-    }
     function setPick(m){
-      state.selectedInvestmentsId='';
       state.selectedPeopleId=m.itemId||'';
       state.selectedMondayId=m.itemId||'';
       state.selectedLp=m;
       picked.innerHTML='<div class="lp-meta"><div class="lp-nm">'+esc2(m.nameHe||m.nameEn||m.name||'(no name)')+'</div><div class="lp-sub">'+esc2(subline(m))+'</div></div><div class="lp-x" id="lpClear" title="Change">&times;</div>';
       picked.hidden=false;box.hidden=true;inp.style.display='none';
       var x=document.getElementById('lpClear');if(x)x.onclick=clearPick;
-      resolveInvestmentsForPick(m);
     }
     // Exposed (2026-08-02) so the board-search LP-directory results can reuse
     // the exact same pick logic instead of a second copy, same pattern as the
@@ -8424,7 +8371,7 @@ document.addEventListener('keydown',function(e){
       // moneyMintBaseForLane_ separately for each call would risk splitting
       // them across GAS and ju-service if the flag ever flipped mid-session.
       var moneyBase_=moneyMintBaseForLane_(state.lane);
-      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId)+'&investmentsId='+encodeURIComponent(state.selectedInvestmentsId||''), false, moneyBase_).then(function(res){
+      apiFetch('?admin=mintLink&process='+encodeURIComponent(state.process)+'&lane='+encodeURIComponent(state.lane)+'&type='+encodeURIComponent(state.type)+'&mondayId='+encodeURIComponent(state.selectedPeopleId)+'&peopleId='+encodeURIComponent(state.selectedPeopleId), false, moneyBase_).then(function(res){
         if(!res||!res.ok){btn.disabled=false;btn.textContent="Send invite";showMsg((res&&res.error)||"Could not create. Check GAS logs.",true);return;}
         var processId=res.processId||'', link=res.url||res.signerLink||"";
         return apiFetch('?admin=sendIsraeliInvite&process='+encodeURIComponent(processId), false, moneyBase_).then(function(sr){
