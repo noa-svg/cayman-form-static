@@ -8900,24 +8900,34 @@ document.addEventListener('keydown',function(e){
     }).join('');
     return '<div class="wl-rows">'+hdr+rows+'</div>';
   }
-  // ---- THE MONEY / WIRE-LETTER PANEL IS GAS-ONLY (2026-08-23 seam audit) -----
-  // Everything from here to the Settings panel below talks to the transfer-forms
-  // tracker, and NONE of it is ported. Checked route by route against
-  // routes/consoledispatch.ts (the single dispatch table; the ?source=op tunnel
-  // re-enters it, so there is no second surface): ju-service has no handler for
-  //   opPeekAwaitingMoney, opMarkMoneyReceived, opPeekMonthTransfers,
+  // ---- THE MONEY / WIRE-LETTER PANEL: MOSTLY GAS-ONLY (2026-08-23 seam audit,
+  // corrected 2026-09-03) -----
+  // Re-verified route by route against routes/consoledispatch.ts (the single
+  // dispatch table; the ?source=op tunnel re-enters it, so there is no second
+  // surface) rather than trusting this comment's own prior claim:
+  //   PORTED, flipped to JU_API 2026-09-03: opPeekAwaitingMoney, opPeekMonthTransfers
+  //     (peekAwaiting()/peekMonthTransfers() above; both read-only, no
+  //     internal token gate beyond the dispatcher's authorizeFull/diag door).
+  //   STILL GAS-ONLY, ju-service has a route but it CANNOT be called without a
+  //   diag token yet (found 2026-09-03): opParkRow, opUnparkRow. The
+  //   dispatcher's own comment implies a console-identity door "adds a door
+  //   rather than moving one," same as the peek pair, but it was never built:
+  //   resolveRows() in routes/opparkrow.ts hard-requires
+  //   params.t === diagToken internally (opparkrow.ts:254-257), independent of
+  //   whatever the dispatcher already checked. Flipping these two needs that
+  //   inner check relaxed to also accept a verified console identity (and a
+  //   decision on what `actor` gets recorded for that path) - a real change to
+  //   the write path, not a client-side repoint. Do not flip GAS_ONLY_->JU_API
+  //   here until that lands and is tested.
+  //   STILL FULLY UNPORTED, zero references anywhere under ju-service/src
+  //   (2026-09-03 grep, not just this comment's prior claim): opMarkMoneyReceived,
   //   opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
-  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails,
-  //   opPeekParked, opParkRow, opUnparkRow
-  // - none of those eleven strings appears anywhere under ju-service/src (the
-  // last three added 2026-08-31 with the Parked execution state; re-checked
-  // against consoledispatch.ts the same way). An
-  // unknown api there returns {ok:false,error:'unknown route'}, which apiFetch
-  // turns into a thrown server_error, so repointing any of these would break a
-  // live operator panel that touches real money rows on the first click.
-  // They therefore pass GAS_ONLY_ explicitly. Same destination as before; the
-  // difference is that it is now WRITTEN DOWN rather than inherited from a
-  // default, which is the entire point of making base required.
+  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails, opPeekParked.
+  // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
+  // which apiFetch turns into a thrown server_error, so repointing any of the
+  // still-unported ones would break a live operator panel that touches real
+  // money rows on the first click. They therefore still pass GAS_ONLY_
+  // explicitly.
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -9034,7 +9044,14 @@ document.addEventListener('keydown',function(e){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){awaitEl.innerHTML='';return;}
       var rid=++awaitSeq;
-      apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month), false, GAS_ONLY_).then(function(r){
+      // Flipped to JU_API 2026-09-03: ported into routes/transferformpeek.ts
+      // and wired at consoledispatch.ts:288-298 with a verified-console-identity
+      // door (2026-09-02). This is a tracker-wide read, not a per-process action,
+      // so JU_API directly - NOT currentEngine, which tracks whichever process a
+      // drawer last opened and has nothing to do with this panel (the
+      // opMarkMoneyReceived incident above is exactly what using currentEngine
+      // here would risk repeating).
+      apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month), false, JU_API).then(function(r){
         if(rid!==awaitSeq)return;
         awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
       }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
@@ -9236,7 +9253,8 @@ document.addEventListener('keydown',function(e){
       if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
       var rid=++peekSeq;
       rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
-      apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, GAS_ONLY_).then(function(r){
+      // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
+      apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
         if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
