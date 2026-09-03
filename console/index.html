@@ -8017,10 +8017,10 @@ document.addEventListener('keydown',function(e){
   //
   // The Investments-board deal-row resolution/disambiguation this used to do
   // (resolveInvestmentsForPick, state.selectedInvestmentsId, the multi-deal
-  // picker) was removed 2026-09-03: board 1606766158 is archived, and
-  // ?admin=investmentsForPerson is gone on both engines. Nothing downstream
-  // reads an investmentsId any more (the writeback that consumed it is
-  // deleted too), so the mint below no longer sends one.
+  // picker) was removed 2026-09-03: board 1606766158 is archived, and its
+  // read route (admin investmentsForPerson) is gone on both engines. Nothing
+  // downstream reads an investmentsId any more (the writeback that consumed
+  // it is deleted too), so the mint below no longer sends one.
   (function(){
     var inp=document.getElementById('lpSearch'),box=document.getElementById('lpResults'),picked=document.getElementById('lpPicked');
     if(!inp||!box||!picked)return;
