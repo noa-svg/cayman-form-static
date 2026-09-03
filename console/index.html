@@ -7802,12 +7802,16 @@ document.addEventListener('keydown',function(e){
         }).catch(function(){dactBusy=false;dHideConfirm();dStatus('Could not save the review. Refresh and try again.','error');});
         return;
       }
-      // Hardcoded GAS_ONLY_ below (2026-09-02 CTO review, money-critical): opMarkMoneyReceived
-      // exists only on GAS; this drawer call used currentEngine and silently hit a route
-      // that never existed on ju-service for any Israeli-lane process. The Transfer Form's
-      // reuse of this same route already knew and hardcodes GAS_ONLY_.
+      // Flipped to JU_API 2026-09-03: domain/markMoneyReceived.ts ported and
+      // wired through consoledispatch.ts's two-door pattern (diag token or a
+      // verified console identity, same shape opParkRow/opUnparkRow already
+      // use). JU_API directly, not currentEngine, for the same reason
+      // opPeekAwaitingMoney above does - this is keyed on the row's own
+      // masterRid/processId, not on whichever process a drawer last opened,
+      // and currentEngine drifting from that is exactly the incident the
+      // prior GAS_ONLY_ pin here was hand-fixing around.
       if(act==='markMoneyReceived'){
-        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,GAS_ONLY_).then(function(r){
+        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(currentPid),false,JU_API).then(function(r){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
@@ -8863,10 +8867,19 @@ document.addEventListener('keydown',function(e){
   //     same pattern opSetRowReview/opPauseReminders already use (actor comes
   //     from the verified identity, never params). Diag-token path unchanged
   //     for headless exercise/comparison.
+  //   PORTED, flipped to JU_API 2026-09-03 (third pass, same day): opMarkMoneyReceived
+  //     (the drawer button above and the Awaiting-money peek's "Mark received"
+  //     button). Same discovery as opParkRow: the first cut of domain/
+  //     markMoneyReceived.ts was registered as a STANDALONE diag-token-only
+  //     Hono handler, which made it unreachable from a real console session no
+  //     matter what the client called - fixed by routing it through
+  //     consoledispatch.ts's same two-door pattern instead.
+  //   BACKEND EXISTS, diag-token ONLY, no console-auth door yet - still pass
+  //   GAS_ONLY_ explicitly, repointing these would 'unknown route' on the
+  //   first click: opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails.
   //   STILL FULLY UNPORTED, zero references anywhere under ju-service/src
-  //   (2026-09-03 grep, not just this comment's prior claim): opMarkMoneyReceived,
-  //   opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
-  //   opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails, opPeekParked.
+  //   (2026-09-03 grep): opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
+  //   opPeekParked.
   // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
   // which apiFetch turns into a thrown server_error, so repointing any of the
   // still-unported ones would break a live operator panel that touches real
@@ -9153,7 +9166,7 @@ document.addEventListener('keydown',function(e){
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
       btn.disabled=true;btn.textContent='Marking...';
-      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
