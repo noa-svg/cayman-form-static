@@ -8908,17 +8908,14 @@ document.addEventListener('keydown',function(e){
   //   PORTED, flipped to JU_API 2026-09-03: opPeekAwaitingMoney, opPeekMonthTransfers
   //     (peekAwaiting()/peekMonthTransfers() above; both read-only, no
   //     internal token gate beyond the dispatcher's authorizeFull/diag door).
-  //   STILL GAS-ONLY, ju-service has a route but it CANNOT be called without a
-  //   diag token yet (found 2026-09-03): opParkRow, opUnparkRow. The
-  //   dispatcher's own comment implies a console-identity door "adds a door
-  //   rather than moving one," same as the peek pair, but it was never built:
-  //   resolveRows() in routes/opparkrow.ts hard-requires
-  //   params.t === diagToken internally (opparkrow.ts:254-257), independent of
-  //   whatever the dispatcher already checked. Flipping these two needs that
-  //   inner check relaxed to also accept a verified console identity (and a
-  //   decision on what `actor` gets recorded for that path) - a real change to
-  //   the write path, not a client-side repoint. Do not flip GAS_ONLY_->JU_API
-  //   here until that lands and is tested.
+  //   PORTED, flipped to JU_API 2026-09-03 (same day, second pass): opParkRow,
+  //     opUnparkRow (parkRow()/the unpark click handler above). resolveRows()
+  //     in routes/opparkrow.ts used to hard-require params.t === diagToken
+  //     internally regardless of the dispatcher's own check - fixed by
+  //     threading a verifiedActor through from a Tier-1 authorizeFull pass,
+  //     same pattern opSetRowReview/opPauseReminders already use (actor comes
+  //     from the verified identity, never params). Diag-token path unchanged
+  //     for headless exercise/comparison.
   //   STILL FULLY UNPORTED, zero references anywhere under ju-service/src
   //   (2026-09-03 grep, not just this comment's prior claim): opMarkMoneyReceived,
   //   opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
@@ -9136,7 +9133,12 @@ document.addEventListener('keydown',function(e){
     // instruction. &tab= still exists server-side for a deliberate single-month
     // park; this button is not that.
     function parkRow(rid,reason,form,go){
-      apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, GAS_ONLY_).then(function(r){
+      // Flipped to JU_API 2026-09-03: ju-service's opParkRow now has a
+      // verified-console-identity door (consoledispatch.ts), not just the
+      // diag token. JU_API directly, not currentEngine - the tracker Sheet
+      // this writes is shared and engine-agnostic (see opparkrow.ts's header),
+      // unlike a session field which lives on exactly one engine.
+      apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, JU_API).then(function(r){
         if(!r||!r.ok){go.disabled=false;go.textContent='Park';go.title=(r&&r.error)||'Failed, try again';return;}
         form.remove();
         wlNoteLandingTab(r);
@@ -9163,7 +9165,8 @@ document.addEventListener('keydown',function(e){
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
       btn.disabled=true;btn.textContent='Un-parking...';
-      apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, GAS_ONLY_).then(function(r){
+      // Flipped to JU_API 2026-09-03, same reasoning as parkRow() above.
+      apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
         if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Un-parked';
         wlNoteLandingTab(r);
