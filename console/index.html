@@ -6132,7 +6132,7 @@ document.addEventListener('keydown',function(e){
         // silent GAS default is the exact defect this change exists to remove.
         // Correct fix, out of scope for this edit: add consoleMondayReadBase_ to
         // that harness's injected parameter list and drop the guard.
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false,
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)+'&lane='+encodeURIComponent(state.lane),false,
           (typeof consoleMondayReadBase_==='function')?consoleMondayReadBase_():undefined).then(function(d){
           if(mySeq!==seq)return; // stale: query changed while this was in flight
           render((d&&d.matches)||[]);
@@ -8060,7 +8060,7 @@ document.addEventListener('keydown',function(e){
       if(q.length<2){box.hidden=true;rows=[];return;}
       if(T)clearTimeout(T);
       T=setTimeout(function(){
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false, consoleMondayReadBase_()).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(err){
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)+'&lane='+encodeURIComponent(state.lane), false, consoleMondayReadBase_()).then(function(d){rows=(d&&d.matches)||[];render();}).catch(function(err){
           // C5 (2026-07-19): a search ERROR is not "no matches" - say so, offer a
           // one-click retry, and name the likely cause (a server error here was the
           // tell of both grant outages; the operator should not have to guess).
@@ -8194,7 +8194,7 @@ document.addEventListener('keydown',function(e){
       if(T)clearTimeout(T);
       var mySeq=++seq;
       T=setTimeout(function(){
-        apiFetch('?admin=searchLps&q='+encodeURIComponent(q), false, consoleMondayReadBase_()).then(function(d){
+        apiFetch('?admin=searchLps&q='+encodeURIComponent(q)+'&lane='+encodeURIComponent(state.lane), false, consoleMondayReadBase_()).then(function(d){
           if(mySeq!==seq)return; // stale: query changed while this was in flight
           rows=(d&&d.matches)||[];render();
         }).catch(function(err){
