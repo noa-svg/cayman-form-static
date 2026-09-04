@@ -47,5 +47,6 @@ test/*
 !test/signer-sticky-token-key-harness.cjs
 !test/rig-signer.cjs
 !test/flow-account-normalise-harness.cjs
+!test/flow-cayman-lane-harness.cjs
 !test/signer-doc-gate-harness.cjs
 !test/israel-sigpad-encode-harness.cjs

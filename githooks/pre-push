@@ -109,6 +109,7 @@ HARNESSES=(
   pilot-fallback-harness
   signer-sticky-token-key-harness
   flow-account-normalise-harness
+  flow-cayman-lane-harness
   signer-doc-gate-harness
   israel-sigpad-encode-harness
 )

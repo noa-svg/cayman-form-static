@@ -423,7 +423,7 @@
           <h1 class="lvp-page__title">העלאת קבצים</h1>
           <div id="lvp-uploads-summary" class="lvp-error-summary" hidden role="alert"></div>
 
-          <div class="lvp-upload" data-field="accountManagementApproval">
+          <div class="lvp-upload" id="upload-accountManagementApproval-wrap" data-field="accountManagementApproval">
             <div class="lvp-upload__label"><label for="file-accountManagementApproval">אישור ניהול חשבון<span class="lvp-req" aria-hidden="true">*</span></label></div>
             <input type="file" class="lvp-upload__input" id="file-accountManagementApproval" data-upload="accountManagementApproval" accept="image/*,application/pdf" aria-describedby="err-accountManagementApproval">
             <label for="file-accountManagementApproval" class="lvp-upload__btn">צירוף קובץ</label>
@@ -495,6 +495,164 @@
       // "lane":"" for a Cayman-lane session, "lane":"israeli" for an Israeli
       // one) the same way flowType already is, never hardcoded again below.
       var lane = 'israeli';
+      // IS_CAYMAN (2026-09-04, Layer 2 English/LTR build): the LP-facing signal
+      // this whole file was missing. Everything below keys off this ONE flag,
+      // computed the instant `lane` itself is known (both assignment sites),
+      // never re-derived ad hoc. Cayman-lane money-mint sessions stamp
+      // lane:'cayman' at mint time (domain/initiateCaymanMoneyFlow.ts) and
+      // session.language:'en', which ?api=config already echoes as CFG.lane -
+      // see this file's own 2026-09-03 comment on the `lane` var above.
+      var IS_CAYMAN = false;
+
+      // ===================================================================
+      // Bilingual HE/EN, ported from israel.html's own EN_MAP/applyLang
+      // mechanism (that file's the precedent named in the build brief - the
+      // one place this codebase already flips a form's language AND its
+      // reading direction from a server signal, not just a user toggle).
+      // Same contract: authored in Hebrew, EN_MAP is the Hebrew-string to
+      // English map, an untranslated string is LEFT in Hebrew (never
+      // blanked) - never a fabricated placeholder, the same fallback
+      // israel.html's own header documents as intentional partial coverage.
+      //
+      // COVERAGE (2026-09-04): every entry below is an EXISTING, already-
+      // shipped English string reused verbatim for the identical concept -
+      // index.html's field labels, israel.html's own EN_MAP, signer.html's
+      // approved copy, or the already-shipped domain/money/{increase,
+      // withdrawal}.ts validators (the exact string ju-service itself would
+      // show a Cayman-lane LP if client validation ever missed something).
+      // NOTHING here is newly drafted. Every visible string on this page
+      // that has NO existing approved English twin is deliberately absent -
+      // see the build report for the full list awaiting Noa's sign-off.
+      // Bank-field "Source"/"Destination" wording (increase vs withdrawal)
+      // is NOT in this flat map (one Hebrew key, two possible English
+      // strings) - handled directly in vBank/vBranch/vAccount instead.
+      // ===================================================================
+      var EN_MAP = {
+        'טוען...': 'Loading...',
+        'שם מלא': 'Full name',
+        'מספר תעודת זהות': 'ID number',
+        'מספר תעודת הזהות אינו תקין.': 'The ID number is not valid.',
+        'מספר חשבון': 'Account number',
+        'הקודם': 'Back',
+        'הבא': 'Continue',
+        'כתובת דוא"ל': 'Email address',
+        'בנק': 'Bank name',
+        'סניף': 'Branch number',
+        'נא לא לסגור את החלון.': 'Please keep this window open.',
+        'אישור ניהול חשבון': 'Account management approval',
+        'חותמת החברה': 'Company stamp',
+        'נא להעלות קובץ תמונה של החותמת בגודל המקורי וללא עמוד רקע כדי לוודא שהיא תופיע כראוי במסמכים.':
+          'Please upload an image of the seal at its original size and without a background so it appears properly in the documents.',
+        'שולח...': 'Sending...',
+        // Added 2026-09-04 (pixel-verifier fix pass). Every entry below is an
+        // EXISTING approved English string, reused verbatim - not new copy.
+        // Sourced from either this codebase's own EN_MAP/field-label precedent
+        // (israel.html, index.html) or CAYMAN_SEAL_FIXTURE_HTML_ - the byte-
+        // verified (sha256, per its own header) auto-extraction of the LIVE,
+        // already-signed-off English Cayman increase/withdrawal legal documents
+        // (legacy-tools-mono apps/ju-service/src/docpack/caymanSealFixtures.ts,
+        // identical copy in apps/ju-cayman/src/server/CaymanSealFixtures.ts).
+        'שם התאגיד': 'Entity name', // exact key, israel.html EN_MAP
+        'מספר ח.פ': 'Entity / company number', // same value israel.html EN_MAP uses for the equivalent מספר תאגיד/ח.פ key
+        'סיום ושליחה': 'Finish and send', // exact key, israel.html EN_MAP (also that file's own submit button + page title)
+        'פרטי חשבון': 'Your bank details', // exact page title, index.html:981 (same concept: collecting the LP's bank name/branch/account)
+        'העלאת קבצים': 'Documents', // exact page title, index.html:684 (same concept: the file-upload page)
+        'מטבע השקעה': 'Investment currency', // exact key, israel.html EN_MAP
+        // The live Cayman English documents' own title (CAYMAN_SEAL_FIXTURE_HTML_
+        // increase_request / withdrawal_request bodies both open "Legacy Value
+        // Partners CI, LP" / "Increase Request" / "Redemption Request").
+        'טופס הגדלת השקעה': 'Increase Request',
+        'טופס בקשת פדיון': 'Redemption Request',
+        'פרטי בקשת ההגדלה': 'Increase Request',
+        'פרטי הפדיון': 'Redemption Request',
+        // "...is as set out below (the "Additional Investment Amount")" - the
+        // increase_request fixture's own defined term, verbatim.
+        'סכום ההשקעה הנוספת': 'Additional Investment Amount',
+        // "Requested redemption amount: {{computed.withdrawal.amountClause}}" -
+        // the withdrawal_request fixture's own field label, verbatim.
+        'סכום הפדיון המבוקש': 'Requested redemption amount',
+        'סכום הפדיון': 'Redemption amount', // same fixture label, minus "Requested" (this is the section header above the fieldset, not the request itself)
+        // "Requested redemption date: {{computed.withdrawal.dateClause}}" - the
+        // withdrawal_request fixture's own field label, verbatim.
+        'יום הפדיון המבוקש': 'Requested redemption date',
+        'יום הפדיון': 'Redemption date', // same fixture label, minus "Requested"
+        // The withdrawal_request fixture's own full-redemption sentence, verbatim
+        // (also independently confirmed live in CaymanWithdrawal.js's
+        // buildCaymanWithdrawalScope_ amountClause for w.mode==='full').
+        'כל יתרת חשבון ההון': 'The entire balance of the capital account',
+        // The withdrawal_request fixture's own floor-rule sentence, verbatim -
+        // word-for-word match of the Hebrew (same parenthetical (א)/(ב) structure,
+        // same "fifty thousand (50,000) New Shekels"/"חמישים אלף (50,000) שקלים
+        // חדשים"). Also codified as CAYMAN_WITHDRAWAL_PARTIAL_MIN_ = 50000.
+        'סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים':
+          'The redemption amount will not be less than the lesser of (a) the balance in the capital account of that partner or (b) fifty thousand (50,000) New Shekels.',
+        // THE LEGAL REDEMPTION-CONSENT CLAUSE. Verbatim from the withdrawal_request
+        // fixture's own closing paragraph - the exact sentence a Cayman-lane LP's
+        // signed, sealed redemption document already carries today. Confirmed
+        // word-for-word equivalent to the Hebrew (same clauses: paid in the
+        // original investment currency, conversion cost borne by the LP, notice
+        // irrevocable absent the GP's prior written consent). NOT a paraphrase.
+        'ידוע לי כי סכום הפדיון יועבר בהתאם לתנאי הסכם השותפות, במטבע בו בוצעה ההשקעה בחשבון השותפות, ועלויות המרה למטבע אחר, אם יחולו, יחולו על חשבוני וכי הודעת פדיון זו לא תהיה ניתנת לביטול אלא אם הסכים השותף הכללי מראש ובכתב לביטולה.':
+          'I understand that the redemption amount will be transferred in accordance with the terms of the Partnership Agreement, in the currency in which the investment was made in the partnership account, and that conversion costs to another currency, if applicable, shall be borne solely by me. This redemption notice shall not be revocable unless the general partner has agreed in advance and in writing to its revocation.',
+        // Bare nouns used only as (a) error-summary jump-link labels ("Amount
+        // (Row 2)") and (b) the amountRequiredMsg_/bankFieldMsg_ label arg above -
+        // not sentences, so no drafting judgment call; both words already appear
+        // inside the confirmed-verbatim fixture phrases above ("...Investment
+        // Amount", "...redemption amount").
+        'סכום': 'Amount',
+        'שורה': 'Row'
+      };
+      function lookupEn_(he) {
+        if (he == null) return null;
+        var raw = String(he).replace(/^\s+|\s+$/g, '');
+        return Object.prototype.hasOwnProperty.call(EN_MAP, raw) ? EN_MAP[raw] : null;
+      }
+      // T(): the single choke point every LP-visible string is meant to pass
+      // through. Hebrew/Israeli-lane: identity (never touches the string).
+      // Cayman lane: look up EN_MAP, fall back to the Hebrew source untouched
+      // when no approved entry exists yet (never blank, never a placeholder).
+      function T(he) {
+        if (!IS_CAYMAN || he == null) return he;
+        var en = lookupEn_(he);
+        return (en == null) ? he : en;
+      }
+      // English month names for the redemption date radios - NOT a wording
+      // decision (a calendar fact, like the ISO currency codes below), so
+      // safe to write outright rather than gate on sign-off.
+      var REDEMPTION_MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      // swapScopeText_: the static-markup half of the mechanism (dynamic strings
+      // - validator messages, generated rows, submit/busy status - go through T()
+      // directly at their own call sites above). Runs ONCE, at bootstrap, since
+      // unlike israel.html's own EN toggle this page's language is fixed for the
+      // whole session (a Cayman-lane link never flips back to Hebrew mid-form),
+      // so there is no need for israel.html's dataset-caching/toggle-back
+      // machinery - a plain one-shot T() swap is enough.
+      //
+      // A label may carry an ELEMENT child (the .lvp-req required-asterisk span,
+      // or the wd-mode/wd-date radio's own trailing <span>) - flattening via
+      // .textContent would destroy it (the exact bug israel.html's own
+      // swapTextContent comment warns about), so swap only the first non-blank
+      // TEXT node when children exist, matching israel.html's guard.
+      function swapText_(el) {
+        if (!el) return;
+        if (el.children && el.children.length) {
+          for (var i = 0; i < el.childNodes.length; i++) {
+            var c = el.childNodes[i];
+            if (c.nodeType === 3 && c.nodeValue && c.nodeValue.trim()) { c.nodeValue = T(c.nodeValue.trim()); return; }
+          }
+          return;
+        }
+        el.textContent = T(el.textContent);
+      }
+      function swapScopeText_(root) {
+        if (!IS_CAYMAN) return;
+        var sel = '.lvp-page__title, .lvp-section__title, .lvp-field__label, legend.lvp-field__label, ' +
+          '.lvp-field__hint, .lvp-upload__hint, .lvp-prose, .lvp-required-note, ' +
+          '.lvp-upload__label label, .lvp-upload__btn, .lvp-radio > span, [data-go], ' +
+          '#lvp-loading, #lvp-busy-title, #lvp-busy-warn, #lvp-submit-btn, .lvp-amount-add';
+        root.querySelectorAll(sel).forEach(swapText_);
+      }
       var applicantType = 'individual';
       var pendingUploads = {};
       // Double-submit belt (CTO review finding #5, ported from signer.html's
@@ -506,11 +664,21 @@
       var submitting = false;
       // Lifted to the top of the IIFE so the mock-mode bootstrap path (which fires
       // before later var declarations execute) can use them.
-      var CURRENCIES = [
-        { code: 'שקל', symbol: '₪' },
-        { code: 'דולר', symbol: '$' },
-        { code: 'יורו', symbol: '€' }
-      ];
+      //
+      // Currency VALUES, not labels: caymanCurrencyCode_ (domain/money/model.ts)
+      // normalizes 'שקל'/'ILS'/'₪' -> ILS, 'דולר'/'USD'/'$' -> USD, 'יורו'/
+      // 'אירו'/'EUR'/'€' -> EUR - but NOT the English WORDS 'Shekel'/'Dollar'/
+      // 'Euro'. So a Cayman-lane English currency picker cannot just show a
+      // translated label over the same Hebrew value: the option VALUE has to
+      // become the ISO code the server already recognises. ISO codes are not
+      // a wording decision (same footing as the month names above), so this
+      // is safe to write outright rather than hold for sign-off - unlike
+      // every prose string on this page, nobody is drafting new LP copy here.
+      function currencyList_() {
+        return IS_CAYMAN
+          ? [{ code: 'ILS', symbol: '₪' }, { code: 'USD', symbol: '$' }, { code: 'EUR', symbol: '€' }]
+          : [{ code: 'שקל', symbol: '₪' }, { code: 'דולר', symbol: '$' }, { code: 'יורו', symbol: '€' }];
+      }
       var PAGE_ORDER = ['start', 'request', 'uploads'];
       // Rebuilt once flowType is known (bootstrapForm): a transfer has no
       // request page at all, so it must not appear in the sequence, the
@@ -629,19 +797,34 @@
       function stubConfigForMock(m) {
         var ind = { legalName: 'משקיע בדיקה', idNumber: '123456782', email: 'noa+test@legacyvpartners.com', phone: '050-1234567' };
         var ent = { legalName: 'חברת בדיקה בע״מ', idNumber: '514999999', email: 'noa+test@legacyvpartners.com', phone: '03-5550000' };
+        // 'cay-' prefix (2026-09-04, Layer 2): the ONLY way to render-verify the
+        // English/LTR path locally without a real Cayman-lane mint. Same
+        // flowType/applicantType matrix as the Israeli-lane keys below, lane
+        // flipped to 'cayman' - so a pixel pass can diff cay-inc-ind against
+        // inc-ind side by side and see exactly what the lane flag changes.
+        var isCay = /^cay-/.test(m);
+        var base = isCay ? m.slice(4) : m;
+        var indEn = { legalName: 'Test Investor', idNumber: 'A1234567', email: 'noa+test@legacyvpartners.com', phone: '+1-555-0100' };
+        var entEn = { legalName: 'Test Holdings Ltd', idNumber: 'CAY-000123', email: 'noa+test@legacyvpartners.com', phone: '+1-555-0200' };
         var pick = {
-          'inc-ind': { flowType: 'cayman_increase',   applicantType: 'individual', lp: ind },
-          'inc-ent': { flowType: 'cayman_increase',   applicantType: 'entity',     lp: ent },
-          'red-ind': { flowType: 'cayman_withdrawal', applicantType: 'individual', lp: ind },
-          'red-ent': { flowType: 'cayman_withdrawal', applicantType: 'entity',     lp: ent },
+          'inc-ind': { flowType: 'cayman_increase',   applicantType: 'individual', lp: isCay ? indEn : ind },
+          'inc-ent': { flowType: 'cayman_increase',   applicantType: 'entity',     lp: isCay ? entEn : ent },
+          'red-ind': { flowType: 'cayman_withdrawal', applicantType: 'individual', lp: isCay ? indEn : ind },
+          'red-ent': { flowType: 'cayman_withdrawal', applicantType: 'entity',     lp: isCay ? entEn : ent },
           // Added 2026-08-30 with the transfer lane. Without these the newest
           // flow is the only one ?mock= cannot render, which is exactly the
           // lane a design pass most needs to see.
-          'trn-ind': { flowType: 'cayman_transfer',   applicantType: 'individual', lp: ind },
-          'trn-ent': { flowType: 'cayman_transfer',   applicantType: 'entity',     lp: ent }
-        }[m] || null;
+          'trn-ind': { flowType: 'cayman_transfer',   applicantType: 'individual', lp: isCay ? indEn : ind },
+          'trn-ent': { flowType: 'cayman_transfer',   applicantType: 'entity',     lp: isCay ? entEn : ent }
+        }[base] || null;
         if (!pick) return { flowType: '' };
-        return { flowType: pick.flowType, lane: 'israeli', language: 'he', applicantType: pick.applicantType, prefill: { lp: pick.lp } };
+        return {
+          flowType: pick.flowType,
+          lane: isCay ? 'cayman' : 'israeli',
+          language: isCay ? 'en' : 'he',
+          applicantType: pick.applicantType,
+          prefill: { lp: pick.lp }
+        };
       }
 
       // Render-verify mode: ?mock=inc-ind | inc-ent | red-ind | red-ent bypasses
@@ -664,6 +847,7 @@
         CFG = stubConfigForMock(mock);
         flowType = CFG.flowType;
         lane = CFG.lane || lane;
+        IS_CAYMAN = (lane === 'cayman');
         applicantType = CFG.applicantType;
         bootstrapForm();
       } else {
@@ -864,9 +1048,10 @@
         function applyLoadedConfig_(cfg) {
           bootBusyDone_();
           CFG = cfg;
-          if (!CFG || !CFG.flowType) { $loading.textContent = BROKEN_LINK_MSG; return; }
+          if (!CFG || !CFG.flowType) { $loading.textContent = T(BROKEN_LINK_MSG); return; }
           flowType = CFG.flowType;
         lane = CFG.lane || lane;
+          IS_CAYMAN = (lane === 'cayman');
           applicantType = (CFG.applicantType === 'entity') ? 'entity' : 'individual';
           bootstrapForm();
         }
@@ -1064,16 +1249,19 @@
         // Page-1 title per Noa: plain "form" titles for both flows.
         // Approved by Noa 2026-08-30. A two-way increase/else ternary meant a
         // transfer greeted the investor with the redemption title.
-        document.getElementById('welcome-title').textContent = isTransfer
+        // T(): no EN_MAP entry exists for any of these three yet (see the build
+        // report) - Cayman lane shows the Hebrew source until Noa approves the
+        // English wording, exactly like an untranslated israel.html string.
+        document.getElementById('welcome-title').textContent = T(isTransfer
           ? 'טופס העברה לקרן הקיימנית'
           : isIncrease
             ? 'טופס הגדלת השקעה'
-            : 'טופס בקשת פדיון';
+            : 'טופס בקשת פדיון');
 
         // Request-page title. A transfer has no request page (removed from
         // PAGE_ORDER), so this only ever matters for the other two.
-        document.getElementById('request-title').textContent = isIncrease
-          ? 'פרטי בקשת ההגדלה' : 'פרטי הפדיון';
+        document.getElementById('request-title').textContent = T(isIncrease
+          ? 'פרטי בקשת ההגדלה' : 'פרטי הפדיון');
 
         // Page 2 entity vs individual.
         document.getElementById('personal-individual').hidden = (applicantType === 'entity');
@@ -1090,11 +1278,60 @@
         // 1st-of-month, computed relative to today). No "future" toggle now.
         if (isRedemption) populateRedemptionMonths();
 
-        // Bank prose only on redemption.
+        // Bank prose only on redemption. The paragraph itself is untranslated
+        // legal-flavoured LP copy (build report) - Cayman lane shows it in
+        // Hebrew until Noa approves an English version; hiding it entirely
+        // would be worse (the redemption terms it states still apply).
         document.getElementById('bank-prose-redemption').hidden = !isRedemption;
 
         // Entity stamp upload only for entity.
         document.getElementById('upload-stamp-wrap').hidden = (applicantType !== 'entity');
+
+        // Account-management-approval upload: ISRAELI LANE ONLY. The shipped
+        // domain/money/{increase,withdrawal}.ts validators gate this required
+        // upload behind isIsraeli - "the Cayman lane never asked for it" (both
+        // files' own comment, verbatim) - so showing it to a Cayman LP would ask
+        // for a document the server does not require and never even reads for
+        // this lane. fieldsForPage/validateField below match this same gate.
+        var amaWrap = document.getElementById('upload-accountManagementApproval-wrap');
+        if (amaWrap) amaWrap.hidden = IS_CAYMAN;
+
+        // Cayman lane: bank-name/branch/account are free text (no Bank-of-
+        // Israel registry, no format constraint - see vBank/vBranch/vAccount
+        // and initBankCombo above). The HTML still carries the Israeli-lane
+        // combobox affordances (role, aria-*, numeric inputmode, digit pattern,
+        // short maxlength) baked in statically; strip them here so a foreign
+        // bank name/branch/IBAN-style account number can actually be typed, and
+        // so a screen reader never announces a listbox that will never open.
+        if (IS_CAYMAN) {
+          var bnEl = document.getElementById('bank-name');
+          if (bnEl) { bnEl.removeAttribute('role'); bnEl.removeAttribute('aria-autocomplete'); bnEl.removeAttribute('aria-controls'); bnEl.removeAttribute('aria-expanded'); }
+          var brEl = document.getElementById('bank-branch');
+          if (brEl) {
+            brEl.removeAttribute('role'); brEl.removeAttribute('aria-autocomplete'); brEl.removeAttribute('aria-controls'); brEl.removeAttribute('aria-expanded');
+            brEl.removeAttribute('pattern'); brEl.setAttribute('inputmode', 'text'); brEl.setAttribute('maxlength', '40');
+          }
+          var acEl = document.getElementById('bank-account');
+          if (acEl) { acEl.removeAttribute('pattern'); acEl.setAttribute('inputmode', 'text'); acEl.setAttribute('maxlength', '40'); }
+          // Same relaxation for the ID/company-number fields (validateField's
+          // ind-idNumber/ent-number cases above already switched to presence-
+          // only for this lane) - a passport or foreign registration number is
+          // alphanumeric and longer than the Israeli 9-digit pattern allows.
+          var idEl = document.getElementById('ind-idNumber');
+          if (idEl) { idEl.removeAttribute('pattern'); idEl.setAttribute('inputmode', 'text'); idEl.setAttribute('maxlength', '40'); }
+          var entNumEl = document.getElementById('ent-number');
+          if (entNumEl) { entNumEl.removeAttribute('pattern'); entNumEl.setAttribute('inputmode', 'text'); entNumEl.setAttribute('maxlength', '40'); }
+          // The "9 digits, including check digit" hints describe an Israeli-
+          // only format rule that no longer applies to this field on this
+          // lane (see the presence-only validators above) - showing them
+          // would misdescribe what the field now accepts, and no approved
+          // English replacement hint exists yet (build report), so hide
+          // rather than show a Hebrew sentence inside an English form.
+          var idHint = document.getElementById('hint-ind-idNumber');
+          if (idHint) idHint.hidden = true;
+          var entHint = document.getElementById('hint-ent-number');
+          if (entHint) entHint.hidden = true;
+        }
 
         // Prefill from the session snapshot. For an existing LP the identity is
         // authoritative (read off Monday), so name + ID land READ-ONLY when known
@@ -1140,13 +1377,24 @@
         // already applied above; this layer carries everything else.
         try { applyResumeSnapshot(CFG.prefill || {}); } catch (e) {}
         // Preload the bank registry so a resumed bank name re-resolves (sets the
-        // bank code + branch confirmation) without waiting for a focus.
-        try { loadBankRegistry(); } catch (e) {}
+        // bank code + branch confirmation) without waiting for a focus. No
+        // registry exists for the Cayman lane (see vBank/initBankCombo above).
+        if (!IS_CAYMAN) { try { loadBankRegistry(); } catch (e) {} }
 
         // Resume page: jump straight to where the LP left off, if not page 1.
         if (CFG.resumePage && CFG.resumePage !== 'start') {
           try { goToPage(CFG.resumePage); } catch (e) {}
         }
+
+        // Language + direction. dir/lang flip FIRST so anything the translation
+        // pass measures (e.g. a screen reader re-announcing on attribute change)
+        // sees the right direction before the text itself changes. Static-markup
+        // strings (labels/hints/prose/buttons) go through swapScopeText, exactly
+        // israel.html's own applyLang split between the attribute flip and the
+        // text swap - see that file's applyLang for the precedent.
+        document.documentElement.setAttribute('lang', IS_CAYMAN ? 'en' : 'he');
+        document.documentElement.setAttribute('dir', IS_CAYMAN ? 'ltr' : 'rtl');
+        swapScopeText_(document);
 
         $loading.hidden = true;
         $form.hidden = false;
@@ -1247,13 +1495,20 @@
         var row = document.createElement('div');
         row.className = 'lvp-amount-row';
         row.setAttribute('data-amount-row', kind);
-        // Redemption is NIS-only (Noa 2026-07-18): a fixed שקל currency, no picker
-        // and no extra-currency legs. Only the amount is entered. collectAmounts
-        // still reads [data-currency] - here a hidden input pinned to שקל.
-        if (kind === 'redemption') {
+        // Redemption is NIS-only on the ISRAELI lane (Noa 2026-07-18): a fixed
+        // שקל currency, no picker, no extra-currency legs. Cayman lane has no
+        // such rule - domain/money/withdrawal.ts's own header says "Cayman has
+        // no currency choice (pays in the original currency)", which the client
+        // cannot know without asking, so it gets the SAME real ILS/USD/EUR
+        // picker increase already uses (still one row only - no add/remove
+        // affordance added here, that stays increase-only). Forcing 'שקל' on a
+        // real USD/EUR Cayman investor would both mislabel their redemption and
+        // wrongly apply the ILS 50,000 floor below to a currency it never
+        // applies to. collectAmounts still reads [data-currency] either way.
+        if (kind === 'redemption' && !IS_CAYMAN) {
           row.innerHTML =
-            '<label class="lvp-field"><span class="lvp-field__label">סכום<span class="lvp-req" aria-hidden="true">*</span></span>' +
-            '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="סכום" aria-describedby="err-' + rowId + '"></label>' +
+            '<label class="lvp-field"><span class="lvp-field__label">' + T('סכום') + '<span class="lvp-req" aria-hidden="true">*</span></span>' +
+            '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="' + T('סכום') + '" aria-describedby="err-' + rowId + '"></label>' +
             '<label class="lvp-field"><span class="lvp-field__label">מטבע פדיון</span>' +
             '<input class="lvp-input" type="text" value="שקל" disabled aria-label="מטבע פדיון">' +
             '<input type="hidden" data-currency value="שקל"></label>' +
@@ -1263,16 +1518,18 @@
         }
         // Each row carries an amount + currency dropdown + labelled error. No
         // per-row "amount" heading; the section heading carries it. The remove
-        // button surfaces only when more than one row exists.
-        var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
+        // button surfaces only when more than one row exists (redemption never
+        // gets more than one row - see refreshAddVisibility/the markup comment
+        // on #block-redemption - so it never shows there regardless of lane).
+        var curLabel = T((kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון');
         row.innerHTML =
-          '<label class="lvp-field"><span class="lvp-field__label">סכום<span class="lvp-req" aria-hidden="true">*</span></span>' +
-          '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="סכום" aria-describedby="err-' + rowId + '"></label>' +
+          '<label class="lvp-field"><span class="lvp-field__label">' + T('סכום') + '<span class="lvp-req" aria-hidden="true">*</span></span>' +
+          '<input class="lvp-input lvp-input--ltr" type="text" data-amount inputmode="decimal" autocomplete="off" required aria-label="' + T('סכום') + '" aria-describedby="err-' + rowId + '"></label>' +
           '<label class="lvp-field"><span class="lvp-field__label">' + curLabel + '<span class="lvp-req" aria-hidden="true">*</span></span>' +
           '<select class="lvp-select" data-currency required aria-label="' + curLabel + '">' +
-          CURRENCIES.map(function (c) { return '<option value="' + c.code + '">' + c.code + '</option>'; }).join('') +
+          currencyList_().map(function (c) { return '<option value="' + c.code + '">' + c.code + '</option>'; }).join('') +
           '</select></label>' +
-          '<button type="button" class="lvp-amount-rm" aria-label="הסר מטבע" hidden>&times;</button>' +
+          '<button type="button" class="lvp-amount-rm" aria-label="' + T('הסר מטבע') + '" hidden>&times;</button>' +
           '<span class="lvp-field__error" id="err-' + rowId + '" style="grid-column:1/-1;"></span>';
         host.appendChild(row);
         row.querySelector('.lvp-amount-rm').addEventListener('click', function () {
@@ -1304,7 +1561,7 @@
           hint.id = hintId;
           hint.className = 'lvp-field__hint';
           hint.style.cssText = 'margin-top: 8px;';
-          hint.textContent = 'ניתן להוסיף עד 4 מטבעות לבקשה זו.';
+          hint.textContent = T('ניתן להוסיף עד 4 מטבעות לבקשה זו.');
           if (addBtn && addBtn.parentNode) addBtn.parentNode.insertBefore(hint, addBtn.nextSibling);
         } else if (!atCap && existing) {
           existing.remove();
@@ -1495,8 +1752,15 @@
             var acct = document.getElementById('bank-account'); if (acct) acct.focus();
           });
         }
-        bankInput.addEventListener('focus', loadBankRegistry);
+        // Cayman lane (2026-09-04): no Bank-of-Israel registry exists for a
+        // foreign bank, so none of this type-to-search machinery applies -
+        // bank-name/branch stay plain free-text inputs. IS_CAYMAN is not yet
+        // known when this IIFE runs at parse time (config hasn't loaded), so
+        // every listener below re-checks it live rather than short-circuiting
+        // the whole IIFE up front.
+        bankInput.addEventListener('focus', function(){ if (!IS_CAYMAN) loadBankRegistry(); });
         bankInput.addEventListener('input', function(){
+          if (IS_CAYMAN) return;
           // Typing a new bank invalidates the prior pick + any branch chosen under it.
           bankInput.removeAttribute('data-bank-code');
           brInput.value = '';
@@ -1511,10 +1775,12 @@
           });
         });
         brInput.addEventListener('focus', function(){
+          if (IS_CAYMAN) return;
           loadBankRegistry();
           var bank = selectedBank(); if (bank) brShow(bank, brInput.value);
         });
         brInput.addEventListener('input', function(){
+          if (IS_CAYMAN) return;
           var bank = selectedBank();
           if (bank) brShow(bank, brInput.value);
         });
@@ -1524,6 +1790,7 @@
         // bank or branch that uniquely identifies one entry gets it auto-committed, so a
         // correct typed value is not rejected just because they never tapped the list.
         bankInput.addEventListener('blur', function(){
+          if (IS_CAYMAN) return;
           if (bankInput.getAttribute('data-bank-code') || !BANK_REG) return;
           var q = normHe(bankInput.value); if (!q) return;
           var exact = bankByName(bankInput.value);
@@ -1532,6 +1799,7 @@
           if (pick){ bankInput.value = pick.n; bankInput.setAttribute('data-bank-code', pick.c); clearFieldErr('bank-name'); }
         });
         brInput.addEventListener('blur', function(){
+          if (IS_CAYMAN) return;
           var bank = selectedBank(); if (!bank) return;
           var v = String(brInput.value || ''), vn = v.replace(/\D/g, ''), qt = normHe(v);
           if (vn && branchByCode(bank, +vn)) return;  // already a valid code
@@ -1585,7 +1853,9 @@
           var y = cursor.getFullYear();
           var m = cursor.getMonth();
           var iso = y + '-' + String(m + 1).padStart(2, '0') + '-01';
-          var label = '1 ב' + REDEMPTION_MONTHS_HE[m] + ' ' + y;
+          // Month names, not prose (same footing as the ISO currency codes /
+          // REDEMPTION_MONTHS_EN above) - safe to write outright.
+          var label = IS_CAYMAN ? (REDEMPTION_MONTHS_EN[m] + ' 1, ' + y) : ('1 ב' + REDEMPTION_MONTHS_HE[m] + ' ' + y);
           var checked = (iso === prev) ? ' checked' : '';
           html += '<label class="lvp-radio"><input type="radio" name="wd-date" value="' + iso + '"' + checked + ' required><span>' + label + '</span></label>';
           cursor.setMonth(m + 1);
@@ -1720,7 +1990,10 @@
         var w = fieldWrap(name); if (!w) return;
         w.classList.add('is-invalid');
         var err = w.querySelector('.lvp-field__error');
-        if (err) err.textContent = msg || '';   // silent = no text, just red border
+        // Choke point: every field-level validator message passes through here,
+        // so translating HERE (T()) covers vRequired/vEmail/vDigits/vBank/
+        // vBranch/vAccount/validateRowsBlock without touching each call site.
+        if (err) err.textContent = T(msg) || '';   // silent = no text, just red border
         var inp = w.querySelector('input, select');
         if (inp) inp.setAttribute('aria-invalid', 'true');
       }
@@ -1772,14 +2045,64 @@
       // line and no existence error; the message just asks them to pick (Noa-approved,
       // 2026-06-25). A registry load hiccup falls back to a plain non-empty check so it
       // never blocks. Account is a plain number field, required.
+      // Bank-field wording is "Source" (increase - the LP's remitting account) vs
+      // "Destination" (withdrawal - where the redemption is paid) on the Cayman
+      // lane, per the ALREADY-SHIPPED domain/money/increase.ts and withdrawal.ts
+      // validators (their isIsraeli:false branch) - reused verbatim here so this
+      // client-side check never drifts from what the server would say if it ever
+      // saw an empty field. One Hebrew key cannot hold two English strings, which
+      // is why this lives here rather than in EN_MAP.
+      function bankFieldMsg_(concept) {
+        var noun = isIncreaseFlow() ? 'Source' : 'Destination';
+        return noun + ' bank ' + concept + ' is required.';
+      }
+      // Same one-Hebrew-key/two-English-strings shape as bankFieldMsg_ above.
+      // 'נא להזין סכום.' is shared by both the increase and redemption amount-row
+      // validation, but the ALREADY-SHIPPED domain/money/{increase,withdrawal}.ts
+      // validators (isIsraeli:false branch, i.e. exactly what ju-service itself
+      // would show a Cayman-lane LP) use two DIFFERENT English strings per flow:
+      // increase.ts: 'A positive additional investment amount is required.';
+      // withdrawal.ts: 'Enter a redemption amount.'. Reused verbatim here so the
+      // redemption empty-submit error box never mixes a Hebrew amount error in
+      // with the (already-English) bank-field errors in the same list.
+      function amountRequiredMsg_(kind) {
+        if (!IS_CAYMAN) return 'נא להזין סכום.';
+        return (kind === 'increase') ? 'A positive additional investment amount is required.' : 'Enter a redemption amount.';
+      }
+      // Error-summary box title. Hebrew grammar needs a singular/plural split
+      // ('יש לתקן שגיאה אחת:' vs 'יש לתקן N שגיאות:'), which a flat EN_MAP
+      // string-for-string lookup can't reproduce (the plural key embeds the
+      // count). index.html's OWN already-shipped error-summary box (the same
+      // mechanism, same visual component) uses one phrase for both cases -
+      // "Please fix the following:" (index.html's doSubmit-adjacent summary
+      // builder) - reused verbatim here rather than inventing an English
+      // singular/plural pair.
+      function errorSummaryTitle_(count) {
+        if (!IS_CAYMAN) return (count === 1) ? 'יש לתקן שגיאה אחת:' : ('יש לתקן ' + count + ' שגיאות:');
+        return 'Please fix the following:';
+      }
+      // Bank/branch/account are a Bank-of-Israel PICK-FROM-LIST on the Israeli
+      // lane (unchanged below): the value must resolve to a real registry entry,
+      // so a typed-but-unmatched value reads as "not selected" (Noa-approved,
+      // 2026-06-25). The Cayman lane has no such registry (a foreign bank is not
+      // in bank-registry.json, and domain/money/{increase,withdrawal}.ts's own
+      // isIsraeli-gated rule confirms the server itself only enforces the known-
+      // bank-code / ISRAELI_ACCOUNT_RE_ formats for lane==='israeli' - the Cayman
+      // lane is presence-only server-side too), so Cayman keeps these three
+      // fields plain free text, checked for presence only.
       function vBank() {
         var inp = document.getElementById('bank-name');
         var has = inp && inp.value.trim();
+        if (IS_CAYMAN) return has ? { ok: true } : { ok: false, msg: bankFieldMsg_('name') };
         if (!BANK_REG || !BANK_REG.length) return has ? { ok: true } : { ok: false, msg: 'נא לבחור בנק' };
         return selectedBank() ? { ok: true } : { ok: false, msg: 'נא לבחור בנק' };
       }
       function vBranch() {
         var inp = document.getElementById('bank-branch');
+        if (IS_CAYMAN) {
+          var vC = String((inp && inp.value) || '').trim();
+          return vC ? { ok: true } : { ok: false, msg: bankFieldMsg_('branch') };
+        }
         var v = String((inp && inp.value) || '').replace(/\D/g, '');
         if (!BANK_REG || !BANK_REG.length) return v ? { ok: true } : { ok: false, msg: 'נא לבחור סניף' };
         var bank = selectedBank();
@@ -1807,6 +2130,13 @@
         return (window.LVPRules && window.LVPRules.ACCOUNT_RE) || ACCOUNT_RX_FALLBACK;
       }
       function vAccount() {
+        // Cayman lane: presence-only, no digit-only/13-digit format constraint - a
+        // foreign account number/IBAN is free text (see domain/money/increase.ts's
+        // "Cayman lane keeps presence-only" comment on this exact rule).
+        if (IS_CAYMAN) {
+          var vAcc = normAccount(val('bank-account'));
+          return vAcc ? { ok: true } : { ok: false, msg: bankFieldMsg_('account number') };
+        }
         // Empty gets Noa's required message. Israeli IBAN account slot is 13 digits
         // (ISO 13616: IL + 2 check + 3 bank + 3 branch + 13 account), zero-left-padded,
         // so 4-13 digits is the real range, plus the optional /nn sub-account suffix.
@@ -1824,6 +2154,14 @@
         switch (name) {
           case 'ind-fullName':   return vRequired('ind-fullName');
           case 'ind-idNumber': {
+            // Cayman lane: presence-only, matching the shipped domain/money/
+            // {increase,withdrawal}.ts validators exactly - the teudat-zehut
+            // 9-digit checksum rule there only fires "isIsraeli && ... &&
+            // /^\d{9}$/.test(...)", i.e. it is an ISRAELI-lane rule, not a
+            // universal one. A Cayman LP's passport/foreign ID is free text
+            // (letters included) and would otherwise be rejected outright by
+            // the digits-only check below before it ever reached the server.
+            if (IS_CAYMAN) return vRequired('ind-idNumber');
             // 2026-07-18: real Israeli-ID checksum via the shared D1 module
             // (validation-rules.js, verbatim port of the server validator),
             // matching israel.html. The old bare 9-digit length check let a
@@ -1839,6 +2177,11 @@
           }
           case 'ent-name':       return vRequired('ent-name');
           case 'ent-number': {
+            // Cayman lane: presence-only - same reasoning as ind-idNumber above,
+            // the company-number checksum in domain/money/*.ts is Israeli-only
+            // (its message is even Hebrew-only there, with no English twin,
+            // because the rule itself never applies off the Israeli lane).
+            if (IS_CAYMAN) return vRequired('ent-number');
             // Same shared-module upgrade as ind-idNumber (company-number rule),
             // same load-failure fallback. Error copy verbatim from israel.html.
             var entRes = vDigits('ent-number', 9, 9);
@@ -1891,7 +2234,10 @@
           return ['__rows-increase'].concat(bank);
         }
         if (page === 'uploads') {
-          var f2 = ['accountManagementApproval'];
+          // Cayman lane: never required (never even shown - see bootstrapForm's
+          // upload-accountManagementApproval-wrap hide, matching the shipped
+          // domain/money validators' isIsraeli gate on this exact upload).
+          var f2 = IS_CAYMAN ? [] : ['accountManagementApproval'];
           if (applicantType === 'entity') f2.push('companyStamp');
           return f2;
         }
@@ -1901,10 +2247,10 @@
         var hostId = (kind === 'increase') ? 'amount-rows-increase' : 'amount-rows-redemption';
         var host = document.getElementById(hostId);
         var rows = host.querySelectorAll('.lvp-amount-row');
-        if (!rows.length) return [{ name: '__rows-' + kind, msg: 'נא להזין סכום.', label: 'סכום', anchor: host }];
+        if (!rows.length) return [{ name: '__rows-' + kind, msg: amountRequiredMsg_(kind), label: T('סכום'), anchor: host }];
         var errs = [];
         var seen = {};
-        var curLabel = (kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון';
+        var curLabel = T((kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון');
         for (var i = 0; i < rows.length; i++) {
           var amtInp = rows[i].querySelector('[data-amount]');
           var curSel = rows[i].querySelector('[data-currency]');
@@ -1922,35 +2268,39 @@
           if (curSel) curSel.removeAttribute('aria-invalid');
           if (!a) {
             rows[i].classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = 'נא להזין סכום בשורה ' + (i + 1) + '.';
+            if (errSpan) errSpan.textContent = IS_CAYMAN ? amountRequiredMsg_(kind) : T('נא להזין סכום בשורה ' + (i + 1) + '.');
             amtInp.setAttribute('aria-invalid', 'true');
-            errs.push({ name: '__rows-' + kind, msg: 'נא להזין סכום.', label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            errs.push({ name: '__rows-' + kind, msg: amountRequiredMsg_(kind), label: T('סכום') + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: amtInp });
             continue;
           }
           if (!isFinite(n) || n <= 0) {
             rows[i].classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = 'נא להזין סכום תקין בשורה ' + (i + 1) + '.';
+            if (errSpan) errSpan.textContent = T('נא להזין סכום תקין בשורה ' + (i + 1) + '.');
             amtInp.setAttribute('aria-invalid', 'true');
-            errs.push({ name: '__rows-' + kind, msg: 'סכום לא תקין.', label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            errs.push({ name: '__rows-' + kind, msg: T('סכום לא תקין.'), label: T('סכום') + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: amtInp });
             continue;
           }
           if (seen[c]) {
             rows[i].classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = 'יש לבחור ' + curLabel + ' שונה.';
+            if (errSpan) errSpan.textContent = T('יש לבחור ' + curLabel + ' שונה.');
             curSel.setAttribute('aria-invalid', 'true');
-            errs.push({ name: '__rows-' + kind, msg: 'יש לבחור ' + curLabel + ' שונה.', label: curLabel + ' (שורה ' + (i + 1) + ')', anchor: curSel });
+            errs.push({ name: '__rows-' + kind, msg: T('יש לבחור ' + curLabel + ' שונה.'), label: curLabel + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: curSel });
             continue;
           }
           // Mirror the server ILS partial-redemption floor (CaymanWithdrawal.js:201): shekel min
-          // 50,000, forex (דולר/יורו) has none. Client shekel code is 'שקל'. Message is the server's
-          // Noa-approved verbatim string (reused, not new copy). Shows on the field pre-submit
-          // instead of a silent server bounce.
-          if (kind === 'redemption' && c === 'שקל' && n > 0 && n < 50000) {
+          // 50,000, forex (דולר/יורו) has none. Message is the server's Noa-approved verbatim
+          // Hebrew string, reused (not new copy) - it has NO English twin anywhere in this
+          // codebase yet (the shipped domain/money/withdrawal.ts validator emits the SAME
+          // Hebrew clause regardless of lane, unlike every other message it isIsraeli-branches -
+          // see this file's build report). T() leaves it in Hebrew until that copy exists.
+          // Currency check: 'שקל' (Israeli-lane value) OR 'ILS' (Cayman-lane ISO value,
+          // see currencyList_ above) - the floor applies to an ILS redemption on EITHER lane.
+          if (kind === 'redemption' && (c === 'שקל' || c === 'ILS') && n > 0 && n < 50000) {
             rows[i].classList.add('is-invalid');
-            var floorMsg = 'סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים';
+            var floorMsg = T('סכום הפדיון לא יפחת מהנמוך מבין (א) היתרה בחשבון ההון של אותו שותף או (ב) חמישים אלף (50,000) שקלים חדשים');
             if (errSpan) errSpan.textContent = floorMsg;
             amtInp.setAttribute('aria-invalid', 'true');
-            errs.push({ name: '__rows-' + kind, msg: floorMsg, label: 'סכום (שורה ' + (i + 1) + ')', anchor: amtInp });
+            errs.push({ name: '__rows-' + kind, msg: floorMsg, label: T('סכום') + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: amtInp });
             continue;
           }
           seen[c] = 1;
@@ -1999,12 +2349,12 @@
         // summary stays hidden; the red highlights speak.
         var verbose = errs.filter(function (e) { return !e.silent; });
         if (summary && verbose.length) {
-          var html = '<p class="lvp-error-summary__title">' + (verbose.length === 1 ? 'יש לתקן שגיאה אחת:' : 'יש לתקן ' + verbose.length + ' שגיאות:') + '</p><ul>';
+          var html = '<p class="lvp-error-summary__title">' + errorSummaryTitle_(verbose.length) + '</p><ul>';
           verbose.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
             if (e.anchor) summaryAnchors[id] = e.anchor;
             else delete summaryAnchors[id];
-            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + e.msg + '</button></li>';
+            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + T(e.msg) + '</button></li>';
           });
           html += '</ul>';
           summary.innerHTML = html;
@@ -2116,12 +2466,12 @@
         if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
         submitting = true; // suppress re-entry from here through the POST settling
         var btn = document.getElementById('lvp-submit-btn');
-        btn.disabled = true; btn.textContent = 'שולח...';
+        btn.disabled = true; btn.textContent = T('שולח...');
         document.getElementById('lvp-busy').classList.add('is-active');
-        submitStatus('שולחים את הטופס, נא לא לסגור את החלון.');
+        submitStatus(T('שולחים את הטופס, נא לא לסגור את החלון.'));
         function restoreSubmitBtn() {
           submitting = false; // allow a genuine retry after validation/network failure
-          btn.disabled = false; btn.textContent = 'סיום ושליחה';
+          btn.disabled = false; btn.textContent = T('סיום ושליחה');
           document.getElementById('lvp-busy').classList.remove('is-active');
         }
         // Wait out any in-flight photo/PDF read, then drop any upload that never
@@ -2141,7 +2491,7 @@
             lane: lane,
             payload: { flowType: flowType, submission: submission, __uploads: pendingUploads }
           };
-          function fail(msg) { restoreSubmitBtn(); submitTopErr(msg || SUBMIT_FAIL_MSG); }
+          function fail(msg) { restoreSubmitBtn(); submitTopErr(T(msg) || T(SUBMIT_FAIL_MSG)); }
           // Silent timeout retry (2026-07-18, ported from israel.html's 2026-07-16
           // hardening; this lane was the one submit path without it). The gateway
           // dedupes submit per-process, so a retry of the same payload is a no-op
@@ -2212,8 +2562,12 @@
                 // approved Hebrew line names the actual problem instead of the generic
                 // SUBMIT_FAIL_MSG this class used to fall through to.
                 var msg = (res && res.detail && res.detail.uploadError === 'corrupted'
-                    && 'אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.')
-                  || (typeof v0 === 'string' && v0) || (res && typeof res.error === 'string' && res.error) || SUBMIT_FAIL_MSG;
+                    && T('אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.'))
+                  // v0/res.error are server-ECHOED strings: for a Cayman-lane submit these
+                  // already come back in English straight from the shipped domain/money
+                  // validators (isIsraeli branch there), so T() must not touch them - only
+                  // this file's OWN hardcoded literals need the wrap.
+                  || (typeof v0 === 'string' && v0) || (res && typeof res.error === 'string' && res.error) || T(SUBMIT_FAIL_MSG);
                 var rErr = new Error(msg);
                 rErr.lvpCurated = true;   // safe to show: server-curated or approved fallback
                 return rErr;
@@ -2227,7 +2581,7 @@
           }
           function runAttempt() {
             return postSubmitOnce_().then(function (res) {
-              if (res.nextUrl) { submitStatus('עוברים לחתימה.'); window.location.href = res.nextUrl; return; }
+              if (res.nextUrl) { submitStatus(T('עוברים לחתימה.')); window.location.href = res.nextUrl; return; }
               // Proof-of-progress (2026-07-15 Bremington replay): ok:true WITHOUT a
               // signing link shows no work done for this flow (increase/redemption
               // success is always a nextUrl handoff), so it falls to the existing
@@ -2235,7 +2589,7 @@
               // the full response is what is new, so a replayed/evidence-free
               // answer is diagnosable instead of invisible.
               if (window.console) { try { console.log('submit response failed the proof-of-progress gate:', JSON.stringify(res)); } catch (eLog2) {} }
-              var gErr = new Error(SUBMIT_FAIL_MSG);
+              var gErr = new Error(T(SUBMIT_FAIL_MSG));
               gErr.lvpCurated = true;
               throw gErr;
             });
@@ -2254,7 +2608,7 @@
             // Only a curated message (server validation string / res.error /
             // the approved fallback) is ever painted; a raw network or parse
             // error shows the same approved SUBMIT_FAIL_MSG as before.
-            fail(err && err.lvpCurated ? err.message : SUBMIT_FAIL_MSG);
+            fail(err && err.lvpCurated ? err.message : T(SUBMIT_FAIL_MSG));
           });
         });
       }
