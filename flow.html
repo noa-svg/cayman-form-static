@@ -600,7 +600,29 @@
         // inside the confirmed-verbatim fixture phrases above ("...Investment
         // Amount", "...redemption amount").
         'סכום': 'Amount',
-        'שורה': 'Row'
+        'שורה': 'Row',
+        // Approved by Noa 2026-09-04 (second pixel-review pass). Fresh copy,
+        // not reused from elsewhere - each was shown to her verbatim and
+        // signed off before being written here.
+        'בתהליך זה אפשר למלא, לחתום ולשלוח את הבקשה.': 'In this process you can complete, sign, and submit the request.',
+        'לאחר השלמת התהליך יתקבל עותק חתום.': 'Once the process is complete, you will receive a signed copy.',
+        'טופס העברה לקרן הקיימנית': 'Transfer to the Cayman Fund',
+        'כל השדות הינם חובה': 'All fields are required.',
+        '+ הוספת מטבע': '+ Add currency',
+        'הסר מטבע': 'Remove currency',
+        'ניתן להוסיף עד 4 מטבעות לבקשה זו.': 'You can add up to 4 currencies to this request.',
+        'סכום (ברוטו) מתוך החשבון': 'Amount (gross) from the account',
+        'סכום הפדיון (ברוטו)': 'Redemption amount (gross)',
+        'מטבע פדיון': 'Redemption currency',
+        'צירוף קובץ': 'Attach file',
+        'סכום לא תקין.': 'Amount must be a positive number.',
+        'נא להזין ספרות בלבד.': 'Please enter digits only.',
+        'לא ניתן לקרוא את הקובץ. נא להעלות מחדש.': 'The file could not be read. Please upload it again.',
+        '🔗 נראה שהקישור שבור.': '🔗 This link appears to be broken.',
+        'אחד הקבצים שהועלו לא נשמר כראוי. יש להסיר אותו ולהעלות אותו מחדש, ולאחר מכן לשלוח את הטופס שוב.':
+          'One of the uploaded files was not saved correctly. Please remove it, upload it again, and then resubmit the form.',
+        'עוברים לחתימה.': 'Moving to signing.',
+        'שולחים את הטופס, נא לא לסגור את החלון.': 'Submitting the form, please do not close this window.'
       };
       function lookupEn_(he) {
         if (he == null) return null;
@@ -1928,7 +1950,7 @@
         if (inp) { inp.value = ''; renderFileName(inp, ''); }
         // A file the device could not read used to vanish silently. Tell the LP
         // plainly what to do (Noa-approved 2026-06-27). Cleared when they re-pick.
-        markFieldErr(slot, 'לא ניתן לקרוא את הקובץ. נא להעלות מחדש.');
+        markFieldErr(slot, T('לא ניתן לקרוא את הקובץ. נא להעלות מחדש.'));
       }
       function renderFileName(inp, name) {
         var wrap = inp.closest('.lvp-upload');
@@ -2035,7 +2057,7 @@
       function vDigits(id, minLen, maxLen) {
         var v = val(id).replace(/[ -]/g, '');
         if (!v) return { ok: false, silent: true };
-        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: 'נא להזין ספרות בלבד.' };
+        if (!/^[0-9]+$/.test(v)) return { ok: false, msg: T('נא להזין ספרות בלבד.') };
         var ranged = (minLen === maxLen) ? (minLen + ' ספרות') : ('בין ' + minLen + ' ל-' + maxLen + ' ספרות');
         if (v.length < minLen || v.length > maxLen) return { ok: false, msg: 'נא להזין ' + ranged + '.' };
         return { ok: true };
@@ -2148,7 +2170,7 @@
         // gets the range message, anything else gets the digits message.
         return /^\d+(?:\/\d{1,3})?$/.test(v)
           ? { ok: false, msg: 'נא להזין בין 4 ל-13 ספרות.' }
-          : { ok: false, msg: 'נא להזין ספרות בלבד.' };
+          : { ok: false, msg: T('נא להזין ספרות בלבד.') };
       }
       function validateField(name) {
         switch (name) {
@@ -2275,7 +2297,7 @@
           }
           if (!isFinite(n) || n <= 0) {
             rows[i].classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = T('נא להזין סכום תקין בשורה ' + (i + 1) + '.');
+            if (errSpan) errSpan.textContent = IS_CAYMAN ? T('סכום לא תקין.') : T('נא להזין סכום תקין בשורה ' + (i + 1) + '.');
             amtInp.setAttribute('aria-invalid', 'true');
             errs.push({ name: '__rows-' + kind, msg: T('סכום לא תקין.'), label: T('סכום') + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: amtInp });
             continue;
