@@ -112,6 +112,8 @@ HARNESSES=(
   flow-cayman-lane-harness
   signer-doc-gate-harness
   israel-sigpad-encode-harness
+  israel-english-address-fallback-harness
+  israel-cp-english-address-fatca-gate
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

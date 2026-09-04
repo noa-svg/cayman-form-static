@@ -3937,6 +3937,9 @@
       // never derived, exactly the doSubmitNow_ check, run early instead of last.
       Array.prototype.forEach.call(pageEl.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
         var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
+        // Same FATCA gate as the final-submit scan below - a CP's englishAddress
+        // is only server-required when the entity self-certifies Passive NFFE.
+        if (prefix.indexOf('controllingShareholdersContainer.controllingShareholdersArray[') === 0 && readRadio('entityW8.fatcaStatus') !== 'Passive NFFE') return;
         var heStreetEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.street"]');
         var heCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.city"]');
         var enCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.englishDetails.englishAddress.city"]');
@@ -4975,9 +4978,16 @@
       // Hebrew address is actually filled - an unfilled/inapplicable holder (e.g. no
       // second authorized signer) has blank Hebrew too and is correctly skipped.
       var missingPrefix = null;
+      // Controlling persons only carry the englishAddress requirement when the
+      // entity's own FATCA self-cert is Passive NFFE (validate.ts:443-490,
+      // `cpNeedsEnglish`) - Active NFFE/Other controlling persons are never
+      // checked for it server-side. Read this ONCE, not per-CP: it is a single
+      // entity-level radio, not a per-holder field.
+      var cpEnglishRequired = readRadio('entityW8.fatcaStatus') === 'Passive NFFE';
       Array.prototype.forEach.call(form.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
         if (missingPrefix) return;
         var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
+        if (prefix.indexOf('controllingShareholdersContainer.controllingShareholdersArray[') === 0 && !cpEnglishRequired) return;
         if (!_v(prefix + '.israelAddress.street') || !_v(prefix + '.israelAddress.city')) return;
         if (!_v(prefix + '.englishDetails.englishAddress.street') || !_v(prefix + '.englishDetails.englishAddress.city')) missingPrefix = prefix;
       });

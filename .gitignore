@@ -50,3 +50,4 @@ test/*
 !test/flow-cayman-lane-harness.cjs
 !test/signer-doc-gate-harness.cjs
 !test/israel-sigpad-encode-harness.cjs
+!test/israel-cp-english-address-fatca-gate.cjs
