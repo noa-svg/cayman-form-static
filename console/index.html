@@ -5295,7 +5295,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Per key: phase (spine band), trigger (the WHEN), recipients (To + cc),
   // class (lp|internal|counterparty -> dot material), format (html|text -> render
   // mode, NOT a "<" sniff), and per-lang base coverage (default-exists|no-copy).
-  // The 8 increase/withdrawal/notify keys are Hebrew-only: en = no-copy.
+  // Of the 8 increase/withdrawal/notify keys, 6 are Hebrew-only (en = no-copy).
+  // invite_increase/invite_redemption got approved English defaults
+  // 2026-09-04 (Cayman money-mint Layer 3). notify_increase/notify_redemption
+  // (BDO/bank) never get English, on any lane - Noa's standing rule, not a
+  // gap - and completion_internal_increase/completion_internal_withdrawal
+  // (Noa/Omri only) have no LP-facing reason to exist in English either.
   // ============================================================
   var MSG_PHASES=['Onboarding','Reminders','Completion','Counterparty','Increase','Withdrawal','W-8 renewal'];
   // recipient chip: {to:[...], cc:[...]} with short role tokens.
@@ -5317,11 +5322,11 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     completion_internal:      {phase:'Completion', trigger:'After completion',  rcpt:R(['Noa','Omri'],[]),           cls:'internal',     fmt:'text', en:'default-exists'},
     bdo_draft:                {phase:'Counterparty', trigger:'After completion', rcpt:R(['BDO'],[]),                 cls:'counterparty', fmt:'text', en:'default-exists'},
     bank_draft:               {phase:'Counterparty', trigger:'After completion', rcpt:R(['Bank'],[]),               cls:'counterparty', fmt:'text', en:'default-exists'},
-    invite_increase:          {phase:'Increase',   trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'no-copy'},
+    invite_increase:          {phase:'Increase',   trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'default-exists'},
     completion_internal_increase:{phase:'Increase', trigger:'After completion', rcpt:R(['Noa','Omri'],[]),          cls:'internal',     fmt:'text', en:'no-copy'},
     completion_lp_increase:   {phase:'Increase',   trigger:'After completion',  rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'text', en:'no-copy'},
     notify_increase:          {phase:'Increase',   trigger:'After completion',  rcpt:R(['BDO','Bank','Omri'],[]),    cls:'counterparty', fmt:'text', en:'no-copy'},
-    invite_redemption:        {phase:'Withdrawal', trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'no-copy'},
+    invite_redemption:        {phase:'Withdrawal', trigger:'On mint',           rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'html', en:'default-exists'},
     completion_internal_withdrawal:{phase:'Withdrawal', trigger:'After completion', rcpt:R(['Noa','Omri'],[]),      cls:'internal',     fmt:'text', en:'no-copy'},
     completion_lp_withdrawal: {phase:'Withdrawal', trigger:'After completion',  rcpt:R(['LP'],[]),                   cls:'lp',           fmt:'text', en:'no-copy'},
     notify_redemption:        {phase:'Withdrawal', trigger:'After completion',  rcpt:R(['BDO','Bank'],[]),           cls:'counterparty', fmt:'text', en:'no-copy'},

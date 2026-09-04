@@ -624,7 +624,12 @@
         'עוברים לחתימה.': 'Moving to signing.',
         'שולחים את הטופס, נא לא לסגור את החלון.': 'Submitting the form, please do not close this window.',
         // Approved by Noa 2026-09-04 (third pixel-review pass, email hint).
-        'כתובת זו תשמש אותנו לתקשורת': 'This address will be used for our correspondence.'
+        'כתובת זו תשמש אותנו לתקשורת': 'This address will be used for our correspondence.',
+        // Approved by Noa 2026-09-04 (fourth pass, generic submit-fail +
+        // email-invalid - the two remaining T()-wrapped strings with no
+        // EN_MAP entry, verified reachable on the Cayman lane).
+        'לא ניתן לשלוח את הבקשה. נא לנסות שוב.': 'Unable to send the request. Please try again.',
+        'כתובת הדוא"ל לא תקינה.': 'The email address is not valid.'
       };
       function lookupEn_(he) {
         if (he == null) return null;
@@ -2065,7 +2070,7 @@
       function vEmail(id) {
         var v = val(id);
         if (!v) return { ok: false, silent: true };
-        return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: 'כתובת הדוא"ל לא תקינה.' };
+        return EMAIL_RX.test(v) ? { ok: true } : { ok: false, msg: T('כתובת הדוא"ל לא תקינה.') };
       }
       function vDigits(id, minLen, maxLen) {
         var v = val(id).replace(/[ -]/g, '');
