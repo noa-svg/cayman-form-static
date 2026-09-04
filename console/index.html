@@ -8884,11 +8884,14 @@ document.addEventListener('keydown',function(e){
   //     Hono handler, which made it unreachable from a real console session no
   //     matter what the client called - fixed by routing it through
   //     consoledispatch.ts's same two-door pattern instead.
-  //   BACKEND EXISTS, diag-token ONLY, no console-auth door yet - still pass
-  //   GAS_ONLY_ explicitly, repointing these would 'unknown route' on the
-  //   first click: opAddManualTransferRow, opSetRowAmount, opSetRowBankDetails.
+  //   PORTED, flipped to JU_API 2026-09-04: opAddManualTransferRow,
+  //     opSetRowAmount, opSetRowBankDetails. consoledispatch.ts gave these a
+  //     real console-auth door 2026-09-03 (4f5872ad), confirmed live in
+  //     production (serverBuild f24c20bd) before this flip - the prior claim
+  //     here ("no console-auth door yet") was already stale by the time it
+  //     was read.
   //   STILL FULLY UNPORTED, zero references anywhere under ju-service/src
-  //   (2026-09-03 grep): opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
+  //   (2026-09-04 grep): opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
   //   opPeekParked.
   // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
   // which apiFetch turns into a thrown server_error, so repointing any of the
@@ -9516,7 +9519,7 @@ document.addEventListener('keydown',function(e){
         +'&amount='+encodeURIComponent((document.getElementById('mrAmount').value||'').trim())
         +'&bank='+encodeURIComponent((document.getElementById('mrBank').value||'').trim())
         +'&notes='+encodeURIComponent((document.getElementById('mrNotes').value||'').trim());
-      apiFetch(qs, false, GAS_ONLY_).then(function(r){
+      apiFetch(qs, false, JU_API).then(function(r){
         addBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
@@ -9562,7 +9565,7 @@ document.addEventListener('keydown',function(e){
       if(cfg.extraQs)qs+=cfg.extraQs();
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
-      apiFetch(qs, false, GAS_ONLY_).then(function(r){
+      apiFetch(qs, false, JU_API).then(function(r){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
