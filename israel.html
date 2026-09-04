@@ -296,6 +296,11 @@
     .lvp-note strong { color: var(--lvp-navy); }
 
     [data-show-when][hidden] { display: none !important; }
+    /* Same gotcha as the rule above: bare [hidden] loses to .lvp-field's own
+       display:block (an author rule beats the UA default), so a bare `hidden`
+       attribute alone left the label text visible with no input under it -
+       caught by actually rendering this in a browser, not by reading the DOM. */
+    .lvp-field--en-addr-fallback[hidden] { display: none !important; }
     /* Same reason as the line above: a bare `hidden` attribute loses to
        `.lvp-field { display: block }`, so the attester's stamp/licence/phone stayed
        on screen when the paper route hid them and the fields were still required.
@@ -578,8 +583,16 @@
           <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
           <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
           <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="investorsArray[0].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-          <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.city">
-          <input type="hidden" name="investorsArray[0].englishDetails.englishAddress.street">
+          <!-- English mirror of the address above (the W-8's line 3). Normally filled
+               invisibly by the async geocode below; stays a hidden, un-required pair
+               with NO holder wrapper so the normal flow never shows it. If the geocode
+               MISSES (no English name on file for the street, API failure/timeout),
+               revealEnglishAddressFallback_ un-hides this exact holder and flips these
+               to real text inputs, at which point validatePage's ordinary required-field
+               pass takes over - the phantom-field class closed 2026-09-04 after the
+               ינאי אורון incident (see the submit-belt comment near doSubmitNow_). -->
+          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="investorsArray[0].englishDetails.englishAddress.street"></label>
+          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="investorsArray[0].englishDetails.englishAddress.city"></label>
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email" autocomplete="email"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567" autocomplete="tel"></label>
@@ -688,8 +701,9 @@
             <input type="hidden" name="corporationDetails.israelAddress.houseNumber">
             <input type="hidden" name="corporationDetails.israelAddress.postalCode">
             <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="corporationDetails.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-            <input type="hidden" name="corporationDetails.englishDetails.englishAddress.city">
-            <input type="hidden" name="corporationDetails.englishDetails.englishAddress.street">
+            <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="corporationDetails.englishDetails.englishAddress.street"></label>
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="corporationDetails.englishDetails.englishAddress.city"></label>
           </fieldset>
         </section>
 
@@ -743,8 +757,9 @@
             <input type="hidden" name="firstAuthorized.israelAddress.houseNumber">
             <input type="hidden" name="firstAuthorized.israelAddress.postalCode">
             <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="firstAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-            <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.city">
-            <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
+            <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="firstAuthorized"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="firstAuthorized.englishDetails.englishAddress.street"></label>
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="firstAuthorized"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="firstAuthorized.englishDetails.englishAddress.city"></label>
           </fieldset>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email" autocomplete="email"></label>
 
@@ -784,8 +799,9 @@
               <input type="hidden" name="secondAuthorized.israelAddress.houseNumber">
               <input type="hidden" name="secondAuthorized.israelAddress.postalCode">
               <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="secondAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-              <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.city">
-              <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.street">
+              <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
+              <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="secondAuthorized"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="secondAuthorized.englishDetails.englishAddress.street"></label>
+              <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="secondAuthorized"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="secondAuthorized.englishDetails.englishAddress.city"></label>
             </fieldset>
             <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
             <fieldset class="lvp-fieldset">
@@ -992,8 +1008,9 @@
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.houseNumber">
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.postalCode">
                 <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-                <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city">
-                <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street">
+                <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
+                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street"></label>
+                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city"></label>
               </fieldset>
               <div class="lvp-grid-2">
                 <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].email" data-help="יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה"></label>
@@ -3256,6 +3273,29 @@
         });
       } catch (e) { deriveEnglishFromHebrew_(set); }
     }
+    // English-address phantom-field backstop (2026-09-04, ינאי אורון incident): the
+    // englishDetails.englishAddress.street/city mirrors are required server-side
+    // (W-8 line 3) for every holder, unconditionally, but normally ride as bare
+    // <input type="hidden"> pairs the LP never sees - filled invisibly by the
+    // geocode above. When that geocode misses (no English name on file for the
+    // street, API failure/timeout - see isHebrewText_ above), the mirror stays
+    // blank forever with nothing on the page to correct: the LP retries the exact
+    // same submit and gets the exact same server refusal every time. Un-hides the
+    // matching .lvp-field--en-addr-fallback holder(s) and flips their inputs from
+    // hidden to text, at which point they are ordinary visible required fields and
+    // validatePage's existing required-field pass (no special-casing needed) does
+    // the rest - same mechanic the ID-appendix group already uses. prefix is the
+    // holder key with no trailing dot, e.g. "investorsArray[0]" or
+    // "corporationDetails" - matches data-en-addr-fallback on the HTML side.
+    function revealEnglishAddressFallback_(prefix) {
+      var any = false;
+      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
+        if (holder.hidden) { holder.hidden = false; any = true; }
+        var input = holder.querySelector('input');
+        if (input && input.type === 'hidden') input.type = 'text';
+      });
+      return any;
+    }
     function bindPlacesInputs() {
       if (!(window.google && google.maps && google.maps.places)) return;
       PLACES_SETS.forEach(function (set) {
@@ -4889,6 +4929,39 @@
       } catch (e) {}
       var deriveTimeout = new Promise(function (resolve) { setTimeout(resolve, 4000); });
       Promise.race([Promise.all(deriveWaits), deriveTimeout]).then(function () {
+      // English-address phantom-field belt (2026-09-04, ינאי אורון incident): the
+      // derive above is fail-soft by design (see deriveEnglishAddress.ts's own
+      // header on the server side) - it can legitimately still leave a mirror
+      // blank (no English name on file for the street, API miss/timeout). Before
+      // this belt, a blank mirror sailed straight into collectAll() and the server
+      // refused with a message naming no field, on a value the LP had no visible
+      // input to correct - the SAME dead end israeliDeriveEnglishAddress_'s own doc
+      // comment describes. Generic by design (name-suffix scan, not PLACES_SETS):
+      // catches every holder that carries the englishAddress pair, including the
+      // dynamically-templated controlling-person rows. A holder only counts if its
+      // Hebrew address is actually filled - an unfilled/inapplicable holder (e.g. no
+      // second authorized signer) has blank Hebrew too and is correctly skipped.
+      var missingPrefix = null;
+      Array.prototype.forEach.call(form.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
+        if (missingPrefix) return;
+        var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
+        if (!_v(prefix + '.israelAddress.street') || !_v(prefix + '.israelAddress.city')) return;
+        if (!_v(prefix + '.englishDetails.englishAddress.street') || !_v(prefix + '.englishDetails.englishAddress.city')) missingPrefix = prefix;
+      });
+      if (missingPrefix) {
+        revealEnglishAddressFallback_(missingPrefix);
+        submitting = false;
+        var revealedHolder = form.querySelector('[data-en-addr-fallback="' + missingPrefix + '"]');
+        var pageEl = revealedHolder ? revealedHolder.closest('.lvp-page') : null;
+        var pageIdx = pageEl ? visiblePages().indexOf(pageEl) : -1;
+        if (pageIdx !== -1 && pageIdx !== idx) showPage(pageIdx);
+        if (revealedHolder) {
+          revealedHolder.classList.add('lvp-field--error');
+          try { revealedHolder.scrollIntoView({ block: 'center' }); } catch (eScroll) {}
+        }
+        setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
+        return;
+      }
       // Belt (2026-07-14 fatcaStatus blank on resume): if inferredDefaults didn't
       // fire during hydration (no trusted change event from snapshot restore),
       // run them once more so the autofill is guaranteed before collection.

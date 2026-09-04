@@ -11,6 +11,7 @@ test/*
 !test/lvp-token-consistency.cjs
 !test/atrium-palette-sync.cjs
 !test/israel-flow.cjs
+!test/israel-english-address-fallback-harness.cjs
 !test/console-harness.cjs
 !test/rig-israel.cjs
 !test/rig.cjs
