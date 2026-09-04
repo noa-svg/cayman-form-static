@@ -69,7 +69,11 @@
   --ease-out: cubic-bezier(0.2,0.9,0.3,1);
   --ease-in: cubic-bezier(0.4,0,1,1);
   --ease-inout: cubic-bezier(0.65,0,0.35,1);
-  --dur-fast: 140ms; --dur-base: 180ms; --dur-slow: 240ms; --dur-drawer: 200ms;
+  /* ive-pass 2026-09-04: --dur-fast 140ms->120ms (finding #9, matches the
+     skill's micro-hover guideline) and --dur-drawer 200ms->300ms (finding
+     #8, the drawer is the largest-scale motion in the app and was running
+     faster than the 280-320ms band panel-scale reveals want). */
+  --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 240ms; --dur-drawer: 300ms;
 }
 
 /* CTO review finding (2026-08-02): a bare `display:flex` on a class selector
@@ -849,6 +853,26 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   cursor: default;
   pointer-events: none;
 }
+/* Completed/canceled are routine operator filters; test-rows is a rare QA/
+   internal toggle, but all three used to share one flat weight (ive-pass
+   2026-09-04, finding #4). Quieter resting state - no border/box, smaller,
+   fainter - same ON treatment so it's still unmistakable once active. */
+.show-done.tertiary {
+  border: none;
+  background: transparent;
+  font-size: 9px;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-ink-faint, var(--color-ink-muted));
+}
+.show-done.tertiary:hover {
+  color: var(--color-ink-sub);
+  background: var(--color-bg-card);
+}
+.show-done.tertiary.on {
+  background: var(--color-atrium-tint);
+  color: var(--color-atrium);
+  border: none;
+}
 
 /* ============================================================
    BOARD TABLE (redesigned 2026-08-06. Noa: "its ugly" / "i asked for more
@@ -1303,19 +1327,6 @@ body.side-coll .ss-row.ss-total { display: none; }
 .rail.frozen .seg.current { background: var(--color-amber); box-shadow: none; }
 /* voided / expired: entire rail ghost */
 .rail.dead .seg { background: var(--color-border); box-shadow: none; }
-/* .rail-lbl retired 2026-08-06: the stage reads as words in .rword now; the
-   class stays styled only so any residual consumer degrades gracefully. */
-.rail-lbl {
-  font-size: 10px;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.01em;
-  color: var(--color-ink-sub);
-  line-height: 1;
-  white-space: nowrap;
-}
-.rail-lbl.muted { color: var(--color-ink-muted); }
-.rail-lbl.warn { color: var(--color-danger); }
-.rail-lbl .frac { color: var(--color-ink-muted); }
 /* Age column (total process age; the per-wait duration lives in .rwait). */
 .rage {
   font-size: var(--text-xs);
@@ -2181,6 +2192,15 @@ input:focus {
   color: var(--color-ink);
   letter-spacing: -0.01em;
   line-height: var(--leading-tight);
+}
+
+/* The one Hebrew-bearing span in the drawer header, carried inline instead
+   of a class - and missing dir="auto" unlike the equivalent board-row
+   Hebrew name (.rhe). Given its own class (ive-pass 2026-09-04, finding #6). */
+.dh-he {
+  font-size: 13px;
+  color: var(--color-ink-sub);
+  margin-top: 4px;
 }
 
 .dh .st {
@@ -3424,8 +3444,12 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .rail.frozen .seg.done{background:#fff}
 .rail.frozen .seg.current{background:var(--color-red)}
 .rail.dead .seg{background:var(--color-red-tint)}
-.rail-lbl{text-transform:uppercase;letter-spacing:0.08em;font-weight:800;font-size:10px;color:var(--color-ink)}
-.rail-lbl.muted{color:var(--color-ink-muted)}
+/* Text-color utilities (ive-pass 2026-09-04, finding #5): 45 call sites
+   carried a bare inline color style, ungoverned by a shared class - the
+   same failure mode finding #1 caught (a value duplicated at the call
+   site instead of named once). */
+.t-danger { color: var(--color-danger); }
+.t-muted { color: var(--color-ink-muted); }
 
 /* ---- generic buttons ---- */
 .btn{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);font-weight:800;text-transform:uppercase;letter-spacing:0.06em;transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out)}
@@ -3577,7 +3601,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
 /* ---- DRAWER internals ---- */
 .dh h2{font-family:var(--font-display);font-weight:800;font-size:20px;text-transform:none;letter-spacing:-0.02em;line-height:1.1}
 .dh .st{border-radius:var(--radius-sm);border:1px solid var(--color-border-strong);text-transform:uppercase;letter-spacing:0.07em;font-weight:800;font-size:10px}
-.dsec h3{text-transform:uppercase;letter-spacing:0.12em;font-weight:800;font-size:11px;color:var(--color-ink)}
+/* .dsec h3: the real rule lives at :2210 (2026-08-26 contrast-floor fix,
+   see the comment block at :2308). A stale duplicate used to sit here,
+   same specificity, later in source order, so it silently won and
+   reverted the drawer section headers to uppercase/tracked/near-black -
+   exactly the regression that pass believed it had killed. Removed
+   (ive-pass 2026-09-04, finding #1), not merged, since :2210 already has
+   the correct declaration. */
 .dlink .cp{border:var(--bw) solid var(--color-ink);border-radius:var(--radius-sm);box-shadow:var(--shadow-card);background:#fff;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.05em;font-weight:800}
 .dlink .cp:hover{background:var(--color-gold)}
 /* .dact .reseal/.nudge/.dvoid: single definition now lives with the other
@@ -3701,7 +3731,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="board-filters" id="boardFilters" hidden>
           <button type="button" class="show-done" id="showDoneToggle" aria-pressed="false" hidden></button>
           <button type="button" class="show-done" id="showCanceledToggle" aria-pressed="false" hidden></button>
-          <button type="button" class="show-done" id="showTestToggle" aria-pressed="false" hidden></button>
+          <button type="button" class="show-done tertiary" id="showTestToggle" aria-pressed="false" hidden></button>
         </div>
         <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
       </div>
@@ -6264,7 +6294,7 @@ document.addEventListener('keydown',function(e){
       // C5 (2026-07-19): the board error state gets an in-place Retry and the real
       // cause in small print, instead of a dead-end "refresh or check auth" guess.
       var el=document.getElementById("list");
-      el.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load the board. '
+      el.innerHTML='<div class="empty t-danger">Could not load the board. '
         +'<a href="#" id="boardRetry">Retry</a>'
         +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
         +'</div>';
@@ -7207,7 +7237,7 @@ document.addEventListener('keydown',function(e){
   function renderDrawer(d){
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
-    if(d.nameHebrew)h+='<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top: 4px">'+esc2(d.nameHebrew)+'</div>';
+    if(d.nameHebrew)h+='<div class="dh-he" dir="auto">'+esc2(d.nameHebrew)+'</div>';
     h+='<span class="st">'+esc2(stageMilestone(d.stage||d.currentStage))+'</span>'+entityClassChipHtml(d)+'</div>';
     // F44: gate lifecycle actions on stage so a footgun (reseal with no docs,
     // void on a completed sub) can never be clicked.
@@ -7885,7 +7915,7 @@ document.addEventListener('keydown',function(e){
           var when=p.daysAgo!=null?(p.daysAgo===0?'today':p.daysAgo+'d ago'):'';
           rows+='<div class="kv hist" data-pid="'+esc2(p.processId)+'" tabindex="0" role="button" style="cursor:pointer;border-radius:6px;padding: 4px 8px;transition:background .12s">'
             +'<span class="k" style="display:flex;align-items:center;gap: 8px"><span style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;display:inline-block"></span>'+esc2(label)+'</span>'
-            +'<span class="v" style="display:flex;align-items:center;gap: 8px"><span style="color:var(--color-ink-muted)">'+esc2(stageMilestone(p.currentStage))+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
+            +'<span class="v" style="display:flex;align-items:center;gap: 8px"><span class="t-muted">'+esc2(stageMilestone(p.currentStage))+'</span>'+(when?'<span style="color:var(--color-ink-muted);font-size:11px">'+esc2(when)+'</span>':'')+'</span>'
             +'</div>';
         });
         el.innerHTML='<h3>History ('+others.length+')</h3>'+rows;
@@ -7911,12 +7941,12 @@ document.addEventListener('keydown',function(e){
     var known=null;
     for(var ki=0;ki<allRows.length;ki++){if(allRows[ki].pid===pid){known=allRows[ki];break;}}
     currentEngine=(known&&known._engine)||GW;
-    var skel='<div class="dsec" style="color:var(--color-ink-muted)">Loading...</div>';
+    var skel='<div class="dsec t-muted">Loading...</div>';
     if(known){
       skel='<div class="dh"><h2>'+esc2(known.name||'LP')+'</h2>'
         +(known.he?'<div class="pe" style="font-size:13px;color:var(--color-ink-sub);margin-top: 4px">'+esc2(known.he)+'</div>':'')
         +'<span class="st">'+esc2(stageMilestone(known.stage)||known.stage||'')+'</span></div>'
-        +'<div class="dsec" style="color:var(--color-ink-muted)">Loading details...</div>';
+        +'<div class="dsec t-muted">Loading details...</div>';
     }
     document.getElementById("dbody").innerHTML=skel;
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane,false,currentEngine).then(function(d){
@@ -8744,7 +8774,7 @@ document.addEventListener('keydown',function(e){
       setW8Badge(0);
       var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
       var wle=document.getElementById('w8list');
-      wle.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. <a href="#" id="w8Retry">Retry</a></div>';
+      wle.innerHTML='<div class="empty t-danger">Could not load. <a href="#" id="w8Retry">Retry</a></div>';
       var wr=document.getElementById('w8Retry');
       if(wr)wr.onclick=function(e){e.preventDefault();loadW8();};
     });
@@ -8981,13 +9011,13 @@ document.addEventListener('keydown',function(e){
       // Blaming the Month select, which is correctly set, sent the operator to
       // the wrong control.
       if(!eff&&overridden){
-        lineEl.innerHTML='<span style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</span>';
+        lineEl.innerHTML='<span class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</span>';
         return;
       }
       lineEl.innerHTML=eff
         ? 'Verified against the <span style="color:var(--color-ink)">'+esc2(wlMonthWords(eff))+'</span> close'
-          +(overridden?' <span style="color:var(--color-ink-muted)">(overridden)</span>':'')
-        : '<span style="color:var(--color-ink-muted)">Pick a month to derive the struck NAV.</span>';
+          +(overridden?' <span class="t-muted">(overridden)</span>':'')
+        : '<span class="t-muted">Pick a month to derive the struck NAV.</span>';
     }
     function wlNavMonthQs(){
       var eff=wlEffectiveNavMonth();
@@ -9146,7 +9176,7 @@ document.addEventListener('keydown',function(e){
       var tab=r&&r.tab;
       var shown=(monthEl.value||'').trim();
       if(!tab||!shown||tab===shown)return;
-      setResult('<div style="color:var(--color-ink-muted)">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
+      setResult('<div class="t-muted">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
     }
     // Un-park returns the row to Pending - "the park was wrong", NOT "the money
     // arrived". Mark received is the other reversal and lands the row on
@@ -9247,11 +9277,11 @@ document.addEventListener('keydown',function(e){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
       var rid=++peekSeq;
-      rowsEl.innerHTML='<div style="color:var(--color-ink-muted)">Loading rows...</div>';
+      rowsEl.innerHTML='<div class="t-muted">Loading rows...</div>';
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
         renderWlRows();
         wlApplyEmptyBatchState(r.transfers);
@@ -9259,7 +9289,7 @@ document.addEventListener('keydown',function(e){
         if(rid!==peekSeq)return;
         wlLastTransfers=null;
         wlCloseGate('Rows could not be loaded. Review again before generating.');
-        rowsEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        rowsEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     }
     // Month dropdown (Noa, 2026-08-02: "it should have a dropdown for the
@@ -9351,7 +9381,7 @@ document.addEventListener('keydown',function(e){
       var mBtn=document.getElementById('tplMeasureBtn'),cBtn=document.getElementById('tplCandidateBtn'),out=document.getElementById('tplResult');
       if(!mBtn||!cBtn||!out)return;
       function show(r){
-        if(!r||!r.ok){out.innerHTML='<span style="color:var(--color-danger)">'+esc2((r&&r.error)||'failed')+'</span>';return;}
+        if(!r||!r.ok){out.innerHTML='<span class="t-danger">'+esc2((r&&r.error)||'failed')+'</span>';return;}
         var h='columns '+r.columns+' &middot; widths '+esc2((r.widthsBefore||[]).join(', '));
         if(r.applied){
           h+='<br>after '+esc2((r.widthsAfter||[]).join(', '));
@@ -9363,7 +9393,7 @@ document.addEventListener('keydown',function(e){
       function call(q,btn){
         btn.disabled=true;out.textContent='Working...';
         apiFetch('?api=opLetterTemplateGeometry'+q, false, GAS_ONLY_).then(function(r){btn.disabled=false;show(r);})
-          .catch(function(e){btn.disabled=false;out.innerHTML='<span style="color:var(--color-danger)">'+esc2(String(e))+'</span>';});
+          .catch(function(e){btn.disabled=false;out.innerHTML='<span class="t-danger">'+esc2(String(e))+'</span>';});
       }
       mBtn.onclick=function(){call('',mBtn);};
       // An inline field, not a prompt(). A native dialog blocks the renderer,
@@ -9375,7 +9405,7 @@ document.addEventListener('keydown',function(e){
         var el=document.getElementById('tplWidths');
         var w=((el&&el.value)||'').trim();
         if(!/^[0-9.,\s]+$/.test(w)||!w){
-          out.innerHTML='<span style="color:var(--color-danger)">Widths must be numbers in points, comma separated.</span>';
+          out.innerHTML='<span class="t-danger">Widths must be numbers in points, comma separated.</span>';
           return;
         }
         call('&apply=true&widths='+encodeURIComponent(w),cBtn);
@@ -9404,20 +9434,20 @@ document.addEventListener('keydown',function(e){
     wlRenderNavLine();
     reviewBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Choose a month first.</div>','');return;}
-      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Choose a month first.</div>','');return;}
+      if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
       reviewBtn.disabled=true;wlCloseGate('');
-      findEl.innerHTML='<div style="color:var(--color-ink-muted)">Reviewing...</div>';
+      findEl.innerHTML='<div class="t-muted">Reviewing...</div>';
       setResult('','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, GAS_ONLY_).then(function(r){
         reviewBtn.disabled=false;
-        if(!r){findEl.innerHTML='<div style="color:var(--color-danger)">No response.</div>';return;}
+        if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
           wlCloseGate('Blocking findings. Generate stays off until they clear.');
           return;
         }
-        if(!r.ok){findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(r.error||'Review failed.')+'</div>';return;}
+        if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=wlInputs();lastGo.counts=r.counts||null;
         genBtn.disabled=false;
@@ -9429,7 +9459,7 @@ document.addEventListener('keydown',function(e){
         }
       }).catch(function(err){
         reviewBtn.disabled=false;
-        findEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        findEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
     // Generate ARMS a confirm; it no longer commits on the first click. The
@@ -9461,11 +9491,11 @@ document.addEventListener('keydown',function(e){
       }
       wlDisarmConfirm();
       genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
-      setResult('<div style="color:var(--color-ink-muted)">Generating and settling...</div>','');
+      setResult('<div class="t-muted">Generating and settling...</div>','');
       var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, GAS_ONLY_).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
-        if(!r||!r.ok){genBtn.disabled=false;setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
+        if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         // Finding 4: this used to re-enable Generate and leave the gate open, so
         // a second click returned the identical green message and the operator
         // could not tell a fresh settle from a no-op.
@@ -9478,7 +9508,7 @@ document.addEventListener('keydown',function(e){
         setResult(h,'');
       }).catch(function(err){
         genBtn.disabled=false;reviewBtn.disabled=false;confirmGoEl.disabled=false;
-        setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
+        setResult('<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
     }
     if(confirmGoEl)confirmGoEl.onclick=wlDoGenerate;
@@ -9492,23 +9522,23 @@ document.addEventListener('keydown',function(e){
     var verifyBtn=document.getElementById('wlVerifyBtn');
     if(verifyBtn)verifyBtn.onclick=function(){
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>','');return;}
-      if(wlNavMonthInvalid()){setResult('<div style="color:var(--color-danger)">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Set the month above (MM/YYYY) first.</div>','');return;}
+      if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
       verifyBtn.disabled=true;
-      setResult('<div style="color:var(--color-ink-muted)">Generating verification copy (nothing will be settled)...</div>','');
+      setResult('<div class="t-muted">Generating verification copy (nothing will be settled)...</div>','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true', false, GAS_ONLY_).then(function(r){
         verifyBtn.disabled=false;
-        if(!r||!r.ok){setResult('<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
+        if(!r||!r.ok){setResult('<div class="t-danger">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
         // The server returns ok:true with NO document when the HY-close gate says
         // no-go (go:false is the discriminator, not ok:false - see
         // CaymanWireLetter.ts). Checking only r.ok reported a false success with an
         // empty link, which is exactly what happened on the first live run.
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
-          setResult('<div style="color:var(--color-danger)">No verification copy: the HY-close gate blocked this batch'+(r.verdict?' ('+esc2(r.verdict)+')':'')+'. Findings above.</div>','');
+          setResult('<div class="t-danger">No verification copy: the HY-close gate blocked this batch'+(r.verdict?' ('+esc2(r.verdict)+')':'')+'. Findings above.</div>','');
           return;
         }
-        if(!r.docUrl){setResult('<div style="color:var(--color-danger)">Server reported success but returned no document. Nothing was generated.</div>','');return;}
+        if(!r.docUrl){setResult('<div class="t-danger">Server reported success but returned no document. Nothing was generated.</div>','');return;}
         var h='<div style="color:var(--color-green)">Verification copy generated. No row was settled.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>'
           +'<div style="margin-top:6px;color:var(--color-ink-muted)">Doc id: '+esc2(r.docId||'')+'</div>';
@@ -9517,7 +9547,7 @@ document.addEventListener('keydown',function(e){
         setResult(h,'');
       }).catch(function(err){
         verifyBtn.disabled=false;
-        setResult('<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
+        setResult('<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
     };
   })();
@@ -9527,10 +9557,10 @@ document.addEventListener('keydown',function(e){
     addBtn.onclick=function(){
       var month=(document.getElementById('wlMonth').value||'').trim();
       var name=(document.getElementById('mrName').value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){resEl.innerHTML='<div style="color:var(--color-danger)">Set the month above (MM/YYYY) first.</div>';return;}
-      if(!name){resEl.innerHTML='<div style="color:var(--color-danger)">Name is required.</div>';return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){resEl.innerHTML='<div class="t-danger">Set the month above (MM/YYYY) first.</div>';return;}
+      if(!name){resEl.innerHTML='<div class="t-danger">Name is required.</div>';return;}
       addBtn.disabled=true;
-      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Adding...</div>';
+      resEl.innerHTML='<div class="t-muted">Adding...</div>';
       var qs='?api=opAddManualTransferRow&monthTab='+encodeURIComponent(month)
         +'&name='+encodeURIComponent(name)
         +'&type='+encodeURIComponent(document.getElementById('mrType').value)
@@ -9540,7 +9570,7 @@ document.addEventListener('keydown',function(e){
         +'&notes='+encodeURIComponent((document.getElementById('mrNotes').value||'').trim());
       apiFetch(qs, false, JU_API).then(function(r){
         addBtn.disabled=false;
-        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
+        if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
         document.getElementById('mrName').value='';
         document.getElementById('mrAmount').value='';
@@ -9548,7 +9578,7 @@ document.addEventListener('keydown',function(e){
         document.getElementById('mrNotes').value='';
       }).catch(function(err){
         addBtn.disabled=false;
-        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        resEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
   })();
@@ -9574,19 +9604,19 @@ document.addEventListener('keydown',function(e){
       var name=(document.getElementById(cfg.prefix+'Name').value||'').trim();
       var value=(document.getElementById(cfg.prefix+cfg.valueField).value||'').trim();
       var byRid=!!rid, byRowMatch=!!(tab&&row&&name);
-      if(byRid&&byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give either a RID or the month/row/name, not both.</div>';return;}
-      if(!byRid&&!byRowMatch){resEl.innerHTML='<div style="color:var(--color-danger)">Give a RID, or all three of month, row number and exact name.</div>';return;}
-      if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div style="color:var(--color-danger)">Month must be MM/YYYY.</div>';return;}
-      if(!value){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2(cfg.valueLabel)+' is required.</div>';return;}
+      if(byRid&&byRowMatch){resEl.innerHTML='<div class="t-danger">Give either a RID or the month/row/name, not both.</div>';return;}
+      if(!byRid&&!byRowMatch){resEl.innerHTML='<div class="t-danger">Give a RID, or all three of month, row number and exact name.</div>';return;}
+      if(byRowMatch&&!/^\d{2}\/\d{4}$/.test(tab)){resEl.innerHTML='<div class="t-danger">Month must be MM/YYYY.</div>';return;}
+      if(!value){resEl.innerHTML='<div class="t-danger">'+esc2(cfg.valueLabel)+' is required.</div>';return;}
       setBtn.disabled=true;
-      resEl.innerHTML='<div style="color:var(--color-ink-muted)">Writing...</div>';
+      resEl.innerHTML='<div class="t-muted">Writing...</div>';
       var qs='?api='+cfg.api+'&'+cfg.valueParam+'='+encodeURIComponent(value);
       if(cfg.extraQs)qs+=cfg.extraQs();
       if(byRid){qs+='&masterRid='+encodeURIComponent(rid);}
       else{qs+='&tab='+encodeURIComponent(tab)+'&row='+encodeURIComponent(row)+'&expectName='+encodeURIComponent(name);}
       apiFetch(qs, false, JU_API).then(function(r){
         setBtn.disabled=false;
-        if(!r||!r.ok){resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
+        if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
         ['Rid','Tab','Row','Name',cfg.valueField].concat(cfg.extraFields||[]).forEach(function(f){
           var el=document.getElementById(cfg.prefix+f);
@@ -9594,7 +9624,7 @@ document.addEventListener('keydown',function(e){
         });
       }).catch(function(err){
         setBtn.disabled=false;
-        resEl.innerHTML='<div style="color:var(--color-danger)">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        resEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
     };
   }
@@ -9811,7 +9841,7 @@ document.addEventListener('keydown',function(e){
       if(rid!==MSG_SEQ)return;
       MSGS=null;
       var mse=document.getElementById('msgspine');
-      mse.innerHTML='<div class="empty" style="color:var(--color-danger)">Could not load. <a href="#" id="msgRetry">Retry</a></div>';
+      mse.innerHTML='<div class="empty t-danger">Could not load. <a href="#" id="msgRetry">Retry</a></div>';
       var mr=document.getElementById('msgRetry');
       if(mr)mr.onclick=function(e){e.preventDefault();loadMsgs();};
     });
@@ -10111,11 +10141,11 @@ document.addEventListener('keydown',function(e){
 </div>
 <script>initAuth();</script>
 <nav id="tab-bar">
-  <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true">🗂️</span><span class="tab-lbl">Board</span></button>
-  <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true">✉️</span><span class="tab-lbl">Msgs</span></button>
-  <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true">🕒</span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
-  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true">🏦</span><span class="tab-lbl">Transfer Form</span></button>
-  <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true">⚙️</span><span class="tab-lbl">Settings</span></button>
+  <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true"><i class="ti ti-layout-board"></i></span><span class="tab-lbl">Board</span></button>
+  <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true"><i class="ti ti-mail"></i></span><span class="tab-lbl">Msgs</span></button>
+  <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true"><i class="ti ti-clock"></i></span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
+  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true"><i class="ti ti-file-invoice"></i></span><span class="tab-lbl">Transfer Form</span></button>
+  <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true"><i class="ti ti-settings"></i></span><span class="tab-lbl">Settings</span></button>
 </nav>
 <script>
   Array.prototype.forEach.call(document.querySelectorAll("#tab-bar .tab[data-view]"),function(t){
