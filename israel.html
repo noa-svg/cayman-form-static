@@ -3928,6 +3928,22 @@
       var firstError = null;
       pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); unbindFieldInvalid_(f); });
       pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
+      // English-address fallback, revealed on THIS page's own Next gate, not only
+      // at final submit (2026-09-04, punish-late finding: the fallback holder is
+      // `hidden` by default, so the required-field pass two lines down silently
+      // skipped it - an LP could click Next through every remaining page and only
+      // get bounced back here at the very last step). Scoped to this page only:
+      // reveal any holder whose Hebrew address is filled but whose English mirror
+      // never derived, exactly the doSubmitNow_ check, run early instead of last.
+      Array.prototype.forEach.call(pageEl.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
+        var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
+        var heStreetEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.street"]');
+        var heCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.city"]');
+        var enCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.englishDetails.englishAddress.city"]');
+        if (!heStreetEl || !heCityEl) return; // this page does not carry this holder's Hebrew source
+        if (!heStreetEl.value.trim() || !heCityEl.value.trim()) return; // nothing to derive from yet
+        if (!enStreetEl.value.trim() || !(enCityEl && enCityEl.value.trim())) revealEnglishAddressFallback_(prefix);
+      });
       // Required-field pass: every label/legend carries its field; a required field
       // is one whose holder is visible and whose label has no opt-out. EasySend
       // model: every visible field in these pages is required unless flagged optional.

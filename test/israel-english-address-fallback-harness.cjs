@@ -12,13 +12,16 @@
 // straight into the submit POST and the server bounced it with a message
 // naming no field, forever, on retry.
 //
-// E1  the blank English mirror BLOCKS the submit client-side instead of
-//     posting an incomplete pack: no gateway 'submit' call fires.
+// E1  Next, on the SAME page as the Hebrew address, catches the blank English
+//     mirror and blocks advancing (2026-09-04, second pass: this used to be
+//     invisible to validatePage - hidden holders were skipped - so an LP could
+//     click through every later page and only get bounced back at final
+//     submit. Punish-late; caught by Noa reading the shipped behavior).
 //   E2  the matching .lvp-field--en-addr-fallback holder for investorsArray[0]
 //     is revealed (un-hidden, input flipped from hidden to text) and marked in
 //     error, and the LP is left on (or returned to) the page that carries it.
-//   E3  filling the revealed field and submitting again succeeds: the submit
-//     POST fires and carries the LP-typed English street/city.
+//   E3  filling the revealed field and clicking Next again succeeds, and the
+//     LP can walk on to submit, which carries the LP-typed English street/city.
 // Run: node test/israel-english-address-fallback-harness.cjs
 'use strict';
 const {
@@ -88,7 +91,32 @@ async function walkToReview(rig, t) {
   ok(t + ' boots on welcome', currentPage(d) === 'welcome', currentPage(d));
   ok(t + ' welcome -> ind.personal', (await clickNext(d)) === 'ind.personal', currentPage(d));
   fillPersonalPageNoEnglishAddress(d);
-  ok(t + ' personal -> ind.qualification', (await clickNext(d)) === 'ind.qualification', currentPage(d));
+
+  // E1/E2: Next itself must catch this now, on ind.personal, not just final
+  // submit ten pages later.
+  const enStreetEl = d.querySelector('[name="investorsArray[0].englishDetails.englishAddress.street"]');
+  const enCityEl = d.querySelector('[name="investorsArray[0].englishDetails.englishAddress.city"]');
+  ok(t + ' precondition: English street still blank pre-Next', enStreetEl && !enStreetEl.value.trim());
+  ok(t + ' precondition: English city still blank pre-Next', enCityEl && !enCityEl.value.trim());
+  ok(t + ' precondition: fallback holder starts hidden', enStreetEl.closest('.lvp-field').hidden === true);
+
+  const afterFirstNext = await clickNext(d);
+  ok(t + ' E1 Next is BLOCKED on ind.personal, not advanced to ind.qualification', afterFirstNext === 'ind.personal', afterFirstNext);
+
+  const holder = enStreetEl.closest('.lvp-field');
+  ok(t + ' E2 fallback holder revealed (un-hidden)', holder.hidden === false);
+  ok(t + ' E2 fallback holder marked in error', holder.classList.contains('lvp-field--error'));
+  ok(t + ' E2 English street input flipped from hidden to text', enStreetEl.type === 'text', enStreetEl.type);
+  ok(t + ' E2 English city input flipped from hidden to text', enCityEl.type === 'text', enCityEl.type);
+  const inlineMsg = holder.querySelector('.lvp-error-msg');
+  ok(t + ' E2 inline error message present on the revealed field', !!inlineMsg && inlineMsg.textContent.trim().length > 0,
+    inlineMsg && inlineMsg.textContent);
+  ok(t + ' E2 aria-invalid set on the revealed input', enStreetEl.getAttribute('aria-invalid') === 'true');
+
+  // E3: fill the revealed field right here and try again - Next now succeeds.
+  setField(d, 'investorsArray[0].englishDetails.englishAddress.street', 'Dan Shomron 13');
+  setField(d, 'investorsArray[0].englishDetails.englishAddress.city', 'Ramat Gan');
+  ok(t + ' E3 Next succeeds once the revealed field is filled', (await clickNext(d)) === 'ind.qualification', currentPage(d));
 
   checkBox(d, 'investorsArray[0].qualification.isLiquidAssets');
   checkRadio(d, 'investorsArray[0].qualification.isSignedQualification', 'כן');
@@ -122,44 +150,15 @@ async function walkToReview(rig, t) {
 (async () => {
   const rig = await loadIsraelForm({ cfg: { prefillUploads: PREFILL_UPLOADS } });
   const d = rig.document;
+  // walkToReview now fills the revealed field on ind.personal itself (the new
+  // early gate) and carries on to review - see E1/E2/E3 assertions inside it.
   await walkToReview(rig, 'E');
 
-  // Precondition: reproduces the live incident exactly - Hebrew address filled,
-  // English mirror genuinely blank (the rig's Geocoder mock always misses).
-  const enStreetEl = d.querySelector('[name="investorsArray[0].englishDetails.englishAddress.street"]');
-  const enCityEl = d.querySelector('[name="investorsArray[0].englishDetails.englishAddress.city"]');
-  ok('E precondition: English street still blank pre-submit', enStreetEl && !enStreetEl.value.trim());
-  ok('E precondition: English city still blank pre-submit', enCityEl && !enCityEl.value.trim());
-  ok('E precondition: fallback holder starts hidden', enStreetEl.closest('.lvp-field').hidden === true);
-
-  d.querySelector('[data-action="submit"]').click();
-  await sleep(300);
-
-  const blockedSubmitCall = rig.gatewayCalls.find((c) => c.body && c.body.action === 'submit');
-  ok('E1 blank English mirror blocks the submit POST (no incomplete pack sent)', !blockedSubmitCall,
-    blockedSubmitCall && JSON.stringify(blockedSubmitCall.body));
-
-  const holder = enStreetEl.closest('.lvp-field');
-  ok('E2 fallback holder revealed (un-hidden)', holder.hidden === false);
-  ok('E2 fallback holder marked in error', holder.classList.contains('lvp-field--error'));
-  ok('E2 English street input flipped from hidden to text', enStreetEl.type === 'text', enStreetEl.type);
-  ok('E2 English city input flipped from hidden to text', enCityEl.type === 'text', enCityEl.type);
-  ok('E2 LP left on the page carrying the field (ind.personal)', currentPage(d) === 'ind.personal', currentPage(d));
-  const statusEl = d.querySelector('[data-status]');
-  ok('E2 approved required-fields status line shown', !!statusEl && statusEl.textContent.indexOf('נא להשלים את שדות החובה') !== -1,
-    statusEl && statusEl.textContent);
-
-  // E3: the LP can now actually fix it - fill the revealed field and resubmit.
-  setField(d, 'investorsArray[0].englishDetails.englishAddress.street', 'Dan Shomron 13');
-  setField(d, 'investorsArray[0].englishDetails.englishAddress.city', 'Ramat Gan');
-  // The rig's clickNext-based flow already walked every later page once; jump
-  // straight back to review the way the LP's own in-form navigation would, then submit.
-  while (currentPage(d) !== 'review') { await clickNext(d); }
   d.querySelector('[data-action="submit"]').click();
   await sleep(300);
 
   const submitCall = rig.gatewayCalls.find((c) => c.body && c.body.action === 'submit');
-  ok('E3 resubmit after filling the revealed field succeeds', !!submitCall);
+  ok('E3 submit succeeds carrying the field filled at the early gate', !!submitCall);
   if (submitCall) {
     const inv0 = submitCall.body.payload.submission.investorsArray[0];
     ok('E3 submission carries the LP-typed English street', inv0.englishDetails.englishAddress.street === 'Dan Shomron 13',
