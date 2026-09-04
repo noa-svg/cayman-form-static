@@ -1263,6 +1263,17 @@
       }
 
       function bootstrapForm() {
+        // Name/bank-name fields are genuinely Hebrew on the Israeli lane (no
+        // --ltr class, correct default RTL) but hold an English value on the
+        // Cayman lane - .lvp-input hardcodes direction:rtl unconditionally,
+        // so without this the English name/entity-name/bank-name VALUE
+        // rendered right-aligned/mirrored despite the page's own dir="ltr"
+        // (pixel-verifier finding, 2026-09-04). Numeric/email/amount fields
+        // already carry --ltr statically since they're LTR on both lanes.
+        ['ind-fullName', 'ent-name', 'bank-name'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.classList.toggle('lvp-input--ltr', IS_CAYMAN);
+        });
         var isIncrease = isIncreaseFlow();
         var isRedemption = isRedemptionFlow();
         var isTransfer = isTransferFlow();
