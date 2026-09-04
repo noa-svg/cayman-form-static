@@ -3303,6 +3303,13 @@
         if (holder.hidden) { holder.hidden = false; any = true; }
         var input = holder.querySelector('input');
         if (input && input.type === 'hidden') input.type = 'text';
+        // Same inline+programmatic pattern every other validation error on this
+        // form uses (setFieldError -> bindFieldInvalid_: visible message,
+        // aria-invalid, aria-describedby). Without this, a screen-reader user
+        // hears the generic "complete required fields" status but nothing names
+        // WHICH field just appeared (2026-09-04, friedman pass, ינאי אורון class).
+        var isCity = input && /\.englishAddress\.city$/.test(input.name || '');
+        setFieldError(holder, displayFor(isCity ? 'נא להזין את שם העיר באנגלית.' : 'נא להזין את שם הרחוב באנגלית.', curLang));
       });
       return any;
     }
@@ -4967,7 +4974,14 @@
         if (pageIdx !== -1 && pageIdx !== idx) showPage(pageIdx);
         if (revealedHolder) {
           revealedHolder.classList.add('lvp-field--error');
-          try { revealedHolder.scrollIntoView({ block: 'center' }); } catch (eScroll) {}
+          // block:'nearest', not 'center': same FIX #11 reasoning the form's
+          // other error-focus path uses (~line 4122) - 'center' can land the
+          // focused field under the on-screen keyboard on a narrow Android.
+          var _rm2 = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          try { revealedHolder.scrollIntoView({ behavior: _rm2 ? 'auto' : 'smooth', block: 'nearest' }); }
+          catch (eScroll) { try { revealedHolder.scrollIntoView(); } catch (eScroll2) {} }
+          var toFocus = revealedHolder.querySelector('input, select, textarea');
+          if (toFocus) { try { toFocus.focus({ preventScroll: true }); } catch (eFocus) {} }
         }
         setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
         return;
