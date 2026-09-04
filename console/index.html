@@ -6983,6 +6983,20 @@ document.addEventListener('keydown',function(e){
       // recover FROM. This attaches an already-known Drive file straight onto
       // docRef.companyStampDriveId. Offered on the subscriber role (a harmless
       // no-op for an individual applicant, who never has a reason to use it).
+      //
+      // EXCEPTION TO THIS FILE'S GAS_ONLY_ RULE (2026-09-04, FT10 recovery):
+      // unlike every other row in RECOVERY_ACTIONS, this one now DOES have a
+      // handler in ju-service's consoledispatch.ts (?api=opAttachCompanyStamp
+      // -> domain/attachCompanyStamp.ts's attachCompanyStampAndReseal:
+      // KYC-folder-verified attach, same as the GAS original, THEN an
+      // immediate requeueStuckSeals for this one pid - one click, matching
+      // GAS's own opAttachCompanyStampAndReseal shape, not the plain-attach
+      // ?api=opAttachCompanyStamp GAS itself answers). Routed on
+      // currentEngine, not pinned, so a ju-service-born process's
+      // quarantined FT10 seal (no company stamp ever threaded onto docRef,
+      // entity_stamp_missing) has a working recovery path here for the
+      // first time - previously this button did nothing for that process
+      // (base:GAS_ONLY_ against a request ju-cayman has never heard of).
       key:'companyStamp',
       label:'Attach company stamp',
       cta:'Attach',
@@ -6993,9 +7007,14 @@ document.addEventListener('keydown',function(e){
       run:function(v,ctx){
         ctx.send({
           q:'?api=opAttachCompanyStamp&processId='+encodeURIComponent(currentPid)+'&driveId='+encodeURIComponent(v.driveId),
-          base:GAS_ONLY_,
+          base:currentEngine,
           errPrefix:'Could not attach',
-          ok:function(){return "Attached. Run 'Correct this doc' on the subscription document to re-seal with it.";}
+          ok:function(r){
+            if(r&&r.requeue&&r.requeue.requeued&&r.requeue.requeued.length){
+              return "Attached and requeued - the worker picks it up on its next tick.";
+            }
+            return "Attached. Ju-cayman engine: run 'Correct this doc' on the affected document next to actually re-seal with it.";
+          }
         });
       }
     },
