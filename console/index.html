@@ -2988,7 +2988,20 @@ body.side-coll .ss-lbl { display: none; }
      switcher + title - wrap the row and give search its own full-width line,
      the same shape .listhead used to give it before New was removed. */
   .top { padding: 12px var(--grid-gutter); gap: 8px; flex-wrap: wrap; }
-  .top-right { width: 100%; order: 3; }
+  .top-right {
+    width: 100%; order: 3;
+    /* 2026-08-06 brought the "+ New process" button back into this same row
+       (see its own comment above the button markup), but this block still
+       assumed .top-right held search alone: .new-wrap's width:100% below
+       fought the button for the same line, squeezing the button's own text
+       into a two-line wrap inside its pill at common phone widths
+       (2026-09-04, Noa: "it just doesnt look baked"). Stack instead of
+       fighting for space - the button (primary) above, search below, both
+       full width, matching how this file already stacks fields on mobile
+       elsewhere. */
+    flex-direction: column; align-items: stretch;
+  }
+  .top-right .cmd-btn { width: 100%; }
 
   /* Persistent create affordance on mobile (tiles scroll out of view here) */
   .new-wrap { display: inline-flex; width: 100%; }
@@ -3547,14 +3560,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
    "ok" semantic .dact-status.ok and #allowlist-save already use; dreopen is
    a reversal, not a fresh record, so it stays quiet/ink instead of repeating
    that color. ---- */
+/* box-shadow removed (2026-09-04, Noa: "it just doesnt look baked") - this
+   was the one button in the dact-btns row sitting on a different physical
+   plane than reseal/nudge/dvoid beside it (none of which carry a shadow).
+   Color still encodes the affirmative-record meaning; the material (flat,
+   no shadow) now matches its row neighbors. */
 .dact .dreviewed,.dact .markreceived{
-  border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:var(--shadow-card);
+  border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:none;
   background:var(--color-green);color:#fff;
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
-  transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+  transition:background var(--dur-fast) var(--ease-out);
 }
-.dact .dreviewed:hover,.dact .markreceived:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-hover)}
-.dact .dreviewed:active,.dact .markreceived:active{transform:translate(2px,2px);box-shadow:none}
+.dact .dreviewed:hover,.dact .markreceived:hover{background:#256e35}
+.dact .dreviewed:active,.dact .markreceived:active{background:#1f5c2c}
 .dact .dreopen{
   border:1px solid var(--color-border-strong);border-radius:var(--radius-md);
   background:transparent;color:var(--color-ink-sub);box-shadow:none;
@@ -3758,8 +3776,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
         <div class="set-card tf-card" style="max-width:900px">
           <h3 class="set-h">Generate</h3>
           
-          <div style="display:flex;gap:12px;margin-top:8px">
-            <div id="wlNavLine" style="font-size:var(--text-sm);color:var(--color-ink-muted);margin:0 0 12px"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
+            <div id="wlNavLine" style="font-size:var(--text-sm);color:var(--color-ink-muted);margin:0 0 12px;min-width:180px;flex:1 1 auto"></div>
             <div>
               <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
               <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
@@ -4751,7 +4769,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       {name:'Tomer Shapira',processId:'p6',lane:'cayman',variant:'W-8BEN',status:'expiring',expiry:'2026-08-15'},
       {name:'Aurelie Marchand',variant:'W-9',status:'expiring',expiry:'2026-09-04'}
     ]};
-    if(qs.indexOf('?api=opprocess')===0) return {processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
+    if(qs.indexOf('?api=opprocess')===0){
+      // Was hardcoded to the p1/Daniel Rosen fixture regardless of which row's
+      // processId was actually requested, so the drawer opened "Daniel Rosen"
+      // no matter which board row an operator clicked (found in a 2026-09-04
+      // journey-test pass). The signer/doc/event detail below stays generic
+      // demo content - building a unique fixture per row is out of scope for
+      // this fix - but the identity fields now come from the actual clicked
+      // row so the drawer at least names the right person/process.
+      var reqPid=(/processId=([^&]*)/.exec(qs)||[])[1]||'';
+      var reqRow=[].concat(cayman,israel).filter(function(r){return r.processId===reqPid;})[0];
+      var idOverride=reqRow?{processId:reqRow.processId,displayName:reqRow.displayName||reqRow.name||'Daniel Rosen',nameHebrew:reqRow.nameHebrew||reqRow.he||''}:{};
+      return Object.assign({processId:'p1',displayName:'Daniel Rosen',nameHebrew:'דניאל רוזן',stage:'signing',
       signers:[
         {name:'Daniel Rosen',email:'daniel@example.com',role:'subscriber',roleLabel:'Subscriber',state:'done',sentAt:'2026-06-25T09:00:00Z',signedAt:'2026-06-26T14:20:00Z'},
         {name:'Sarah Rosen',email:'sarah@example.com',role:'cp1',roleLabel:'Controlling person',state:'current',sentAt:'2026-06-26T14:21:00Z',signedAt:null}],
@@ -4771,7 +4800,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       createdAt:'2026-06-25T09:00:00Z',updatedAt:'2026-06-28T10:00:00Z',
       people:[{role:'subscriber',roleLabel:'Investor',name:'Daniel Rosen',email:'daniel@example.com'}],
       links:[{label:'Signer link',url:'https://sign.legacyvpartners.com/?t=demo'}],
-      fields:{Process:'Cayman subscription',Lane:'Cayman',investmentAmount:250000,investmentCurrency:'USD'}};
+      fields:{Process:'Cayman subscription',Lane:'Cayman',investmentAmount:250000,investmentCurrency:'USD'}},idOverride);
+    }
     if(qs.indexOf('?api=lpHistory')===0) return {ok:true,processes:[]};
     if(qs.indexOf('?admin=getConsoleSettings')===0) return {ok:true,allowedEmails:['noa@legacyvpartners.com','omri@legacyvpartners.com']};
     if(qs.indexOf('?admin=getSettingsHealth')===0) return {ok:true,healthCheckLastOk:'2026-08-10T09:00:00Z',attentionAlertLastOk:'2026-08-10T09:05:00Z',trackerSweepLastOk:'2026-08-10T06:00:00Z',resealSweepLastOk:'2026-08-10T09:30:00Z',departedArchiveWritesLive:false,resealSweepLive:true,abandonSweepLive:false,alertCredibilityLive:false,reminderCadenceFirstDay:2,reminderCadenceSecondDay:5};
@@ -7463,10 +7493,15 @@ document.addEventListener('keydown',function(e){
         }
         // A manual/off-Ju row's ?api=opprocess response carries these keys as
         // '' (not null) - lane, applicantType and entityName genuinely do not
-        // exist for a row with no Ju submission behind it. '' slid past the
-        // null/NaN guard below and rendered as a bare label with nothing
-        // after it, which reads as broken rather than as "not recorded".
-        fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv||fv==='')fv='-';h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
+        // exist for a row with no Ju submission behind it. That used to render
+        // as "Applicant Type: -" / "Entity Name: -" - a labeled row asserting
+        // there IS a fact here and it's blank, for a field that structurally
+        // does not apply to this row (2026-09-04, Noa: "it just doesnt look
+        // baked" - Ive S1/S3, dead fields are chrome, not signal). Skip the
+        // row entirely rather than rendering a dash; this is not the same as
+        // the earlier "bare label, nothing after it" bug this comment used to
+        // describe fixing - there is no label at all now, not an empty one.
+        fkeys.forEach(function(k){var fv=d.fields[k];if(fv==null||fv!==fv||fv==='')return;h+='<div class="kv"><span class="k">'+esc2(humanKey(k))+'</span><span class="v">'+esc2(fv)+'</span></div>';});
       }
       // Process created/updated stamps (wiring item 1) - registry truth.
       if(d.createdAt)h+='<div class="kv"><span class="k">Created</span><span class="v">'+esc2(fmtTs(d.createdAt)||d.createdAt)+'</span></div>';
