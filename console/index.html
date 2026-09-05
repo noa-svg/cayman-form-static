@@ -8979,14 +8979,26 @@ document.addEventListener('keydown',function(e){
   //     production (serverBuild f24c20bd) before this flip - the prior claim
   //     here ("no console-auth door yet") was already stale by the time it
   //     was read.
-  //   STILL FULLY UNPORTED, zero references anywhere under ju-service/src
-  //   (2026-09-04 grep): opLetterTemplateGeometry, opGenerateMonthlyWireLetter,
-  //   opPeekParked.
+  //   PORTED, flipped to JU_API 2026-09-05: opPeekParked (read-only, same
+  //     console-auth/diag two-door pattern as the peek ops above).
+  //   PORTED but deliberately STILL GAS_ONLY_: opLetterTemplateGeometry and
+  //     opGenerateMonthlyWireLetter. ju-service's opLetterTemplateGeometry
+  //     (routes/letterTemplateGeometry.ts) is disclosed as NOT a faithful
+  //     port - there is no Docs-template artifact in the HTML/PDF pipeline,
+  //     so its "measure" answer is fake-empty widths for a different engine
+  //     entirely and its "apply" always refuses. This button exists to
+  //     adjust the REAL GAS template that opGenerateMonthlyWireLetter (still
+  //     GAS_ONLY_ - see below) actually renders from, so flipping either one
+  //     silently would break a working operator tool, not repoint it.
+  //     opGenerateMonthlyWireLetter itself is ported and live in ju-service
+  //     (domain/generateWireLetter.ts, gated behind the HY-close review-and-
+  //     sign gate before any Drive write/settlement/draft) but the repoint
+  //     is a money-flow decision, not a mechanical one - hold for Noa.
   // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
-  // which apiFetch turns into a thrown server_error, so repointing any of the
-  // still-unported ones would break a live operator panel that touches real
-  // money rows on the first click. They therefore still pass GAS_ONLY_
-  // explicitly.
+  // which apiFetch turns into a thrown server_error, so repointing an unported
+  // op would break a live operator panel on the first click. Verify a route
+  // actually exists in routes/consoledispatch.ts before flipping GAS_ONLY_ to
+  // JU_API on anything still in this file.
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -9120,7 +9132,7 @@ document.addEventListener('keydown',function(e){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){parkedEl.innerHTML='';return;}
       var rid=++parkedSeq;
-      apiFetch('?api=opPeekParked&monthTab='+encodeURIComponent(month), false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opPeekParked&monthTab='+encodeURIComponent(month), false, JU_API).then(function(r){
         if(rid!==parkedSeq)return;
         parkedEl.innerHTML=(r&&r.ok)?wlParkedHtml(r.rows):'';
       }).catch(function(){ if(rid===parkedSeq)parkedEl.innerHTML=''; });
