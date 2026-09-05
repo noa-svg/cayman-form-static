@@ -8981,19 +8981,24 @@ document.addEventListener('keydown',function(e){
   //     was read.
   //   PORTED, flipped to JU_API 2026-09-05: opPeekParked (read-only, same
   //     console-auth/diag two-door pattern as the peek ops above).
-  //   PORTED but deliberately STILL GAS_ONLY_: opLetterTemplateGeometry and
-  //     opGenerateMonthlyWireLetter. ju-service's opLetterTemplateGeometry
-  //     (routes/letterTemplateGeometry.ts) is disclosed as NOT a faithful
-  //     port - there is no Docs-template artifact in the HTML/PDF pipeline,
-  //     so its "measure" answer is fake-empty widths for a different engine
-  //     entirely and its "apply" always refuses. This button exists to
-  //     adjust the REAL GAS template that opGenerateMonthlyWireLetter (still
-  //     GAS_ONLY_ - see below) actually renders from, so flipping either one
-  //     silently would break a working operator tool, not repoint it.
-  //     opGenerateMonthlyWireLetter itself is ported and live in ju-service
-  //     (domain/generateWireLetter.ts, gated behind the HY-close review-and-
-  //     sign gate before any Drive write/settlement/draft) but the repoint
-  //     is a money-flow decision, not a mechanical one - hold for Noa.
+  //   PORTED, flipped to JU_API 2026-09-05 (Noa's explicit go, the one money-
+  //     flow decision in this list): opGenerateMonthlyWireLetter - Review,
+  //     Generate + settle, and Verification copy all three (they share one
+  //     route, dryRun/createDraft/verifyOnly are just params). Backend is
+  //     domain/generateWireLetter.ts: HY-close review-and-sign gate before
+  //     any Drive I/O, a totals gate on the exact bytes saved (the Chaya
+  //     Tzarfati fix), settlement only after a real save, draft (never send)
+  //     only when requested. Reviewed line-by-line before asking for the go.
+  //   PORTED but deliberately STILL GAS_ONLY_: opLetterTemplateGeometry.
+  //     ju-service's version (routes/letterTemplateGeometry.ts) is disclosed
+  //     as NOT a faithful port - there is no Docs-template artifact in the
+  //     HTML/PDF pipeline, so its "measure" answer is fake-empty widths for a
+  //     different engine entirely and its "apply" always refuses. This
+  //     button adjusts the REAL GAS template opGenerateMonthlyWireLetter used
+  //     to render from - now that render+settle runs on ju-service instead,
+  //     this button edits a template the live generator no longer reads, so
+  //     it stays on GAS_ONLY_ as a now-inert legacy control rather than being
+  //     silently repointed to an engine that would misreport it as working.
   // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
   // which apiFetch turns into a thrown server_error, so repointing an unported
   // op would break a live operator panel on the first click. Verify a route
@@ -9491,7 +9496,7 @@ document.addEventListener('keydown',function(e){
       reviewBtn.disabled=true;wlCloseGate('');
       findEl.innerHTML='<div class="t-muted">Reviewing...</div>';
       setResult('','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, JU_API).then(function(r){
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
         if(r.go===false){
@@ -9545,7 +9550,7 @@ document.addEventListener('keydown',function(e){
       genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
       setResult('<div class="t-muted">Generating and settling...</div>','');
       var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         // Finding 4: this used to re-enable Generate and leave the gate open, so
@@ -9578,7 +9583,7 @@ document.addEventListener('keydown',function(e){
       if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
       verifyBtn.disabled=true;
       setResult('<div class="t-muted">Generating verification copy (nothing will be settled)...</div>','');
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true', false, GAS_ONLY_).then(function(r){
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&verifyOnly=true', false, JU_API).then(function(r){
         verifyBtn.disabled=false;
         if(!r||!r.ok){setResult('<div class="t-danger">'+esc2((r&&r.error)||'Verification copy failed.')+'</div>','');return;}
         // The server returns ok:true with NO document when the HY-close gate says
