@@ -5859,10 +5859,24 @@ document.addEventListener('keydown',function(e){
       ?'No processes match "'+esc2(query)+'". <a href="#" id="emptyClearSearch">Clear search</a>'
       :'Nothing in flight.';
     // Column header (2026-08-06 table redesign) leads whenever any rows render.
-    var anyRows=inflight.length||(showDone&&completed.length)||(showCanceled&&canceled.length);
+    var completedVisible=showDone&&completed.length;
+    var canceledVisible=showCanceled&&canceled.length;
+    var anyRows=inflight.length||completedVisible||canceledVisible;
     var bhead='<div class="bhead"><span>Investor</span><span class="h-flow">Type</span><span class="h-amt">Amount</span><span>Status</span><span class="h-age">Age</span><span></span></div>';
     var html=anyRows?bhead:'';
-    html+=inflight.length?foldedRowsHtml(inflight):'<div class="empty">'+emptyMsg+'</div>';
+    // A search query can match ONLY a completed/canceled row (both filtered
+    // from the same query-matched `rows` as inflight - the search itself was
+    // never scoped to inflight alone). Before this fix the "No processes
+    // match" banner rendered whenever inflight itself was empty, with no
+    // regard for whether the completed/canceled sections below it - built
+    // from that identical filtered set - were about to show the very row the
+    // banner just said didn't exist (2026-09-05, Noa: SEARCH BY NAME reads as
+    // broken because a matching completed row sits right under a false "no
+    // match" message). The no-query "Nothing in flight." case is unaffected:
+    // it is a true statement about in-flight processes regardless of what is
+    // completed, so it still shows whenever inflight is empty.
+    var matchesElsewhere=!!query&&(completedVisible||canceledVisible);
+    html+=inflight.length?foldedRowsHtml(inflight):(matchesElsewhere?'':'<div class="empty">'+emptyMsg+'</div>');
     if(showDone&&completed.length)html+=completedByMonthHtml(completed);
     // The wrapper below is deliberate. rowHtml's second parameter is `folded`,
     // and Array.prototype.map calls back with (element, index, array), so
@@ -6291,6 +6305,20 @@ document.addEventListener('keydown',function(e){
       // the operator the board itself.
       (function(){
         var rids=rows.map(function(r){return r.pid;}).filter(Boolean);
+        // Stale-closure guard (2026-09-05, Noa: a row silently vanishes from
+        // the board with no reload after a burst of UI actions - drawer open/
+        // close, a toggle, a search then clear). This IIFE closes over `rows`
+        // from ITS OWN load() call, but its apiFetch below can resolve after a
+        // LATER load() (a toggle, the 45s auto-refresh, a lane switch) has
+        // already replaced allRows via a newer render() - that check happens
+        // one level up (`if(rid!==LOAD_SEQ)return;`) but this nested async
+        // chain never re-read `rid` before its own render(rows) call, so the
+        // OLDER, now-stale `rows` (missing whatever the newer load found, or
+        // still carrying whatever it dropped) silently overwrote the current
+        // board. Re-checking `rid===LOAD_SEQ` here, at every render(rows) call
+        // in this IIFE, makes a superseded load's review overlay a no-op
+        // instead of a regression.
+        if(rid!==LOAD_SEQ)return;
         if(!rids.length){render(rows);return;}
         // CTO review finding 3 (2026-09-02): hardcoded to JU_API, not
         // consoleReadBase_() - GAS has no opGetRowReview handler at all, so
@@ -6300,6 +6328,7 @@ document.addEventListener('keydown',function(e){
         // engine has a route, and GAS never will for this one).
         apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,JU_API)
           .then(function(rv){
+            if(rid!==LOAD_SEQ)return; // superseded while the review fetch was in flight
             var map=(rv&&rv.ok&&rv.reviews)?rv.reviews:{};
             rows.forEach(function(r){
               var hit=map[r.pid];
@@ -6307,7 +6336,7 @@ document.addEventListener('keydown',function(e){
             });
           })
           .catch(function(){/* board still renders */})
-          .then(function(){render(rows);});
+          .then(function(){if(rid===LOAD_SEQ)render(rows);});
       })();
       if(latestGeneratedAt){
         var t=latestGeneratedAt.replace('T',' ').slice(0,16);
@@ -6724,6 +6753,7 @@ document.addEventListener('keydown',function(e){
     // card + status message reset on open; the form fields are wiped on submit only.
     var res=document.getElementById('res');if(res)res.classList.remove('on');
     showMsg('',false);
+    resetCreateFieldErrors_();
     syncPanelFields();
     // Rehydrate any persisted draft for this lane+process (survives reload/crash).
     if(window.__restoreCreateDraft)window.__restoreCreateDraft();
@@ -8392,6 +8422,22 @@ document.addEventListener('keydown',function(e){
     var v=email.value.trim(),ok=/\S+@\S+\.\S+/.test(v);
     fieldErr(err,[email],ok?"":"Enter a valid investor email.");
     return ok;
+  }
+  // Clears the name/email field-level errors left visible by a PRIOR failed
+  // submit attempt (2026-09-05, Noa: opening + NEW PROCESS on the Israel lane
+  // immediately shows "Enter at least one name, English or Hebrew" before the
+  // operator has typed or clicked anything). nameErr/emailErr's `hidden`
+  // attribute is validation STATE, set by validateNameField/validateEmailField
+  // on blur or submit - open() reset every field VALUE and every section's
+  // visibility but never this, so a failed submit earlier in the same page
+  // session left the error banner showing on the next fresh open, on any lane.
+  // Called on every open(), before the field values are restored, so a real
+  // problem (still-empty fields) can only reappear the honest way: a new blur
+  // or a new submit attempt.
+  function resetCreateFieldErrors_(){
+    var name=document.getElementById("name"),nameHebrew=document.getElementById("nameHebrew"),email=document.getElementById("email");
+    fieldErr(document.getElementById("nameErr"),[name,nameHebrew],"");
+    fieldErr(document.getElementById("emailErr"),[email],"");
   }
   (function(){
     var nameEl=document.getElementById("name"),nameHeEl=document.getElementById("nameHebrew"),emailEl=document.getElementById("email");
