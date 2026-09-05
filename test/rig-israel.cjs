@@ -227,6 +227,14 @@ function setField(document, name, v) {
   if (!el) throw new Error('setField: no field named ' + name);
   if (el.tagName === 'SELECT') { el.value = v; fire(el, 'change'); fire(el, 'input'); }
   else setVal(el, v);
+  // 2026-09-05 (Noa, "force the dropdown"): israel.html now requires an actual
+  // Places selection (sInput.dataset.picked) before validatePage accepts an
+  // israelAddressSearch field, not just non-empty hidden components - the stubbed
+  // Autocomplete above never fires place_changed, so nothing sets it. Every
+  // caller of setField on this field is passing an already-resolved LP.address
+  // fixture (search text + real components together), i.e. exactly what a real
+  // pick produces, so mark it picked here rather than at every call site.
+  if (/israelAddressSearch$/.test(name) && String(v || '').trim()) el.dataset.picked = '1';
   return el;
 }
 function checkRadio(document, name, value) {

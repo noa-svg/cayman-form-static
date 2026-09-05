@@ -1460,7 +1460,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-09-05-cp-fatca-english-address-gate';
+      window.__BUILD_TAG = 'israel-2026-09-05-force-address-dropdown-pick';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1813,6 +1813,7 @@
       "נא לבחור":"Select",
       "כשירות":"Qualification",
       "יש לבחור אפשרות אחת.":"Select one option.",
+      "יש לבחור כתובת מתוך הרשימה.":"Select an address from the list.",
       "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 9,411,809 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 9,411,809.",
       "גובה הכנסתי בכל אחת מהשנתיים האחרונות, עולה על 1,411,772 שקלים חדשים, או שגובה הכנסת התא המשפחתי שאליו אני משתייך/ת עולה על 2,117,657 שקלים חדשים.":"My income in each of the last two years exceeds ILS 1,411,772, or my household income exceeds ILS 2,117,657.",
       "השווי הכולל של הנכסים הנזילים שבבעלותי עולה על 5,882,380 שקלים חדשים וגובה הכנסתי בכל אחת מהשנתיים האחרונות עולה על 705,885 שקלים חדשים, או שגובה הכנסה כאמור של התא המשפחתי שאליו אני משתייך/ת עולה על 1,058,827 שקלים חדשים.":"The total value of my liquid assets exceeds ILS 5,882,380 and my income in each of the last two years exceeds ILS 705,885, or my household income exceeds ILS 1,058,827.",
@@ -3260,29 +3261,13 @@
       placesSetHe_(set.zip, placesComp_(comps, 'postal_code'));
       if (set.apt !== undefined) placesSetHe_(set.apt, placesComp_(comps, 'subpremise'));
     }
-    // Manual entry on the single search field (the LP typed instead of picking):
-    // instant heuristic parse ("רחוב מספר, עיר") so the components are never empty
-    // behind a filled search box, then a Hebrew geocode to correct them + the
-    // same-place English fill the W-8 needs. Never blocks; validation re-checks.
-    function placesManualFallback_(set, input) {
-      var text = String(input.value || '').trim();
-      if (!text) return;
-      var m = text.match(/^(.+?)\s+(\d+[א-ת]?(?:\/\d+)?)\s*,?\s*(.*)$/);
-      if (m) {
-        placesSetHe_(set.street, m[1]);
-        placesSetHe_(set.house, m[2]);
-        if (m[3]) placesSetHe_(set.city, m[3]);
-      }
-      try {
-        new google.maps.Geocoder().geocode({ address: text + ', ישראל', language: 'iw' }, function (results, status) {
-          if (status === 'OK' && results && results[0]) {
-            placesFanOutHe_(set, results[0].address_components, text);
-            if (results[0].place_id) placesFillEnglish_(results[0].place_id, set);
-          }
-          deriveEnglishFromHebrew_(set);
-        });
-      } catch (e) { deriveEnglishFromHebrew_(set); }
-    }
+    // placesManualFallback_ (typed-not-picked async geocode rescue) removed 2026-09-05
+    // (Noa, "force the dropdown"): validatePage's Next-gate is synchronous and could
+    // never actually wait on this function's un-awaited Geocoder callback, and the
+    // fallback failed outright - silently, a bare red border, no path forward - for
+    // any address the geocoder could not resolve. Selecting a real suggestion is now
+    // the only way to satisfy an israelAddressSearch field (see sInput.dataset.picked,
+    // set by bindPlacesInputs' place_changed listener, checked in validatePage).
     // English-address phantom-field backstop (2026-09-04, ינאי אורון incident): the
     // englishDetails.englishAddress.street/city mirrors are required server-side
     // (W-8 line 3) for every holder, unconditionally, but normally ride as bare
@@ -3321,18 +3306,22 @@
           var sInput = form.querySelector('[name="' + cssEsc(set.search) + '"]');
           if (sInput && !sInput.hasAttribute('data-places-bound')) {
             var vs = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-            // Resume: an older session carries components but no search text; compose it.
-            if (!sInput.value) {
+            // Resume (or server-hydrated prefill that ran before this binder did): a
+            // pre-existing pair of components came from a genuine earlier pick, so
+            // trust it and mark picked, whether or not the search box itself already
+            // carries text - so validatePage never bounces a returning LP on their
+            // own already-good address.
+            (function () {
               var st0 = vs(set.street), ho0 = vs(set.house), ci0 = vs(set.city);
-              if (st0 && ci0) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
-            }
+              if (st0 && ci0) { if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0; sInput.dataset.picked = '1'; }
+            })();
             var acS = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id', 'formatted_address'] });
             acS.addListener('place_changed', function () {
               var place = acS.getPlace();
               if (!place || !place.address_components) return;
               placesFanOutHe_(set, place.address_components, place.formatted_address || sInput.value);
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
-              if (_st && _ci) sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
+              if (_st && _ci) { sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci; sInput.dataset.picked = '1'; }
               if (place.place_id) placesFillEnglish_(place.place_id, set);
               var _sh = sInput.closest('.lvp-field');
               if (_sh) {
@@ -3345,15 +3334,22 @@
             });
             sInput.setAttribute('data-places-bound', '1');
             sInput.__lvpAc = acS;   // exposed for the deploy-gate walk
+            // 2026-09-05 (Noa, "force the dropdown"): a typed-not-picked address used to
+            // fall back to an async, un-awaited geocode (placesManualFallback_) that
+            // validatePage's Next-gate could not wait on, and that silently failed
+            // outright for anything the geocoder could not resolve (a fabricated test
+            // street, an unlisted address) with only a bare red border to show for it -
+            // no async retry here anymore. Selecting a real suggestion is now the ONLY
+            // way to satisfy this field; see validatePage's picked check below.
             sInput.addEventListener('blur', function () {
-              if (!vs(set.street) || !vs(set.city)) placesManualFallback_(set, sInput);
-              else deriveEnglishFromHebrew_(set);
+              if (vs(set.street) && vs(set.city)) deriveEnglishFromHebrew_(set);
             });
             sInput.addEventListener('input', function () {
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
               if (!_st && !_ci) return;
               var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
               if (sInput.value.trim() !== composed) {
+                delete sInput.dataset.picked;
                 [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
                   var el = form.querySelector('[name="' + cssEsc(n) + '"]');
                   if (el) el.value = '';
@@ -3409,17 +3405,18 @@
           enCity: base + 'englishDetails.englishAddress.city'
         };
         var vs = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-        if (!sInput.value) {
+        // Resume / server-hydrated prefill, same trust rule as the PLACES_SETS binder above.
+        (function () {
           var st0 = vs(dset.street), ho0 = vs(dset.house), ci0 = vs(dset.city);
-          if (st0 && ci0) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
-        }
+          if (st0 && ci0) { if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0; sInput.dataset.picked = '1'; }
+        })();
         var acG = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id', 'formatted_address'] });
         acG.addListener('place_changed', function () {
           var place = acG.getPlace();
           if (!place || !place.address_components) return;
           placesFanOutHe_(dset, place.address_components, place.formatted_address || sInput.value);
           var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
-          if (_st && _ci) sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci;
+          if (_st && _ci) { sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci; sInput.dataset.picked = '1'; }
           if (place.place_id) placesFillEnglish_(place.place_id, dset);
           var _gsh = sInput.closest('.lvp-field');
           if (_gsh) {
@@ -3432,15 +3429,17 @@
         });
         sInput.setAttribute('data-places-bound', '1');
         sInput.__lvpAc = acG;
+        // 2026-09-05 (Noa, "force the dropdown"): see the matching comment on the
+        // PLACES_SETS-bound blur handler above - same reasoning, generic-row twin.
         sInput.addEventListener('blur', function () {
-          if (!vs(dset.street) || !vs(dset.city)) placesManualFallback_(dset, sInput);
-          else deriveEnglishFromHebrew_(dset);
+          if (vs(dset.street) && vs(dset.city)) deriveEnglishFromHebrew_(dset);
         });
         sInput.addEventListener('input', function () {
           var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
           if (!_st && !_ci) return;
           var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
           if (sInput.value.trim() !== composed) {
+            delete sInput.dataset.picked;
             [dset.street, dset.city, dset.house, dset.zip, dset.enStreet, dset.enCity, dset.apt].filter(Boolean).forEach(function (n) {
               var el = form.querySelector('[name="' + cssEsc(n) + '"]');
               if (el) el.value = '';
@@ -4046,22 +4045,34 @@
           if (!firstError) firstError = holder;
         }
       });
-      // Page-level: the single address search field is only "answered" once its
-      // hidden component fields are filled (a Places pick fills them synchronously;
-      // manual typing fills via the parse+geocode fallback). If the search box is
-      // filled but the components are not, flag the search field itself with the
-      // standard required treatment (no new copy) so the LP re-picks from the list.
+      // Page-level: the single address search field is only "answered" once the LP has
+      // actually picked a real suggestion (sInput.dataset.picked, set by bindPlacesInputs'
+      // place_changed listener or trusted forward from a resumed session - never by typing
+      // alone). 2026-09-05 (Noa, "force the dropdown"): this used to accept a filled-in
+      // hidden-component pair however it got there, including an un-awaited async geocode
+      // fallback this synchronous gate could never actually wait on, and that fallback
+      // failed outright - silently, just a bare red border - for anything the geocoder
+      // could not resolve. Named copy now tells the LP exactly what to do.
+      // data-places-bound means the real Google Places widget is live for this input,
+      // so dataset.picked is a meaningful signal and the hard gate applies. Without it
+      // (Places script failed to load, or - test harnesses - no window.google at all,
+      // by design per this repo's CLAUDE.md jsdom rig) there is no dropdown to pick
+      // from in the first place, so fall back to the old "components got filled
+      // somehow" check rather than stranding the LP on a field with no way to satisfy it.
+      var addrGateOk_ = function (srch) {
+        var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
+        if (srch.hasAttribute('data-places-bound')) return srch.dataset.picked === '1';
+        var base = srch.name.replace(/israelAddressSearch$/, '');
+        return !!(gv(base + 'israelAddress.street') && gv(base + 'israelAddress.city'));
+      };
       PLACES_SETS.forEach(function (pset) {
         if (!pset.search) return;
         var srch = pageEl.querySelector('[name="' + cssEsc(pset.search) + '"]');
         if (!srch || isHidden(srch.closest('.lvp-field') || srch)) return;
-        var gv = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-        var componentsOk = gv(pset.street) && gv(pset.city);
-        if (String(srch.value || '').trim() && !componentsOk) {
+        if (String(srch.value || '').trim() && !addrGateOk_(srch)) {
           ok = false;
           var sh = srch.closest('.lvp-field');
-          if (sh) { sh.classList.add('lvp-field--error'); if (!firstError) firstError = sh; }
-          try { placesManualFallback_(pset, srch); } catch (e) {}
+          if (sh) { sh.classList.add('lvp-field--error'); setFieldError(sh, displayFor('יש לבחור כתובת מתוך הרשימה.', curLang)); if (!firstError) firstError = sh; }
         }
       });
       // Generic check for address search fields not covered by PLACES_SETS (e.g. CP rows).
@@ -4071,14 +4082,11 @@
         var sh = srch.closest('.lvp-field');
         if (!sh || isHidden(sh)) return;
         if (!String(srch.value || '').trim()) return;
-        var _base = srch.name.slice(0, -'israelAddressSearch'.length);
-        var gv2 = function (n) { var e = form.querySelector('[name="' + cssEsc(n) + '"]'); return e ? String(e.value || '').trim() : ''; };
-        if (!gv2(_base + 'israelAddress.street') || !gv2(_base + 'israelAddress.city')) {
+        if (!addrGateOk_(srch)) {
           ok = false;
           sh.classList.add('lvp-field--error');
+          setFieldError(sh, displayFor('יש לבחור כתובת מתוך הרשימה.', curLang));
           if (!firstError) firstError = sh;
-          var _fb = { street: _base + 'israelAddress.street', city: _base + 'israelAddress.city', house: _base + 'israelAddress.houseNumber', zip: _base + 'israelAddress.postalCode', enStreet: _base + 'englishDetails.englishAddress.street', enCity: _base + 'englishDetails.englishAddress.city' };
-          try { placesManualFallback_(_fb, srch); } catch (e) {}
         }
       });
       // Page-level: the controlling persons' ownership percentages must total 100%
