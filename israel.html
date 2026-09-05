@@ -757,17 +757,6 @@
             <input type="hidden" name="firstAuthorized.israelAddress.houseNumber">
             <input type="hidden" name="firstAuthorized.israelAddress.postalCode">
             <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="firstAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-            <!-- NOT wrapped in the englishAddress fallback the sibling holders carry
-                 (see the primary investor's address block above): checked against
-                 the real server source (apps/ju-service/src/domain/israeli/
-                 validate.ts) - firstAuthorized gets an unconditional israelAddress
-                 check but NO englishAddress check anywhere. An authorized signatory
-                 files no W-8 of their own, so there is nothing that needs an English
-                 address here; wrapping it would only add friction with no server
-                 purpose (and did - it broke the dead-required-fields lock, which
-                 exists to catch exactly this class of unnecessary question). -->
-            <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.city">
-            <input type="hidden" name="firstAuthorized.englishDetails.englishAddress.street">
           </fieldset>
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="firstAuthorized.email" autocomplete="email"></label>
 
@@ -807,11 +796,6 @@
               <input type="hidden" name="secondAuthorized.israelAddress.houseNumber">
               <input type="hidden" name="secondAuthorized.israelAddress.postalCode">
               <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="secondAuthorized.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-              <!-- NOT wrapped in the englishAddress fallback - same reason as
-                   firstAuthorized's identical block above: no server check exists
-                   for an authorized signatory's English address. -->
-              <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.city">
-              <input type="hidden" name="secondAuthorized.englishDetails.englishAddress.street">
             </fieldset>
             <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="secondAuthorized.email"></label>
             <fieldset class="lvp-fieldset">
@@ -3126,22 +3110,23 @@
         apt: 'corporationDetails.israelAddress.apartmentNumber',
         enStreet: 'corporationDetails.englishDetails.englishAddress.street',
         enCity: 'corporationDetails.englishDetails.englishAddress.city' },
+      // No enStreet/enCity here (item 22, 2026-09-05): firstAuthorized/
+      // secondAuthorized never had a real englishAddress consumer, so the two
+      // hidden mirror fields were removed as dead. These two entries never
+      // filled a real English mirror anyway (nothing consumed it), so this is
+      // a documentation fix, not a behavior change.
       { search: 'firstAuthorized.israelAddressSearch',
         street: 'firstAuthorized.israelAddress.street',
         city: 'firstAuthorized.israelAddress.city',
         house: 'firstAuthorized.israelAddress.houseNumber',
         zip: 'firstAuthorized.israelAddress.postalCode',
-        apt: 'firstAuthorized.israelAddress.apartmentNumber',
-        enStreet: 'firstAuthorized.englishDetails.englishAddress.street',
-        enCity: 'firstAuthorized.englishDetails.englishAddress.city' },
+        apt: 'firstAuthorized.israelAddress.apartmentNumber' },
       { search: 'secondAuthorized.israelAddressSearch',
         street: 'secondAuthorized.israelAddress.street',
         city: 'secondAuthorized.israelAddress.city',
         house: 'secondAuthorized.israelAddress.houseNumber',
         zip: 'secondAuthorized.israelAddress.postalCode',
-        apt: 'secondAuthorized.israelAddress.apartmentNumber',
-        enStreet: 'secondAuthorized.englishDetails.englishAddress.street',
-        enCity: 'secondAuthorized.englishDetails.englishAddress.city' }
+        apt: 'secondAuthorized.israelAddress.apartmentNumber' }
     ];
     function placesComp_(components, type) {
       for (var i = 0; i < (components || []).length; i++) {
