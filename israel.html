@@ -4002,6 +4002,15 @@
       // שם התאגיד field) passed every client check, sailed through all 12 pages,
       // and only bounced at the server with a generic "we could not complete
       // your subscription" message naming no field. corporationName added.
+      //
+      // ITEM 25 (field-content-validation audit, 2026-09-05): this used to carry
+      // its own inline copy of the HE/EN letters regex + the 2-120 length bound,
+      // a THIRD copy alongside validation-rules.js's HE_RE/EN_RE (already wired
+      // to the 'hebrew-name'/'english-name' rule cases via nameOk) and the
+      // server's own israeliNameOk_. Delegates to LVPRules now, same
+      // graceful-degradation contract as validateField above (module failed to
+      // load = skip the client check, server stays the gate).
+      var nameR = (typeof LVPRules !== 'undefined' && LVPRules) ? LVPRules : null;
       Array.prototype.forEach.call(pageEl.querySelectorAll('input[data-script]'), function (i) {
         var holder = i.closest('.lvp-field, .lvp-fieldset');
         if (!holder || isHidden(holder)) return;
@@ -4012,13 +4021,8 @@
         var v = String(i.value || '').trim();
         if (!v) return;   // emptiness is the required pass's job
         var script = i.getAttribute('data-script');
-        // Period allowed both scripts (2026-08-09, Alex Glotzky: "א.י. גלוטק
-        // בע"מ" is a normal Hebrew company-name abbreviation and was rejected).
-        // Mirrors the server's ISRAELI_EN_RE_, which already allows '.' "for
-        // Ltd. in legal names" (IsraeliValidation.ts:37) - the Hebrew regex
-        // (server AND this client copy) never got the same allowance.
-        var reOk = (script === 'he') ? /^[א-ת׳״\s'".\-]+$/ : /^[A-Za-z\s'".\-]+$/;
-        if (v.length < 2 || v.length > 120 || !reOk.test(v)) {
+        var nameRule = (script === 'he') ? 'hebrew-name' : 'english-name';
+        if (nameR && !nameR.validateFormat(nameRule, v)) {
           ok = false;
           holder.classList.add('lvp-field--error');
           setFieldError(holder, displayFor(script === 'he' ? 'נא להזין אותיות בעברית בלבד' : 'נא להזין אותיות באנגלית בלבד', curLang));
