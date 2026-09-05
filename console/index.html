@@ -8019,20 +8019,48 @@ document.addEventListener('keydown',function(e){
         +'<div class="dsec t-muted">Loading details...</div>';
     }
     document.getElementById("dbody").innerHTML=skel;
+    // A manual/off-Ju row (data-pid starting 'manual__') has no process
+    // registry entry on EITHER engine - CaymanWireLetterManualRow.ts's own
+    // header calls this out explicitly ("sheet-owned, no Ju submission behind
+    // it"). ?api=opprocess for one of these does not come back with a thin
+    // record, it FAILS outright (confirmed live 2026-09-05, diagStage:
+    // "no matching row in process_registry"), so calling it here was never
+    // going to work - it is not a fetch that occasionally 404s, it is a
+    // fetch this pid can never satisfy by construction. The prior fix
+    // (2026-09-05, the displayName/nameHebrew backfill below) assumed a
+    // successful-but-thin response and only ever ran in the .then() branch,
+    // which a genuinely failing fetch never reaches - so a manual row's
+    // drawer showed the generic "Could not load this process. Retry" loop
+    // forever, Retry included, since retrying the identical doomed fetch
+    // changes nothing. Skip the fetch entirely for this pid shape and render
+    // straight from `known`, the same board-row data the skeleton above
+    // already used - there is no additional detail to fetch.
+    if(/^manual__/.test(pid)){
+      // Render directly rather than routing a synthetic object through
+      // renderDrawer(): that function's action-button logic (Reseal, Nudge,
+      // Mark money received, signer roster, ...) is all built on real Ju
+      // process shape (d.processId, d.stage transitions, d.signers) that a
+      // sheet-only row has none of, and renderDrawer's own first line bails
+      // to "Process not found." on a missing processId regardless. A manual
+      // row is not missing, it just has nothing further to show beyond what
+      // the board row already carries.
+      var mh='<div class="dh"><h2>'+esc2((known&&known.name)||'LP')+'</h2>';
+      if(known&&known.he)mh+='<div class="dh-he" dir="auto">'+esc2(known.he)+'</div>';
+      mh+='<span class="st">'+esc2((known&&(stageMilestone(known.stage)||known.stage))||'')+'</span></div>'
+        +'<div class="dsec"><div class="pe">Manual entry, off the Ju pipeline. Tracked in the transfer-forms tracker sheet only - no Ju process record exists for it, so there is no further detail or action here.</div></div>';
+      document.getElementById("dbody").innerHTML=mh;
+      return;
+    }
     apiFetch('?api=opprocess&processId='+encodeURIComponent(pid)+'&lane='+state.lane,false,currentEngine).then(function(d){
       // Stale-response guard (2026-07-30): opening drawer B while A's fetch is
       // still in flight moves currentPid to B. A's late response must not
       // paint over the drawer the operator has since opened. Same idiom as
       // the board's LOAD_SEQ guard above.
       if(currentPid!==pid)return;
-      // A manual/off-Ju row (data-pid starting 'manual__') has no process
-      // registry entry behind it - CaymanWireLetterManualRow.ts's own header
-      // calls this out explicitly ("sheet-owned, no Ju submission behind
-      // it"). ?api=opprocess for one of these comes back with no
-      // displayName/nameHebrew at all, so the drawer fell back to the
-      // generic "LP" even though the board row one click away already shows
-      // the real name. Backfill from the same `known` row the skeleton
-      // already used, never overwriting a real name the server DID send.
+      // Backfill from the same `known` row the skeleton already used, never
+      // overwriting a real name the server DID send (belt-and-suspenders:
+      // the manual__ case above now short-circuits before this ever runs,
+      // but a real Ju row can still come back thin in other ways).
       if(known&&!d.displayName&&!d.name)d.displayName=known.name;
       if(known&&!d.nameHebrew&&known.he)d.nameHebrew=known.he;
       renderDrawer(d);
