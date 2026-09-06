@@ -5383,6 +5383,45 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
   function isCompletedStage(st){return st==='complete'||st==='sealed';}
   function isCanceledStage(st){return st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
+  // inflightOf_ - THE definition of "what the default board actually shows".
+  // renderRows' empty state and load()'s progressive-paint guard MUST both read
+  // this one function. They did not on 2026-09-06 (#16), and that is the whole
+  // bug: the guard asked `rows.length`, the renderer asked this set, and the
+  // gap between them is every row whose stage is terminal HERE but not on the
+  // server that sent it.
+  //
+  // That gap is real and permanent, not a transient. isTerminalStage above
+  // counts SEVEN stages; ju-service's server-side includeDone filter counts
+  // THREE (domain/consoleShared.ts's CAYMAN_CONSOLE_TERMINAL = {complete,
+  // voided, expired}) and GAS's counts FIVE (adds sealed, void). So a row in
+  // 'abandoned' or 'token_revoked' is NOT terminal to either server, is
+  // returned by ?api=list even with includeDone=0, and is then filtered out
+  // HERE. 'abandoned' being outside the server's terminal map is deliberate and
+  // documented - ju-service's domain/abandonSweep.ts calls it "REVERSIBLE BY
+  // CONSTRUCTION" - so this is not a server bug to go fix, it is a divergence
+  // the client has to be honest about.
+  //
+  // Consequence, and the reason this function exists rather than a second copy
+  // of the filter: an engine can answer with a NON-EMPTY list that renders a
+  // COMPLETELY EMPTY board. Any guard that counts raw rows is blind to exactly
+  // that case.
+  function inflightOf_(rows){
+    // C1 (2026-07-19): a stale-complete row (records write failed) is NOT
+    // quietly terminal - it needs the operator, so it stays on the board.
+    return rows.filter(function(r){return !isTerminalStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);});
+  }
+  // Would the operator, right now, read an empty board? Answers the question
+  // renderRows will answer a moment later, through the SAME two filters
+  // renderRows and applySearch use - the search filter first, then inflightOf_.
+  // Used only by load()'s partial-paint guard. Search-aware because a partial
+  // paint under an active query renders "No processes match" - the same false
+  // negative wearing different copy.
+  function boardWouldReadEmpty_(rows){
+    var bs=document.getElementById("boardSearch");
+    var q=bs?(bs.value||"").trim().toLowerCase():"";
+    var visible=q?rows.filter(function(r){return rowHay(r).indexOf(q)>=0;}):rows;
+    return inflightOf_(visible).length===0;
+  }
   // Attention-class states: the operator (or the seal engine) owes this row a
   // look right now. seal_* are the stuck/quarantined seal laterals (2026-08-06).
   function isAttnStage(st){return st==='needs_attention'||st==='seal_quarantined'||st==='seal_stuck_retrying';}
@@ -5860,8 +5899,10 @@ document.addEventListener('keydown',function(e){
   function renderRows(rows,query){
     // C1 (2026-07-19): a stale-complete row (records write failed) is NOT quietly
     // terminal - it needs the operator, so it stays on the default board instead
-    // of hiding behind "Show completed".
-    var inflight=sortRows(rows.filter(function(r){return !isTerminalStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);}));
+    // of hiding behind "Show completed". The filter itself moved into
+    // inflightOf_ (2026-09-06) so load()'s partial-paint guard reads THIS set
+    // rather than a second, subtly different copy of it.
+    var inflight=sortRows(inflightOf_(rows));
     var completed=sortRows(rows.filter(function(r){return isCompletedStage(r.stage)&&!r.stale;}));
     var canceled=sortRows(rows.filter(function(r){return isCanceledStage(r.stage);}));
     // Distinct empty-state copy for "no search match" vs "genuinely nothing in
@@ -6380,16 +6421,32 @@ document.addEventListener('keydown',function(e){
       // A PARTIAL paint must never render the empty state. renderRows' no-query
       // empty copy is the flat assertion "Nothing in flight." - a true statement
       // once every engine has answered, and a FALSE ALL-CLEAR OVER LIVE MONEY
-      // while one is still in flight. This is not hypothetical on the Cayman
-      // tab: ju-service holds zero non-proof cayman-lane rows today
-      // (diagRegistryEnum, 2026-09-06 - all 7 of its cayman rows are proof
-      // fixtures), so the fast engine's first paint there is legitimately
-      // EMPTY and GAS supplies the entire tab ~8s later. Painting that gap
-      // would tell the operator the money board is clear when it is not - the
-      // exact class of false all-clear apiFetch's {ok:false} guard exists to
-      // stop. Holding the skeleton instead keeps the honest "still loading"
-      // signal. A partial paint with rows is fine: it is incomplete, not wrong.
-      if(perEngine.length<engines.length&&!rows.length)return;
+      // while one is still in flight. Holding the skeleton instead keeps the
+      // honest "still loading" signal. A partial paint that SHOWS something is
+      // fine: it is incomplete, not wrong.
+      //
+      // THE PREDICATE IS THE WHOLE POINT (fixed 2026-09-06, same day it broke
+      // production). This guard shipped in #16 as `!rows.length` and blanked the
+      // ISRAEL tab within minutes of merging. `rows.length` is the count of rows
+      // the ENGINES returned; the empty state is decided by the count of rows
+      // the RENDERER shows, and those are different numbers. inflightOf_'s
+      // header has the vocabulary divergence in full; the short version is that
+      // a row in 'abandoned' or 'token_revoked' passes the server's
+      // includeDone=0 filter and is then dropped here, so an engine can answer
+      // with a non-empty list whose board is completely empty. #16's guard
+      // counted the list, saw rows, and let the blank board through.
+      //
+      // Cayman never caught it: ju-service holds no non-proof cayman rows, so
+      // its partial there is empty by BOTH predicates and the broken guard
+      // still fired. Only the lane with real ju-service rows could expose it,
+      // and that is the lane the tests did not cover (harness O1-O7c all ran
+      // state.lane 'cayman').
+      //
+      // boardWouldReadEmpty_ asks the renderer's own question, through the
+      // renderer's own filters. It cannot drift from renderRows without
+      // inflightOf_ itself changing, which changes both at once - which is the
+      // point, and is what O9c locks.
+      if(perEngine.length<engines.length&&boardWouldReadEmpty_(rows))return;
       // Review state lives on ju-service, but the manual rows that carry the
       // "needs review" phrase are concatenated into ju-cayman's board response
       // (CaymanGateway.ts:1640). Neither engine can read the other, so the

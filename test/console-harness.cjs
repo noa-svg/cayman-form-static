@@ -967,7 +967,14 @@ function extractVarObj(name) {
 //   O4  fail-open is unchanged: a dead engine degrades, never blanks
 //   O5  an early paint's late async overlay cannot clobber a later, fuller one
 {
-  const src = extractFn('fetchEngineBoard_') + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
+  // load()'s partial-paint guard now goes through the renderer's own filters
+  // (inflightOf_ / boardWouldReadEmpty_, 2026-09-06), so the composition has to
+  // carry them. The O-block keeps its STUB render - it is asserting merge,
+  // order, dedupe and fail-open, none of which need real HTML. What a stub
+  // render cannot see is the empty-state rule itself; that is block P's job.
+  const src = extractFn('isTerminalStage') + ';' + extractFn('isCompletedStage') + ';'
+    + extractFn('inflightOf_') + ';' + extractFn('rowHay') + ';' + extractFn('boardWouldReadEmpty_') + ';'
+    + extractFn('fetchEngineBoard_') + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
 
   // One scriptable gateway for both engines. Each apiFetch call parks a
   // deferred keyed by engine so the test decides the arrival ORDER - which is
@@ -1172,6 +1179,299 @@ function extractVarObj(name) {
     /ENGINES_FOR_LANE_ = \{ cayman: \[GW, JU_API\], israel: \[GW, JU_API\] \}/.test(html));
   ok('O6d the stale "one engine for Cayman" comment is gone',
     !/one engine for Cayman/.test(html), 'stale comment still contradicts the code below it');
+}
+
+// ---- P. The false all-clear, against the REAL renderer (2026-09-06) ---------
+// WHY THIS BLOCK EXISTS, and why the O-block above did not catch the outage it
+// was written to prevent.
+//
+// #16 (2539c27) shipped a guard meant to stop a partial paint from rendering
+// "Nothing in flight." over live rows. It merged, and the ISRAEL tab of the
+// live console rendered exactly that within minutes.
+//
+// The guard was `!rows.length`. The empty state is not decided by rows.length.
+// renderRows decides it on the IN-FLIGHT set - rows minus isTerminalStage -
+// and the two engines do NOT filter the same terminal vocabulary that this
+// client does. isTerminalStage counts seven stages; ju-service's server-side
+// includeDone filter counts three (domain/consoleShared.ts's
+// CAYMAN_CONSOLE_TERMINAL) and GAS's counts five. 'abandoned' and
+// 'token_revoked' are terminal HERE and terminal on NEITHER server, and
+// ju-service's abandonSweep.ts documents that omission as deliberate
+// ("REVERSIBLE BY CONSTRUCTION"). So ?api=list&includeDone=0 can return a
+// non-empty list whose board is completely empty, the guard counts the list,
+// sees rows, and paints the blank.
+//
+// The O-block missed it for two compounding reasons, and this block fixes both:
+//   1. Its oracle was a STUB render that recorded pids. A stub render can never
+//      show that non-empty `rows` produce an empty board - the whole defect
+//      lives inside the renderer the stub replaced. P asserts on the HTML
+//      renderRows actually writes into #list.
+//   2. Every O case ran state.lane 'cayman', the ONE lane where the broken
+//      guard still worked (ju-service holds no non-proof cayman rows, so its
+//      partial is empty by both predicates). P runs BOTH tabs.
+//
+// P1/P1b are the regression proper: RED against 2539c27, green with
+// inflightOf_ + boardWouldReadEmpty_.
+{
+  // The real render chain, composed from the shipped file - no reimplementation
+  // of the empty-state rule anywhere in this harness.
+  const renderSrc = extractFn('esc2') + ';' + extractVar('SEALING_STAGES') + ';' + extractVarObj('STAGE_TO_MILESTONE') + ';'
+    + extractVar('RAIL_MILESTONES') + ';' + extractVarObj('STAGE_WORD') + ';' + extractVarObj('FLOW_CHIP_WORD') + ';'
+    + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
+    + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
+    + extractFn('humanKey') + ';' + extractFn('stageWord') + ';' + extractFn('sinceDur') + ';'
+    + extractFn('isAttnStage') + ';' + extractFn('isTerminalStage') + ';'
+    + extractFn('isCompletedStage') + ';' + extractFn('isCanceledStage') + ';'
+    + extractFn('inflightOf_') + ';' + extractFn('rowHay') + ';' + extractFn('boardWouldReadEmpty_') + ';'
+    + extractFn('flowChipHtml') + ';' + extractFn('waitLineHtml') + ';'
+    + extractFn('attnWhyText') + ';' + extractFn('attnBadgeHtml') + ';' + extractFn('railHtml') + ';'
+    + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
+    + extractFn('isManualRow_') + ';' + extractFn('isAttnRow') + ';' + extractFn('sortRows') + ';'
+    + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml') + ';'
+    + extractFn('monthKeyAndLabel_') + ';' + extractFn('completedByMonthHtml') + ';'
+    + extractFn('renderRows') + ';';
+
+  function makeBoardRig(lane, query) {
+    const GWU = 'https://gas.example/exec';
+    const JUU = 'https://ju.example';
+    const parked = { [GWU]: [], [JUU]: [] };
+    const listRows = { [GWU]: [], [JUU]: [] };
+    // #list is the surface the operator reads. Everything else is a sink: the
+    // filter chips and row handlers are not what this block is about, and a
+    // generic stub keeps renderRows' tail from needing a real DOM.
+    const listEl = { innerHTML: '' };
+    const stub = () => ({
+      innerHTML: '', textContent: '', title: '', value: '', hidden: false, disabled: false, style: {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      setAttribute() {}, appendChild() {}, focus() {}, onclick: null, onkeydown: null,
+    });
+    // boardSearch is a REAL stub carrying the query, not null: applySearch and
+    // boardWouldReadEmpty_ both read it, and a null here would quietly skip the
+    // search branch in exactly the test written to cover it.
+    const searchEl = Object.assign(stub(), { value: query || '' });
+    const document = {
+      getElementById: (id) => (id === 'list' ? listEl : (id === 'boardSearch' ? searchEl : stub())),
+      querySelectorAll: () => [],
+      createElement: stub,
+      visibilityState: 'hidden',
+    };
+    function apiFetch(qs, _retried, base) {
+      if (qs.indexOf('opGetRowReview') !== -1) return Promise.resolve({ ok: true, reviews: {} });
+      return new Promise((resolve) => {
+        parked[base].push(() => {
+          if (qs.indexOf('?api=list') === 0) resolve({ processes: listRows[base], generatedAt: '2026-09-06T10:00' });
+          else if (qs.indexOf('?api=opNotes') === 0) resolve({ notes: {} });
+          else resolve({ rows: {} });
+        });
+      });
+    }
+    const flush = () => new Promise((res) => { let n = 0; (function f() { if (++n > 40) return res(); Promise.resolve().then(f); })(); });
+    const arrive = async (base) => { const q = parked[base].splice(0); q.forEach((fn) => fn()); await flush(); };
+    const scope = {
+      document,
+      boardSkeleton: () => '<skel>',
+      state: { lane },
+      // The REAL engine selector, so the lane string this block passes is the
+      // lane string the shipped code resolves - 'israel' must not silently
+      // fall through to a cayman-shaped engine list.
+      enginesForLane_: new Function(extractVar('GW') + ';var JU_API=' + JSON.stringify(JUU) + ';'
+        + 'var ENGINES_FOR_LANE_={cayman:[' + JSON.stringify(GWU) + ',JU_API],israel:[' + JSON.stringify(GWU) + ',JU_API]};'
+        + extractFn('enginesForLane_') + '; return enginesForLane_;')(),
+      apiFetch,
+      JU_API: JUU,
+      sinceDur: () => '1m',
+      loadW8: () => {},
+      setInterval: () => 0,
+      setBoardBadge: () => {},
+      setSideStats: () => {},
+    };
+    const names = Object.keys(scope);
+    // The shipped render() does allRows=rows -> setBoardBadge -> setSideStats ->
+    // applySearch. The badges are stubbed (not what this block asserts); the
+    // REAL applySearch is composed in, so the search branch of the guard is
+    // exercised by the same code path the operator's typing goes through.
+    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true;'
+      + 'var showDone=false,showCanceled=false,showTest=false,allRows=[];'
+      + 'function render(rows){allRows=rows;applySearch();}';
+    const built = (new Function(...names, prelude + renderSrc + extractFn('applySearch') + ';'
+      + extractFn('fetchEngineBoard_') + ';' + extractFn('load')
+      + '; return { load: load, renderRows: renderRows };'))(...names.map((n) => scope[n]));
+    return { load: built.load, renderRows: built.renderRows, arrive, flush, GWU, JUU, listRows, listEl };
+  }
+
+  // The fixture. 'abandoned' is the cheapest true instance of the divergence:
+  // NOT terminal to either server (so ?api=list&includeDone=0 returns it), and
+  // terminal to isTerminalStage (so renderRows shows nothing). 'token_revoked'
+  // behaves identically. These are the rows that blanked the board.
+  const serverKeepsClientHides = [
+    { processId: 'ju-ab-1', currentStage: 'abandoned', lpDisplayName: 'A', lane: 'israeli' },
+    { processId: 'ju-ab-2', currentStage: 'token_revoked', lpDisplayName: 'B', lane: 'israeli' },
+  ];
+  const liveRow = { processId: 'b-L06SCwQLI', currentStage: 'needs_attention', lpDisplayName: 'C', lane: 'israeli' };
+
+  // P1: THE REGRESSION. Israel tab, ju-service (fast) answers with rows that
+  // all render as nothing, GAS still outstanding with the live row. RED on
+  // 2539c27: listEl.innerHTML reads "Nothing in flight."
+  (async () => {
+    const r = makeBoardRig('israel');
+    r.listRows[r.JUU] = serverKeepsClientHides.slice();
+    r.listRows[r.GWU] = [liveRow];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('P1 ISRAEL: a partial paint whose rows all render as nothing must NOT say "Nothing in flight."',
+      r.listEl.innerHTML.indexOf('Nothing in flight.') === -1, r.listEl.innerHTML.slice(0, 120));
+    ok('P1b and the skeleton is what stays up while GAS is still answering',
+      r.listEl.innerHTML === '<skel>', r.listEl.innerHTML.slice(0, 120));
+    await r.arrive(r.GWU);
+    ok('P1c once GAS lands, the live row is on the board',
+      r.listEl.innerHTML.indexOf('b-L06SCwQLI') !== -1 || r.listEl.innerHTML.indexOf('class="row') !== -1,
+      r.listEl.innerHTML.slice(0, 200));
+    ok('P1d and the board never claims to be empty', r.listEl.innerHTML.indexOf('Nothing in flight.') === -1);
+  })();
+
+  // P2: the SAME assertion on the Cayman tab. #16's guard passed here by luck
+  // (ju-service holds no non-proof cayman rows); the contract is not "the fast
+  // engine happens to be empty", it is "no empty state while a request is out".
+  (async () => {
+    const r = makeBoardRig('cayman');
+    r.listRows[r.JUU] = [{ processId: 'ju-ab-c', currentStage: 'abandoned', lpDisplayName: 'A', lane: 'cayman' }];
+    r.listRows[r.GWU] = [{ processId: 'gas-live', currentStage: 'needs_attention', lpDisplayName: 'C', lane: 'cayman' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('P2 CAYMAN: same guard, same fixture, still no false all-clear',
+      r.listEl.innerHTML.indexOf('Nothing in flight.') === -1, r.listEl.innerHTML.slice(0, 120));
+    await r.arrive(r.GWU);
+    ok('P2b the Cayman board fills once both engines answered',
+      r.listEl.innerHTML.indexOf('class="row') !== -1, r.listEl.innerHTML.slice(0, 200));
+  })();
+
+  // P3: the guard must not become "suppress every partial". A partial that has
+  // something real to show still paints immediately - that IS the speed win
+  // (Israel first paint 8.51s -> 0.65s), and a guard that swallowed it would
+  // pass P1 while quietly reverting #16.
+  (async () => {
+    const r = makeBoardRig('israel');
+    r.listRows[r.JUU] = [{ processId: 'ju-live', currentStage: 'signing', lpDisplayName: 'D', lane: 'israeli' }];
+    r.listRows[r.GWU] = [liveRow];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('P3 a partial paint that HAS in-flight rows still paints without waiting for GAS',
+      r.listEl.innerHTML.indexOf('class="row') !== -1 && r.listEl.innerHTML !== '<skel>',
+      r.listEl.innerHTML.slice(0, 160));
+  })();
+
+  // P4: real emptiness must still reach the operator. The guard suppresses
+  // PARTIAL emptiness only - a board that is genuinely clear has to say so once
+  // every engine has answered, or the console just hangs on a skeleton forever.
+  (async () => {
+    const r = makeBoardRig('israel');
+    r.listRows[r.JUU] = serverKeepsClientHides.slice();
+    r.listRows[r.GWU] = [];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('P4 still suppressed while one engine is outstanding', r.listEl.innerHTML === '<skel>', r.listEl.innerHTML.slice(0, 120));
+    await r.arrive(r.GWU);
+    ok('P4b a genuinely empty board DOES say "Nothing in flight." once both engines answered',
+      r.listEl.innerHTML.indexOf('Nothing in flight.') !== -1, r.listEl.innerHTML.slice(0, 160));
+  })();
+
+  // P4c: the same false all-clear wearing the OTHER empty copy. With a search
+  // active, renderRows says 'No processes match "X"' instead of "Nothing in
+  // flight." - still a flat claim about a board one engine has not answered
+  // for, and still wrong. The operator searching for the LP they are mid-call
+  // with is exactly when this lands. The guard applies the live query for this
+  // reason; without that branch the partial paints and the console tells her
+  // her LP does not exist.
+  (async () => {
+    const r = makeBoardRig('israel', 'dafna');
+    // ju-service answers with a real in-flight row that does NOT match the
+    // query; the row she searched for is on the slow engine.
+    r.listRows[r.JUU] = [{ processId: 'ju-other', currentStage: 'signing', lpDisplayName: 'Unrelated', lane: 'israeli' }];
+    r.listRows[r.GWU] = [{ processId: 'gas-dafna', currentStage: 'needs_attention', lpDisplayName: 'Dafna Levi', lane: 'israeli' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('P4c a partial paint under an active search must not claim "No processes match"',
+      r.listEl.innerHTML.indexOf('No processes match') === -1, r.listEl.innerHTML.slice(0, 140));
+    await r.arrive(r.GWU);
+    ok('P4d once GAS lands, the searched-for row is there and no false no-match stands',
+      r.listEl.innerHTML.indexOf('Dafna Levi') !== -1 && r.listEl.innerHTML.indexOf('No processes match') === -1,
+      r.listEl.innerHTML.slice(0, 200));
+  })();
+
+  // P4e: and a search that genuinely matches nothing still says so, once both
+  // engines are in. The guard defers the message, it does not delete it.
+  (async () => {
+    const r = makeBoardRig('israel', 'zzzznomatch');
+    r.listRows[r.JUU] = [{ processId: 'ju-other', currentStage: 'signing', lpDisplayName: 'Unrelated', lane: 'israeli' }];
+    r.listRows[r.GWU] = [];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    await r.arrive(r.GWU);
+    ok('P4e a real no-match still reaches the operator once every engine answered',
+      r.listEl.innerHTML.indexOf('No processes match') !== -1, r.listEl.innerHTML.slice(0, 160));
+  })();
+
+  // P5: the divergence itself, asserted rather than described. If a future edit
+  // ever aligns isTerminalStage with the servers' terminal maps, this goes red
+  // and whoever did it can retire the whole hazard deliberately instead of
+  // leaving a stale comment behind.
+  {
+    const { isTerminalStage } = new Function(extractFn('isTerminalStage') + '; return { isTerminalStage: isTerminalStage };')();
+    // ju-service domain/consoleShared.ts CAYMAN_CONSOLE_TERMINAL, verbatim.
+    const JU_SERVICE_TERMINAL = ['complete', 'voided', 'expired'];
+    // ju-cayman's literal terminal object, per caymanMint.ts's own note.
+    const GAS_TERMINAL = ['complete', 'sealed', 'voided', 'void', 'expired'];
+    const clientOnly = ['sealed', 'void', 'abandoned', 'token_revoked'].filter((s) => isTerminalStage(s));
+    ok('P5 the client still hides stages neither server filters (the guard cannot count raw rows)',
+      clientOnly.indexOf('abandoned') !== -1 && clientOnly.indexOf('token_revoked') !== -1
+      && JU_SERVICE_TERMINAL.indexOf('abandoned') === -1 && GAS_TERMINAL.indexOf('abandoned') === -1,
+      clientOnly.join(','));
+  }
+
+  // P5b: inflightOf_ now carries the C1 (2026-07-19) carve-out - a COMPLETE row
+  // whose records write failed is stale, still needs the operator, and stays on
+  // the default board. That rule had no test of its own; moving the filter into
+  // a named function is the moment to give it one, because the guard reads the
+  // same function and a silently dropped carve-out would make BOTH the board and
+  // the guard treat a broken completion as finished work.
+  {
+    const { inflightOf_ } = new Function(extractFn('isTerminalStage') + ';' + extractFn('isCompletedStage') + ';'
+      + extractFn('inflightOf_') + '; return { inflightOf_: inflightOf_ };')();
+    const staleComplete = { pid: 's', stage: 'complete', stale: true };
+    const cleanComplete = { pid: 'c', stage: 'complete', stale: false };
+    const signing = { pid: 'g', stage: 'signing' };
+    const got = inflightOf_([staleComplete, cleanComplete, signing]).map((r) => r.pid);
+    ok('P5b a stale-complete row stays in flight (C1), a clean complete one does not',
+      got.join(',') === 's,g', got.join(','));
+    ok('P5c abandoned and token_revoked are out of the in-flight set - the rows that blanked the board',
+      inflightOf_([{ pid: 'a', stage: 'abandoned' }, { pid: 't', stage: 'token_revoked' }]).length === 0);
+  }
+
+  // P6 STRUCTURAL: one table, two readers. The renderer and the guard must both
+  // go through inflightOf_, and the guard must not carry its own row-count
+  // predicate. This is the DETECT for the whole class: it is what makes it
+  // impossible to reintroduce #16's bug by editing only one of the two sites.
+  {
+    const loadSrc = extractFn('load');
+    const renderRowsSrc = extractFn('renderRows');
+    ok('P6 renderRows derives the in-flight set from inflightOf_',
+      /sortRows\(inflightOf_\(rows\)\)/.test(renderRowsSrc), renderRowsSrc.slice(0, 0));
+    ok('P6b renderRows keeps no private copy of the terminal filter',
+      !/rows\.filter\(function\(r\)\{return !isTerminalStage/.test(renderRowsSrc));
+    ok('P6c the partial-paint guard asks the renderer\'s question, not the list\'s',
+      /perEngine\.length<engines\.length&&boardWouldReadEmpty_\(rows\)/.test(loadSrc), loadSrc.slice(0, 0));
+    ok('P6d the raw-row-count predicate that shipped in #16 is gone',
+      !/perEngine\.length<engines\.length&&!rows\.length/.test(loadSrc),
+      '#16\'s `!rows.length` guard is back - it blanked the Israel tab on 2026-09-06');
+    ok('P6e boardWouldReadEmpty_ reads inflightOf_ rather than reimplementing it',
+      /inflightOf_\(visible\)\.length===0/.test(extractFn('boardWouldReadEmpty_')));
+  }
 }
 
 // The O-block's async IIFEs settle on the microtask queue; report after they do.
