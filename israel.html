@@ -301,6 +301,12 @@
        attribute alone left the label text visible with no input under it -
        caught by actually rendering this in a browser, not by reading the DOM. */
     .lvp-field--en-addr-fallback[hidden] { display: none !important; }
+    /* A field holding a machine transliteration the LP has not confirmed yet.
+       Deliberately not the error red (nothing is wrong, it just needs a look)
+       and deliberately not silent either. Cleared the moment the LP touches
+       the field. 2026-09-06. */
+    .lvp-field--translit .lvp-input { border-bottom-style: dashed; border-bottom-width: 2px; }
+    .lvp-field--translit .lvp-en-addr-note, .lvp-en-addr-note { margin: 4px 0 0; }
     /* Same reason as the line above: a bare `hidden` attribute loses to
        `.lvp-field { display: block }`, so the attester's stamp/licence/phone stayed
        on screen when the paper route hid them and the fields were still required.
@@ -1460,7 +1466,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-09-05-force-address-dropdown-pick';
+      window.__BUILD_TAG = 'israel-2026-09-06-english-address-visible-and-transliterated';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1890,7 +1896,8 @@
       "הקובץ גדול מ-10 מ\"ב. יש להעלות קובץ קטן יותר.":"The file is larger than 10 MB. Please upload a smaller file.",
       "תאריך לא תקין. נא להזין dd/mm/yyyy.":"Invalid date. Please enter dd/mm/yyyy.",
       "מספר תעודת הזהות אינו תקין.":"The ID number is not valid.",
-      "סכום ההשקעה חייב להיות גדול מ-50,000.":"The investment amount must be greater than 50,000."
+      "סכום ההשקעה חייב להיות גדול מ-50,000.":"The investment amount must be greater than 50,000.",
+      "לא הצלחנו לתרגם את הכתובת אוטומטית. נא לאשר או להשלים באנגלית.":"We could not translate the address automatically. Please confirm or complete it in English."
     };
 
     var curLang = 'he';
@@ -3076,6 +3083,231 @@
     // matching, deliberately-independent guard) - 2026-08-31, Sharon Dagan's
     // seal failed on exactly this. Gate both English-mirror offers on it.
     function isHebrewText_(s) { return /[א-ת]/.test(String(s || '')); }
+
+    // ---- Hebrew -> Latin transliteration (a SUGGESTION, never an answer) -----
+    // Academy of the Hebrew Language "simplified" romanization: the road-sign
+    // standard, UN-adopted for Israeli geographic names, and the basis of the
+    // BGN/PCGN 2018 agreement.
+    // https://eng.hebrew-academy.org.il/our-work/language-decisions/transliteration/
+    //
+    // Hebrew is an abjad: a written street name does not carry most of its
+    // vowels. This engine reconstructs what it can from the mater lectionis
+    // letters (ו / י / final ה) and supplies 'a' for an unwritten vowel, which
+    // is the commonest road-sign choice but is a GUESS - "דן שומרון" comes out
+    // "Dan Shomron" (right) and "הרצל" comes out "Haratzl" (the sign says
+    // "Herzl"). It is therefore never allowed to be a silent answer: every value
+    // it produces is flagged unconfirmed and blocks Continue until the LP has
+    // actually been in the field (suggestTranslit_ below). Its measured hit rate
+    // against a table of real Israeli street names, failures included, lives in
+    // test/israel-english-address-fallback-harness.cjs.
+    var TRANSLIT_CONS = {
+      'א': '', 'ב': 'v', 'ג': 'g', 'ד': 'd', 'ה': 'h', 'ו': 'v', 'ז': 'z',
+      'ח': 'h', 'ט': 't', 'י': 'y', 'כ': 'kh', 'ל': 'l', 'מ': 'm', 'נ': 'n',
+      'ס': 's', 'ע': '', 'פ': 'f', 'צ': 'tz', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't'
+    };
+    // Without nikud there is no dagesh information, so the spirants are placed
+    // positionally: ב/כ/פ open a word as b/k/p (Ben, Kfar, Petah) and are v/kh/f
+    // elsewhere (Rehavam, Malkhi, Yafo). Wrong inside a word after a vowel
+    // ("שבזי" -> Shavazi, sign says Shabazi); right far more often than not.
+    var TRANSLIT_INITIAL = { 'ב': 'b', 'כ': 'k', 'פ': 'p' };
+    var TRANSLIT_FINAL = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+    // Geresh digraphs for the loan sounds Hebrew writes with an apostrophe.
+    var TRANSLIT_GERESH = { 'ג': 'j', 'ז': 'zh', 'צ': 'ch', 'ד': 'dh', 'ת': 'th' };
+    // The vowel to supply where Hebrew writes none. Unpointed text cannot say
+    // which one it is; 'a' is the commonest on Israeli road signs (Dan, Ramat,
+    // Gan, Ashdod) and is simply wrong on the words that take 'e' or 'i'
+    // (Herzl, Ben, Begin, Rishon). Measured both ways over the harness table
+    // before choosing - see its accuracy block.
+    var EPENTHETIC = 'a';
+    function translitWord_(w) {
+      // 1. Strip nikud/cantillation, fold the five final forms, resolve geresh.
+      var chars = String(w).replace(/[֑-ׇ]/g, '').split('');
+      var letters = [];
+      for (var i = 0; i < chars.length; i++) {
+        var c = chars[i];
+        if (TRANSLIT_FINAL[c]) c = TRANSLIT_FINAL[c];
+        if (!/[א-ת]/.test(c)) continue;
+        var nx = chars[i + 1];
+        if ((nx === "'" || nx === '׳') && TRANSLIT_GERESH[c]) { letters.push({ t: 'c', o: TRANSLIT_GERESH[c] }); i++; continue; }
+        letters.push({ he: c });
+      }
+      // 2. Classify: consonant, or mater lectionis standing in for a vowel.
+      var units = [];
+      for (var j = 0; j < letters.length; j++) {
+        var L = letters[j];
+        if (L.t) { units.push(L); continue; }
+        var he = L.he, next = letters[j + 1];
+        var first = (j === 0), last = (j === letters.length - 1);
+        if (he === 'ו') {
+          if (next && next.he === 'ו') { units.push({ t: 'c', o: 'v' }); j++; continue; }   // וו = the consonant v
+          if (first) { units.push({ t: 'c', o: 'v' }); continue; }
+          units.push({ t: 'v', o: 'o', m: 1 });   // holam male and shuruk are indistinguishable unpointed; 'o' is the commoner sign
+          continue;
+        }
+        if (he === 'י') {
+          if (next && next.he === 'י') { units.push({ t: 'c', o: 'y' }); j++; continue; }   // יי = the consonant y
+          if (first) { units.push({ t: 'c', o: 'y' }); continue; }
+          units.push({ t: 'v', o: 'i', m: 1 });
+          continue;
+        }
+        if (he === 'ה') {
+          if (last && j > 0) { units.push({ t: 'v', o: 'a' }); continue; }   // silent word-final he: Yehuda, Netanya
+          units.push({ t: 'c', o: 'h' });
+          continue;
+        }
+        if (he === 'א' || he === 'ע') {
+          // The consonant itself is not represented at all in the simplified
+          // standard, but the letter is still holding a vowel in the abjad, so
+          // dropping it outright collapses a syllable (רעננה -> "Ranna",
+          // באר -> "Bar"). Keep a vowel slot - EXCEPT when the next letter is
+          // itself a mater writing that vowel, which would double it
+          // (אונו -> "Aono" instead of "Ono").
+          if (!(next && (next.he === 'ו' || next.he === 'י'))) units.push({ t: 'v', o: EPENTHETIC });
+          continue;
+        }
+        units.push({ t: 'c', o: (first && TRANSLIT_INITIAL[he]) || TRANSLIT_CONS[he] || '' });
+      }
+      // 3. Assemble, supplying the unwritten vowel inside consonant clusters.
+      var out = '';
+      for (var k = 0; k < units.length; k++) {
+        var u = units[k];
+        out += u.o;
+        if (u.t !== 'c' || !u.o) continue;
+        var nu = units[k + 1];
+        if (!nu || nu.t === 'v') continue;          // the next letter already writes the vowel
+        var after = units[k + 2];
+        if (after && after.t === 'v') continue;     // C-C-vowel reads as an onset cluster: Shom|ron
+        // C-C closing the word after a WRITTEN vowel reads fine as a coda
+        // (Rotshi|ld). After a merely supplied vowel it does not (אבן -> "Avn"),
+        // so only a real mater lectionis licenses the skip.
+        if (!after && k > 0 && units[k - 1].m) continue;
+        out += EPENTHETIC;
+      }
+      return out;
+    }
+    function translitHe_(s) {
+      var parts = String(s || '').trim().split(/(\s+|[,\-])/);
+      var out = '';
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        if (!/[א-ת]/.test(p)) { out += p; continue; }   // digits, punctuation, already-Latin text ride through
+        var w = translitWord_(p);
+        out += w ? w.charAt(0).toUpperCase() + w.slice(1) : '';
+      }
+      return out.replace(/\s{2,}/g, ' ').trim();
+    }
+    // The one LP-facing string this feature adds (Noa-approved 2026-09-06, verbatim).
+    var EN_ADDR_TRANSLIT_NOTE = 'לא הצלחנו לתרגם את הכתובת אוטומטית. נא לאשר או להשלים באנגלית.';
+    // "prefix" is the holder key with no trailing dot ("investorsArray[0]",
+    // "corporationDetails"), matching data-en-addr-fallback in the HTML.
+    function enAddrPrefix_(set) { return String(set.enStreet).slice(0, -'.englishDetails.englishAddress.street'.length); }
+    function fieldVal_(name) { var e = form.querySelector('[name="' + cssEsc(name) + '"]'); return e ? String(e.value || '').trim() : ''; }
+    // Un-hide a prefix's English-address holders and turn their inputs into real
+    // text fields. PRESENTATION ONLY: no error class, no message.
+    // This is the NORMAL path as of 2026-09-06. The pair becomes visible as soon
+    // as the Hebrew address resolves, pre-filled wherever Google has English, so
+    // the LP meets two ordinary fields in place instead of the form inventing two
+    // new required ones at a failed Continue. revealEnglishAddressFallback_ below
+    // still exists as the safety net for any path that reaches validation with
+    // them blank; it is no longer how an LP first meets these fields.
+    function showEnAddrHolders_(prefix) {
+      var any = false;
+      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
+        if (holder.hidden) { holder.hidden = false; any = true; }
+        var input = holder.querySelector('input');
+        if (input && input.type === 'hidden') input.type = 'text';
+      });
+      return any;
+    }
+    // The LP is re-typing the address, so the resolved English pair no longer
+    // describes anything: put it back out of the way and drop any suggestion
+    // state, rather than leaving a stale guess on screen next to a half-typed
+    // Hebrew address.
+    function hideEnAddrHolders_(prefix) {
+      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
+        var input = holder.querySelector('input');
+        if (input) { delete input.dataset.translitUnconfirmed; input.type = 'hidden'; }
+        holder.classList.remove('lvp-field--translit');
+        clearFieldError_(holder);
+        holder.hidden = true;
+      });
+      renderTranslitNote_(prefix, null);
+    }
+    // Offer a transliteration for a still-blank English field. This is a W-8 tax
+    // form, so a guess must never ride into a submit unseen: the input is flagged
+    // data-translit-unconfirmed and validatePage / doSubmitNow_ both refuse while
+    // that flag is set. The flag clears on a real interaction with the field - an
+    // edit, a click into it, a keypress - i.e. once the LP has actually been in
+    // the field with the note beside it. A programmatic .focus() (the error path
+    // in doSubmitNow_ does one) deliberately does NOT count as confirmation.
+    function suggestTranslit_(name, heSource) {
+      if (!heSource) return false;
+      var el = form.querySelector('[name="' + cssEsc(name) + '"]');
+      if (!el || String(el.value || '').trim()) return false;
+      var guess = translitHe_(heSource);
+      if (!guess || isHebrewText_(guess)) return false;
+      if (!inferOffer(name, guess)) return false;    // TOUCHED / SNAP still win
+      el.dataset.translitUnconfirmed = '1';
+      if (!el.__translitBound) {
+        el.__translitBound = true;
+        var confirmSeen = function () {
+          if (!el.dataset.translitUnconfirmed) return;
+          delete el.dataset.translitUnconfirmed;
+          TOUCHED[name] = true;   // the LP has adopted this value; no later geocode may overwrite it
+          var h2 = el.closest('.lvp-field');
+          if (h2) { h2.classList.remove('lvp-field--translit'); clearFieldError_(h2); }
+        };
+        ['input', 'change', 'mousedown', 'keydown', 'touchstart'].forEach(function (ev) { el.addEventListener(ev, confirmSeen); });
+      }
+      var holder = el.closest('.lvp-field');
+      if (holder) holder.classList.add('lvp-field--translit');
+      return true;
+    }
+    function clearFieldError_(holder) {
+      holder.classList.remove('lvp-field--error', 'lvp-field--has-msg');
+      var m = holder.querySelector('.lvp-error-msg');
+      if (m) m.remove();
+      unbindFieldInvalid_(holder);
+    }
+    // Everything the English mirror needs once a Hebrew address exists: show the
+    // pair, then transliterate whatever the geocode could not supply. Called at
+    // the END of the geocode chain, never before it - a real English name from
+    // Google always beats a guess.
+    function finishEnAddr_(set) {
+      if (!fieldVal_(set.street) || !fieldVal_(set.city)) return;
+      showEnAddrHolders_(enAddrPrefix_(set));
+      var house = fieldVal_(set.house);
+      suggestTranslit_(set.enStreet, fieldVal_(set.street) + (house ? ' ' + house : ''));
+      suggestTranslit_(set.enCity, fieldVal_(set.city));
+      var note = null;
+      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + enAddrPrefix_(set) + '"]'), function (holder) {
+        var input = holder.querySelector('input');
+        if (input && input.dataset.translitUnconfirmed && !note) note = holder;
+      });
+      renderTranslitNote_(enAddrPrefix_(set), note);
+    }
+    // Full English-address resolution for one holder, in strict priority order:
+    // Google's English for the PICKED place -> Google's English for the typed
+    // address string -> a transliteration the LP has to confirm. Always ends in
+    // finishEnAddr_, so the pair is visible and never silently blank.
+    function resolveEnAddr_(set, placeId) {
+      var step = placeId ? placesFillEnglish_(placeId, set) : Promise.resolve();
+      return Promise.resolve(step)
+        .catch(function () {})
+        .then(function () { return deriveEnglishFromHebrew_(set); })
+        .catch(function () {})
+        .then(function () { finishEnAddr_(set); });
+    }
+    // One note per holder group, on the first field carrying a suggestion.
+    function renderTranslitNote_(prefix, holder) {
+      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"] .lvp-en-addr-note'), function (n) { n.remove(); });
+      if (!holder) return;
+      var p = document.createElement('p');
+      p.className = 'lvp-hint-small lvp-en-addr-note';
+      p.setAttribute('data-he', EN_ADDR_TRANSLIT_NOTE);
+      p.textContent = displayFor(EN_ADDR_TRANSLIT_NOTE, curLang);
+      holder.appendChild(p);
+    }
     // The LP explicitly picked this place, so the Hebrew fields are their
     // answer: set directly and mark touched (the infer engine backs off).
     function placesSetHe_(name, val) {
@@ -3112,25 +3344,46 @@
         if (enRoute && !isHebrewText_(enRoute)) inferOffer(set.enStreet, enRoute + (enNum ? ' ' + enNum : ''));
         if (enCity && !isHebrewText_(enCity)) inferOffer(set.enCity, enCity);
       }
+      // Did BOTH English fields actually end up with a value? Not "did we get
+      // components back" - see the fallback condition below.
+      function pairFilled() { return !!(fieldVal_(set.enStreet) && fieldVal_(set.enCity)); }
       function viaGeocoder() {
-        try {
-          new google.maps.Geocoder().geocode({ placeId: placeId, language: 'en' }, function (results, status) {
-            if (status === 'OK' && results && results[0]) {
-              apply(results[0].address_components, function (c) { return c.long_name; });
-            }
-          });
-        } catch (e) {}
+        return new Promise(function (resolve) {
+          try {
+            new google.maps.Geocoder().geocode({ placeId: placeId, language: 'en' }, function (results, status) {
+              if (status === 'OK' && results && results[0]) {
+                apply(results[0].address_components, function (c) { return c.long_name; });
+              }
+              resolve();
+            });
+          } catch (e) { resolve(); }
+        });
       }
+      // ROOT CAUSE of the blank English CITY (found 2026-09-06, reproduced in
+      // test/israel-english-address-fallback-harness.cjs C1-C3). The fallback
+      // used to fire only when the Place class returned NO components at all:
+      //     if (place.addressComponents && place.addressComponents.length) apply(...)
+      //     else viaGeocoder();
+      // The Place class returning Hebrew components is not "no components", so a
+      // place whose requestedLanguage:'en' was not honoured landed in apply(),
+      // was correctly refused by isHebrewText_, and the Geocoder - which for
+      // דן שומרון 13, רמת גן genuinely answers locality "Ramat Gan" in English
+      // (measured live, Noa 2026-09-06) - was NEVER CONSULTED. The city was
+      // available the whole time and the code never asked for it.
+      // The condition is now "did we actually get usable English", not "did we
+      // get bytes back". Costs one extra geocode only on the miss path.
       try {
         if (google.maps.places.Place) {
           var place = new google.maps.places.Place({ id: placeId, requestedLanguage: 'en' });
-          place.fetchFields({ fields: ['addressComponents'] }).then(function () {
+          return place.fetchFields({ fields: ['addressComponents'] }).then(function () {
             if (place.addressComponents && place.addressComponents.length) {
               apply(place.addressComponents, function (c) { return c.longText; });
-            } else { viaGeocoder(); }
+            }
+            return pairFilled() ? undefined : viaGeocoder();
           }).catch(viaGeocoder);
-        } else { viaGeocoder(); }
-      } catch (e) { viaGeocoder(); }
+        }
+        return viaGeocoder();
+      } catch (e) { return viaGeocoder(); }
     }
     function deriveEnglishFromHebrew_(set) {
       // Manual entry (the LP typed the Hebrew address instead of picking a suggestion):
@@ -3198,11 +3451,14 @@
     // holder key with no trailing dot, e.g. "investorsArray[0]" or
     // "corporationDetails" - matches data-en-addr-fallback on the HTML side.
     function revealEnglishAddressFallback_(prefix) {
-      var any = false;
+      var any = showEnAddrHolders_(prefix);
       Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
-        if (holder.hidden) { holder.hidden = false; any = true; }
         var input = holder.querySelector('input');
-        if (input && input.type === 'hidden') input.type = 'text';
+        // Only flag what is actually missing. Since 2026-09-06 the pair is
+        // visible from the moment the Hebrew address resolves, so one of the two
+        // can legitimately already hold a good, LP-confirmed value; marking that
+        // one "חובה" alongside its blank sibling would be a lie.
+        if (input && String(input.value || '').trim() && !input.dataset.translitUnconfirmed) return;
         // Same inline+programmatic pattern every other validation error on this
         // form uses (setFieldError -> bindFieldInvalid_: visible message,
         // aria-invalid, aria-describedby). Without this, a screen-reader user
@@ -3228,16 +3484,27 @@
             // own already-good address.
             (function () {
               var st0 = vs(set.street), ho0 = vs(set.house), ci0 = vs(set.city);
-              if (st0 && ci0) { if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0; sInput.dataset.picked = '1'; }
+              if (st0 && ci0) {
+                if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
+                sInput.dataset.picked = '1';
+                // A resumed address is a resolved address, so its English pair
+                // belongs on screen right away - either already filled, or being
+                // filled now. Never left invisible-and-blank until a failed Next.
+                if (vs(set.enStreet) && vs(set.enCity)) showEnAddrHolders_(enAddrPrefix_(set));
+                else resolveEnAddr_(set, '');
+              }
             })();
             var acS = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id', 'formatted_address'] });
             acS.addListener('place_changed', function () {
               var place = acS.getPlace();
               if (!place || !place.address_components) return;
               placesFanOutHe_(set, place.address_components, place.formatted_address || sInput.value);
+          // Show the English pair the instant the address resolves, not a
+          // geocode round-trip later and never as a surprise at a failed Next.
+          if (vs(set.street) && vs(set.city)) showEnAddrHolders_(enAddrPrefix_(set));
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
               if (_st && _ci) { sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci; sInput.dataset.picked = '1'; }
-              if (place.place_id) placesFillEnglish_(place.place_id, set);
+              resolveEnAddr_(set, place.place_id || '');
               var _sh = sInput.closest('.lvp-field');
               if (_sh) {
                 _sh.classList.add('lvp-field--addr-ok');
@@ -3257,15 +3524,16 @@
             // no async retry here anymore. Selecting a real suggestion is now the ONLY
             // way to satisfy this field; see validatePage's picked check below.
             sInput.addEventListener('blur', function () {
-              if (vs(set.street) && vs(set.city)) deriveEnglishFromHebrew_(set);
+              if (vs(set.street) && vs(set.city)) resolveEnAddr_(set, '');
             });
             sInput.addEventListener('input', function () {
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
               if (!_st && !_ci) return;
               var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
               if (sInput.value.trim() !== composed) {
-                delete sInput.dataset.picked;
-                [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
+            delete sInput.dataset.picked;
+            hideEnAddrHolders_(enAddrPrefix_(set));
+            [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
                   var el = form.querySelector('[name="' + cssEsc(n) + '"]');
                   if (el) el.value = '';
                   delete TOUCHED[n];
@@ -3297,11 +3565,11 @@
             } else {
               placesSetHe_(set.city, placesCity_(comps));
             }
-            if (place.place_id) placesFillEnglish_(place.place_id, set);
+            resolveEnAddr_(set, place.place_id || '');
           });
           input.setAttribute('data-places-bound', '1');
           input.__lvpAc = ac;   // exposed for the deploy-gate walk (trigger place_changed with a stubbed getPlace)
-          input.addEventListener('blur', function () { deriveEnglishFromHebrew_(set); });
+          input.addEventListener('blur', function () { resolveEnAddr_(set, ''); });
         });
       });
       // Generic scan: bind any israelAddressSearch not in PLACES_SETS (e.g. dynamically
@@ -3323,16 +3591,25 @@
         // Resume / server-hydrated prefill, same trust rule as the PLACES_SETS binder above.
         (function () {
           var st0 = vs(dset.street), ho0 = vs(dset.house), ci0 = vs(dset.city);
-          if (st0 && ci0) { if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0; sInput.dataset.picked = '1'; }
+          if (st0 && ci0) {
+            if (!sInput.value) sInput.value = st0 + (ho0 ? ' ' + ho0 : '') + ', ' + ci0;
+            sInput.dataset.picked = '1';
+            // Same resume rule as the PLACES_SETS binder above.
+            if (vs(dset.enStreet) && vs(dset.enCity)) showEnAddrHolders_(enAddrPrefix_(dset));
+            else resolveEnAddr_(dset, '');
+          }
         })();
         var acG = new google.maps.places.Autocomplete(sInput, { types: ['address'], fields: ['address_components', 'place_id', 'formatted_address'] });
         acG.addListener('place_changed', function () {
           var place = acG.getPlace();
           if (!place || !place.address_components) return;
           placesFanOutHe_(dset, place.address_components, place.formatted_address || sInput.value);
+          // Show the English pair the instant the address resolves, not a
+          // geocode round-trip later and never as a surprise at a failed Next.
+          if (vs(dset.street) && vs(dset.city)) showEnAddrHolders_(enAddrPrefix_(dset));
           var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
           if (_st && _ci) { sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci; sInput.dataset.picked = '1'; }
-          if (place.place_id) placesFillEnglish_(place.place_id, dset);
+          resolveEnAddr_(dset, place.place_id || '');
           var _gsh = sInput.closest('.lvp-field');
           if (_gsh) {
             _gsh.classList.add('lvp-field--addr-ok');
@@ -3347,7 +3624,7 @@
         // 2026-09-05 (Noa, "force the dropdown"): see the matching comment on the
         // PLACES_SETS-bound blur handler above - same reasoning, generic-row twin.
         sInput.addEventListener('blur', function () {
-          if (vs(dset.street) && vs(dset.city)) deriveEnglishFromHebrew_(dset);
+          if (vs(dset.street) && vs(dset.city)) resolveEnAddr_(dset, '');
         });
         sInput.addEventListener('input', function () {
           var _st = vs(dset.street), _ho = vs(dset.house), _ci = vs(dset.city);
@@ -3355,6 +3632,7 @@
           var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
           if (sInput.value.trim() !== composed) {
             delete sInput.dataset.picked;
+            hideEnAddrHolders_(enAddrPrefix_(dset));
             [dset.street, dset.city, dset.house, dset.zip, dset.enStreet, dset.enCity, dset.apt].filter(Boolean).forEach(function (n) {
               var el = form.querySelector('[name="' + cssEsc(n) + '"]');
               if (el) el.value = '';
@@ -3860,6 +4138,20 @@
         if (!heStreetEl || !heCityEl) return; // this page does not carry this holder's Hebrew source
         if (!heStreetEl.value.trim() || !heCityEl.value.trim()) return; // nothing to derive from yet
         if (!enStreetEl.value.trim() || !(enCityEl && enCityEl.value.trim())) revealEnglishAddressFallback_(prefix);
+      });
+      // Unconfirmed TRANSLITERATION gate (2026-09-06). englishAddress feeds the
+      // W-8's line 3, so a machine guess at a Hebrew street name must not be
+      // able to ride into a submit on the LP's behalf: suggestTranslit_ flags
+      // the input it filled, and only a real interaction with that field (edit,
+      // click, keypress - never a programmatic focus) clears the flag. Until
+      // then Continue is refused and the approved note names why.
+      Array.prototype.forEach.call(pageEl.querySelectorAll('input[data-translit-unconfirmed]'), function (el) {
+        var holder = el.closest('.lvp-field');
+        if (!holder || isHidden(holder)) return;
+        ok = false;
+        holder.classList.add('lvp-field--error');
+        setFieldError(holder, displayFor(EN_ADDR_TRANSLIT_NOTE, curLang));
+        if (!firstError) firstError = holder;
       });
       // Required-field pass: every label/legend carries its field; a required field
       // is one whose holder is visible and whose label has no opt-out. EasySend
@@ -4900,6 +5192,25 @@
       // dynamically-templated controlling-person rows. A holder only counts if its
       // Hebrew address is actually filled - an unfilled/inapplicable holder (e.g. no
       // second authorized signer) has blank Hebrew too and is correctly skipped.
+      // Same unconfirmed-transliteration gate as validatePage, at the last door:
+      // a submit reached by any route (resume jump, back/forward) must not carry
+      // an unconfirmed machine guess into the W-8.
+      var unconfirmed = form.querySelector('input[data-translit-unconfirmed]');
+      if (unconfirmed) {
+        var uHolder = unconfirmed.closest('.lvp-field');
+        submitting = false;
+        if (uHolder) {
+          uHolder.hidden = false;
+          uHolder.classList.add('lvp-field--error');
+          setFieldError(uHolder, displayFor(EN_ADDR_TRANSLIT_NOTE, curLang));
+          var uPage = uHolder.closest('.lvp-page');
+          var uIdx = uPage ? visiblePages().indexOf(uPage) : -1;
+          if (uIdx !== -1 && uIdx !== idx) showPage(uIdx);
+          try { uHolder.scrollIntoView({ block: 'nearest' }); } catch (eU) {}
+        }
+        setStatus(displayFor(EN_ADDR_TRANSLIT_NOTE, curLang), true);
+        return;
+      }
       var missingPrefix = null;
       // Controlling persons only carry the englishAddress requirement when the
       // entity's own FATCA self-cert is Passive NFFE (validate.ts:443-490,
