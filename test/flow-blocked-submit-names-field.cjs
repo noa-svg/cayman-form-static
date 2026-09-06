@@ -211,6 +211,52 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
     rig.window.close();
   }
 
+  // =========================================================================
+  // F. Transfer flow. PAGE_ORDER drops 'request' entirely (isTransferFlow), so
+  //    the only possible bounce is uploads -> start. Same property must hold.
+  // =========================================================================
+  {
+    const rig = await boot({
+      flowType: 'israeli_transfer', applicantType: 'individual', lane: 'israeli', language: 'he',
+      resumePage: 'uploads'
+    });
+    const d = rig.document;
+    await clickSubmit(rig);
+    const sum = summaryOf(d, activePage(d));
+    ok('F transfer bounces to start', activePage(d) === 'start', activePage(d));
+    ok('F the summary is visible', sum.hidden === false, sum);
+    ok('F it names the identity fields', sum.text.indexOf('שם מלא') !== -1, sum.text);
+    ok('F nothing was submitted', postedSubmit(rig) === false);
+    rig.window.close();
+  }
+
+  // =========================================================================
+  // G. The amount-rows pseudo-field ('__rows-increase') as the FIRST failure on
+  //    a bounced page. It is never silent, so it was already named before this
+  //    change; assert it still is, and that its anchor still resolves (the
+  //    fieldWrap('__rows-*') special case that a naive refactor would drop).
+  // =========================================================================
+  {
+    const rig = await boot({
+      flowType: 'israeli_increase', applicantType: 'individual', lane: 'israeli', language: 'he',
+      resumePage: 'uploads'
+    });
+    const d = rig.document;
+    const set = (id, v) => { const el = d.getElementById(id); if (el) el.value = v; };
+    set('ind-fullName', 'בדיקה בדיקה'); set('ind-idNumber', '123456782'); set('lp-email', 'test@example.com');
+    await clickSubmit(rig);
+    const sum = summaryOf(d, activePage(d));
+    ok('G lands on the request page', activePage(d) === 'request', activePage(d));
+    ok('G the summary is visible', sum.hidden === false, sum);
+    const jumps = [...sum.el.querySelectorAll('[data-jump]')].map((b) => b.getAttribute('data-jump'));
+    ok('G the amount block is named first', jumps[0] === '__rows-increase', jumps);
+    ok('G its amount message survives (it was never silent)', sum.text.indexOf('נא להזין סכום') !== -1, sum.text);
+    ok('G the silent bank fields are named alongside it',
+      jumps.indexOf('bank-name') !== -1 && jumps.indexOf('bank-branch') !== -1 && jumps.indexOf('bank-account') !== -1, jumps);
+    ok('G nothing was submitted', postedSubmit(rig) === false);
+    rig.window.close();
+  }
+
   console.log('\n' + pass + ' pass, ' + fail + ' fail');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS CRASH:', e && e.stack || e); process.exit(1); });
