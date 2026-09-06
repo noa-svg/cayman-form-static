@@ -98,9 +98,17 @@
     }
     .lvp-error-summary__title { font-weight: 700; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 18px; }
+    /* display:block, not the default inline-block. An inline-block button
+       baseline-aligns its LAST line box to the <li>, so a summary item that
+       wraps to two lines drags the bullet down beside its second line and
+       leaves the first line hanging above as an unmarked orphan. Measured at
+       375px on the Cayman start page ("Email address: The email address is not
+       valid." -> bullet beside "valid.") and at 320px in Hebrew. Hits every
+       wrapped item, not only the label-only ones. */
     .lvp-error-summary a, .lvp-error-summary button {
       color: var(--lvp-error); text-decoration: underline; cursor: pointer;
       background: none; border: 0; padding: 0; font: inherit; text-align: inherit;
+      display: block;
     }
     .lvp-sr-only {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -2006,12 +2014,24 @@
         if (tag === 'input' || tag === 'select' || tag === 'textarea') return el;
         return el.querySelector ? el.querySelector('input,select,textarea') : null;
       }
-      function focusAndReveal(el) {
+      // revealEl (optional): scroll THIS element into view instead of the focused
+      // control. Used on a submit-time bounce, where the summary box is the only
+      // thing explaining why the page moved and so is what has to be on screen.
+      // Without it the scroll anchors on the first bad field, which on a
+      // redemption request page sits far below the box: measured at 375px, the
+      // box landed entirely above the viewport (bottom -94px at scrollY 474), so
+      // the LP arrived on a page they did not choose with the explanation
+      // off-screen. Focus still goes to the field, with preventScroll so the
+      // focus call does not undo the reveal.
+      function focusAndReveal(el, revealEl) {
         var inp = focusTargetIn(el);
         if (!inp || !inp.focus) return false;
         setTimeout(function () {
-          inp.focus({ preventScroll: false });
-          if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          try { inp.focus({ preventScroll: !!revealEl }); } catch (e) { inp.focus(); }
+          var target = revealEl || inp;
+          if (target && target.scrollIntoView) {
+            target.scrollIntoView({ block: revealEl ? 'start' : 'center', behavior: 'smooth' });
+          }
         }, 0);
         return true;
       }
@@ -2419,7 +2439,11 @@
         // handles the case where the anchor IS the control (see focusTargetIn); the old
         // inline version only ever looked inside it, which is why pressing הבא with a bad
         // amount moved nothing at all and read as a dead button.
-        focusAndReveal(errs[0].anchor || fieldWrap(errs[0].name));
+        // On a bounce the box IS the explanation for the move, so reveal the box
+        // and focus the field. On the page the LP is already on, unchanged: the
+        // field itself is what they are looking for.
+        var revealEl = (nameSilent && summary && summary.hidden === false) ? summary : null;
+        focusAndReveal(errs[0].anchor || fieldWrap(errs[0].name), revealEl);
         return false;
       }
       function validateCurrentPage() { return validatePage(getCurrentPage()); }

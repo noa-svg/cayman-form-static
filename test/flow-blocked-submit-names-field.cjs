@@ -50,6 +50,16 @@ function visiblePages(d) {
 function redFields(d) {
   return [...d.querySelectorAll('[data-field].is-invalid')].map((w) => w.getAttribute('data-field'));
 }
+// Records what scrollIntoView was called on, so the "is the box actually on
+// screen" property is measurable in jsdom (which has no layout). Pins WHICH
+// element the form chose to reveal, not the pixel result.
+function trackReveals(rig) {
+  const seen = [];
+  rig.window.Element.prototype.scrollIntoView = function () {
+    seen.push(this.id || (this.tagName + '.' + (this.className || '')));
+  };
+  return seen;
+}
 function postedSubmit(rig) {
   return rig.xhrCalls.some((c) => c.body && String(c.body).indexOf('"submit"') !== -1);
 }
@@ -73,6 +83,14 @@ ok('S3 the navigation is KEPT (removing it hides the summary from the LP)',
 ok('S4 a silent error carries its label so it can be named', /errs\.push\(\{ name: name, silent: true, label: fieldLabel\(name\) \}\)/.test(html));
 ok('S5 silent lines render label-only, no invented message', /var text = \(e\.label \|\| e\.name\) \+ \(e\.msg \? ': ' \+ T\(e\.msg\) : ''\);/.test(html));
 ok('S6 vRequired still returns silent (the field-level rule is untouched)', /function vRequired\(id\) \{ return val\(id\) \? \{ ok: true \} : \{ ok: false, silent: true \}; \}/.test(html));
+// Pixel-pass findings, 2026-09-07. Both are about the box being READABLE once
+// it exists; naming the field in a box the LP cannot see is the same dead end.
+ok('S7 a bounce reveals the SUMMARY BOX, not the field far below it',
+  /var revealEl = \(nameSilent && summary && summary\.hidden === false\) \? summary : null;\s*\n\s*focusAndReveal\(errs\[0\]\.anchor \|\| fieldWrap\(errs\[0\]\.name\), revealEl\);/.test(html));
+ok('S8 focusAndReveal takes the reveal target and does not let focus undo it',
+  /function focusAndReveal\(el, revealEl\)/.test(html) && /inp\.focus\(\{ preventScroll: !!revealEl \}\)/.test(html));
+ok('S9 summary items are display:block so a wrapped item keeps its bullet',
+  /\.lvp-error-summary a, \.lvp-error-summary button \{[^}]*display: block;/.test(html));
 
 (async () => {
   // =========================================================================
@@ -88,6 +106,7 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
       resumePage: 'uploads'
     });
     const d = rig.document;
+    const reveals = trackReveals(rig);
     ok(tag + ' resumed on uploads', activePage(d) === 'uploads', activePage(d));
     await clickSubmit(rig);
 
@@ -112,6 +131,10 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
     // Each named line is a working jump control back to its field.
     const links = [...sum.el.querySelectorAll('[data-jump]')].map((b) => b.getAttribute('data-jump'));
     ok(tag + ' every named line is a jump link to a real field', links.length === 3 && links.every((n) => d.querySelector('[data-field="' + n + '"]')), links);
+    // The box the LP was sent to read is what gets scrolled to, not a field
+    // that may sit far below it (pixel-pass finding, 375px redemption bounce).
+    ok(tag + ' the SUMMARY BOX is what is revealed', reveals.indexOf('lvp-start-summary') !== -1, reveals);
+    ok(tag + ' focus is still on the first bad field', d.activeElement && d.activeElement.id === (lane === 'cayman' ? 'ind-fullName' : 'ind-fullName'), d.activeElement && d.activeElement.id);
     // Validation is NOT weakened: nothing was posted.
     ok(tag + ' nothing was submitted to the gateway', postedSubmit(rig) === false);
     ok(tag + ' no jsdom errors (the handler ran to completion)', rig.errors.length === 0, rig.errors);
@@ -125,6 +148,7 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
   {
     const rig = await boot({ flowType: 'israeli_increase', applicantType: 'individual', lane: 'israeli', language: 'he' });
     const d = rig.document;
+    const reveals = trackReveals(rig);
     ok('B on start to begin with', activePage(d) === 'start', activePage(d));
     d.querySelector('[data-go="request"]').dispatchEvent(new rig.window.Event('click', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 200));
@@ -133,6 +157,8 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
     ok('B fields are still marked red', redFields(d).length === 3, redFields(d));
     ok('B the summary stays HIDDEN on the page the LP is already on', sum.hidden === true, sum);
     ok('B no per-field error text is invented', [...d.querySelectorAll('.lvp-field__error')].every((e) => !e.textContent.trim()));
+    // In-page reveal is UNCHANGED: the field, never the (hidden) summary box.
+    ok('B the FIELD is revealed, not the box', reveals.indexOf('lvp-start-summary') === -1 && reveals.length > 0, reveals);
     rig.window.close();
   }
 
@@ -174,6 +200,7 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
       resumePage: 'uploads'
     });
     const d = rig.document;
+    const reveals = trackReveals(rig);
     const set = (id, v) => { const el = d.getElementById(id); if (el) el.value = v; };
     set('ind-fullName', 'Test Investor'); set('ind-idNumber', '123456782'); set('lp-email', 'test@example.com');
     await clickSubmit(rig);
@@ -186,6 +213,9 @@ ok('S6 vRequired still returns silent (the field-level rule is untouched)', /fun
     ok('D the summary lists every failing field on the page',
       sum.el.querySelectorAll('[data-jump]').length === redFields(d).length,
       { listed: sum.el.querySelectorAll('[data-jump]').length, red: redFields(d) });
+    // THE BRANCH THE PIXEL PASS CAUGHT: the first bad field here (wd-date) sits
+    // far below the box, and revealing it put the box above the viewport.
+    ok('D the SUMMARY BOX is revealed, not the field far below it', reveals.indexOf('lvp-request-summary') !== -1, reveals);
     ok('D nothing was submitted', postedSubmit(rig) === false);
     rig.window.close();
   }
