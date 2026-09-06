@@ -78,6 +78,7 @@ function extractVarObj(name) {
   // before the console shipped.
   const sortRows = new Function(
     extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';' +
+    extractFn('isManualRow_') + ';' +
     extractFn('isAttnRow') + ';' + extractFn('sortRows') + '; return sortRows;',
   )();
   const rows = [
@@ -385,7 +386,7 @@ function extractVarObj(name) {
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
-    + extractFn('isAttnRow') + ';'
+    + extractFn('isManualRow_') + ';'
     + extractFn('isAttnRow') + ';' + extractFn('rowHtml') + '; return { rowHtml: rowHtml, foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns };';
   const { rowHtml, foldedRowsHtml, foldRuns } = new Function(src)();
 
@@ -572,6 +573,7 @@ function extractVarObj(name) {
     + extractFn('isCompletedStage') + ';' + extractFn('signerFraction') + ';' + extractFn('signerRoleLabel') + ';' + extractFn('fmtAmount') + ';'
     + extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';'
     + extractVar('RCOPY_ICON') + ';' + extractVar('RNOTE_ICON') + ';' + extractVar('GW') + ';'
+    + extractFn('isManualRow_') + ';'
     + extractFn('isAttnRow') + ';' + extractFn('rowHtml') + ';' + extractFn('foldRuns') + ';' + extractFn('foldedRowsHtml')
     + '; return { foldedRowsHtml: foldedRowsHtml, foldRuns: foldRuns, rowHtml: rowHtml };';
   const { foldedRowsHtml, foldRuns, rowHtml } = new Function(src)();
@@ -901,6 +903,50 @@ function extractVarObj(name) {
     attnWhyText(pending) === 'Manual entry, off Ju pipeline - needs review', attnWhyText(pending));
   ok('K-approved an approved row has NO attention reason (so it cannot fold into a run)',
     attnWhyText(approved) === '', JSON.stringify(attnWhyText(approved)));
+}
+
+// ---- M. A manual / off-Ju row is never an attention row -------------------
+// 2026-09-06, גלבוע פאנד אוף פאנדס, שותפות מוגבלת. That row is a transfer-forms
+// tracker entry with no Ju process (pid 'manual__...'): no session, no signing
+// run, no stage machine. The board was rendering it "Stuck", coral-tinted, and
+// counting it in NEED A LOOK - for something that was not stuck and that the
+// operator had no way to action. The drawer's own text says there is "no
+// further detail or action here". An alarm nobody can clear teaches the
+// operator to ignore the colour, which is the one thing the board cannot
+// afford. These four assertions all FAIL against the pre-fix console.
+{
+  const src = extractFn('isAttnStage') + ';' + extractFn('isCompletedStage') + ';'
+    + extractFn('isManualRow_') + ';' + extractFn('isAttnRow')
+    + '; return { isAttnRow: isAttnRow, isManualRow_: isManualRow_ };';
+  const { isAttnRow, isManualRow_ } = new Function(src)();
+
+  const gilboa = { pid: 'manual__15c8d2b5-e7a4-4625-95bf-0e95952f0d23',
+                   name: 'גלבוע פאנד אוף פאנדס, שותפות מוגבלת', stage: 'needs_attention', age: '6d' };
+  const realStuck = { pid: '9c7dd60c-0a7d-43ad-891f-9a94b2b01e6f', name: 'A real Ju process',
+                      stage: 'needs_attention', age: '6d' };
+
+  ok('M1 a manual__ row is recognised as off-pipeline', isManualRow_(gilboa) === true);
+  ok('M2 a real Ju pid is NOT treated as manual', isManualRow_(realStuck) === false);
+  ok('M3 a manual__ row is never an attention row (was "Stuck" + coral + counted)',
+    isAttnRow(gilboa) === false, isAttnRow(gilboa));
+  ok('M4 a REAL needs_attention row still flags - the fix must not silence genuine alarms',
+    isAttnRow(realStuck) === true, isAttnRow(realStuck));
+}
+
+// ---- N. The manual row's status word borrows no Ju stage vocabulary -------
+// Source-level, because these are render-branch facts rather than pure
+// functions: the row template must not hand a manual row a Ju stage word or a
+// Ju stage rail, and a REAL needs_attention row must still read "Stuck".
+{
+  const flat = html.replace(/\s+/g, '');
+  ok('N1 needs_attention still maps to "Stuck" for real Ju processes',
+    /needs_attention:'Stuck'/.test(flat), 'STAGE_WORD mapping changed');
+  ok('N2 the manual row renders the off-pipeline word instead of a stage word',
+    /manual\?'OfftheJupipeline':stageWord\(st\)/.test(flat), 'off-pipeline word not wired into rowHtml');
+  ok('N3 the manual row suppresses the stage rail (no invented pipeline position)',
+    /\(manual\?'':railHtml\(r\)\)/.test(flat), 'rail not gated on manual');
+  ok('N4 the manual row says where its real state lives',
+    /Trackedinthetransferform/.test(flat), 'tracker pointer line missing');
 }
 
 console.log(pass + ' pass, ' + fail + ' fail');
