@@ -452,7 +452,12 @@ function extractVarObj(name) {
   ok('K11 load() fetches the separate PII-gated opNotes route', engineFetchSrc.includes("apiFetch('?api=opNotes'"));
   ok('K11 opNotes fetch is soft-failed (never blocks the board)', /notesFetch=apiFetch\('\?api=opNotes'.*?\)\.catch/.test(engineFetchSrc));
   ok('K11 list and opNotes are fetched together via Promise.all', engineFetchSrc.includes('Promise.all('));
-  ok('K11 load() itself Promise.all\'s across every engine for the lane', loadSrc.includes('Promise.all(engines.map('));
+  // Was 'load() itself Promise.all's across every engine'. The Promise.all was
+  // the DEFECT (it made the board wait on GAS's ~9s floor), not the contract.
+  // The contract is that load asks EVERY engine for the lane and merges all of
+  // them; how it awaits them is section O's business. Updated 2026-09-06.
+  ok('K11 load() asks every engine for the lane', /engines\.forEach\(function\(base,slotIx\)\{/.test(loadSrc));
+  ok('K11 load() merges every engine that answers', loadSrc.includes('slots.filter(Boolean)'));
   ok('K11 row mapping pulls note text from the merged notes map, keyed by pid', loadSrc.includes('note:(n&&n.text)||\'\''));
 
   // Save/Clear ride the same ?source=op tunnel every other admin action uses
@@ -949,5 +954,228 @@ function extractVarObj(name) {
     /Trackedinthetransferform/.test(flat), 'tracker pointer line missing');
 }
 
-console.log(pass + ' pass, ' + fail + ' fail');
-process.exit(fail ? 1 : 0);
+// ---- O. Progressive engine paint (2026-09-06) -------------------------------
+// load() used to Promise.all over the engines, so the board painted at the pace
+// of the SLOWEST one. GAS's floor is ~6-10s per call regardless of payload, so
+// that made every board load ~9s. It now paints once per engine ARRIVAL.
+//
+// The contract this section locks, in order of what would hurt most if broken:
+//   O1  the fast engine paints WITHOUT waiting for the slow one
+//   O2  no row is lost - the final board is exactly the Promise.all board,
+//       including a row only the slow (GAS) engine can produce
+//   O3  the dedupe still resolves in DECLARED engine order, not arrival order
+//   O4  fail-open is unchanged: a dead engine degrades, never blanks
+//   O5  an early paint's late async overlay cannot clobber a later, fuller one
+{
+  const src = extractFn('fetchEngineBoard_') + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
+
+  // One scriptable gateway for both engines. Each apiFetch call parks a
+  // deferred keyed by engine so the test decides the arrival ORDER - which is
+  // the whole point: real GAS arrives ~20x later than real ju-service.
+  function makeRig() {
+    const GWU = 'https://gas.example/exec';
+    const JUU = 'https://ju.example';
+    const parked = { [GWU]: [], [JUU]: [] };
+    const painted = [];
+    const dead = {};
+    const listRows = { [GWU]: [], [JUU]: [] };
+    // The review overlay is parked SEPARATELY so O5 can resolve an EARLY
+    // paint's overlay AFTER a later paint has already rendered - the exact
+    // late-clobber shape PAINT_SEQ exists to stop.
+    const reviews = [];
+    let parkReviews = false;
+    function apiFetch(qs, _retried, base) {
+      // opGetRowReview always rides JU_API, by design.
+      if (qs.indexOf('opGetRowReview') !== -1) {
+        if (!parkReviews) return Promise.resolve({ ok: true, reviews: {} });
+        return new Promise((resolve) => reviews.push(() => resolve({ ok: true, reviews: {} })));
+      }
+      if (dead[base]) return Promise.reject(new Error('engine down'));
+      return new Promise((resolve) => {
+        parked[base].push(() => {
+          if (qs.indexOf('?api=list') === 0) resolve({ processes: listRows[base], generatedAt: '2026-09-06T10:00' });
+          else if (qs.indexOf('?api=opNotes') === 0) resolve({ notes: {} });
+          else resolve({ rows: {} });
+        });
+      });
+    }
+    const flush = () => new Promise((res) => { let n = 0; (function f() { if (++n > 40) return res(); Promise.resolve().then(f); })(); });
+    const arrive = async (base) => { const q = parked[base].splice(0); q.forEach((fn) => fn()); await flush(); };
+    const listEl = { innerHTML: '' };
+    const verEl = { style: {}, textContent: '', title: '' };
+    const scope = {
+      document: { getElementById: (id) => (id === 'list' ? listEl : (id === 'ver-line' ? verEl : null)), visibilityState: 'hidden' },
+      boardSkeleton: () => '<skel>',
+      state: { lane: 'cayman' },
+      enginesForLane_: () => [GWU, JUU],
+      apiFetch,
+      // Capture the NAME as well as the pid: O3's dedupe check needs a field
+      // that differs between the two engines' copies of the same pid, or an
+      // arrival-order merge is indistinguishable from a declared-order one.
+      render: (rows) => painted.push(Object.assign(rows.map((r) => r.pid), { names: rows.map((r) => r.name) })),
+      JU_API: JUU,
+      sinceDur: () => '1m',
+      esc2: (s) => String(s == null ? '' : s),
+      loadW8: () => {},
+      setInterval: () => 0,
+    };
+    const names = Object.keys(scope);
+    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true;'
+      + 'var showDone=false,showCanceled=false,showTest=false;';
+    const built = (new Function(...names, prelude + src))(...names.map((n) => scope[n]));
+    // newestFirst resolves the LATER paint's overlay before the earlier one's,
+    // so the earlier paint's stale `rows` is the last thing to reach render().
+    // That ordering is what actually reproduces the clobber; resolving oldest
+    // first hides it, because the newer paint's render happens to land last.
+    const arriveReviews = async (newestFirst) => {
+      const q = reviews.splice(0);
+      (newestFirst ? q.reverse() : q).forEach((fn) => fn());
+      await flush();
+    };
+    return {
+      load: built.load, painted, arrive, flush, GWU, JUU, listRows, dead,
+      arriveReviews, parkReviews: (v) => { parkReviews = v; }, reviewsPending: () => reviews.length,
+    };
+  }
+
+  // O1 + O2: the fast engine paints alone, then the slow engine's rows merge in.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [{ processId: 'ju-1', currentStage: 'signing' }];
+    // b-L06SCwQLI is the real, live GAS-only row: a pre-Ju EasySend tracker
+    // orphan that ju-service's spine-only ?api=list provably cannot reproduce.
+    r.listRows[r.GWU] = [{ processId: 'b-L06SCwQLI', currentStage: 'needs_attention' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('O1 the fast engine paints without waiting for the slow one', r.painted.length >= 1, r.painted);
+    ok('O1b that first paint carries the fast engine\'s rows',
+      r.painted.length >= 1 && r.painted[0].indexOf('ju-1') !== -1, r.painted[0]);
+    ok('O1c and does NOT yet carry the slow engine\'s rows',
+      r.painted.length >= 1 && r.painted[0].indexOf('b-L06SCwQLI') === -1, r.painted[0]);
+    await r.arrive(r.GWU);
+    const finalPaint = r.painted[r.painted.length - 1];
+    ok('O2 the GAS-only tracker orphan row is NOT lost - it lands on the final board',
+      finalPaint.indexOf('b-L06SCwQLI') !== -1, finalPaint);
+    ok('O2b the final board is the full union of both engines',
+      finalPaint.slice().sort().join(',') === 'b-L06SCwQLI,ju-1', finalPaint);
+  })();
+
+  // O3: dedupe stays declared-order (GAS first), even though GAS arrives LAST.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.GWU] = [{ processId: 'dup', currentStage: 'needs_attention', displayName: 'from-GAS' }];
+    r.listRows[r.JUU] = [{ processId: 'dup', currentStage: 'signing', displayName: 'from-JU' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    await r.arrive(r.GWU);
+    const finalPaint = r.painted[r.painted.length - 1];
+    ok('O3 a pid on both engines is listed exactly once', finalPaint.length === 1, finalPaint);
+    // The pid alone cannot distinguish the two copies - assert on a field that
+    // differs, so an arrival-order merge fails here instead of passing silently.
+    ok('O3b declared engine order (GAS first) wins the dedupe, though GAS arrived LAST',
+      finalPaint.names[0] === 'from-GAS', finalPaint.names);
+  })();
+
+  // O4: fail-open. fetchEngineBoard_ must still never reject, so one dead
+  // engine degrades the board to the other's rows rather than blanking it.
+  (async () => {
+    const r = makeRig();
+    r.dead['https://gas.example/exec'] = true;
+    r.listRows[r.JUU] = [{ processId: 'ju-only', currentStage: 'signing' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    await r.flush();
+    const finalPaint = r.painted[r.painted.length - 1] || [];
+    ok('O4 a dead engine degrades the board instead of blanking it',
+      finalPaint.indexOf('ju-only') !== -1, finalPaint);
+    ok('O4b and never paints the error state', r.painted.length > 0);
+  })();
+
+  // O5 BEHAVIOURAL: the late-overlay clobber. Paint 1 (ju-service only) fires a
+  // review overlay; paint 2 (both engines) renders the full board; THEN paint
+  // 1's overlay resolves. Both paints share a rid, so the pre-existing
+  // rid===LOAD_SEQ check cannot separate them - without PAINT_SEQ, paint 1's
+  // stale `rows` re-renders and the GAS-only row disappears with no reload.
+  // This is the 2026-09-05 "a row silently vanishes" regression, one level down.
+  (async () => {
+    const r = makeRig();
+    r.parkReviews(true);
+    r.listRows[r.JUU] = [{ processId: 'ju-1', currentStage: 'signing' }];
+    r.listRows[r.GWU] = [{ processId: 'b-L06SCwQLI', currentStage: 'needs_attention' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);          // paint 1: ju-service only, overlay parked
+    ok('O5 paint 1 parked a review overlay', r.reviewsPending() === 1, r.reviewsPending());
+    await r.arrive(r.GWU);          // paint 2: full board, its own overlay parked
+    await r.arriveReviews(true);    // paint 2's overlay lands FIRST, paint 1's LAST
+    const finalPaint = r.painted[r.painted.length - 1];
+    ok('O5 a late overlay from an EARLIER paint cannot clobber the fuller board',
+      finalPaint.indexOf('b-L06SCwQLI') !== -1, finalPaint);
+    ok('O5b the board still holds both engines\' rows after the overlays settle',
+      finalPaint.slice().sort().join(',') === 'b-L06SCwQLI,ju-1', finalPaint);
+  })();
+
+  // O7: the false all-clear. On the Cayman tab ju-service holds no non-proof
+  // rows at all, so its (fast) paint is legitimately EMPTY and GAS supplies the
+  // whole tab ~8s later. Painting an empty partial there renders renderRows'
+  // "Nothing in flight." - telling the operator a live money board is clear
+  // while an engine is still answering. The skeleton must stay up instead.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [];                                     // fast engine: nothing (real Cayman shape)
+    r.listRows[r.GWU] = [{ processId: 'b-L06SCwQLI', currentStage: 'needs_attention' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    ok('O7 an EMPTY partial paint is suppressed (no false "Nothing in flight")',
+      r.painted.length === 0, r.painted);
+    await r.arrive(r.GWU);
+    ok('O7b once every engine has answered the board paints normally',
+      r.painted.length === 1 && r.painted[0].indexOf('b-L06SCwQLI') !== -1, r.painted);
+  })();
+
+  // O7c: a genuinely empty board must still reach the empty state once all
+  // engines are in - the guard suppresses PARTIAL emptiness, not real emptiness.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [];
+    r.listRows[r.GWU] = [];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    await r.arrive(r.GWU);
+    ok('O7c a truly empty board still renders once both engines answered',
+      r.painted.length === 1 && r.painted[0].length === 0, r.painted);
+  })();
+
+  // O5c/d: the structural guard itself.
+  const loadSrc = extractFn('load');
+  const reviewIife = loadSrc.slice(loadSrc.indexOf('opGetRowReview') - 2000);
+  const renderCalls = (reviewIife.match(/render\(rows\)/g) || []).length;
+  const guarded = (reviewIife.match(/pseq!==PAINT_SEQ|pseq===PAINT_SEQ/g) || []).length;
+  // Exactly three: the early return, the in-flight check, and the final render.
+  // A >= threshold let a dropped guard survive mutation M4 on 2026-09-06.
+  ok('O5c all three PAINT_SEQ guards in the review overlay are present',
+    renderCalls > 0 && guarded === 3, 'renders=' + renderCalls + ' guards=' + guarded);
+  ok('O5d PAINT_SEQ is declared alongside LOAD_SEQ and bumped per paint',
+    /var LOAD_SEQ=0, PAINT_SEQ=0/.test(html) && /var pseq=\+\+PAINT_SEQ;/.test(html));
+
+  // O6: the old blocking shape must not come back, and both engines must stay.
+  ok('O6 load() no longer Promise.all-blocks on the engine list',
+    !/Promise\.all\(engines\.map/.test(loadSrc), 'Promise.all over engines is back');
+  ok('O6b fetchEngineBoard_ still fail-opens all three of its fetches',
+    (extractFn('fetchEngineBoard_').match(/\.catch\(function\(\)\{return/g) || []).length === 3);
+  ok('O6c both lanes still read BOTH engines (dropping GW loses actionable rows)',
+    /ENGINES_FOR_LANE_ = \{ cayman: \[GW, JU_API\], israel: \[GW, JU_API\] \}/.test(html));
+  ok('O6d the stale "one engine for Cayman" comment is gone',
+    !/one engine for Cayman/.test(html), 'stale comment still contradicts the code below it');
+}
+
+// The O-block's async IIFEs settle on the microtask queue; report after they do.
+setTimeout(function () {
+  console.log(pass + ' pass, ' + fail + ' fail');
+  process.exit(fail ? 1 : 0);
+}, 0);
