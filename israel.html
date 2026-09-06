@@ -301,12 +301,6 @@
        attribute alone left the label text visible with no input under it -
        caught by actually rendering this in a browser, not by reading the DOM. */
     .lvp-field--en-addr-fallback[hidden] { display: none !important; }
-    /* A field holding a machine transliteration the LP has not confirmed yet.
-       Deliberately not the error red (nothing is wrong, it just needs a look)
-       and deliberately not silent either. Cleared the moment the LP touches
-       the field. 2026-09-06. */
-    .lvp-field--translit .lvp-input { border-bottom-style: dashed; border-bottom-width: 2px; }
-    .lvp-field--translit .lvp-en-addr-note, .lvp-en-addr-note { margin: 4px 0 0; }
     /* Same reason as the line above: a bare `hidden` attribute loses to
        `.lvp-field { display: block }`, so the attester's stamp/licence/phone stayed
        on screen when the paper route hid them and the fields were still required.
@@ -589,16 +583,19 @@
           <input type="hidden" name="investorsArray[0].israelAddress.houseNumber">
           <input type="hidden" name="investorsArray[0].israelAddress.postalCode">
           <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="investorsArray[0].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
-          <!-- English mirror of the address above (the W-8's line 3). Normally filled
-               invisibly by the async geocode below; stays a hidden, un-required pair
-               with NO holder wrapper so the normal flow never shows it. If the geocode
-               MISSES (no English name on file for the street, API failure/timeout),
-               revealEnglishAddressFallback_ un-hides this exact holder and flips these
-               to real text inputs, at which point validatePage's ordinary required-field
-               pass takes over - the phantom-field class closed 2026-09-04 after the
-               ינאי אורון incident (see the submit-belt comment near doSubmitNow_). -->
-          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="investorsArray[0].englishDetails.englishAddress.street"></label>
-          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="investorsArray[0].englishDetails.englishAddress.city"></label>
+          <!-- English mirror of the address above (the W-8's line 3). Hidden until the
+               Hebrew address resolves, then shown as an ordinary editable pair,
+               pre-filled with whatever English Google had (showEnAddrHolders_ /
+               resolveEnAddr_). data-optional because the LP is NOT the source of
+               truth for these: israeliDeriveEnglishAddress_ derives both on
+               ju-service immediately before validation, and blocking Continue on a
+               blank one blocked a real LP on 2026-09-06 over a value the server had.
+               If the server DOES refuse, focusServerValidation_ calls
+               revealEnglishAddressFallback_, which puts the named message on this
+               exact holder. data-script="en" hands them to the form's existing
+               wrong-script handler so Hebrew cannot be typed into a W-8 line 3. -->
+          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="investorsArray[0].englishDetails.englishAddress.street"></label>
+          <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="investorsArray[0]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="investorsArray[0].englishDetails.englishAddress.city"></label>
 
           <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="investorsArray[0].email" autocomplete="email"></label>
           <label class="lvp-field"><span class="lvp-field__label">טלפון נייד</span><input class="lvp-input" type="tel" dir="ltr" name="investorsArray[0].phoneNumber" data-validate="cell-il" placeholder="0541234567 / +972541234567" autocomplete="tel"></label>
@@ -708,8 +705,8 @@
             <input type="hidden" name="corporationDetails.israelAddress.postalCode">
             <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="corporationDetails.israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
             <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
-            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="corporationDetails.englishDetails.englishAddress.street"></label>
-            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="corporationDetails.englishDetails.englishAddress.city"></label>
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="corporationDetails.englishDetails.englishAddress.street"></label>
+            <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="corporationDetails"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="corporationDetails.englishDetails.englishAddress.city"></label>
           </fieldset>
         </section>
 
@@ -1025,8 +1022,8 @@
                 <input type="hidden" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.postalCode">
                 <label class="lvp-field" data-optional><input class="lvp-input lvp-input--apt" type="text" data-optional data-script="he" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].israelAddress.apartmentNumber" autocomplete="off" placeholder="קומה ודירה (במידה ויש)"></label>
                 <!-- English-address phantom-field backstop, see the identical comment on the primary investor's address block above. -->
-                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street"></label>
-                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city"></label>
+                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">רחוב באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.street"></label>
+                <label class="lvp-field lvp-field--en-addr-fallback" hidden data-optional data-en-addr-fallback="controllingShareholdersContainer.controllingShareholdersArray[${i}]"><span class="lvp-field__label">עיר באנגלית</span><input class="lvp-input" type="hidden" dir="ltr" data-script="en" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].englishDetails.englishAddress.city"></label>
               </fieldset>
               <div class="lvp-grid-2">
                 <label class="lvp-field"><span class="lvp-field__label">דואר אלקטרוני</span><input class="lvp-input" type="email" name="controllingShareholdersContainer.controllingShareholdersArray[${i}].email" data-help="יישלח אליו/ה קישור אישי להשלמת הפרטים ולחתימה"></label>
@@ -1466,7 +1463,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-09-06-english-address-visible-and-transliterated';
+      window.__BUILD_TAG = 'israel-2026-09-06-english-address-visible-server-derived';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1896,8 +1893,7 @@
       "הקובץ גדול מ-10 מ\"ב. יש להעלות קובץ קטן יותר.":"The file is larger than 10 MB. Please upload a smaller file.",
       "תאריך לא תקין. נא להזין dd/mm/yyyy.":"Invalid date. Please enter dd/mm/yyyy.",
       "מספר תעודת הזהות אינו תקין.":"The ID number is not valid.",
-      "סכום ההשקעה חייב להיות גדול מ-50,000.":"The investment amount must be greater than 50,000.",
-      "לא הצלחנו לתרגם את הכתובת אוטומטית. נא לאשר או להשלים באנגלית.":"We could not translate the address automatically. Please confirm or complete it in English."
+      "סכום ההשקעה חייב להיות גדול מ-50,000.":"The investment amount must be greater than 50,000."
     };
 
     var curLang = 'he';
@@ -3084,120 +3080,6 @@
     // seal failed on exactly this. Gate both English-mirror offers on it.
     function isHebrewText_(s) { return /[א-ת]/.test(String(s || '')); }
 
-    // ---- Hebrew -> Latin transliteration (a SUGGESTION, never an answer) -----
-    // Academy of the Hebrew Language "simplified" romanization: the road-sign
-    // standard, UN-adopted for Israeli geographic names, and the basis of the
-    // BGN/PCGN 2018 agreement.
-    // https://eng.hebrew-academy.org.il/our-work/language-decisions/transliteration/
-    //
-    // Hebrew is an abjad: a written street name does not carry most of its
-    // vowels. This engine reconstructs what it can from the mater lectionis
-    // letters (ו / י / final ה) and supplies 'a' for an unwritten vowel, which
-    // is the commonest road-sign choice but is a GUESS - "דן שומרון" comes out
-    // "Dan Shomron" (right) and "הרצל" comes out "Haratzl" (the sign says
-    // "Herzl"). It is therefore never allowed to be a silent answer: every value
-    // it produces is flagged unconfirmed and blocks Continue until the LP has
-    // actually been in the field (suggestTranslit_ below). Its measured hit rate
-    // against a table of real Israeli street names, failures included, lives in
-    // test/israel-english-address-fallback-harness.cjs.
-    var TRANSLIT_CONS = {
-      'א': '', 'ב': 'v', 'ג': 'g', 'ד': 'd', 'ה': 'h', 'ו': 'v', 'ז': 'z',
-      'ח': 'h', 'ט': 't', 'י': 'y', 'כ': 'kh', 'ל': 'l', 'מ': 'm', 'נ': 'n',
-      'ס': 's', 'ע': '', 'פ': 'f', 'צ': 'tz', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't'
-    };
-    // Without nikud there is no dagesh information, so the spirants are placed
-    // positionally: ב/כ/פ open a word as b/k/p (Ben, Kfar, Petah) and are v/kh/f
-    // elsewhere (Rehavam, Malkhi, Yafo). Wrong inside a word after a vowel
-    // ("שבזי" -> Shavazi, sign says Shabazi); right far more often than not.
-    var TRANSLIT_INITIAL = { 'ב': 'b', 'כ': 'k', 'פ': 'p' };
-    var TRANSLIT_FINAL = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
-    // Geresh digraphs for the loan sounds Hebrew writes with an apostrophe.
-    var TRANSLIT_GERESH = { 'ג': 'j', 'ז': 'zh', 'צ': 'ch', 'ד': 'dh', 'ת': 'th' };
-    // The vowel to supply where Hebrew writes none. Unpointed text cannot say
-    // which one it is; 'a' is the commonest on Israeli road signs (Dan, Ramat,
-    // Gan, Ashdod) and is simply wrong on the words that take 'e' or 'i'
-    // (Herzl, Ben, Begin, Rishon). Measured both ways over the harness table
-    // before choosing - see its accuracy block.
-    var EPENTHETIC = 'a';
-    function translitWord_(w) {
-      // 1. Strip nikud/cantillation, fold the five final forms, resolve geresh.
-      var chars = String(w).replace(/[֑-ׇ]/g, '').split('');
-      var letters = [];
-      for (var i = 0; i < chars.length; i++) {
-        var c = chars[i];
-        if (TRANSLIT_FINAL[c]) c = TRANSLIT_FINAL[c];
-        if (!/[א-ת]/.test(c)) continue;
-        var nx = chars[i + 1];
-        if ((nx === "'" || nx === '׳') && TRANSLIT_GERESH[c]) { letters.push({ t: 'c', o: TRANSLIT_GERESH[c] }); i++; continue; }
-        letters.push({ he: c });
-      }
-      // 2. Classify: consonant, or mater lectionis standing in for a vowel.
-      var units = [];
-      for (var j = 0; j < letters.length; j++) {
-        var L = letters[j];
-        if (L.t) { units.push(L); continue; }
-        var he = L.he, next = letters[j + 1];
-        var first = (j === 0), last = (j === letters.length - 1);
-        if (he === 'ו') {
-          if (next && next.he === 'ו') { units.push({ t: 'c', o: 'v' }); j++; continue; }   // וו = the consonant v
-          if (first) { units.push({ t: 'c', o: 'v' }); continue; }
-          units.push({ t: 'v', o: 'o', m: 1 });   // holam male and shuruk are indistinguishable unpointed; 'o' is the commoner sign
-          continue;
-        }
-        if (he === 'י') {
-          if (next && next.he === 'י') { units.push({ t: 'c', o: 'y' }); j++; continue; }   // יי = the consonant y
-          if (first) { units.push({ t: 'c', o: 'y' }); continue; }
-          units.push({ t: 'v', o: 'i', m: 1 });
-          continue;
-        }
-        if (he === 'ה') {
-          if (last && j > 0) { units.push({ t: 'v', o: 'a' }); continue; }   // silent word-final he: Yehuda, Netanya
-          units.push({ t: 'c', o: 'h' });
-          continue;
-        }
-        if (he === 'א' || he === 'ע') {
-          // The consonant itself is not represented at all in the simplified
-          // standard, but the letter is still holding a vowel in the abjad, so
-          // dropping it outright collapses a syllable (רעננה -> "Ranna",
-          // באר -> "Bar"). Keep a vowel slot - EXCEPT when the next letter is
-          // itself a mater writing that vowel, which would double it
-          // (אונו -> "Aono" instead of "Ono").
-          if (!(next && (next.he === 'ו' || next.he === 'י'))) units.push({ t: 'v', o: EPENTHETIC });
-          continue;
-        }
-        units.push({ t: 'c', o: (first && TRANSLIT_INITIAL[he]) || TRANSLIT_CONS[he] || '' });
-      }
-      // 3. Assemble, supplying the unwritten vowel inside consonant clusters.
-      var out = '';
-      for (var k = 0; k < units.length; k++) {
-        var u = units[k];
-        out += u.o;
-        if (u.t !== 'c' || !u.o) continue;
-        var nu = units[k + 1];
-        if (!nu || nu.t === 'v') continue;          // the next letter already writes the vowel
-        var after = units[k + 2];
-        if (after && after.t === 'v') continue;     // C-C-vowel reads as an onset cluster: Shom|ron
-        // C-C closing the word after a WRITTEN vowel reads fine as a coda
-        // (Rotshi|ld). After a merely supplied vowel it does not (אבן -> "Avn"),
-        // so only a real mater lectionis licenses the skip.
-        if (!after && k > 0 && units[k - 1].m) continue;
-        out += EPENTHETIC;
-      }
-      return out;
-    }
-    function translitHe_(s) {
-      var parts = String(s || '').trim().split(/(\s+|[,\-])/);
-      var out = '';
-      for (var i = 0; i < parts.length; i++) {
-        var p = parts[i];
-        if (!/[א-ת]/.test(p)) { out += p; continue; }   // digits, punctuation, already-Latin text ride through
-        var w = translitWord_(p);
-        out += w ? w.charAt(0).toUpperCase() + w.slice(1) : '';
-      }
-      return out.replace(/\s{2,}/g, ' ').trim();
-    }
-    // The one LP-facing string this feature adds (Noa-approved 2026-09-06, verbatim).
-    var EN_ADDR_TRANSLIT_NOTE = 'לא הצלחנו לתרגם את הכתובת אוטומטית. נא לאשר או להשלים באנגלית.';
     // "prefix" is the holder key with no trailing dot ("investorsArray[0]",
     // "corporationDetails"), matching data-en-addr-fallback in the HTML.
     function enAddrPrefix_(set) { return String(set.enStreet).slice(0, -'.englishDetails.englishAddress.street'.length); }
@@ -3208,8 +3090,8 @@
     // as the Hebrew address resolves, pre-filled wherever Google has English, so
     // the LP meets two ordinary fields in place instead of the form inventing two
     // new required ones at a failed Continue. revealEnglishAddressFallback_ below
-    // still exists as the safety net for any path that reaches validation with
-    // them blank; it is no longer how an LP first meets these fields.
+    // adds the error state on top, and is now reached ONLY from a server refusal
+    // (focusServerValidation_), never from a client-side gate.
     function showEnAddrHolders_(prefix) {
       var any = false;
       Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
@@ -3220,93 +3102,41 @@
       return any;
     }
     // The LP is re-typing the address, so the resolved English pair no longer
-    // describes anything: put it back out of the way and drop any suggestion
-    // state, rather than leaving a stale guess on screen next to a half-typed
-    // Hebrew address.
+    // describes anything: put it back out of the way rather than leaving a stale
+    // English value on screen next to a half-typed Hebrew address.
     function hideEnAddrHolders_(prefix) {
       Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
         var input = holder.querySelector('input');
-        if (input) { delete input.dataset.translitUnconfirmed; input.type = 'hidden'; }
-        holder.classList.remove('lvp-field--translit');
+        if (input) input.type = 'hidden';
         clearFieldError_(holder);
         holder.hidden = true;
       });
-      renderTranslitNote_(prefix, null);
-    }
-    // Offer a transliteration for a still-blank English field. This is a W-8 tax
-    // form, so a guess must never ride into a submit unseen: the input is flagged
-    // data-translit-unconfirmed and validatePage / doSubmitNow_ both refuse while
-    // that flag is set. The flag clears on a real interaction with the field - an
-    // edit, a click into it, a keypress - i.e. once the LP has actually been in
-    // the field with the note beside it. A programmatic .focus() (the error path
-    // in doSubmitNow_ does one) deliberately does NOT count as confirmation.
-    function suggestTranslit_(name, heSource) {
-      if (!heSource) return false;
-      var el = form.querySelector('[name="' + cssEsc(name) + '"]');
-      if (!el || String(el.value || '').trim()) return false;
-      var guess = translitHe_(heSource);
-      if (!guess || isHebrewText_(guess)) return false;
-      if (!inferOffer(name, guess)) return false;    // TOUCHED / SNAP still win
-      el.dataset.translitUnconfirmed = '1';
-      if (!el.__translitBound) {
-        el.__translitBound = true;
-        var confirmSeen = function () {
-          if (!el.dataset.translitUnconfirmed) return;
-          delete el.dataset.translitUnconfirmed;
-          TOUCHED[name] = true;   // the LP has adopted this value; no later geocode may overwrite it
-          var h2 = el.closest('.lvp-field');
-          if (h2) { h2.classList.remove('lvp-field--translit'); clearFieldError_(h2); }
-        };
-        ['input', 'change', 'mousedown', 'keydown', 'touchstart'].forEach(function (ev) { el.addEventListener(ev, confirmSeen); });
-      }
-      var holder = el.closest('.lvp-field');
-      if (holder) holder.classList.add('lvp-field--translit');
-      return true;
-    }
-    function clearFieldError_(holder) {
-      holder.classList.remove('lvp-field--error', 'lvp-field--has-msg');
-      var m = holder.querySelector('.lvp-error-msg');
-      if (m) m.remove();
-      unbindFieldInvalid_(holder);
-    }
-    // Everything the English mirror needs once a Hebrew address exists: show the
-    // pair, then transliterate whatever the geocode could not supply. Called at
-    // the END of the geocode chain, never before it - a real English name from
-    // Google always beats a guess.
-    function finishEnAddr_(set) {
-      if (!fieldVal_(set.street) || !fieldVal_(set.city)) return;
-      showEnAddrHolders_(enAddrPrefix_(set));
-      var house = fieldVal_(set.house);
-      suggestTranslit_(set.enStreet, fieldVal_(set.street) + (house ? ' ' + house : ''));
-      suggestTranslit_(set.enCity, fieldVal_(set.city));
-      var note = null;
-      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + enAddrPrefix_(set) + '"]'), function (holder) {
-        var input = holder.querySelector('input');
-        if (input && input.dataset.translitUnconfirmed && !note) note = holder;
-      });
-      renderTranslitNote_(enAddrPrefix_(set), note);
     }
     // Full English-address resolution for one holder, in strict priority order:
     // Google's English for the PICKED place -> Google's English for the typed
-    // address string -> a transliteration the LP has to confirm. Always ends in
-    // finishEnAddr_, so the pair is visible and never silently blank.
+    // address string. Always ends by SHOWING the pair, whether or not Google had
+    // anything, so the LP can see and correct what the W-8 will carry.
+    //
+    // There is deliberately no client-side guess for what Google could not
+    // answer (a transliteration engine was written on 2026-09-06 and cut the
+    // same day). israeliDeriveEnglishAddress_ on ju-service already derives BOTH
+    // fields server-side immediately before validation, with a Geocoding tier
+    // and a Cloud Translation tier behind it, and it is measurably better than
+    // anything this file could guess: measured live against production
+    // 2026-09-06 via ?api=diagGeocode, it answered Dan Shomron 13 / Ramat Gan
+    // for the street the client geocode returns in Hebrew, Herzl Street 1 /
+    // Tel Aviv-Yafo, Shabazi 5 / Jerusalem, and still produced Latin text for a
+    // street name that does not exist. Guessing here would only be a worse
+    // second copy of that, on a W-8 line 3.
     function resolveEnAddr_(set, placeId) {
       var step = placeId ? placesFillEnglish_(placeId, set) : Promise.resolve();
       return Promise.resolve(step)
         .catch(function () {})
         .then(function () { return deriveEnglishFromHebrew_(set); })
         .catch(function () {})
-        .then(function () { finishEnAddr_(set); });
-    }
-    // One note per holder group, on the first field carrying a suggestion.
-    function renderTranslitNote_(prefix, holder) {
-      Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"] .lvp-en-addr-note'), function (n) { n.remove(); });
-      if (!holder) return;
-      var p = document.createElement('p');
-      p.className = 'lvp-hint-small lvp-en-addr-note';
-      p.setAttribute('data-he', EN_ADDR_TRANSLIT_NOTE);
-      p.textContent = displayFor(EN_ADDR_TRANSLIT_NOTE, curLang);
-      holder.appendChild(p);
+        .then(function () {
+          if (fieldVal_(set.street) && fieldVal_(set.city)) showEnAddrHolders_(enAddrPrefix_(set));
+        });
     }
     // The LP explicitly picked this place, so the Hebrew fields are their
     // answer: set directly and mark touched (the infer engine backs off).
@@ -3436,29 +3266,45 @@
     // any address the geocoder could not resolve. Selecting a real suggestion is now
     // the only way to satisfy an israelAddressSearch field (see sInput.dataset.picked,
     // set by bindPlacesInputs' place_changed listener, checked in validatePage).
-    // English-address phantom-field backstop (2026-09-04, ינאי אורון incident): the
-    // englishDetails.englishAddress.street/city mirrors are required server-side
-    // (W-8 line 3) for every holder, unconditionally, but normally ride as bare
-    // <input type="hidden"> pairs the LP never sees - filled invisibly by the
-    // geocode above. When that geocode misses (no English name on file for the
-    // street, API failure/timeout - see isHebrewText_ above), the mirror stays
-    // blank forever with nothing on the page to correct: the LP retries the exact
-    // same submit and gets the exact same server refusal every time. Un-hides the
-    // matching .lvp-field--en-addr-fallback holder(s) and flips their inputs from
-    // hidden to text, at which point they are ordinary visible required fields and
-    // validatePage's existing required-field pass (no special-casing needed) does
-    // the rest - same mechanic the ID-appendix group already uses. prefix is the
-    // holder key with no trailing dot, e.g. "investorsArray[0]" or
-    // "corporationDetails" - matches data-en-addr-fallback on the HTML side.
+    // English-address phantom-field backstop (2026-09-04, ינאי אורון incident,
+    // re-scoped 2026-09-06). The englishDetails.englishAddress.street/city mirrors
+    // are required server-side (W-8 line 3) for every holder, unconditionally, and
+    // the LP does not type them: they are filled by the geocode above, and failing
+    // that by israeliDeriveEnglishAddress_ on ju-service immediately before
+    // validation. The original dead end was that a blank mirror was INVISIBLE, so
+    // the server's refusal named a field the LP could not see or fix and every
+    // retry produced the same refusal.
+    //
+    // The pair is now VISIBLE from the moment the Hebrew address resolves
+    // (showEnAddrHolders_ above), so the LP can always see and correct what the
+    // W-8 will carry. This function is the second half: it adds the named error
+    // state on top. As of 2026-09-06 its ONLY caller is focusServerValidation_,
+    // i.e. it fires when the SERVER actually refused, never as a client-side
+    // guess that the server would have refused. prefix is the holder key with no
+    // trailing dot, e.g. "investorsArray[0]" or "corporationDetails" - matches
+    // data-en-addr-fallback on the HTML side.
     function revealEnglishAddressFallback_(prefix) {
       var any = showEnAddrHolders_(prefix);
       Array.prototype.forEach.call(form.querySelectorAll('[data-en-addr-fallback="' + prefix + '"]'), function (holder) {
         var input = holder.querySelector('input');
-        // Only flag what is actually missing. Since 2026-09-06 the pair is
-        // visible from the moment the Hebrew address resolves, so one of the two
-        // can legitimately already hold a good, LP-confirmed value; marking that
-        // one "חובה" alongside its blank sibling would be a lie.
-        if (input && String(input.value || '').trim() && !input.dataset.translitUnconfirmed) return;
+        // Only flag what is actually missing. The pair is visible from the moment
+        // the Hebrew address resolves, so one of the two can legitimately already
+        // hold a good value; marking that one in error alongside its blank
+        // sibling would be a lie.
+        if (input && String(input.value || '').trim()) return;
+        // The error CLASS is set here, not by the caller. It used to be added by
+        // each of the two call sites; both were removed on 2026-09-06 and the
+        // remaining caller (focusServerValidation_) would have inherited a field
+        // that carried the message but no red state and no row in
+        // renderErrorSummary's jump list. Caught by the harness's S2 assertion,
+        // which is why S2 exists.
+        // Rendered and checked at 1280 and 375 on 2026-09-06: the label turns red
+        // and the message sits on its own line below the input. It does NOT gain
+        // the " חובה" suffix, because setFieldError also adds lvp-field--has-msg
+        // and the rule at the top of this file suppresses the ::after when a
+        // message is present. That is the same treatment every other errored
+        // field with an inline message gets, which is the point.
+        holder.classList.add('lvp-field--error');
         // Same inline+programmatic pattern every other validation error on this
         // form uses (setFieldError -> bindFieldInvalid_: visible message,
         // aria-invalid, aria-describedby). Without this, a screen-reader user
@@ -3499,9 +3345,9 @@
               var place = acS.getPlace();
               if (!place || !place.address_components) return;
               placesFanOutHe_(set, place.address_components, place.formatted_address || sInput.value);
-          // Show the English pair the instant the address resolves, not a
-          // geocode round-trip later and never as a surprise at a failed Next.
-          if (vs(set.street) && vs(set.city)) showEnAddrHolders_(enAddrPrefix_(set));
+              // Show the English pair the instant the address resolves, not a
+              // geocode round-trip later and never as a surprise at a failed Next.
+              if (vs(set.street) && vs(set.city)) showEnAddrHolders_(enAddrPrefix_(set));
               var _st = vs(set.street), _ho = vs(set.house), _ci = vs(set.city);
               if (_st && _ci) { sInput.value = _st + (_ho ? ' ' + _ho : '') + ', ' + _ci; sInput.dataset.picked = '1'; }
               resolveEnAddr_(set, place.place_id || '');
@@ -3531,9 +3377,9 @@
               if (!_st && !_ci) return;
               var composed = _st + (_ho ? ' ' + _ho : '') + (_ci ? ', ' + _ci : '');
               if (sInput.value.trim() !== composed) {
-            delete sInput.dataset.picked;
-            hideEnAddrHolders_(enAddrPrefix_(set));
-            [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
+                delete sInput.dataset.picked;
+                hideEnAddrHolders_(enAddrPrefix_(set));
+                [set.street, set.city, set.house, set.zip, set.enStreet, set.enCity, set.apt].filter(Boolean).forEach(function (n) {
                   var el = form.querySelector('[name="' + cssEsc(n) + '"]');
                   if (el) el.value = '';
                   delete TOUCHED[n];
@@ -3954,6 +3800,24 @@
       // Step 2 restored the hidden dd/mm/yyyy value by name; split it back into
       // the visible Day/Month/Year segments for display.
       dobInitAll();
+      // 4) RESUME: put the English address pair back on screen for any holder
+      //    whose Hebrew address was just restored (2026-09-06). bindPlacesInputs
+      //    has its own resume branch for exactly this, but it runs at Places-ready
+      //    time, which is BEFORE this function ever fires on a real resume - and
+      //    it marks the input data-places-bound, so the later re-bind is a no-op
+      //    and the branch never gets a second chance. Measured in the jsdom rig:
+      //    a resumed LP with a filled Hebrew address and a blank English pair saw
+      //    the pair stay hidden and fired ZERO geocodes. Re-derive here, where the
+      //    values actually exist. resolveEnAddr_ ends by showing the pair either
+      //    way, so a resume that already HAS both English values just shows them.
+      try {
+        PLACES_SETS.forEach(function (_s) {
+          if (!_s.enStreet || !_s.enCity) return;
+          if (!fieldVal_(_s.street) || !fieldVal_(_s.city)) return;
+          if (fieldVal_(_s.enStreet) && fieldVal_(_s.enCity)) showEnAddrHolders_(enAddrPrefix_(_s));
+          else resolveEnAddr_(_s, '');
+        });
+      } catch (eEnAddr) {}
     }
 
     // ---- the files payload the gateway persists (per-investor + entity + lawyer) ----
@@ -4120,39 +3984,23 @@
       var firstError = null;
       pageEl.querySelectorAll('.lvp-field, .lvp-fieldset').forEach(function (f) { f.classList.remove('lvp-field--error', 'lvp-fieldset--error', 'lvp-field--has-msg', 'lvp-fieldset--has-msg'); unbindFieldInvalid_(f); });
       pageEl.querySelectorAll('.lvp-error-msg').forEach(function (e) { e.remove(); });
-      // English-address fallback, revealed on THIS page's own Next gate, not only
-      // at final submit (2026-09-04, punish-late finding: the fallback holder is
-      // `hidden` by default, so the required-field pass two lines down silently
-      // skipped it - an LP could click Next through every remaining page and only
-      // get bounced back here at the very last step). Scoped to this page only:
-      // reveal any holder whose Hebrew address is filled but whose English mirror
-      // never derived, exactly the doSubmitNow_ check, run early instead of last.
-      Array.prototype.forEach.call(pageEl.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
-        var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
-        // Same FATCA gate as the final-submit scan below - a CP's englishAddress
-        // is only server-required when the entity self-certifies Passive NFFE.
-        if (prefix.indexOf('controllingShareholdersContainer.controllingShareholdersArray[') === 0 && readRadio('entityW8.fatcaStatus') !== 'Passive NFFE') return;
-        var heStreetEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.street"]');
-        var heCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.israelAddress.city"]');
-        var enCityEl = pageEl.querySelector('[name="' + cssEsc(prefix) + '.englishDetails.englishAddress.city"]');
-        if (!heStreetEl || !heCityEl) return; // this page does not carry this holder's Hebrew source
-        if (!heStreetEl.value.trim() || !heCityEl.value.trim()) return; // nothing to derive from yet
-        if (!enStreetEl.value.trim() || !(enCityEl && enCityEl.value.trim())) revealEnglishAddressFallback_(prefix);
-      });
-      // Unconfirmed TRANSLITERATION gate (2026-09-06). englishAddress feeds the
-      // W-8's line 3, so a machine guess at a Hebrew street name must not be
-      // able to ride into a submit on the LP's behalf: suggestTranslit_ flags
-      // the input it filled, and only a real interaction with that field (edit,
-      // click, keypress - never a programmatic focus) clears the flag. Until
-      // then Continue is refused and the approved note names why.
-      Array.prototype.forEach.call(pageEl.querySelectorAll('input[data-translit-unconfirmed]'), function (el) {
-        var holder = el.closest('.lvp-field');
-        if (!holder || isHidden(holder)) return;
-        ok = false;
-        holder.classList.add('lvp-field--error');
-        setFieldError(holder, displayFor(EN_ADDR_TRANSLIT_NOTE, curLang));
-        if (!firstError) firstError = holder;
-      });
+      // NO English-address gate here, deliberately (2026-09-06). A Next gate on a
+      // blank englishAddress.street/city used to live at this exact spot. It is
+      // gone because it blocked the LP on a value the LP does not supply and the
+      // SERVER does: israeliDeriveEnglishAddress_ runs on ju-service immediately
+      // before validation (submit.ts, right before israeliSanitizeSubmission),
+      // with a Geocoding tier and a Cloud Translation tier, and it derives the
+      // street the client-side Geocoder returns in Hebrew. Google's client-side
+      // route for דן שומרון is Hebrew, so this gate fired on a perfectly good
+      // address and stopped a real LP dead on 2026-09-06.
+      //
+      // The two English fields are still on screen from the moment the Hebrew
+      // address resolves (showEnAddrHolders_), so an LP who wants to supply or
+      // correct them can. They carry data-optional so this page's required pass
+      // skips them. If the server ever DOES refuse (no key, timeout, no match),
+      // focusServerValidation_ brings the LP back to this exact field with the
+      // named message - so the refusal is named where it happens, and is never a
+      // blank dead end.
       // Required-field pass: every label/legend carries its field; a required field
       // is one whose holder is visible and whose label has no opt-out. EasySend
       // model: every visible field in these pages is required unless flagged optional.
@@ -5123,6 +4971,30 @@
      * caller then shows the existing generic line - never a silent no-op.
      */
     function focusServerValidation_(problems) {
+      // ENGLISH-ADDRESS PASS, FIRST (2026-09-06). Since the client no longer
+      // pre-empts the server on englishDetails.englishAddress.street/city (both
+      // client gates removed today, see validatePage and doSubmitNow_), the
+      // server's own refusal is the ONE place that class can surface. It must
+      // therefore arrive as a NAMED, VISIBLE, FILLABLE field and never as the
+      // generic retry line - that unnamed dead end is the whole ינאי אורון
+      // incident. revealEnglishAddressFallback_ does exactly that: un-hides the
+      // holder, flips the input from hidden to text, and writes the per-field
+      // message. Runs before the generic walk below so the LP lands on the
+      // English field rather than on some other path the server also named.
+      var enPrefixes = {};
+      for (var e0 = 0; e0 < problems.length; e0++) {
+        var p0 = String((problems[e0] && problems[e0].path) || '');
+        var m0 = p0.match(/^(.*)\.englishDetails\.englishAddress\.(?:street|city)$/) ||
+                 p0.match(/^(.*)\.englishAddress\.(?:street|city)$/);
+        if (!m0) continue;
+        // The typed-shape path ('investorsArray[0].englishAddress.street') and the
+        // raw form path both reduce to the same holder key, which is what
+        // data-en-addr-fallback carries.
+        var pre0 = m0[1];
+        if (enPrefixes[pre0]) continue;
+        enPrefixes[pre0] = 1;
+        if (form.querySelector('[data-en-addr-fallback="' + pre0 + '"]')) revealEnglishAddressFallback_(pre0);
+      }
       var el = null;
       for (var i = 0; i < problems.length && !el; i++) {
         var path = String((problems[i] && problems[i].path) || '');
@@ -5180,72 +5052,25 @@
       } catch (e) {}
       var deriveTimeout = new Promise(function (resolve) { setTimeout(resolve, 4000); });
       Promise.race([Promise.all(deriveWaits), deriveTimeout]).then(function () {
-      // English-address phantom-field belt (2026-09-04, ינאי אורון incident): the
-      // derive above is fail-soft by design (see deriveEnglishAddress.ts's own
-      // header on the server side) - it can legitimately still leave a mirror
-      // blank (no English name on file for the street, API miss/timeout). Before
-      // this belt, a blank mirror sailed straight into collectAll() and the server
-      // refused with a message naming no field, on a value the LP had no visible
-      // input to correct - the SAME dead end israeliDeriveEnglishAddress_'s own doc
-      // comment describes. Generic by design (name-suffix scan, not PLACES_SETS):
-      // catches every holder that carries the englishAddress pair, including the
-      // dynamically-templated controlling-person rows. A holder only counts if its
-      // Hebrew address is actually filled - an unfilled/inapplicable holder (e.g. no
-      // second authorized signer) has blank Hebrew too and is correctly skipped.
-      // Same unconfirmed-transliteration gate as validatePage, at the last door:
-      // a submit reached by any route (resume jump, back/forward) must not carry
-      // an unconfirmed machine guess into the W-8.
-      var unconfirmed = form.querySelector('input[data-translit-unconfirmed]');
-      if (unconfirmed) {
-        var uHolder = unconfirmed.closest('.lvp-field');
-        submitting = false;
-        if (uHolder) {
-          uHolder.hidden = false;
-          uHolder.classList.add('lvp-field--error');
-          setFieldError(uHolder, displayFor(EN_ADDR_TRANSLIT_NOTE, curLang));
-          var uPage = uHolder.closest('.lvp-page');
-          var uIdx = uPage ? visiblePages().indexOf(uPage) : -1;
-          if (uIdx !== -1 && uIdx !== idx) showPage(uIdx);
-          try { uHolder.scrollIntoView({ block: 'nearest' }); } catch (eU) {}
-        }
-        setStatus(displayFor(EN_ADDR_TRANSLIT_NOTE, curLang), true);
-        return;
-      }
-      var missingPrefix = null;
-      // Controlling persons only carry the englishAddress requirement when the
-      // entity's own FATCA self-cert is Passive NFFE (validate.ts:443-490,
-      // `cpNeedsEnglish`) - Active NFFE/Other controlling persons are never
-      // checked for it server-side. Read this ONCE, not per-CP: it is a single
-      // entity-level radio, not a per-holder field.
-      var cpEnglishRequired = readRadio('entityW8.fatcaStatus') === 'Passive NFFE';
-      Array.prototype.forEach.call(form.querySelectorAll('input[name$=".englishDetails.englishAddress.street"]'), function (enStreetEl) {
-        if (missingPrefix) return;
-        var prefix = enStreetEl.name.slice(0, -'.englishDetails.englishAddress.street'.length);
-        if (prefix.indexOf('controllingShareholdersContainer.controllingShareholdersArray[') === 0 && !cpEnglishRequired) return;
-        if (!_v(prefix + '.israelAddress.street') || !_v(prefix + '.israelAddress.city')) return;
-        if (!_v(prefix + '.englishDetails.englishAddress.street') || !_v(prefix + '.englishDetails.englishAddress.city')) missingPrefix = prefix;
-      });
-      if (missingPrefix) {
-        revealEnglishAddressFallback_(missingPrefix);
-        submitting = false;
-        var revealedHolder = form.querySelector('[data-en-addr-fallback="' + missingPrefix + '"]');
-        var pageEl = revealedHolder ? revealedHolder.closest('.lvp-page') : null;
-        var pageIdx = pageEl ? visiblePages().indexOf(pageEl) : -1;
-        if (pageIdx !== -1 && pageIdx !== idx) showPage(pageIdx);
-        if (revealedHolder) {
-          revealedHolder.classList.add('lvp-field--error');
-          // block:'nearest', not 'center': same FIX #11 reasoning the form's
-          // other error-focus path uses (~line 4122) - 'center' can land the
-          // focused field under the on-screen keyboard on a narrow Android.
-          var _rm2 = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          try { revealedHolder.scrollIntoView({ behavior: _rm2 ? 'auto' : 'smooth', block: 'nearest' }); }
-          catch (eScroll) { try { revealedHolder.scrollIntoView(); } catch (eScroll2) {} }
-          var toFocus = revealedHolder.querySelector('input, select, textarea');
-          if (toFocus) { try { toFocus.focus({ preventScroll: true }); } catch (eFocus) {} }
-        }
-        setStatus(displayFor('נא להשלים את שדות החובה.', curLang), true);
-        return;
-      }
+      // NO client-side English-address gate here, deliberately (2026-09-06). A
+      // pre-submit bounce on a blank englishDetails.englishAddress.street/city
+      // used to live at this exact spot (added 2026-09-04 for the Yanai Oron
+      // incident). It is gone for the same reason the Next-gate twin in
+      // validatePage is: it refused a submit over a value the LP never types and
+      // the SERVER derives. israeliDeriveEnglishAddress_ runs on ju-service
+      // immediately before validation with a Geocoding tier and a Cloud
+      // Translation tier, and the CLIENT-side Google route for a street like
+      // Dan Shomron comes back in Hebrew while the same street derives as
+      // "Dan Shomron 13" server-side (measured live 2026-09-06, ?api=diagGeocode).
+      // So the client idea of "missing" was routinely wrong, and it blocked a
+      // real LP on 2026-09-06.
+      //
+      // What replaces it is not silence. The pair is VISIBLE and editable from
+      // the moment the Hebrew address resolves, and if the server does refuse
+      // (no key, timeout, no match, or a value that came back in Hebrew), the
+      // submit catch routes through focusServerValidation_, which un-hides the
+      // holder the server named, flips it to a real input and puts the named
+      // message on it. The LP is never bounced with nothing named.
       // Belt (2026-07-14 fatcaStatus blank on resume): if inferredDefaults didn't
       // fire during hydration (no trusted change event from snapshot restore),
       // run them once more so the autofill is guaranteed before collection.
