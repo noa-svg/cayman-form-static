@@ -6,15 +6,23 @@
 //       served files resolves to ONE distinct deployment id (and each live
 //       gateway consumer actually carries it -- sign.html is a redirect stub
 //       and is allowed zero occurrences);
-//   C1p PILOT EXCEPTION (2026-08-05, Phase 4 pilot flip): israel.html's
-//       PRIMARY gateway is ju-api.legacyvpartners.com (ju-service), so it
-//       leaves C1's ">=1 /exec" presence assertion and instead gets POSITIVE
-//       assertions of its own: exactly one ju-api primary URL, plus exactly
-//       one legacy /exec URL (the in-flight-session fallback for sessions
-//       minted before the flip) carrying the SAME deployment id the other
-//       four pages carry. Drift protection preserved, not weakened: a stray
-//       second copy of either URL, a missing fallback, or a diverged id all
-//       fail here.
+//   C1p ju-api-ONLY pages, israel.html + index.html (2026-08-05/19 flip;
+//       LEGACY FALLBACK REMOVED 2026-09-06). Both lanes' ONBOARDING invites
+//       mint on ju-service exclusively, and ju-cayman (GAS) is permanently
+//       retired and Drive-trashed - a stale pre-flip token has no live
+//       session to recover on either engine, so probing GAS for one only
+//       risked routing a real LP onto a dead backend (the actual bug this
+//       removal fixes: a pre-2026-08-05 link falling back to GAS and then
+//       silently stranding, since every GAS-side recovery trigger is also
+//       permanently suspended - see DECISIONS-PARKED.md 2026-09-06). Both
+//       pages leave C1's ">=1 /exec" presence assertion and instead assert
+//       ju-api primary exactly once and ZERO /exec occurrences.
+//       flow.html and signer.html are NOT included in this removal: Cayman
+//       (non-Israel) money still mints on GAS today by design
+//       (moneyMintBaseForLane_ is isIsrael-gated), so their GAS gateway is a
+//       live primary, not a legacy fallback - removing it would break
+//       current Cayman increase/redemption traffic. C1f/C1s below are
+//       unchanged.
 //   C1j CONSOLE SEAM EXCEPTION (2026-08-07, Israeli-onboarding mint reroute):
 //       console/index.html carries the ju-api base (GW_JU) exactly once, ON
 //       TOP OF its unchanged C1 obligations (it still carries the one GAS
@@ -44,9 +52,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const FILES = ['index.html', 'israel.html', 'signer.html', 'flow.html', 'console/index.html', 'sign.html'];
 // Files that MUST carry the gateway URL (sign.html is a redirect stub: zero is
-// correct; israel.html is the Phase 4 pilot page and is asserted separately in
-// C1p below, see the header note).
-const GATEWAY_REQUIRED = ['index.html', 'signer.html', 'flow.html', 'console/index.html'];
+// correct; israel.html and index.html are the ju-api-only pages and are
+// asserted separately in C1p below, see the header note).
+const GATEWAY_REQUIRED = ['signer.html', 'flow.html', 'console/index.html'];
 // israel.html's pilot PRIMARY gateway (ju-service behind ju-api).
 const PILOT_PRIMARY_URL = 'https://ju-api.legacyvpartners.com';
 // Files that MUST bake a filename-prefixed build tag.
@@ -117,23 +125,19 @@ for (const f of GATEWAY_REQUIRED) {
   ok('C1 ' + f + ' carries the gateway /exec URL', idsByFile[f].length >= 1, 'found ' + idsByFile[f].length + ' occurrences');
 }
 ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
-// ---- C1p: pilot exception, israel.html (2026-08-05 flip) -------------------
-// Positive replacement for israel.html's former C1 presence check: the ju-api
-// primary constant appears exactly once, and exactly one legacy /exec URL (the
-// pre-flip in-flight-session fallback) rides along, same id as the rest of the
-// fleet (the id-match leg also feeds the global single-id assertion below,
-// since israel.html's occurrence is in allIds).
-{
-  const primaryCount = html['israel.html'].split(PILOT_PRIMARY_URL).length - 1;
-  ok('C1p israel.html carries the ju-api primary URL exactly once', primaryCount === 1,
+// ---- C1p: ju-api-only pages, israel.html + index.html (legacy fallback removed 2026-09-06) ----
+// Positive replacement for their former C1 presence check: the ju-api primary
+// constant appears exactly once, and NO /exec URL rides along any more - GAS
+// is permanently retired, so there is no live session for a fallback to ever
+// recover.
+for (const f of ['israel.html', 'index.html']) {
+  const primaryCount = html[f].split(PILOT_PRIMARY_URL).length - 1;
+  ok('C1p ' + f + ' carries the ju-api primary URL exactly once', primaryCount === 1,
     'found ' + primaryCount + ' occurrences of ' + PILOT_PRIMARY_URL);
-  ok('C1p israel.html carries exactly ONE legacy /exec URL (pre-flip fallback)',
-    idsByFile['israel.html'].length === 1, 'found ' + idsByFile['israel.html'].length + ' occurrences');
-  ok('C1p israel.html legacy fallback id matches the id the other pages carry',
-    idsByFile['israel.html'].length === 1 && idsByFile['index.html'].length >= 1
-      && idsByFile['israel.html'][0] === idsByFile['index.html'][0],
-    'israel: ' + JSON.stringify(idsByFile['israel.html'].map(id => id.slice(0, 12) + '...'))
-      + ' index: ' + JSON.stringify(idsByFile['index.html'].map(id => id.slice(0, 12) + '...')));
+  ok('C1p ' + f + ' carries ZERO /exec URLs (no legacy fallback)',
+    idsByFile[f].length === 0, 'found ' + idsByFile[f].length + ' occurrences');
+  ok('C1p ' + f + ' carries no leftover legacy-gateway plumbing',
+    !/LEGACY_GATEWAY|useLegacyGateway|activeGatewayUrl_|probeLegacyGateway_|cfgTokenUnknown_|stickToLegacyGateway_/.test(html[f]));
 }
 // ---- C1j: console per-lane gateway seam (2026-08-07/08 Israeli mint reroute) --
 // The console's Israeli-onboarding mint CAN be born on ju-service, flag-gated
@@ -171,8 +175,8 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
   ok('C1f flow.html carries exactly ONE legacy /exec URL (GAS fallback)',
     idsByFile['flow.html'].length === 1, 'found ' + idsByFile['flow.html'].length + ' occurrences');
   ok('C1f flow.html legacy fallback id matches the id the other pages carry',
-    idsByFile['flow.html'].length === 1 && idsByFile['index.html'].length >= 1
-      && idsByFile['flow.html'][0] === idsByFile['index.html'][0]);
+    idsByFile['flow.html'].length === 1 && idsByFile['console/index.html'].length >= 1
+      && idsByFile['flow.html'][0] === idsByFile['console/index.html'][0]);
   ok('C1f flow.html carries the token-unknown fallback probe (cfgTokenUnknown_ + probeLegacyGateway_)',
     html['flow.html'].indexOf('function cfgTokenUnknown_(') !== -1
       && html['flow.html'].indexOf('function probeLegacyGateway_(') !== -1);
@@ -196,8 +200,8 @@ ok('C1 at least one /exec occurrence in the fleet', allIds.size >= 1);
   ok('C1s signer.html carries exactly ONE legacy /exec URL (GAS fallback)',
     idsByFile['signer.html'].length === 1, 'found ' + idsByFile['signer.html'].length + ' occurrences');
   ok('C1s signer.html legacy fallback id matches the id the other pages carry',
-    idsByFile['signer.html'].length === 1 && idsByFile['index.html'].length >= 1
-      && idsByFile['signer.html'][0] === idsByFile['index.html'][0]);
+    idsByFile['signer.html'].length === 1 && idsByFile['console/index.html'].length >= 1
+      && idsByFile['signer.html'][0] === idsByFile['console/index.html'][0]);
   ok('C1s signer.html carries the one-shot legacy probe (probeLegacySigner_)',
     html['signer.html'].indexOf('function probeLegacySigner_(') !== -1);
   ok('C1s signer.html defaults to the ju-api primary, legacy only when sticky',
