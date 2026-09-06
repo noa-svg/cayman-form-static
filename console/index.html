@@ -4556,6 +4556,12 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // This dual-read line remains correct and necessary either way: it is what
   // makes a ju-service-born Cayman process visible and actionable on the
   // board, which matters MORE now that real Cayman processes are born there.
+  // BOTH lanes read BOTH engines, and both entries are load-bearing (verified
+  // live 2026-09-06, see load()'s header for the evidence): ju-service owns
+  // everything born since 2026-08-16, GAS owns the older spine rows AND is the
+  // only engine that surfaces the tracker's still-owed orphan/manual money
+  // rows. GAS is slow (~6-10s floor) but it is NOT redundant - load() pays for
+  // it off the critical path instead of dropping it.
   var ENGINES_FOR_LANE_ = { cayman: [GW, JU_API], israel: [GW, JU_API] };
   function enginesForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
@@ -6252,7 +6258,12 @@ document.addEventListener('keydown',function(e){
   })();
   // F4: request-generation stamp. A slow response from the prior lane resolving
   // after a fund switch must never paint stale rows; only the newest request wins.
-  var LOAD_SEQ=0, _autoRefreshArmed=false, _w8BadgeArmed=false;
+  // PAINT_SEQ (2026-09-06) is one level FINER than LOAD_SEQ. LOAD_SEQ separates
+  // loads; since load() now paints once per engine arrival, PAINT_SEQ separates
+  // the paints WITHIN a load, so an earlier paint's async review overlay cannot
+  // resolve late and overwrite a later, fuller board. Monotonic across loads -
+  // never reset - so a stale paint can never collide with a live one.
+  var LOAD_SEQ=0, PAINT_SEQ=0, _autoRefreshArmed=false, _w8BadgeArmed=false;
   // Three skeleton rows with ghost rails pulsing (no "Loading..." text).
   function boardSkeleton(){
     var one='<div class="skel-row"><span class="skel-bar sk-name"></span><span class="skel-bar sk-rail"></span><span class="skel-bar sk-age"></span></div>';
@@ -6276,12 +6287,64 @@ document.addEventListener('keydown',function(e){
     // includeDone=0 by default (wiring item 5): terminal rows are fetched only
     // once a Show completed / Show canceled toggle asks for them.
     var wantDone=(showDone||showCanceled);
-    // BOARD READ + ACTION SEAM (2026-08-12): one engine for Cayman, two
-    // (GAS + ju-service) for Israel - a process born since 2026-08-08 lives
-    // ONLY in ju-service's registry and is invisible if this only asks GAS.
+    // BOARD READ + ACTION SEAM (2026-08-12, corrected 2026-09-06): TWO engines
+    // for BOTH lanes. ENGINES_FOR_LANE_ has read {cayman:[GW,JU_API],
+    // israel:[GW,JU_API]} since the Cayman lane flipped to dual-read on
+    // 2026-08-19. This comment used to claim a single engine for the Cayman
+    // lane, which was stale against the very line it sat above - and that
+    // contradiction is how the cost below went unnoticed for weeks. Both
+    // engines are REQUIRED, and neither is droppable:
+    //   - ju-service owns ju.process_registry (everything born since
+    //     2026-08-16; its diagRegistryStats oldestCreatedAt proves nothing
+    //     older exists there).
+    //   - GAS owns the spine sheet's process_registry AND is the ONLY engine
+    //     that surfaces the transfer-forms tracker's orphan/manual money rows
+    //     (CaymanGateway.ts:1713 concats caymanListManualTrackerRows_).
+    //     ju-service's ?api=list is spine-only (consolelist.ts:101-126, three
+    //     Postgres reads, no Sheets handle is even passed to it), so it cannot
+    //     reproduce them. Those rows are emitted `currentStage:'needs_attention',
+    //     stageIndex:-1` - the TOP of the board, still-owed money. Live on
+    //     2026-09-06 that is b-L06SCwQLI (pre-Ju EasySend) plus three manual__
+    //     rows in 08/2026 alone. Dropping GW silently deletes actionable rows.
+    //
+    // PROGRESSIVE ENGINE PAINT (2026-09-06): what WAS droppable is the WAIT.
+    // This used to be Promise.all over the engines, so the board painted at the
+    // pace of the slowest one, and GAS's floor is ~6-10s per call no matter how
+    // little it does (a 55-byte `unauthorized` rejection - which returns before
+    // any sheet read - measured 8.14s). That is Apps Script dispatch, not data
+    // volume, so no server-side tuning of GAS can get a Promise.all board under
+    // a second. Now each engine paints as it lands: ju-service (~0.4s) renders
+    // the board immediately, GAS's rows merge in when they arrive. Nothing is
+    // dropped, only deferred.
+    //
+    // The merge is recomputed from scratch on every arrival, over `slots` in
+    // DECLARED engine order (never arrival order), so the final paint is
+    // byte-identical to what the old Promise.all produced - including the
+    // "first engine wins" pid dedupe below.
     var engines=enginesForLane_(state.lane);
-    Promise.all(engines.map(function(base){return fetchEngineBoard_(base,state.lane,wantDone,showTest);})).then(function(perEngine){
+    var slots=engines.map(function(){return null;});
+    engines.forEach(function(base,slotIx){
+      // fetchEngineBoard_ never rejects (see its comment), so every engine
+      // settles and the fail-open posture is unchanged: a dead engine
+      // contributes an empty triple and the board renders the other one's rows.
+      fetchEngineBoard_(base,state.lane,wantDone,showTest).then(function(res){
+        if(rid!==LOAD_SEQ)return;
+        slots[slotIx]=res;
+        paintBoard_(slots.filter(Boolean),rid,wantDone,silent);
+      }).catch(function(err){onBoardLoadError_(err,rid,silent);});
+    });
+    // Extracted verbatim from the old Promise.all .then() body so it can run
+    // once per engine arrival instead of once per load.
+    function paintBoard_(perEngine,rid,wantDone,silent){
       if(rid!==LOAD_SEQ)return;
+      // Per-PAINT stamp, one level finer than LOAD_SEQ. Both paints of a single
+      // load() share a rid, so the rid check alone cannot stop the FIRST
+      // paint's async review overlay from resolving after the SECOND paint has
+      // already rendered and clobbering the fuller board with its own older,
+      // GAS-less `rows`. That is exactly the stale-closure regression fixed on
+      // 2026-09-05 ("a row silently vanishes from the board with no reload"),
+      // which progressive painting would otherwise reintroduce inside one load.
+      var pseq=++PAINT_SEQ;
       doneLoaded=wantDone;
       // Merge maps/lists across engines in order (GAS first, ju-service
       // second) - pids are random UUIDs with no cross-engine collision path
@@ -6314,6 +6377,19 @@ document.addEventListener('keydown',function(e){
         signerIndex:(numOrNull_(x.signerIndex)!=null?x.signerIndex:numOrNull_(it.signerIndex)),signerCount:(numOrNull_(x.signerCount)!=null?x.signerCount:numOrNull_(it.signerCount)),
         waitName:x.signerName||'',waitRole:x.signerRole||'',waitIndex:numOrNull_(x.signerIndex),waitCount:numOrNull_(x.signerCount),waitSince:x.waitSince||'',attnWhy:x.attentionReasonHuman||'',
         type:ft,typeLabel:FLOW_WORD[ft]||'',lane:it.lane||'',amountNum:(it.investmentAmount!=null?it.investmentAmount:null),ccy:it.investmentCurrency||'',note:(n&&n.text)||''};});
+      // A PARTIAL paint must never render the empty state. renderRows' no-query
+      // empty copy is the flat assertion "Nothing in flight." - a true statement
+      // once every engine has answered, and a FALSE ALL-CLEAR OVER LIVE MONEY
+      // while one is still in flight. This is not hypothetical on the Cayman
+      // tab: ju-service holds zero non-proof cayman-lane rows today
+      // (diagRegistryEnum, 2026-09-06 - all 7 of its cayman rows are proof
+      // fixtures), so the fast engine's first paint there is legitimately
+      // EMPTY and GAS supplies the entire tab ~8s later. Painting that gap
+      // would tell the operator the money board is clear when it is not - the
+      // exact class of false all-clear apiFetch's {ok:false} guard exists to
+      // stop. Holding the skeleton instead keeps the honest "still loading"
+      // signal. A partial paint with rows is fine: it is incomplete, not wrong.
+      if(perEngine.length<engines.length&&!rows.length)return;
       // Review state lives on ju-service, but the manual rows that carry the
       // "needs review" phrase are concatenated into ju-cayman's board response
       // (CaymanGateway.ts:1640). Neither engine can read the other, so the
@@ -6339,7 +6415,9 @@ document.addEventListener('keydown',function(e){
         // board. Re-checking `rid===LOAD_SEQ` here, at every render(rows) call
         // in this IIFE, makes a superseded load's review overlay a no-op
         // instead of a regression.
-        if(rid!==LOAD_SEQ)return;
+        // pseq joins rid here (2026-09-06): see paintBoard_'s header. rid alone
+        // does not separate the two paints of ONE progressive load.
+        if(rid!==LOAD_SEQ||pseq!==PAINT_SEQ)return;
         if(!rids.length){render(rows);return;}
         // CTO review finding 3 (2026-09-02): hardcoded to JU_API, not
         // consoleReadBase_() - GAS has no opGetRowReview handler at all, so
@@ -6349,7 +6427,7 @@ document.addEventListener('keydown',function(e){
         // engine has a route, and GAS never will for this one).
         apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,JU_API)
           .then(function(rv){
-            if(rid!==LOAD_SEQ)return; // superseded while the review fetch was in flight
+            if(rid!==LOAD_SEQ||pseq!==PAINT_SEQ)return; // superseded while the review fetch was in flight
             var map=(rv&&rv.ok&&rv.reviews)?rv.reviews:{};
             rows.forEach(function(r){
               var hit=map[r.pid];
@@ -6357,7 +6435,7 @@ document.addEventListener('keydown',function(e){
             });
           })
           .catch(function(){/* board still renders */})
-          .then(function(){if(rid===LOAD_SEQ)render(rows);});
+          .then(function(){if(rid===LOAD_SEQ&&pseq===PAINT_SEQ)render(rows);});
       })();
       if(latestGeneratedAt){
         var t=latestGeneratedAt.replace('T',' ').slice(0,16);
@@ -6375,9 +6453,12 @@ document.addEventListener('keydown',function(e){
           if(stale)vl.textContent='last synced '+age+' ago · the board may be stale';
         }
       }
-    }).catch(function(err){if(rid!==LOAD_SEQ)return;if(!silent){
+    }
+    function onBoardLoadError_(err,rid,silent){if(rid!==LOAD_SEQ)return;if(!silent){
       // C5 (2026-07-19): the board error state gets an in-place Retry and the real
       // cause in small print, instead of a dead-end "refresh or check auth" guess.
+      // Reached only if paintBoard_ ITSELF throws: fetchEngineBoard_ never
+      // rejects, so an engine outage still degrades rather than erroring.
       var el=document.getElementById("list");
       el.innerHTML='<div class="empty t-danger">Could not load the board. '
         +'<a href="#" id="boardRetry">Retry</a>'
@@ -6385,7 +6466,7 @@ document.addEventListener('keydown',function(e){
         +'</div>';
       var br=document.getElementById('boardRetry');
       if(br)br.onclick=function(e){e.preventDefault();load();};
-    }});
+    }}
     // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
     // the operator must reload to see truth. Silent (no Loading flash, keeps the current
     // rows on a transient failure). LOAD_SEQ already guards against stale paints.
