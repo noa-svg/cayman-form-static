@@ -478,7 +478,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-08-25-1-amount-error-visibility';
+      window.__BUILD_TAG = 'flow-2026-09-07-1-name-the-field-on-a-bounced-submit';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -2360,7 +2360,17 @@
         return res;
       }
 
-      function validatePage(page) {
+      // nameSilent: list the empty-required (silent) errors in the summary too,
+      // by LABEL only. Used ONLY when the LP is about to be SENT to this page
+      // from another one (see validateAllDataPages). On the page the LP is
+      // already looking at, the house style stands unchanged: empty required =
+      // red border, no text (Noa, "it's obvious", see vRequired). That reading
+      // depends on the LP watching the field they just left. It does not survive
+      // a bounce from a different page, where red borders with no text read as
+      // an unexplained refusal. Same failure the 2026-07-18 pixel pass fixed one
+      // level down for the missing-upload field ("submit looked like it did
+      // nothing", see validateField's accountManagementApproval case).
+      function validatePage(page, nameSilent) {
         var summary = document.getElementById('lvp-' + page + '-summary');
         if (summary) { summary.hidden = true; summary.innerHTML = ''; }
         var fields = fieldsForPage(page);
@@ -2376,25 +2386,30 @@
           if (res.ok) { clearFieldErr(name); }
           else {
             markFieldErr(name, res.silent ? '' : res.msg);
-            // Silent errors (empty required) skip the summary list. Red border
-            // is the signal. Format/length/dup errors still populate the summary
-            // so the LP can jump to the specific issue.
+            // Silent errors (empty required) carry no per-field message: the red
+            // border is the signal. Whether they also reach the summary list is
+            // the caller's call, via nameSilent. Format/length/dup errors always
+            // populate the summary so the LP can jump to the specific issue.
             if (!res.silent) errs.push({ name: name, msg: res.msg, label: fieldLabel(name) });
-            else errs.push({ name: name, silent: true });
+            else errs.push({ name: name, silent: true, label: fieldLabel(name) });
           }
         });
         if (!errs.length) return true;
-        // Build the summary with jump links, skipping silent errors (those
-        // already show up as red borders alone). If every error is silent the
-        // summary stays hidden; the red highlights speak.
-        var verbose = errs.filter(function (e) { return !e.silent; });
-        if (summary && verbose.length) {
-          var html = '<p class="lvp-error-summary__title">' + errorSummaryTitle_(verbose.length) + '</p><ul>';
-          verbose.forEach(function (e, i) {
+        // Build the summary with jump links. Silent errors are listed only when
+        // nameSilent is set, and then by label alone: no per-field message is
+        // invented for them, so the "empty required needs no words" rule keeps
+        // holding at the field itself. Every string here already ships (the
+        // summary title from errorSummaryTitle_, the label from the field's own
+        // markup via fieldLabel).
+        var listed = errs.filter(function (e) { return nameSilent || !e.silent; });
+        if (summary && listed.length) {
+          var html = '<p class="lvp-error-summary__title">' + errorSummaryTitle_(listed.length) + '</p><ul>';
+          listed.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
             if (e.anchor) summaryAnchors[id] = e.anchor;
             else delete summaryAnchors[id];
-            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + T(e.msg) + '</button></li>';
+            var text = (e.label || e.name) + (e.msg ? ': ' + T(e.msg) : '');
+            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + text + '</button></li>';
           });
           html += '</ul>';
           summary.innerHTML = html;
@@ -2411,10 +2426,14 @@
       // Submit-time guard: a resumed session can land on the last page with an
       // earlier page never validated. Walk every page so a missing amount, bank
       // detail, or upload is caught and the LP is taken to the first page that
-      // needs a fix, instead of posting an incomplete money request.
+      // needs a fix, instead of posting an incomplete money request. A page the
+      // LP is NOT currently on has to NAME what is wrong: they did not choose to
+      // go there, so the summary is the only thing that explains the move. On
+      // the page they are already on, nothing changes.
       function validateAllDataPages() {
+        var from = getCurrentPage();
         for (var i = 0; i < PAGE_ORDER.length; i++) {
-          if (!validatePage(PAGE_ORDER[i])) { try { goToPage(PAGE_ORDER[i]); } catch (e) {} return false; }
+          if (!validatePage(PAGE_ORDER[i], PAGE_ORDER[i] !== from)) { try { goToPage(PAGE_ORDER[i]); } catch (e) {} return false; }
         }
         return true;
       }
