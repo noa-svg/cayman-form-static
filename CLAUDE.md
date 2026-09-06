@@ -25,14 +25,25 @@ build is fixed by requesting a fresh one:
 ## Editing a form here turns ju-cayman's suite RED until you re-vendor (2026-08-24)
 
 `legacy-tools-mono/apps/ju-cayman/tests/form-snapshots/` holds VENDORED copies of
-`index.html`, `israel.html`, `console/index.html`, `validation-rules.js`,
-`doc-sanitize.js`, `lvp-gateway.js` and `bank-registry.json`. Two ju-cayman
-assertions compare them against THIS repo's COMMITTED state:
+`index.html`, `israel.html`, `flow.html`, `signer.html`, `console/index.html`,
+`validation-rules.js`, `doc-sanitize.js`, `lvp-gateway.js` and
+`bank-registry.json`. CORRECTED 2026-09-07: this list previously omitted
+`flow.html` and `signer.html`, both of which have been vendored for a while and
+one of which (`flow.html`) carries its own freshness assertion, listed below.
+Three ju-cayman assertions compare them against THIS repo's state:
 
 - `tests/israeli-form-validator-parity.test.mjs` / `tests/cayman-form-validator-parity.test.mjs`
   "form snapshot freshness: vendored index.html matches the live sibling form"
+- `tests/israeli-flow-form-validator-parity.test.mjs:235`
+  "form snapshot freshness: vendored flow.html matches the live sibling form"
 - `tests/console-route-contract.test.mjs`
   "freshness: the vendored console snapshot matches the sibling repo COMMITTED state"
+
+The `flow.html` one is NARROWER than the others: it compares only the parsed
+upload registry (`parseFlowUploadRegistry`, same file `:91`), i.e. the
+`.lvp-upload` wrappers, the `fieldsForPage('uploads')` list and the
+`upload-stamp-wrap` gate. A `flow.html` change outside that surface does not
+make it stale. Run the parser over both files rather than assuming either way.
 
 So a push here that changes any vendored file leaves the ju-cayman suite failing in
 the OTHER repo, with nothing in this repo's own green deploy gate hinting at it. Hit

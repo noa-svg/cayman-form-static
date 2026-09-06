@@ -98,9 +98,17 @@
     }
     .lvp-error-summary__title { font-weight: 700; margin: 0 0 8px; }
     .lvp-error-summary ul { margin: 0; padding-inline-start: 18px; }
+    /* display:block, not the default inline-block. An inline-block button
+       baseline-aligns its LAST line box to the <li>, so a summary item that
+       wraps to two lines drags the bullet down beside its second line and
+       leaves the first line hanging above as an unmarked orphan. Measured at
+       375px on the Cayman start page ("Email address: The email address is not
+       valid." -> bullet beside "valid.") and at 320px in Hebrew. Hits every
+       wrapped item, not only the label-only ones. */
     .lvp-error-summary a, .lvp-error-summary button {
       color: var(--lvp-error); text-decoration: underline; cursor: pointer;
       background: none; border: 0; padding: 0; font: inherit; text-align: inherit;
+      display: block;
     }
     .lvp-sr-only {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -478,7 +486,7 @@
       // served one. No server-side version signal exists today (?api=config
       // carries no build field), so the page itself is the version source of
       // truth.
-      window.__BUILD_TAG = 'flow-2026-08-25-1-amount-error-visibility';
+      window.__BUILD_TAG = 'flow-2026-09-07-1-name-the-field-on-a-bounced-submit';
 
       // ---- bootstrap (token + config) ---------------------------------------
       var qs = new URLSearchParams(location.search);
@@ -2006,12 +2014,24 @@
         if (tag === 'input' || tag === 'select' || tag === 'textarea') return el;
         return el.querySelector ? el.querySelector('input,select,textarea') : null;
       }
-      function focusAndReveal(el) {
+      // revealEl (optional): scroll THIS element into view instead of the focused
+      // control. Used on a submit-time bounce, where the summary box is the only
+      // thing explaining why the page moved and so is what has to be on screen.
+      // Without it the scroll anchors on the first bad field, which on a
+      // redemption request page sits far below the box: measured at 375px, the
+      // box landed entirely above the viewport (bottom -94px at scrollY 474), so
+      // the LP arrived on a page they did not choose with the explanation
+      // off-screen. Focus still goes to the field, with preventScroll so the
+      // focus call does not undo the reveal.
+      function focusAndReveal(el, revealEl) {
         var inp = focusTargetIn(el);
         if (!inp || !inp.focus) return false;
         setTimeout(function () {
-          inp.focus({ preventScroll: false });
-          if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          try { inp.focus({ preventScroll: !!revealEl }); } catch (e) { inp.focus(); }
+          var target = revealEl || inp;
+          if (target && target.scrollIntoView) {
+            target.scrollIntoView({ block: revealEl ? 'start' : 'center', behavior: 'smooth' });
+          }
         }, 0);
         return true;
       }
@@ -2360,7 +2380,17 @@
         return res;
       }
 
-      function validatePage(page) {
+      // nameSilent: list the empty-required (silent) errors in the summary too,
+      // by LABEL only. Used ONLY when the LP is about to be SENT to this page
+      // from another one (see validateAllDataPages). On the page the LP is
+      // already looking at, the house style stands unchanged: empty required =
+      // red border, no text (Noa, "it's obvious", see vRequired). That reading
+      // depends on the LP watching the field they just left. It does not survive
+      // a bounce from a different page, where red borders with no text read as
+      // an unexplained refusal. Same failure the 2026-07-18 pixel pass fixed one
+      // level down for the missing-upload field ("submit looked like it did
+      // nothing", see validateField's accountManagementApproval case).
+      function validatePage(page, nameSilent) {
         var summary = document.getElementById('lvp-' + page + '-summary');
         if (summary) { summary.hidden = true; summary.innerHTML = ''; }
         var fields = fieldsForPage(page);
@@ -2376,25 +2406,30 @@
           if (res.ok) { clearFieldErr(name); }
           else {
             markFieldErr(name, res.silent ? '' : res.msg);
-            // Silent errors (empty required) skip the summary list. Red border
-            // is the signal. Format/length/dup errors still populate the summary
-            // so the LP can jump to the specific issue.
+            // Silent errors (empty required) carry no per-field message: the red
+            // border is the signal. Whether they also reach the summary list is
+            // the caller's call, via nameSilent. Format/length/dup errors always
+            // populate the summary so the LP can jump to the specific issue.
             if (!res.silent) errs.push({ name: name, msg: res.msg, label: fieldLabel(name) });
-            else errs.push({ name: name, silent: true });
+            else errs.push({ name: name, silent: true, label: fieldLabel(name) });
           }
         });
         if (!errs.length) return true;
-        // Build the summary with jump links, skipping silent errors (those
-        // already show up as red borders alone). If every error is silent the
-        // summary stays hidden; the red highlights speak.
-        var verbose = errs.filter(function (e) { return !e.silent; });
-        if (summary && verbose.length) {
-          var html = '<p class="lvp-error-summary__title">' + errorSummaryTitle_(verbose.length) + '</p><ul>';
-          verbose.forEach(function (e, i) {
+        // Build the summary with jump links. Silent errors are listed only when
+        // nameSilent is set, and then by label alone: no per-field message is
+        // invented for them, so the "empty required needs no words" rule keeps
+        // holding at the field itself. Every string here already ships (the
+        // summary title from errorSummaryTitle_, the label from the field's own
+        // markup via fieldLabel).
+        var listed = errs.filter(function (e) { return nameSilent || !e.silent; });
+        if (summary && listed.length) {
+          var html = '<p class="lvp-error-summary__title">' + errorSummaryTitle_(listed.length) + '</p><ul>';
+          listed.forEach(function (e, i) {
             var id = 'sumlnk-' + page + '-' + i;
             if (e.anchor) summaryAnchors[id] = e.anchor;
             else delete summaryAnchors[id];
-            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + (e.label || e.name) + ': ' + T(e.msg) + '</button></li>';
+            var text = (e.label || e.name) + (e.msg ? ': ' + T(e.msg) : '');
+            html += '<li><button type="button" id="' + id + '" data-jump="' + e.name + '">' + text + '</button></li>';
           });
           html += '</ul>';
           summary.innerHTML = html;
@@ -2404,17 +2439,25 @@
         // handles the case where the anchor IS the control (see focusTargetIn); the old
         // inline version only ever looked inside it, which is why pressing הבא with a bad
         // amount moved nothing at all and read as a dead button.
-        focusAndReveal(errs[0].anchor || fieldWrap(errs[0].name));
+        // On a bounce the box IS the explanation for the move, so reveal the box
+        // and focus the field. On the page the LP is already on, unchanged: the
+        // field itself is what they are looking for.
+        var revealEl = (nameSilent && summary && summary.hidden === false) ? summary : null;
+        focusAndReveal(errs[0].anchor || fieldWrap(errs[0].name), revealEl);
         return false;
       }
       function validateCurrentPage() { return validatePage(getCurrentPage()); }
       // Submit-time guard: a resumed session can land on the last page with an
       // earlier page never validated. Walk every page so a missing amount, bank
       // detail, or upload is caught and the LP is taken to the first page that
-      // needs a fix, instead of posting an incomplete money request.
+      // needs a fix, instead of posting an incomplete money request. A page the
+      // LP is NOT currently on has to NAME what is wrong: they did not choose to
+      // go there, so the summary is the only thing that explains the move. On
+      // the page they are already on, nothing changes.
       function validateAllDataPages() {
+        var from = getCurrentPage();
         for (var i = 0; i < PAGE_ORDER.length; i++) {
-          if (!validatePage(PAGE_ORDER[i])) { try { goToPage(PAGE_ORDER[i]); } catch (e) {} return false; }
+          if (!validatePage(PAGE_ORDER[i], PAGE_ORDER[i] !== from)) { try { goToPage(PAGE_ORDER[i]); } catch (e) {} return false; }
         }
         return true;
       }
