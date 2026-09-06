@@ -109,6 +109,8 @@ async function loadIsraelForm(opts) {
 
   const gatewayCalls = [];   // every ?source=lp POST: { url, body (parsed) }
   const configCalls = [];    // every ?api=config fetch URL, in boot order
+  const geocodeCalls = [];   // every google.maps.Geocoder().geocode request
+  opts.__geocodeCalls = geocodeCalls;
 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
@@ -182,13 +184,43 @@ async function loadIsraelForm(opts) {
 
       // Google Places stub (address search binds Autocomplete when a key exists;
       // israel.html also has a geocode fallback that must not explode).
+      //
+      // Two optional hooks let a test model the REAL Maps behaviour instead of
+      // the always-miss default (added 2026-09-06 for the English-address work):
+      //   opts.geocode(request) -> null | { status, results }
+      //       answers google.maps.Geocoder().geocode. Falls back to ZERO_RESULTS.
+      //       Every request is recorded on rig.geocodeCalls.
+      //   pickPlace(document, searchFieldName, place)   [exported helper]
+      //       fires the Autocomplete's real place_changed listener with `place`
+      //       as getPlace(), i.e. exactly what an LP choosing a suggestion does.
+      // The Autocomplete stub therefore has to REMEMBER its listeners and its
+      // host input; the old one threw both away, which is why no harness could
+      // exercise the pick path at all.
+      const geocodeCalls = opts.__geocodeCalls;
       window.google = {
         maps: {
           places: {
-            Autocomplete: function () { this.addListener = function () {}; this.getPlace = function () { return {}; }; },
+            Autocomplete: function (input, o) {
+              const self = this;
+              this.__input = input;
+              this.__listeners = {};
+              this.__opts = o;
+              this.__place = null;
+              if (input) input.__lvpAcStub = this;
+              this.addListener = function (ev, fn) { (self.__listeners[ev] = self.__listeners[ev] || []).push(fn); };
+              this.getPlace = function () { return self.__place || {}; };
+            },
             AutocompleteService: function () {}, PlacesService: function () {}
           },
-          Geocoder: function () { this.geocode = function (q, cb) { cb([], 'ZERO_RESULTS'); }; },
+          Geocoder: function () {
+            this.geocode = function (q, cb) {
+              geocodeCalls.push(q);
+              let answer = null;
+              if (typeof opts.geocode === 'function') answer = opts.geocode(q);
+              if (answer && answer.results) cb(answer.results, answer.status || 'OK');
+              else cb([], 'ZERO_RESULTS');
+            };
+          },
           event: { addListener() {}, clearInstanceListeners() {} }
         }
       };
@@ -213,7 +245,7 @@ async function loadIsraelForm(opts) {
   });
   // Settle the async ?api=config fetch + the deferred __israelOnCfgUpdate chain.
   await new Promise((r) => setTimeout(r, 250));
-  return { dom, window, document: window.document, errors, gatewayCalls, configCalls, cfg };
+  return { dom, window, document: window.document, errors, gatewayCalls, configCalls, geocodeCalls, cfg };
 }
 
 // ---- scripted-user helpers (drive the REAL rendered state) -------------------
@@ -274,8 +306,27 @@ async function drawSignature(window) {
   await sleep(20);
 }
 
+// Drive a REAL Places pick on an israelAddressSearch field: sets the search
+// box text, hands `place` to the bound Autocomplete's getPlace(), and fires its
+// real place_changed listener - the same entry point an LP choosing a
+// suggestion from the dropdown hits. `place` is the Maps PlaceResult shape:
+// { address_components: [{ long_name, short_name, types: [] }], place_id,
+//   formatted_address }. Returns the search input.
+function pickPlace(document, searchFieldName, place) {
+  const el = document.querySelector('[name="' + searchFieldName.replace(/(["\\\]\[])/g, '\\$1') + '"]');
+  if (!el) throw new Error('pickPlace: no field named ' + searchFieldName);
+  const ac = el.__lvpAcStub;
+  if (!ac) throw new Error('pickPlace: no Autocomplete bound to ' + searchFieldName + ' (Places binder did not run)');
+  if (place && place.formatted_address) el.value = place.formatted_address;
+  ac.__place = place;
+  (ac.__listeners.place_changed || []).forEach((fn) => fn());
+  return el;
+}
+// Shorthand for a Maps address component.
+function comp(long, types) { return { long_name: long, short_name: long, types: types }; }
+
 module.exports = {
   loadIsraelForm, makeCfg,
-  fire, setVal, setField, checkRadio, checkBox,
+  fire, setVal, setField, checkRadio, checkBox, pickPlace, comp,
   currentPage, currentPageEl, clickNext, drawSignature, sleep
 };
