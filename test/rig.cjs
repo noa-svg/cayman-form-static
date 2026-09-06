@@ -115,6 +115,13 @@ async function loadForm(opts) {
         return { matches: false, media: '', addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} };
       };
       window.scrollTo = function () {};
+      // jsdom has no scrollIntoView; validatePage's jump-to-first-error calls it
+      // (try/catch'd variant AND bare fallback), so without this the whole click
+      // handler dies before renderErrorSummary paints. rig-israel.cjs has carried
+      // this stub since the Israeli form was rigged; this rig did not, so every
+      // Cayman harness that drove a FAILING validatePage was measuring an aborted
+      // click handler rather than the real blocked-submit path. Added 2026-09-06.
+      window.Element.prototype.scrollIntoView = function () {};
       window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(Date.now()); }, 0); };
       window.cancelAnimationFrame = function (id) { clearTimeout(id); };
     }
