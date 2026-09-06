@@ -5674,13 +5674,19 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var done=(isTerminalStage(st)&&!stale)?' done':'';
     var dead=isCanceledStage(st)?' dead':'';
     var amt=fmtAmount(r.amountNum,r.ccy);
-    var wordCls=attn?' warn':((dead||isCompletedStage(st))?' muted':'');
-    var statSecond=attn?attnBadgeHtml(r,folded):(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r));
+    // A manual/off-Ju row carries no Ju stage, so it gets neither Ju's stage
+    // word nor Ju's stage rail - both would be inventing a pipeline position
+    // for a row that has none (2026-09-06, see isManualRow_ above). It reads
+    // muted and says where its real state lives.
+    var manual=isManualRow_(r);
+    var wordCls=manual?' muted':(attn?' warn':((dead||isCompletedStage(st))?' muted':''));
+    var statSecond=manual?'<span class="rwait">Tracked in the transfer form</span>'
+      :(attn?attnBadgeHtml(r,folded):(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r)));
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
       +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
-      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(stageWord(st))+'</span>'+railHtml(r)+'</span>'
+      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':stageWord(st))+'</span>'+(manual?'':railHtml(r))+'</span>'
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
       +'<span class="ract">'
@@ -5996,9 +6002,24 @@ document.addEventListener('keydown',function(e){
   // moved - it just is not asking a question any more. Review and settlement are
   // different facts; collapsing them is what put "Completed" in the execution
   // column on three live rows.
+  // A manual / off-Ju row (pid 'manual__...') is a transfer-forms tracker entry
+  // that never had a Ju process: no session, no signing run, no stage machine.
+  // Ju's own stage vocabulary therefore cannot describe it, and the board must
+  // not borrow that vocabulary to editorialise about it.
+  function isManualRow_(r){ return !!(r && /^manual__/.test(String(r.pid||''))); }
   function isAttnRow(r){
     if(!r)return false;
     if(r.reviewApproved)return false;
+    // 2026-09-06, גלבוע פאנד אוף פאנדס: a manual row was rendering as "Stuck",
+    // coral-tinted, and counted in NEED A LOOK, for a tracker entry that was
+    // not stuck and that the operator had no way to action - the drawer's own
+    // text says there is "no further detail or action here". An alarm nobody
+    // can clear is worse than no alarm: it trains the operator to ignore the
+    // colour that is supposed to mean something. A row with no Ju process
+    // cannot be stuck IN the Ju pipeline, so it is never an attention row.
+    // Its real state lives in the transfer-forms tracker, which this board
+    // does not read.
+    if(isManualRow_(r))return false;
     return isAttnStage(r.stage)||(isCompletedStage(r.stage)&&r.stale);
   }
   function setSideStats(rows){
