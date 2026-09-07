@@ -3215,6 +3215,15 @@ body.side-coll .ss-lbl { display: none; }
 .wl-park-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted);max-width:520px}
 .wl-await-btn:disabled{opacity:0.55;cursor:default}
 .wl-await-btn.wl-await-done{border-color:var(--color-green);background:var(--color-green);color:#fff;cursor:default}
+/* The per-row confirm / failure strip (2026-09-07). Same chrome as the Park
+   reason form above it on purpose: an operator has already learned that a
+   panel opening under a row is that row's own question. The confirm sentence
+   reads at body size (the .wl-park-lbl uppercase micro-label is for field
+   labels, not for a sentence that must be READ before a money write), and a
+   failure is danger-coloured because it used to live in a tooltip. */
+.wl-row-confirm-msg{margin:0;font-size:13px;line-height:1.5;color:var(--color-ink);max-width:560px}
+.wl-row-fail-txt{color:var(--color-danger);font-size:13px;line-height:1.5;margin:0;max-width:560px}
+.wl-park-form.wl-row-fail{background:transparent}
 /* Manual-row form (2026-08-04 redesign): grouped sections instead of one
    flat grid, so Name/Type/Currency (required) read as a different KIND of
    information than Amount/Bank details/Notes (optional, transaction-level).
@@ -7458,6 +7467,35 @@ document.addEventListener('keydown',function(e){
     if(!lbl)return '';
     return '<span class="st st-class'+(tone?' st-class-'+tone:'')+'">'+esc2(lbl)+'</span>';
   }
+  // ---- ONE CONFIRM TABLE FOR THE WHOLE CONSOLE (hoisted out of renderDrawer) -
+  // This map used to live inside renderDrawer, which is why the SAME tracker
+  // write could be confirm-gated in the drawer and one click in the Transfer
+  // Form panel: the panel is a separate top-level IIFE and simply could not see
+  // it, so it grew its own bare button instead. A second copy of the wording
+  // would have been the other half of the same bug. Hoisted so both surfaces
+  // read this one table; the drawer's own strip and the panel's per-row strip
+  // (wlArmRowConfirm_) are two renderers of ONE source.
+  //
+  // Bounded in three places on purpose, same as the Park reason: the input's
+  // maxlength stops typing, the slice stops a paste, and the server checks
+  // again. It travels as a query parameter, where an unbounded value fails on
+  // URL length as an opaque network error rather than anything actionable.
+  var RP_REASON_MAX=200;
+  var ACT_CONFIRM={
+    // The message used to name no LP at all, and this strip renders at the
+    // BOTTOM of a long scrolled drawer, far from the header carrying the name
+    // (2026-08-26 review, finding 11). dactWho_ is filled at arm time.
+    void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
+    reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'},
+    markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'},
+    // Added 2026-09-02: the buttons themselves (dactBtns, further down) shipped
+    // a few commits before this map got their entries, so clicking "Approved"
+    // or "Undo approval" armed nothing - the click handler's `if(!c||!confEl)
+    // return;` guard silently no-opped on the missing key. Same shape as the
+    // dvoid/reseal/nudge styling gap fixed alongside this in the CSS above.
+    rowReviewed:{msg:'Approve this row? Records that you checked it - it does not touch the money or the wire status.',cta:'Approve',danger:false,working:'Approving...'},
+    rowReopen:{msg:'Undo the approval on this row? It goes back to needing review.',cta:'Undo approval',danger:false,working:'Undoing...'}
+  };
   function renderDrawer(d){
     if(!d||!d.processId){document.getElementById("dbody").innerHTML='<div class="dsec"><div class="pe">Process not found.</div></div>';return;}
     var h='<div class="dh"><h2>'+esc2(d.displayName||d.name||"LP")+'</h2>';
@@ -7893,26 +7931,9 @@ document.addEventListener('keydown',function(e){
     // Inline material confirm for BOTH lifecycle actions. Void was confirm()-gated and
     // reseal fired on one click; now both arm the same in-drawer strip. Errors land on
     // the status line with real context, never a bare native alert('Error').
-    // Bounded in three places on purpose, same as the Park reason: the input's
-    // maxlength stops typing, the slice stops a paste, and the server checks
-    // again. It travels as a query parameter, where an unbounded value fails on
-    // URL length as an opaque network error rather than anything actionable.
-    var RP_REASON_MAX=200;
-    var ACT_CONFIRM={
-      // The message used to name no LP at all, and this strip renders at the
-      // BOTTOM of a long scrolled drawer, far from the header carrying the name
-      // (2026-08-26 review, finding 11). dactWho_ is filled at arm time.
-      void:{msg:'Void this process? Signer links will stop working. This cannot be undone.',cta:'Void',danger:true,working:'Voiding...'},
-      reseal:{msg:'Reseal the documents? This regenerates and re-seals the signed pack.',cta:'Reseal docs',danger:false,working:'Resealing...'},
-      markMoneyReceived:{msg:'Mark this LP\'s money as received? Advances the wire status and shows the bank-request draft(s) already waiting in Gmail. Does not send anything.',cta:'Mark received',danger:false,working:'Marking...'},
-      // Added 2026-09-02: the buttons themselves (dactBtns, further down) shipped
-      // a few commits before this map got their entries, so clicking "Approved"
-      // or "Undo approval" armed nothing - the click handler's `if(!c||!confEl)
-      // return;` guard silently no-opped on the missing key. Same shape as the
-      // dvoid/reseal/nudge styling gap fixed alongside this in the CSS above.
-      rowReviewed:{msg:'Approve this row? Records that you checked it - it does not touch the money or the wire status.',cta:'Approve',danger:false,working:'Approving...'},
-      rowReopen:{msg:'Undo the approval on this row? It goes back to needing review.',cta:'Undo approval',danger:false,working:'Undoing...'}
-    };
+    // ACT_CONFIRM and RP_REASON_MAX now live at file scope (just above
+    // renderDrawer), because the Transfer Form panel needs the identical
+    // wording for the identical write. Nothing about their content changed.
     // Whoever the drawer is currently about, for the confirm copy.
     var dactWho_=(function(){
       var n=(d&&(d.displayName||d.name))?String(d.displayName||d.name).trim():'';
@@ -9468,10 +9489,86 @@ document.addEventListener('keydown',function(e){
       if(!tab||!shown||tab===shown)return;
       setResult('<div class="t-muted">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
     }
+    // ---- ONE INLINE STRIP PER ROW: confirm, and VISIBLE failure (2026-09-07) -
+    // Two defects, one mechanism.
+    //
+    // GATE PARITY. ?api=opMarkMoneyReceived below is the SAME tracker write the
+    // drawer arms behind ACT_CONFIRM.markMoneyReceived: it sets EXECUTION_STATUS
+    // to "Received in transit", un-parks the row and mirrors to Monday, and it
+    // is reversible only by hand on the sheet. In this panel it fired on the
+    // first click, because ACT_CONFIRM used to live inside renderDrawer and this
+    // panel is a separate top-level IIFE that could not see it. The table is
+    // hoisted now and the wording is READ from it, never restated here, so the
+    // two surfaces cannot drift apart again.
+    //
+    // FAILURE VISIBILITY. Every failure on this panel landed in btn.title (a
+    // tooltip nobody hovers) or, for "Not this month", in a native alert().
+    // Both are now this same in-row line. The STRINGS are unchanged - the only
+    // text ever rendered here is the server's own error or this panel's
+    // existing fallbacks. A money write that failed must look failed, on the
+    // row it failed on.
+    // ONE strip per row, and only ever one. The marker class matters: the Park
+    // reason form is also a .wl-park-form sibling of the row, and silently
+    // reusing it would overwrite a reason the operator was mid-way through
+    // typing. If Park is armed and another action is clicked, the Park form is
+    // dropped rather than mutated - a row asks one question at a time.
+    function wlRowStrip_(btn,cls){
+      var row=btn.closest('.wl-await-row');
+      if(!row)return null;
+      var s=row.nextElementSibling;
+      if(s&&s.classList&&s.classList.contains('wl-park-form')&&!s.classList.contains('wl-row-strip')){
+        s.remove();s=null;
+      }
+      if(!s||!s.classList||!s.classList.contains('wl-row-strip')){
+        s=document.createElement('div');
+        s.className='wl-park-form wl-row-strip';
+        row.insertAdjacentElement('afterend',s);
+      }
+      s.className='wl-park-form wl-row-strip'+(cls?(' '+cls):'');
+      return s;
+    }
+    function wlRowFail_(btn,text){
+      var s=wlRowStrip_(btn,'wl-row-fail');
+      // No row to hang it on (a shape change upstream): fall back to the old
+      // tooltip rather than swallowing the failure entirely.
+      if(!s){btn.title=text;return;}
+      s.innerHTML='<p class="wl-row-fail-txt" role="alert">'+esc2(text)+'</p>';
+    }
+    // Arm the confirm strip for one row. cfg is an ACT_CONFIRM entry, and this
+    // function has NO wording of its own: handed a missing entry it returns
+    // false and fires nothing, because a money write that silently loses its
+    // gate is the failure this whole block exists to prevent.
+    function wlArmRowConfirm_(btn,cfg,go){
+      if(!cfg||!cfg.msg||!cfg.cta)return false;
+      var s=wlRowStrip_(btn,'wl-row-confirm');
+      if(!s)return false;
+      s.innerHTML='<p class="wl-row-confirm-msg">'+esc2(cfg.msg)+'</p>'
+        +'<div class="wl-park-acts">'
+          +'<button type="button" class="wl-await-btn" data-row-go="1">'+esc2(cfg.cta)+'</button>'
+          +'<button type="button" class="wl-await-btn wl-await-park" data-row-cancel="1">Cancel</button>'
+        +'</div>';
+      var goBtn=s.querySelector('[data-row-go]');
+      s.querySelector('[data-row-cancel]').onclick=function(){s.remove();};
+      goBtn.onclick=function(){
+        if(goBtn.disabled)return;
+        goBtn.disabled=true;goBtn.textContent=cfg.working||cfg.cta;
+        go(s,goBtn);
+      };
+      goBtn.focus();
+      return true;
+    }
     // Un-park returns the row to Pending - "the park was wrong", NOT "the money
     // arrived". Mark received is the other reversal and lands the row on
     // Received in transit; keeping them separate means correcting a mis-click
     // never requires asserting that funds landed.
+    //
+    // NOT confirm-gated, deliberately, and this is the argued line between the
+    // three neighbours: un-park is undone by parking again from this same
+    // panel, and "Not this month" by moving the month again. Mark received is
+    // not - it asserts a fact about money and is reversible only by hand on the
+    // sheet. Same consequence gets the same gate; these are not the same
+    // consequence. Their FAILURE handling is a different question and is fixed
+    // below alongside it, because an invisible failure is invisible either way.
     if(parkedEl)parkedEl.addEventListener('click',function(e){
       var btn=e.target.closest('[data-act="unparkRow"]');
       if(!btn||btn.disabled)return;
@@ -9479,12 +9576,12 @@ document.addEventListener('keydown',function(e){
       btn.disabled=true;btn.textContent='Un-parking...';
       // Flipped to JU_API 2026-09-03, same reasoning as parkRow() above.
       apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
-        if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
+        if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';wlRowFail_(btn,(r&&r.error)||'Failed, try again');return;}
         btn.textContent='Un-parked';
         wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
-        btn.disabled=false;btn.textContent='Un-park';btn.title=(err&&err.serverError)||'Could not reach the server';
+        btn.disabled=false;btn.textContent='Un-park';wlRowFail_(btn,(err&&err.serverError)||'Could not reach the server');
       });
     });
     awaitEl.addEventListener('click',function(e){
@@ -9509,21 +9606,30 @@ document.addEventListener('keydown',function(e){
             peekAwaiting();peekRows();
           })
           .catch(function(err){
+            // Was a native alert(), which is modal, unstyled, uncopyable and
+            // lands nowhere near the row it is about. Same string, same
+            // fallback, now on the row itself.
             nxt.disabled=false;nxt.textContent='Not this month';
-            alert((err&&(err.serverError||err.message))||'Could not set the month.');
+            wlRowFail_(nxt,(err&&(err.serverError||err.message))||'Could not set the month.');
           });
         return;
       }
       var btn=e.target.closest('[data-act="markMoneyReceived"]');
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
-      btn.disabled=true;btn.textContent='Marking...';
-      apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
-        if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
-        btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
-      }).catch(function(err){
-        btn.disabled=false;btn.textContent='Mark received';btn.title=(err&&err.serverError)||'Could not reach the server';
+      // GATE PARITY with the drawer (see wlArmRowConfirm_ above): NOTHING is
+      // sent on this click. The request is issued only from the strip's own
+      // Go, and the wording is ACT_CONFIRM's, not a second copy of it.
+      wlArmRowConfirm_(btn,ACT_CONFIRM.markMoneyReceived,function(strip){
+        btn.disabled=true;btn.textContent='Marking...';
+        apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
+          if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';wlRowFail_(btn,(r&&r.error)||'Failed, try again');return;}
+          strip.remove();
+          btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
+          setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
+        }).catch(function(err){
+          btn.disabled=false;btn.textContent='Mark received';wlRowFail_(btn,(err&&err.serverError)||'Could not reach the server');
+        });
       });
     });
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
@@ -9942,40 +10048,77 @@ document.addEventListener('keydown',function(e){
   })();
 
   // Settings
-  // ---- THE SETTINGS PANEL STAYS GAS-ONLY, AS A SET (2026-08-23 seam audit) --
-  // Two of its three routes DO have ju-service handlers (consoledispatch.ts
-  // admin==='getConsoleSettings' and admin==='setConsoleSettings'), but the
-  // third does NOT: ?admin=getSettingsHealth appears nowhere under
-  // ju-service/src, so it cannot move. Moving the other two on their own splits
-  // one panel across two engines, and this particular panel must not split:
-  //   - the health card would report GAS's configuration while the allowlist
-  //     box beside it showed ju-service's, with nothing on screen saying so;
-  //   - worse, the allowlist is an AUTH store, and the two engines keep their
-  //     own. GAS still serves the whole money/wire-letter panel above, so an
-  //     operator who edited the list on ju-service alone would believe they had
-  //     granted or revoked access that GAS still decides by its old copy. A
-  //     revocation that does not revoke is the failure that matters here.
-  // So all three pass GAS_ONLY_ and this is the reason. Moving the panel needs
-  // getSettingsHealth ported AND a decision about which engine owns the
-  // allowlist; it is not a client-side flip.
+  // ---- THE ALLOWLIST IS READ FROM AND WRITTEN TO BOTH ENGINES (2026-09-07) --
+  // SUPERSEDES the 2026-08-23 seam-audit pin that kept all three of this panel's
+  // routes on GAS. That pin's own justification was "GAS still serves the whole
+  // money/wire-letter panel above", and by 2026-09-05 that had stopped being
+  // true: park, un-park, mark-received, set-amount, set-bank-details and
+  // add-manual-row moved to ju-service on 2026-09-03/04, and the wire letter
+  // followed on 2026-09-05. So the allowlist was being EDITED on one engine
+  // while money was being SETTLED on the other, which keeps its OWN copy of the
+  // same CONSOLE_ALLOWED_EMAILS property (ju-service auth/consoleAuth.ts,
+  // consoleEmailAllowed). Removing a guest in this box revoked nothing on the
+  // engine that settles money.
+  //
+  // Firm-domain addresses auto-allow on BOTH engines (the anchored
+  // @legacyvpartners.com regex), so the split only ever bit NON-domain guests.
+  // It is still an auth store, and "a revocation that does not revoke" is not a
+  // hazard to leave standing because today's guest list happens to be short.
+  //
+  // WHAT THIS DOES: one Save writes BOTH engines, and load reads BOTH.
+  //   - ju-service is written FIRST, deliberately: it is the engine that settles
+  //     money. If it refuses, nothing has been written anywhere and the operator
+  //     sees the refusal against an unchanged state.
+  //   - 'Saved' appears only when BOTH writes came back ok. Half-applied access
+  //     control that reports success is worse than the split it replaces, so any
+  //     failure keeps a danger line on screen and re-reads both engines so the
+  //     box shows what is actually true.
+  //   - load requires BOTH reads to succeed. One engine answering is not a
+  //     picture of who has access, it is half of one, and saving on top of half
+  //     a picture is the allowlist-wipe hazard the ALLOWLIST_LOADED guard below
+  //     already existed to stop.
+  //
+  // STILL GAS-ONLY, and correctly so: ?admin=getSettingsHealth has no handler
+  // anywhere under ju-service/src, so the health card cannot move. That leaves a
+  // read-only DIAGNOSTIC split across engines, which is a different and much
+  // smaller thing than an auth store being split.
+  //
   // Guard against the allowlist-wipe hazard: if the current allowlist never
   // loaded (fetch failed, auth lapsed), the textarea reads empty, and a blind
   // Save would push an empty allowlist and lock every operator out. Save is
   // refused until a successful load has populated the field.
   var ALLOWLIST_LOADED=false;
-  function loadSettings(){
+  // True when the two engines disagreed on the last successful load. RECORDED,
+  // not displayed: naming the divergence on screen needs operator-facing
+  // wording Noa has not approved. The next Save converges the two either way.
+  var ALLOWLIST_DIVERGED=false;
+  function allowlistFail_(st,text){
+    if(!st)return;
+    st.textContent=text;st.style.color='var(--color-danger)';
+  }
+  // keepStatus: leave an existing danger line alone. A reload triggered by a
+  // failed Save must not wipe the reason it was triggered.
+  function loadSettings(keepStatus){
     ALLOWLIST_LOADED=false;
+    ALLOWLIST_DIVERGED=false;
     var st=document.getElementById('allowlist-status');
-    apiFetch('?admin=getConsoleSettings', false, GAS_ONLY_).then(function(d){
-      if(d&&d.ok){
-        document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
-        ALLOWLIST_LOADED=true;
-        if(st){st.textContent='';}
-      } else if(st){
-        st.textContent='Could not load the current allowlist. Do not save.';st.style.color='var(--color-danger)';
-      }
-    }).catch(function(){
-      if(st){st.textContent='Could not load the current allowlist. Do not save.';st.style.color='var(--color-danger)';}
+    var LOAD_FAIL='Could not load the current allowlist. Do not save.';
+    Promise.all([
+      apiFetch('?admin=getConsoleSettings', false, JU_API),
+      apiFetch('?admin=getConsoleSettings', false, GW)
+    ].map(function(p){return p.then(function(d){return d;},function(){return null;});}))
+    .then(function(res){
+      var ju=res[0], gas=res[1];
+      if(!ju||!ju.ok||!gas||!gas.ok){allowlistFail_(st,LOAD_FAIL);return;}
+      var juList=(ju.allowedEmails||[]).slice();
+      var gasList=(gas.allowedEmails||[]).slice();
+      // The box shows the MONEY engine's list. It is the copy that decides
+      // whether a guest can reach opMarkMoneyReceived, which is the question an
+      // operator is actually asking when they open this panel.
+      document.getElementById('allowlist-input').value=juList.join('\n');
+      ALLOWLIST_DIVERGED=(juList.slice().sort().join(',')!==gasList.slice().sort().join(','));
+      ALLOWLIST_LOADED=true;
+      if(st&&!keepStatus){st.textContent='';}
     });
     loadSettingsHealth();
     loadSettingsFoCatalog();
@@ -10047,10 +10190,37 @@ document.addEventListener('keydown',function(e){
       return;
     }
     st.textContent='Saving...';st.style.color='var(--color-ink-muted)';
-    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw), false, GAS_ONLY_).then(function(d){
-      if(d&&d.ok){st.textContent='Saved';st.style.color='var(--color-success)';}
-      else{st.textContent=(d&&d.error)||'Error';st.style.color='var(--color-danger)';}
-    }).catch(function(){st.textContent='Error';st.style.color='var(--color-danger)';});
+    // SEQUENTIAL, ju-service first, and NOT Promise.all. Two writes fired
+    // together can both land, both fail, or split - and a split fired in
+    // parallel gives the operator no way to reason about what state they are
+    // in. In this order, a refusal from the money engine means nothing was
+    // written anywhere.
+    var q='?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw);
+    // The bare word 'Error' was the whole failure message on the transport
+    // path. apiFetch attaches err.serverError whenever the server actually
+    // answered, so surface that; 'Error' survives only as the genuinely
+    // no-information fallback, which is what it should always have been.
+    function writeErr_(d,err){
+      return (d&&d.error)||(err&&err.serverError)||'Error';
+    }
+    apiFetch(q, false, JU_API).then(function(d){
+      if(!d||!d.ok){allowlistFail_(st,writeErr_(d,null));return null;}
+      return apiFetch(q, false, GW).then(function(g){
+        if(g&&g.ok){st.textContent='Saved';st.style.color='var(--color-success)';return null;}
+        // PARTIAL: ju-service took it, GAS did not. Never 'Saved'. The danger
+        // line stays and both engines are re-read, so the box stops showing
+        // the operator's typed intent and starts showing the split.
+        allowlistFail_(st,writeErr_(g,null));
+        loadSettings(true);
+        return null;
+      },function(err){
+        allowlistFail_(st,writeErr_(null,err));
+        loadSettings(true);
+        return null;
+      });
+    },function(err){
+      allowlistFail_(st,writeErr_(null,err));
+    });
   };
 
   // ============================================================
