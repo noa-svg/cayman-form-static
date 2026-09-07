@@ -168,9 +168,38 @@ test file that should ship, add a matching `!test/<name>.cjs` line to
   the REAL index.html/israel.html in a virtual DOM (inlining `<script src>`
   dependencies, since jsdom's `runScripts:'dangerously'` does not fetch
   external scripts) so tests exercise production code, not hand-written
-  copies. Most other harnesses extract real functions from the live HTML via
-  brace-counting (`extractFn`) and drive them directly. Prefer that pattern
-  over reimplementing logic by hand when adding a new test.
+  copies. Many older harnesses instead EXTRACT functions out of the live HTML
+  by brace-counting or source-string anchors and eval them in a hand-built
+  scope. **Do not add new harnesses that way.** Boot the real page in jsdom
+  with a scriptable `window.fetch` and call the real globals, as
+  `test/console-honest-status-harness.cjs` and
+  `test/api-fetch-nonjson-harness.cjs` do.
+
+  Extraction drifts from the file it claims to test, silently and without
+  touching the harness. Both live cases were found on 2026-09-07:
+  `api-fetch-nonjson-harness` eval'd `apiFetch` in a synthetic scope that had
+  no `JU_API`, so every call threw `ReferenceError` once `apiFetch` gained its
+  required `base` argument in `d6eb87f` (2026-08-23), and all 12 assertions
+  had been failing for the 15 days since. `test/console-harness.cjs` extracts
+  the same function and survived only because its sandbox happens to name
+  `JU_API`; nothing made the two agree.
+  `mint-pick-binding-harness` pinned four assertions to the literal string
+  `var pickedId=(window.__onbPickItemId&&...`, which was refactored into the
+  helper `onbPickedItemId_`; `indexOf` returned -1, the slice produced garbage,
+  and the harness reported four failures about protections that were fully
+  intact. A harness pinned to a spelling reports on a copy nobody ships.
+
+  When a wiring fact genuinely can only be read statically (which single call
+  site passes which gateway, say), anchor on the thing that cannot change
+  without changing the server - the route name - assert the match COUNT so a
+  second call site cannot silently capture the anchor, and A/B the assertion
+  against a deliberately broken copy before trusting it.
+
+  Every tracked harness must be listed in `githooks/pre-push`'s `HARNESSES`
+  array. `test/harness-gate-membership.cjs` enforces that: this repo has no CI,
+  so a harness outside the gate is a harness nothing runs, which is how
+  `api-fetch-nonjson-harness` stayed dead. The only exemptions are the four
+  `rig*.cjs` shared libraries, named in that file with their reason.
 
 ## The gateway URL is duplicated 5 times
 

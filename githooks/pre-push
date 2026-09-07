@@ -122,6 +122,12 @@ HARNESSES=(
   prepush-marker-contract
   transfer-in-review-gate-harness
   migration-carries-no-amount-harness
+  api-fetch-nonjson-harness
+  mint-pick-binding-harness
+  money-flow-fallback-harness
+  sign-preview-race-harness
+  sign-stub-harness
+  harness-gate-membership
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

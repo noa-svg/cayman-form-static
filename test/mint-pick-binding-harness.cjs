@@ -79,20 +79,75 @@ if (pickerSrc.indexOf('window.__onbPick=pick') === -1) throw new Error('extracte
       /window\.__onbPickItemId='';\s*window\.__onbPickEmail='';/.test(body), body.slice(-200));
   }
 
-  // 4: the mint request builder carries the pick, guarded by email equality,
-  // on the ONE call site whose destination (GAS or ju-service) is chosen by
-  // mintBaseForLane_ - so the pick binding travels identically regardless of
-  // which engine the flag-gated seam sends this mint to.
+  // 4: the email-equality gate, driven LIVE on the real console.
+  //
+  // REPAIRED 2026-09-07. This block used to pin four assertions to the literal
+  // source string `var pickedId=(window.__onbPickItemId&&window.__onbPickEmail`.
+  // That expression was refactored into the helper onbPickedItemId_
+  // (console/index.html:6922) and the anchor stopped matching, so indexOf
+  // returned -1, html.slice(-1, ...) produced garbage, and all four assertions
+  // failed while the protections they name were fully intact and live. Same
+  // failure mode that killed test/api-fetch-nonjson-harness.cjs: a harness
+  // pinned to a spelling rather than to a behaviour reports on a copy nobody
+  // ships. The gate is now DRIVEN instead of matched.
   {
-    const mintIdx = html.indexOf('var pickedId=(window.__onbPickItemId&&window.__onbPickEmail');
-    ok('mint pick-binding computation exists', mintIdx > -1);
-    const mintBlock = html.slice(mintIdx, html.indexOf('.then(function(res){', mintIdx) + '.then(function(res){'.length);
-    ok('the mint computes pickedId gated on email equality with the picked record',
-      /var pickedId=\(window\.__onbPickItemId&&window\.__onbPickEmail&&String\(email\|\|''\)\.trim\(\)\.toLowerCase\(\)===window\.__onbPickEmail\)\?window\.__onbPickItemId:''/.test(mintBlock));
+    const dom = new JSDOM(html, {
+      url: 'http://localhost:8000/console/', runScripts: 'dangerously', pretendToBeVisual: true,
+      beforeParse(w) { w.fetch = function () { return Promise.resolve({ status: 200, text: () => Promise.resolve('{"ok":true}') }); }; },
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    const w = dom.window;
+    ok('the mint reads its pick through onbPickedItemId_', typeof w.onbPickedItemId_ === 'function');
+    w.__onbPickItemId = '3052718037';
+    w.__onbPickEmail = 'pick.ed@example.com';
+    ok('a matching email binds the picked Monday item id',
+      w.onbPickedItemId_('pick.ed@example.com') === '3052718037', w.onbPickedItemId_('pick.ed@example.com'));
+    ok('the match ignores case and surrounding space, as the pick stored it',
+      w.onbPickedItemId_('  Pick.Ed@Example.COM ') === '3052718037', w.onbPickedItemId_('  Pick.Ed@Example.COM '));
+    ok('an operator who RE-TYPED a different email no longer mints the picked identity',
+      w.onbPickedItemId_('someone.else@example.com') === '', w.onbPickedItemId_('someone.else@example.com'));
+    ok('an empty typed email does not inherit the pick',
+      w.onbPickedItemId_('') === '', w.onbPickedItemId_(''));
+    w.__onbPickItemId = '';
+    w.__onbPickEmail = '';
+    ok('with no pick bound, nothing is sent even on the same email',
+      w.onbPickedItemId_('pick.ed@example.com') === '', w.onbPickedItemId_('pick.ed@example.com'));
+    dom.window.close();
+  }
+
+  // 5: the ONBOARDING mint call site carries that id and names its engine.
+  // Static, on the live call site: this is a wiring fact about a single line,
+  // and driving the whole mint UI to observe it would test the UI, not the
+  // wiring. Anchored on the ROUTE + its first parameter - the thing that cannot
+  // change without changing the server - rather than on the spelling of an
+  // expression inside it.
+  //
+  // ?admin=mintLink has TWO call sites and only this one is the pick-binding
+  // path: the money lane mints at console/index.html:8986 with `&process=` /
+  // `&mondayId=` through moneyMintBaseForLane_, and has no pick to bind. The
+  // 2026-08-08 anchor did not distinguish them, so a plain indexOf on the route
+  // now lands on the money mint - which is why this asserts the count too.
+  {
+    const ONB = "apiFetch('?admin=mintLink&type=";
+    const mintIdx = html.indexOf(ONB);
+    ok('the onboarding mint call site exists', mintIdx > -1);
+    ok('there is exactly ONE onboarding mint call site', html.split(ONB).length - 1 === 1,
+      html.split(ONB).length - 1);
+    ok('exactly one call site in the file binds a pick at all',
+      html.split("(pickedId?'&mondayItemId='").length - 1 === 1,
+      html.split("(pickedId?'&mondayItemId='").length - 1);
+    const endTok = '.then(function(res){';
+    const mintStmt = html.slice(mintIdx, html.indexOf(endTok, mintIdx) + endTok.length);
+    const preIdx = html.lastIndexOf('var mintBase', mintIdx);
+    const preamble = preIdx > -1 ? html.slice(preIdx, mintIdx) : '';
     ok('the mint URL sends &mondayItemId= when a valid pick is bound',
-      mintBlock.indexOf("(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')") > -1);
-    ok('the mint call routes through the flag-gated per-lane dispatcher (mintBaseForLane_), not a hardcoded engine',
-      /apiFetch\('\?admin=mintLink[\s\S]*mintBaseForLane_\(state\.lane\)\)\.then\(function\(res\)\{/.test(mintBlock));
+      mintStmt.indexOf("(pickedId?'&mondayItemId='+encodeURIComponent(pickedId):'')") > -1);
+    ok('the id it sends comes from the email-equality gate, not from the raw pick',
+      /var pickedId\s*=\s*onbPickedItemId_\(/.test(preamble), preamble.slice(-160));
+    ok('the mint resolves its engine through the flag-gated per-lane dispatcher',
+      /var mintBase\s*=\s*mintBaseForLane_\(state\.lane\);/.test(preamble));
+    ok('the mint call PASSES that engine rather than defaulting to one',
+      /,\s*false,\s*mintBase\)\.then\(function\(res\)\{$/.test(mintStmt), mintStmt.slice(-70));
   }
 
   // caymanClearCreateForm drops the binding after a completed mint (static).
@@ -104,5 +159,9 @@ if (pickerSrc.indexOf('window.__onbPick=pick') === -1) throw new Error('extracte
   }
 
   console.log(pass + ' passed, ' + fail + ' failed');
-  if (fail) process.exit(1);
+  // Explicit exit: booting the real console (section 4) arms its own timers -
+  // the 45s auto-refresh interval among them - and dom.window.close() does not
+  // always drain them, so without this the harness passes and then HANGS,
+  // which in the parallel deploy gate looks exactly like a stuck runner.
+  process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
