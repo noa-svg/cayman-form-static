@@ -2023,14 +2023,51 @@
       // the LP arrived on a page they did not choose with the explanation
       // off-screen. Focus still goes to the field, with preventScroll so the
       // focus call does not undo the reveal.
+      // Reveal the bounce box WITH the bearings that say where the LP now is.
+      // scrollIntoView({block:'start'}) pins the box to y=0, which is why the
+      // page's own title, the progress bar and the logo all left the screen:
+      // .lvp-page__title measured at top -51 on every request-page bounce and
+      // -147..-203 on the 320px start-page ones. The LP then saw a red box on a
+      // page with no heading and no step indicator, and nothing on screen said
+      // they had been moved backwards.
+      // So scroll by the MINIMUM that gets the box fully on screen, instead of
+      // by the amount that puts one of its edges on a particular line. Every
+      // pixel of scroll past that minimum only removes context from above the
+      // box, and context above the box is the entire thing being fixed here.
+      // The floor is what the old code lacked in the other direction: it is the
+      // reason this is not simply scrollTo(0), because on a short viewport
+      // (320x568, 1280x600) or with a long summary the box would sit below the
+      // fold and the bounce would read as a dead button again.
+      //   floorY  - box bottom must be on screen, so never scroll less;
+      //   ceilY   - box top must be on screen, so never scroll more. A box taller
+      //             than the viewport therefore degrades to head-visible (title
+      //             gone, box readable from its first line) rather than head-cut.
+      // Doc-space coordinates throughout, so this is safe to run while goToPage's
+      // own smooth scrollTo(0) is still in flight.
+      function revealWithContext_(box) {
+        var de = document.documentElement;
+        var vh = window.innerHeight || de.clientHeight || 0;
+        var sy = window.pageYOffset || de.scrollTop || 0;
+        var r = box.getBoundingClientRect();
+        var boxTop = r.top + sy;
+        var boxBottom = boxTop + r.height;
+        var PAD = 12;
+        var want = boxBottom - vh + PAD;          // floor: box bottom on screen
+        var ceilY = boxTop - PAD;                 // ceiling: box top on screen
+        if (want > ceilY) want = ceilY;
+        var limit = Math.max(0, (de.scrollHeight || 0) - vh);
+        want = Math.max(0, Math.min(want, limit));
+        try { window.scrollTo({ top: want, behavior: 'smooth' }); }
+        catch (e) { window.scrollTo(0, want); }
+      }
       function focusAndReveal(el, revealEl) {
         var inp = focusTargetIn(el);
         if (!inp || !inp.focus) return false;
         setTimeout(function () {
           try { inp.focus({ preventScroll: !!revealEl }); } catch (e) { inp.focus(); }
-          var target = revealEl || inp;
-          if (target && target.scrollIntoView) {
-            target.scrollIntoView({ block: revealEl ? 'start' : 'center', behavior: 'smooth' });
+          if (revealEl) { revealWithContext_(revealEl); return; }
+          if (inp && inp.scrollIntoView) {
+            inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
           }
         }, 0);
         return true;
