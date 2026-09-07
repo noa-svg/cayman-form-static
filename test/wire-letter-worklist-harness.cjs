@@ -143,7 +143,12 @@ function planOf(awaiting, transfers, parked, extra) {
   return function (route) {
     if (route === 'listTrackerMonthTabs') return { ok: true, months: MONTHS };
     if (route === 'opPeekAwaitingMoney') return { ok: true, rows: awaiting };
-    if (route === 'opPeekMonthTransfers') return { ok: true, transfers: transfers };
+    if (route === 'opPeekMonthTransfers') {
+      return Object.assign(
+        { ok: true, transfers: transfers },
+        (extra && extra.peekExtra) || {},
+      );
+    }
     if (route === 'opPeekParked') return { ok: true, rows: parked };
     if (extra && extra[route] !== undefined) return extra[route];
     return { ok: true };
@@ -410,7 +415,14 @@ function planOf(awaiting, transfers, parked, extra) {
       t.el('wlBlockers') ? 'has content' : 'no #wlBlockers');
     ok('W10 Generate stays shut on an empty month',
       !!t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled') === 'true');
-    ok('W10 and says so', /Nothing to wire this month/.test(t.txt('wlGateNote') || ''), t.txt('wlGateNote'));
+    // The gate beside Generate describes the CONTROL. It used to restate the
+    // list's own headline ("Nothing to wire this month."), which is how the same
+    // sentence came to appear twice in one viewport, which is what Noa actually
+    // objected to on 2026-09-07.
+    ok('W10 and says why the control is shut, without restating the list',
+      /Generate stays off until a row is ready to wire/.test(t.txt('wlGateNote') || ''), t.txt('wlGateNote'));
+    ok('W10 the old duplicated sentence is gone from the whole screen',
+      !/Nothing to wire this month/.test(t.doc.body.textContent || ''), 'still present');
     ok('W10 the artifact reports a zero-row letter', /0 rows on a NIS letter/.test(t.txt('wlArtifact') || ''),
       t.txt('wlArtifact'));
     t.dom.window.close();
@@ -551,6 +563,66 @@ function planOf(awaiting, transfers, parked, extra) {
     ok('W2b changing the month shuts the gate again',
       !!t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled') === 'true');
     t.dom.window.close();
+  }
+
+  // -------------------------------------------------------------------------
+  // W11: WHY the letter group is empty, derived rather than guessed.
+  //
+  // On 2026-09-07 this screen told Noa "Every row on this tab has already been
+  // paid or moved to trading" while its own Awaiting list showed two Pending
+  // rows worth 380,000 in EUR and USD under a NIS selector. The first rebuild
+  // softened that to "either the money is not in yet, or ...", which is a hedge
+  // about a question the screen can answer from data it is already holding.
+  // Each reason below is asserted from the evidence that produces it, and the
+  // settled claim is asserted to be UNREACHABLE while any evidence contradicts it.
+  // -------------------------------------------------------------------------
+  {
+    const SETTLED = /already been paid or moved to trading/;
+
+    // Her exact live case.
+    const t1 = boot(planOf(
+      [A('r-lia', 'ליאה לדוגמה', { amount: 50000, currency: 'EUR', type: 'Increase' }),
+       A('r-yan', 'ינאי לדוגמה', { amount: 330000, currency: 'USD' })],
+      [], [],
+    ));
+    await settle(400);
+    const letter1 = TX(t1.groupOf('Goes on a letter'));
+    ok('W11 does not claim the tab is settled while money is awaited', !SETTLED.test(letter1), letter1.slice(0, 240));
+    ok('W11 names the awaiting count', /2 rows are still awaiting money/.test(letter1), letter1.slice(0, 240));
+    ok('W11 carries the real EUR figure', /50,000 EUR/.test(letter1), letter1.slice(0, 240));
+    ok('W11 carries the real USD figure', /330,000 USD/.test(letter1), letter1.slice(0, 240));
+    ok('W11 the reason is stated once in the letter group',
+      (letter1.match(/still awaiting money/g) || []).length === 1,
+      'count=' + (letter1.match(/still awaiting money/g) || []).length);
+    ok('W11 the gate does not restate it beside Generate',
+      !/still awaiting money/.test(t1.txt('wlGateNote') || ''), t1.txt('wlGateNote'));
+    t1.dom.window.close();
+
+    // Money IS ready, in a currency this letter cannot carry.
+    const t2 = boot(planOf([], [], [], { peekExtra: { excluded: { total: 3, byCurrency: { USD: 1, EUR: 2 } } } }));
+    await settle(400);
+    const letter2 = TX(t2.groupOf('Goes on a letter'));
+    ok('W11 does not claim settled while other-currency money is ready', !SETTLED.test(letter2), letter2.slice(0, 240));
+    ok('W11 counts the other-currency rows', /3 rows are ready to wire in another currency/.test(letter2), letter2.slice(0, 240));
+    ok('W11 names each currency', /1 row in USD/.test(letter2) && /2 rows in EUR/.test(letter2), letter2.slice(0, 240));
+    t2.dom.window.close();
+
+    // A currency cell nobody can read stops the whole month.
+    const t3 = boot(planOf([], [], [], { peekExtra: { unresolvedCurrency: ['נועם לדוגמה: "פרנק"'] } }));
+    await settle(400);
+    const letter3 = TX(t3.groupOf('Goes on a letter'));
+    ok('W11 reports the unreadable currency cell', /currency cell nobody can read/.test(letter3), letter3.slice(0, 240));
+    ok('W11 says it blocks generation', /blocks generation/.test(letter3), letter3.slice(0, 240));
+    ok('W11 does not also claim settled', !SETTLED.test(letter3), letter3.slice(0, 240));
+    t3.dom.window.close();
+
+    // Genuinely settled: the claim is allowed, because now it is true.
+    const t4 = boot(planOf([], [], []));
+    await settle(400);
+    const letter4 = TX(t4.groupOf('Goes on a letter'));
+    ok('W11 states the settled case when it is true', SETTLED.test(letter4), letter4.slice(0, 240));
+    ok('W11 invents no awaiting rows', !/awaiting money/.test(letter4), letter4.slice(0, 240));
+    t4.dom.window.close();
   }
 
   console.log('\n' + (fail ? 'WIRE-LETTER WORKLIST HARNESS FAILED: ' : 'WIRE-LETTER WORKLIST HARNESS PASSED: ')

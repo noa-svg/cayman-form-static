@@ -9685,7 +9685,52 @@ document.addEventListener('keydown',function(e){
       empty:'<strong>Nothing is waiting on money.</strong> No signed row on this tab is still owed funds.'
     });
   }
-  function wlLetterHtml(transfers){
+  // THE HEDGE (closed 2026-09-07). This group's empty copy used to read "Either
+  // the money is not in yet, or every row has already been paid or moved to
+  // trading." The screen does not need to guess between those two: it is holding
+  // the Needs-you rows, the excluded-by-currency tally and the blocked list, so
+  // it KNOWS which it is. An "either/or" is the polite descendant of the sentence
+  // Noa hit on 2026-09-07, which asserted the tab was settled while two Pending
+  // rows worth 380,000 sat above it. Where there is no evidence for a reason, no
+  // reason is given, and the settled claim is made only when it is true.
+  function wlLetterEmptyHtml_(ctx){
+    ctx = ctx || {};
+    var ccy = esc2(ctx.currency || 'NIS');
+    var out = [];
+    var needs = ctx.needs || [];
+    if (needs.length) {
+      var by = {};
+      needs.forEach(function(r){ var c=String(r.currency||'').trim()||'?'; by[c]=(by[c]||0)+(Number(r.amount)||0); });
+      var parts = Object.keys(by).map(function(c){ return wlAmountText(by[c])+' '+esc2(c); });
+      // Oxford-free list: "a and b", "a, b and c". `parts.join(' and ')` gave
+      // "a and b and c" on a three-currency month, which reads as a typo on a
+      // money screen.
+      var worth = parts.length>1 ? (parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1]) : parts[0];
+      out.push('<strong>'+needs.length+' '+(needs.length===1?'row is':'rows are')+' still awaiting money</strong>, worth '
+        +worth+'. Mark a row arrived once the credit lands and it moves here.');
+    }
+    var ex = ctx.excluded;
+    if (ex && ex.total) {
+      var toks = Object.keys(ex.byCurrency||{}).map(function(t){
+        var n = ex.byCurrency[t];
+        return n+' '+(n===1?'row':'rows')+' in '+esc2(t);
+      });
+      out.push('<strong>'+ex.total+' '+(ex.total===1?'row is':'rows are')+' ready to wire in another currency</strong> ('
+        +toks.join(', ')+'). A letter carries one currency, so switch the selector to put '
+        +(ex.total===1?'it':'them')+' on one.');
+    }
+    var un = ctx.unresolved || [];
+    if (un.length) {
+      out.push('<strong class="t-danger">'+un.length+' '+(un.length===1?'row has':'rows have')
+        +' a currency cell nobody can read</strong>, which blocks generation for the whole month: '
+        +esc2(un.join('; '))+'. Fix the CURRENCY cell to NIS, USD or EUR.');
+    }
+    if (!out.length) {
+      out.push('<strong>Every row on this tab has already been paid or moved to trading.</strong>');
+    }
+    return '<strong>No '+ccy+' row is ready to wire.</strong><br>'+out.join('<br>');
+  }
+  function wlLetterHtml(transfers, ctx){
     var sortHd='<button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button>'
       +'<button type="button" data-sort="type">Type '+wlSortIcon('type')+'</button>'
       +'<button type="button" data-sort="amount">Amount '+wlSortIcon('amount')+'</button>';
@@ -9700,7 +9745,7 @@ document.addEventListener('keydown',function(e){
       job:'these rows, in this currency, on this month’s letter',
       extra:rows.length?('<span style="margin-left:auto">'+sortHd+'</span>'):'',
       body:body,
-      empty:'<strong>No row on this tab is eligible for a letter in this currency.</strong> Either the money is not in yet, or every row has already been paid or moved to trading.'
+      empty:wlLetterEmptyHtml_(ctx)
     });
   }
   // DONE, collapsed to one summary line. There is no endpoint that reports the
@@ -9970,6 +10015,10 @@ document.addEventListener('keydown',function(e){
     // have diverged. Only the empty-month path used to clear it; every input
     // now clears it.
     var lastGo=null,peekSeq=0,wlLastTransfers=null,awaitSeq=0,parkedSeq=0;
+    // Additive fields from the 2026-09-07 ju-service currency fix. Defaulted,
+    // never assumed: an older deployed service omits them and the empty state
+    // falls back to the reasons it can still prove.
+    var wlLastExcluded=null,wlLastUnresolved=null;
     // Everything the four groups are rendered from lives here, so one render
     // pass reads one set of facts. Three independently-writing peeks is how the
     // blocker summary and the artifact line would otherwise disagree with the
@@ -10064,6 +10113,14 @@ document.addEventListener('keydown',function(e){
       // A blocker on screen is a blocker on the gate. Without this the summary
       // could say the letter is stopped while Generate sat armed beside it.
       if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Fix it, then review again.');
+      // THE ORDERING BUG (2026-09-07). The two peeks land in either order, and
+      // the letter group's empty state is derived from the AWAITING rows. When
+      // awaiting answered second, the letter group had already painted a reason
+      // it had no evidence for, and nothing re-rendered it. Re-render here so a
+      // late awaiting answer corrects the reading instead of leaving it standing.
+      // Guarded on wlLastTransfers so the initial "Loading rows..." is not
+      // replaced by an empty state before the rows have answered at all.
+      if(wlLastTransfers!==null)renderWlRows();
       wlRenderArtifact(split);
     }
     function wlRenderArtifact(split){
@@ -10336,7 +10393,16 @@ document.addEventListener('keydown',function(e){
       });
     }
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
-    function renderWlRows(){rowsEl.innerHTML=wlLetterHtml(wlLastTransfers);wlRenderArtifact(wlSplitAwaiting(wlAwaitRows));}
+    function renderWlRows(){
+      var split=wlSplitAwaiting(wlAwaitRows);
+      rowsEl.innerHTML=wlLetterHtml(wlLastTransfers,{
+        currency:(ccyEl&&ccyEl.value)||'NIS',
+        needs:split.needs,
+        excluded:wlLastExcluded,
+        unresolved:wlLastUnresolved
+      });
+      wlRenderArtifact(split);
+    }
     // Click-to-sort headers (Noa, 2026-08-02: "make the columns sort on click
     // on header"). Re-sorts the already-fetched rows client-side, no refetch.
     rowsEl.addEventListener('click',function(e){
@@ -10361,7 +10427,7 @@ document.addEventListener('keydown',function(e){
       var empty=!transfers||!transfers.length;
       if(reviewBtn)reviewBtn.disabled=empty;
       if(empty){
-        wlCloseGate('Nothing to wire this month.');
+        wlCloseGate('Generate stays off until a row is ready to wire.');
         if(findEl)findEl.innerHTML='';
       }
     }
@@ -10376,13 +10442,15 @@ document.addEventListener('keydown',function(e){
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
         wlLastTransfers=r.transfers;
+        wlLastExcluded=r.excluded||null;
+        wlLastUnresolved=r.unresolvedCurrency||null;
         renderWlRows();
         wlApplyEmptyBatchState(r.transfers);
       }).catch(function(err){
         if(rid!==peekSeq)return;
-        wlLastTransfers=null;
+        wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;
         wlCloseGate('Rows could not be loaded. Review again before generating.');
         rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div></div>';
       });
