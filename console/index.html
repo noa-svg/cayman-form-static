@@ -1325,6 +1325,10 @@ body.side-coll .ss-row.ss-total { display: none; }
    current becomes a hollow gold ring (inset shadow, not a fill). */
 .rail.frozen .seg.done    { background: var(--color-border); }
 .rail.frozen .seg.current { background: var(--color-amber); box-shadow: none; }
+/* .cleared: the row is still frozen (its beat is genuinely unknown) but it is
+   no longer asking a question - an operator approved it. Same geometry, alarm
+   colour removed. Gated by isAttnRow in railHtml, never by the raw stage. */
+.rail.frozen.cleared .seg.current { background: var(--color-border-strong); box-shadow: none; }
 /* voided / expired: entire rail ghost */
 .rail.dead .seg { background: var(--color-border); box-shadow: none; }
 /* Age column (total process age; the per-wait duration lives in .rwait). */
@@ -3456,6 +3460,8 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .rail .seg.sealing{background:var(--color-gold);animation:rail-seal 1.1s var(--ease-inout) infinite}
 .rail.frozen .seg.done{background:#fff}
 .rail.frozen .seg.current{background:var(--color-red)}
+/* An APPROVED row keeps the frozen geometry and loses the red (2026-09-07). */
+.rail.frozen.cleared .seg.current{background:var(--color-border-strong)}
 .rail.dead .seg{background:var(--color-red-tint)}
 /* Text-color utilities (ive-pass 2026-09-04, finding #5): 45 call sites
    carried a bare inline color style, ungoverned by a shared class - the
@@ -3751,7 +3757,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <button type="button" class="show-done" id="showCanceledToggle" aria-pressed="false" hidden></button>
           <button type="button" class="show-done tertiary" id="showTestToggle" aria-pressed="false" hidden></button>
         </div>
-        <div class="syncline" id="statusbar"><span id="ver-line">Synced</span></div>
+        <!-- ver-line starts EMPTY. It used to ship the static word "Synced",
+             which is an assertion about a load that has not happened yet: a
+             console that never completed a single board fetch still read
+             "Synced" forever, because the line was only ever written when a
+             list leg came back with a generatedAt (2026-09-07 audit, defect 2).
+             paintVerLine_ owns every word in here now, and it writes on every
+             paint including the failures. -->
+        <div class="syncline" id="statusbar"><span id="ver-line"></span></div>
       </div>
     </div>
 
@@ -5505,20 +5518,33 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Laterals: attention states freeze the rail; dead states go full ghost.
   function railHtml(r){
     var st=String(r.stage||'');
+    // THE RAIL IS PRESENTATION OF THE SAME PREDICATE (2026-09-07 audit, defect
+    // 4). isAttnRow already decides the sidebar count, the coral tint, the sort
+    // pin and the fold; the rail went on deciding for itself from the raw
+    // stage, so an APPROVED needs_attention row computed a red current segment
+    // (rgb(192,32,46) via .rail.frozen .seg.current) right beside its own
+    // "Approved by <operator>" sentence. isAttnRow's own logic is untouched -
+    // only its presentation is gated on it here.
+    //
+    // `cleared` keeps the rail FROZEN, because the beat is still genuinely
+    // unknown (C6d below: the list feed never emits lastStage). It only takes
+    // the alarm colour off a row that is no longer asking a question.
+    var cleared=!isAttnRow(r)&&(isAttnStage(st)||(isCompletedStage(st)&&r.stale));
+    var frozen=cleared?'frozen cleared':'frozen';
     var segs, railCls='';
     if(isCanceledStage(st)){ railCls='dead'; segs=['up','up','up','up']; }
     else if(st==='needs_attention'){
       // C6d (2026-07-19): the list feed never emits lastStage, so freeze
       // honestly at one fixed beat rather than pretending to know where.
-      railCls='frozen'; segs=['done','current','up','up'];
+      railCls=frozen; segs=['done','current','up','up'];
     } else if(st==='seal_stuck_retrying'||st==='seal_quarantined'){
       // Seal laterals: everyone signed, the seal leg is stuck - freeze at the
       // last beat so the rail agrees with the "Seal retrying/failed" word.
-      railCls='frozen'; segs=['done','done','done','current'];
+      railCls=frozen; segs=['done','done','done','current'];
     } else if(isCompletedStage(st)){
       // C1 (2026-07-19): a phantom-complete row (server sends stale:true) must
       // never read as a clean green Done.
-      if(r.stale){ railCls='frozen'; segs=['done','done','done','current']; }
+      if(r.stale){ railCls=frozen; segs=['done','done','done','current']; }
       else { segs=['done','done','done','done']; }
     } else if(SEALING_STAGES[st]){
       // Sealing = arriving at Done: the last segment fills as motion.
@@ -5724,14 +5750,28 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // for a row that has none (2026-09-06, see isManualRow_ above). It reads
     // muted and says where its real state lives.
     var manual=isManualRow_(r);
-    var wordCls=manual?' muted':(attn?' warn':((dead||isCompletedStage(st))?' muted':''));
+    // AN APPROVED ROW DOES NOT WEAR THE ALARM WORD EITHER (2026-09-07 audit,
+    // defect 4). isAttnRow gated the count, the tint, the pin and the fold, but
+    // the status word came straight from STAGE_WORD, so an approved
+    // needs_attention row read the literal word "Stuck" one line above its own
+    // "Approved by <operator>".
+    //
+    // The stage genuinely has NOT moved - review and settlement are different
+    // facts (see isAttnRow) - so no substitute stage word is invented for it.
+    // The row is given the sentence it was already carrying, promoted from the
+    // second line into the word slot and muted: "Approved by <operator>" IS the
+    // answer to what this row's state is, and it is copy this file already
+    // ships. The second line then has nothing left to add, so it is dropped
+    // rather than repeated.
+    var cleared=!!reviewedLine&&isAttnStage(st);
+    var wordCls=manual?' muted':(attn?' warn':((dead||isCompletedStage(st)||cleared)?' muted':''));
     var statSecond=manual?'<span class="rwait">Tracked in the transfer form</span>'
-      :(attn?attnBadgeHtml(r,folded):(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r)));
+      :(attn?attnBadgeHtml(r,folded):(cleared?'':(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r))));
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
       +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
-      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':stageWord(st))+'</span>'+(manual?'':railHtml(r))+'</span>'
+      +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':(cleared?reviewedLine:stageWord(st)))+'</span>'+(manual?'':railHtml(r))+'</span>'
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
       +'<span class="ract">'
@@ -5896,6 +5936,86 @@ document.addEventListener('keydown',function(e){
     });
     return out;
   }
+  // ============================================================
+  // BOARD HEALTH (2026-09-07 audit, defects 1 + 2)
+  //
+  // The board is fail-open by DESIGN and stays that way: fetchEngineBoard_
+  // catches every leg so one dead engine degrades the merged board instead of
+  // blanking it, and that is correct - the two engines carry different rows
+  // (GAS is the only one that surfaces the tracker's manual/orphan money rows),
+  // so one surviving engine beats none.
+  //
+  // What was missing is that NOTHING SAID SO. Measured with the list leg
+  // failed: "Nothing in flight.", sidebar counters gone, no red anywhere, and
+  // an operator who concludes the pipeline is clear. A dead leg was
+  // byte-identical on screen to a genuinely empty answer. Partial data must
+  // never present as complete, so every failed leg is recorded here and
+  // surfaced in the two places she is already looking - the sync line under the
+  // board, and the empty state itself.
+  //
+  //   legFail     recomputed from the engine results on EVERY paint, never
+  //               sticky, so a recovered refresh clears the red by itself.
+  //   overlayFail set by the opGetRowReview overlay's catch; reset per load().
+  //   syncedAt    the newest generatedAt any list leg has actually returned.
+  //               '' means no list leg has ever answered - which is exactly
+  //               when no freshness may be asserted (defect 2).
+  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:''};
+  function boardDegraded_(){return !!(BOARD_HEALTH.legFail||BOARD_HEALTH.overlayFail);}
+  // The sync line is the console's only always-visible claim about how fresh
+  // the board is, so it is also where "this board is INCOMPLETE" belongs.
+  //
+  // It used to be written ONLY inside `if(latestGeneratedAt)`, so a failed
+  // refresh left the previous "synced 2m ago" standing as a live claim, and a
+  // console that never completed a load kept the static markup word "Synced"
+  // forever. Every path through a paint now writes this line, failures
+  // included.
+  //
+  // Every string below is one this file already shipped ("synced X ago",
+  // "last synced X ago . the board may be stale", "Could not load the board.").
+  // No new operator wording was invented here.
+  function paintVerLine_(){
+    var vl=document.getElementById('ver-line');
+    if(!vl)return;
+    var deg=boardDegraded_(), at=BOARD_HEALTH.syncedAt;
+    if(!at){
+      // Nothing has synced yet, so there is no freshness to report. Silence,
+      // or - if a leg has already failed - the board's own error sentence.
+      vl.textContent=deg?'Could not load the board.':'';
+      vl.title=vl.textContent;
+      vl.style.color=deg?'var(--color-danger)':'';
+      return;
+    }
+    var t=at.replace('T',' ').slice(0,16);
+    // Absolute-only meant the operator had to diff the stamp against her own
+    // clock to notice a dead cron, on the ONLY live view of in-flight money
+    // (2026-08-26 review, finding 16).
+    var age=sinceDur(at);
+    var stale=false;
+    try{ stale=(Date.now()-Date.parse(at))>6*3600000; }catch(e){}
+    vl.title='Last synced '+t;
+    if(deg||stale){
+      vl.textContent=age?('last synced '+age+' ago · the board may be stale'):'the board may be stale';
+      vl.style.color='var(--color-danger)';
+    }else{
+      vl.textContent='synced '+(age?(age+' ago'):('· '+t));
+      vl.style.color='';
+    }
+  }
+  // The board's own error state. It existed already, but was reachable ONLY if
+  // paintBoard_ ITSELF threw - which the common outage never does, precisely
+  // because fetchEngineBoard_ swallows every leg. It is now also what a
+  // degraded board renders in place of the flat all-clear. One copy of the
+  // markup, two callers, same Retry, same small-print cause.
+  function boardErrorHtml_(err){
+    return '<div class="empty t-danger">Could not load the board. '
+      +'<a href="#" id="boardRetry">Retry</a>'
+      +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
+      +'</div>';
+  }
+  function wireBoardRetry_(){
+    var br=document.getElementById('boardRetry');
+    if(br)br.onclick=function(e){e.preventDefault();load();};
+  }
   function renderRows(rows,query){
     // C1 (2026-07-19): a stale-complete row (records write failed) is NOT quietly
     // terminal - it needs the operator, so it stays on the default board instead
@@ -5929,7 +6049,16 @@ document.addEventListener('keydown',function(e){
     // it is a true statement about in-flight processes regardless of what is
     // completed, so it still shows whenever inflight is empty.
     var matchesElsewhere=!!query&&(completedVisible||canceledVisible);
-    html+=inflight.length?foldedRowsHtml(inflight):(matchesElsewhere?'':'<div class="empty">'+emptyMsg+'</div>');
+    // DEGRADED EMPTY (2026-09-07 audit, defect 1). "Nothing in flight." and
+    // "No processes match" are both ALL-CLEARS, and neither is true while an
+    // engine leg has failed: the rows that would have contradicted them are
+    // exactly the ones that did not load. When the board is degraded the empty
+    // slot renders the board's own error state - the one with the Retry -
+    // instead. Under a search the Clear-search line stays underneath it, so a
+    // degraded board never traps the operator inside her own query.
+    var emptyBlock=matchesElsewhere?'':('<div class="empty">'+emptyMsg+'</div>');
+    if(boardDegraded_())emptyBlock=boardErrorHtml_(null)+(query?emptyBlock:'');
+    html+=inflight.length?foldedRowsHtml(inflight):emptyBlock;
     if(showDone&&completed.length)html+=completedByMonthHtml(completed);
     // The wrapper below is deliberate. rowHtml's second parameter is `folded`,
     // and Array.prototype.map calls back with (element, index, array), so
@@ -6007,6 +6136,9 @@ document.addEventListener('keydown',function(e){
     });
     var clearLink=document.getElementById("emptyClearSearch");
     if(clearLink)clearLink.onclick=function(e){e.preventDefault();var bs=document.getElementById("boardSearch");if(bs){bs.value="";bs.focus();}applySearch();};
+    // The degraded empty state carries the same Retry the thrown-error state
+    // does, and it is rendered here, so it is bound here (2026-09-07).
+    wireBoardRetry_();
   }
   // One haystack per row: every field the row shows or carries, so search matches
   // name, Hebrew name, stage (raw + spaced), type (word + raw), lane, age, next-action.
@@ -6054,6 +6186,35 @@ document.addEventListener('keydown',function(e){
   // Ju's own stage vocabulary therefore cannot describe it, and the board must
   // not borrow that vocabulary to editorialise about it.
   function isManualRow_(r){ return !!(r && /^manual__/.test(String(r.pid||''))); }
+  // LAST KNOWN-GOOD REVIEW STATE (2026-09-07 audit, defect 4).
+  //
+  // The opGetRowReview overlay is fail-soft on purpose - losing an annotation
+  // must never cost the operator the board - but "fail soft" was implemented as
+  // "fail silent", and silence here is not neutral: with the overlay missing,
+  // every approved row re-acquires the coral tint, the "Stuck" word and its
+  // slot in the NEED A LOOK count. So an approved row oscillated in and out of
+  // the alarm with the network, and the operator had no way to tell an
+  // un-approval from a dropped fetch.
+  //
+  // pid -> reviewedBy, written only from an answer the server actually gave.
+  // Re-applied when a later fetch fails, so a failure holds the last truth
+  // instead of inventing a new one. Cleared per-pid on the next real answer,
+  // so a genuine "Undo approval" still lands on the following load.
+  var REVIEW_CACHE={};
+  function applyReviewCache_(rows){
+    rows.forEach(function(r){
+      if(Object.prototype.hasOwnProperty.call(REVIEW_CACHE,r.pid)){
+        r.reviewApproved=true;r.reviewedBy=REVIEW_CACHE[r.pid]||'';
+      }
+    });
+  }
+  // One recovery path for both "the fetch rejected" and "the fetch resolved
+  // with something that is not a review map".
+  function reviewOverlayFailed_(rows){
+    applyReviewCache_(rows);
+    BOARD_HEALTH.overlayFail=true;
+    paintVerLine_();
+  }
   function isAttnRow(r){
     if(!r)return false;
     if(r.reviewApproved)return false;
@@ -6072,7 +6233,18 @@ document.addEventListener('keydown',function(e){
   function setSideStats(rows){
     var el=document.getElementById("sideStats");
     if(!el)return;
-    if(!rows.length){el.hidden=true;return;}
+    // Hiding is not clearing (2026-09-07 audit, defect 3). The early return
+    // used to leave the previous set's money total sitting in #ssTotals, one
+    // `hidden=false` away from being read under a different lane's name. An
+    // empty set has no figures, so it renders none.
+    if(!rows.length){
+      el.hidden=true;
+      var t0=document.getElementById("ssTotals");if(t0)t0.innerHTML='';
+      var a0=document.getElementById("ss-active");if(a0)a0.textContent='0';
+      var n0=document.getElementById("ss-attn");if(n0)n0.textContent='0';
+      var s0=document.getElementById("ss-signing");if(s0)s0.textContent='0';
+      return;
+    }
     var active=rows.filter(function(r){return !isTerminalStage(r.stage);}).length;
     var attn=rows.filter(isAttnRow).length;
     var signing=rows.filter(function(r){return r.stage==='signing';}).length;
@@ -6314,16 +6486,28 @@ document.addEventListener('keydown',function(e){
   // rejects - a ju-service outage must degrade the merged board to GAS-only
   // rows, not blank it (same fail-open idiom the individual fetches below
   // already used before this engine loop existed).
+  // A FAILED LEG IS RECORDED, NOT ERASED (2026-09-07 audit, defect 1). The
+  // catches themselves stay: fail-open is deliberate and one surviving engine
+  // beats none. What changes is that each catch now leaves a mark, so the
+  // caller can tell a dead leg from an empty answer. Before this they were the
+  // same value - `{processes:[]}` - and a whole engine could vanish in silence,
+  // taking every manual/orphan money row with it.
   function fetchEngineBoard_(base, lane, wantDone, wantTest){
-    var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){return {notes:{}};});
-    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){return {rows:{}};});
-    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){return {processes:[]};});
+    var failed={list:false,notes:false,extras:false};
+    var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){failed.notes=true;return {notes:{}};});
+    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){failed.extras=true;return {rows:{}};});
+    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){failed.list=true;return {processes:[]};});
     return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
-      return {base:base,list:r[0],notes:r[1],extras:r[2]};
+      return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed};
     });
   }
   function load(silent){
     var rid=++LOAD_SEQ;
+    // Per-load overlay health (2026-09-07 audit, defect 4). legFail is
+    // recomputed from the engine results on every paint; this one has no such
+    // source, so it is cleared at the start of each load and set by the
+    // opGetRowReview catch below.
+    BOARD_HEALTH.overlayFail=false;
     if(!silent) document.getElementById("list").innerHTML=boardSkeleton();
     // includeDone=0 by default (wiring item 5): terminal rows are fetched only
     // once a Show completed / Show canceled toggle asks for them.
@@ -6405,6 +6589,15 @@ document.addEventListener('keydown',function(e){
         });
         if(d&&d.generatedAt&&d.generatedAt>latestGeneratedAt)latestGeneratedAt=d.generatedAt;
       });
+      // BOARD HEALTH, computed BEFORE the partial-paint guard below so a paint
+      // that returns early still tells the operator a leg died (2026-09-07
+      // audit, defects 1 + 2). legFail is recomputed from scratch here, never
+      // accumulated, so a recovered refresh clears the red on its own.
+      BOARD_HEALTH.legFail=perEngine.some(function(e){
+        var f=e.failed||{}; return !!(f.list||f.notes||f.extras);
+      });
+      if(latestGeneratedAt&&latestGeneratedAt>BOARD_HEALTH.syncedAt)BOARD_HEALTH.syncedAt=latestGeneratedAt;
+      paintVerLine_();
       var FLOW_WORD={cayman_subscription:'onboarding',cayman_increase:'increase',cayman_withdrawal:'withdrawal',cayman_transfer:'transfer',israeli_increase:'increase',israeli_withdrawal:'withdrawal'};
       // CTO review finding 4 (2026-09-02): the same '' vs null hazard fixed
       // in the drawer's Details section earlier today also lived here.
@@ -6485,44 +6678,44 @@ document.addEventListener('keydown',function(e){
         apiFetch('?api=opGetRowReview&masterRids='+encodeURIComponent(rids.join(',')),false,JU_API)
           .then(function(rv){
             if(rid!==LOAD_SEQ||pseq!==PAINT_SEQ)return; // superseded while the review fetch was in flight
-            var map=(rv&&rv.ok&&rv.reviews)?rv.reviews:{};
+            // A NON-ANSWER IS NOT AN ANSWER (2026-09-07 audit, defect 4). This
+            // used to read `(rv&&rv.ok&&rv.reviews)?rv.reviews:{}` - an empty
+            // map, indistinguishable from "the server says nothing here is
+            // approved". Fall through to the same recovery the catch uses.
+            if(!(rv&&rv.ok&&rv.reviews)){reviewOverlayFailed_(rows);return;}
+            var map=rv.reviews;
+            // Only the rids we actually asked about are re-decided. A pid that
+            // was not in this query keeps whatever the cache last knew.
+            rids.forEach(function(id){delete REVIEW_CACHE[id];});
             rows.forEach(function(r){
               var hit=map[r.pid];
-              if(hit&&hit.state==='approved'){r.reviewApproved=true;r.reviewedBy=hit.reviewedBy||'';}
+              if(hit&&hit.state==='approved'){r.reviewApproved=true;r.reviewedBy=hit.reviewedBy||'';REVIEW_CACHE[r.pid]=r.reviewedBy||'';}
             });
           })
-          .catch(function(){/* board still renders */})
+          // A FAILED OVERLAY FETCH IS NOT A STATE CHANGE (2026-09-07 audit,
+          // defect 4). This catch used to swallow silently, which reverted an
+          // approved row to coral and back into NEED A LOOK on one unlucky
+          // refresh, then cleared it again on the next: the alarm depended on
+          // network luck. The last known-good review state is reapplied and the
+          // sync line goes red instead.
+          .catch(function(){if(rid===LOAD_SEQ&&pseq===PAINT_SEQ)reviewOverlayFailed_(rows);})
           .then(function(){if(rid===LOAD_SEQ&&pseq===PAINT_SEQ)render(rows);});
       })();
-      if(latestGeneratedAt){
-        var t=latestGeneratedAt.replace('T',' ').slice(0,16);
-        var vl=document.getElementById('ver-line');
-        if(vl){
-          // Absolute-only meant the operator had to diff the stamp against her
-          // own clock to notice a dead cron, on the ONLY live view of in-flight
-          // money (2026-08-26 review, finding 16).
-          var age=sinceDur(latestGeneratedAt);
-          var stale=false;
-          try{ stale=(Date.now()-Date.parse(latestGeneratedAt))>6*3600000; }catch(e){}
-          vl.textContent='synced '+(age?(age+' ago'):('· '+t));
-          vl.title='Last synced '+t;
-          vl.style.color=stale?'var(--color-danger)':'';
-          if(stale)vl.textContent='last synced '+age+' ago · the board may be stale';
-        }
-      }
+      // The ver-line is painted above, unconditionally, by paintVerLine_. It
+      // used to be written HERE and only inside `if(latestGeneratedAt)`, which
+      // is why a failed refresh left the previous "synced 2m ago" standing and
+      // a console that never loaded kept the markup's static "Synced".
     }
     function onBoardLoadError_(err,rid,silent){if(rid!==LOAD_SEQ)return;if(!silent){
       // C5 (2026-07-19): the board error state gets an in-place Retry and the real
       // cause in small print, instead of a dead-end "refresh or check auth" guess.
       // Reached only if paintBoard_ ITSELF throws: fetchEngineBoard_ never
-      // rejects, so an engine outage still degrades rather than erroring.
-      var el=document.getElementById("list");
-      el.innerHTML='<div class="empty t-danger">Could not load the board. '
-        +'<a href="#" id="boardRetry">Retry</a>'
-        +(err&&err.serverError?'<div class="lp-empty-detail">'+esc2(String(err.serverError).slice(0,140))+'</div>':'')
-        +'</div>';
-      var br=document.getElementById('boardRetry');
-      if(br)br.onclick=function(e){e.preventDefault();load();};
+      // rejects, so an engine outage still degrades rather than erroring - and
+      // THAT is why renderRows now renders this same block for a degraded
+      // empty board (2026-09-07 audit, defect 1). One copy of the markup, two
+      // callers, so the two error screens cannot drift apart.
+      document.getElementById("list").innerHTML=boardErrorHtml_(err);
+      wireBoardRetry_();
     }}
     // L6: arm one visibility-guarded auto-refresh so the board is not a frozen snapshot
     // the operator must reload to see truth. Silent (no Loading flash, keeps the current
@@ -8083,6 +8276,12 @@ document.addEventListener('keydown',function(e){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.textContent=wantState==='approved'?('Approved by '+(r.actor||'you')):'Reopened for review';}
+            // Seed the review cache from the write we just made (2026-09-07).
+            // The reload below re-fetches the overlay; if THAT fetch fails, the
+            // cache is the only thing standing between a just-approved row and
+            // an immediate bounce back into the alarm.
+            if(wantState==='approved')REVIEW_CACHE[currentPid]=r.actor||'';
+            else delete REVIEW_CACHE[currentPid];
             load(true);
           }else{
             dStatus('Could not save the review'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
@@ -8278,6 +8477,23 @@ document.addEventListener('keydown',function(e){
       state.lpKind="new";state.onbLpKind="new";
       if(window.__onbClearPick)window.__onbClearPick();
       var bs=document.getElementById("boardSearch");if(bs)bs.value="";
+      // THE SIDEBAR IS PER-LANE STATE TOO (2026-09-07 audit, defect 3). F3
+      // cleared every per-lane cache above but never touched the sidebar
+      // figures, which only ever repaint from inside render(). Measured 2.5s
+      // into a Cayman load: header chip CAYMAN, list skeletons, sidebar still
+      // reading Israel's 5 IN FLIGHT / 0 NEED A LOOK / 2,550,000 IN FLIGHT -
+      // one lane's money presented under another lane's name, for the ~8.5s
+      // until the Cayman paint landed.
+      //
+      // Blanked rather than guessed. setSideStats/setBoardBadge over an empty
+      // set are the same two functions render() uses, so there is no second
+      // copy of "what the sidebar shows" to drift; allRows goes with them so a
+      // stray applySearch cannot repaint the prior lane's rows either.
+      allRows=[];setSideStats(allRows);setBoardBadge(allRows);
+      // Same rule for the sync stamp: the new lane has not synced, so nothing
+      // about its freshness may be asserted until it does (defect 2).
+      BOARD_HEALTH.legFail=false;BOARD_HEALTH.overlayFail=false;BOARD_HEALTH.syncedAt='';
+      paintVerLine_();
       W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
       var wc=document.getElementById('w8readout');if(wc)wc.innerHTML='';
