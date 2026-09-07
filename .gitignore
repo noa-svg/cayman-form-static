@@ -53,3 +53,4 @@ test/*
 !test/israel-sigpad-encode-harness.cjs
 !test/israel-cp-english-address-fatca-gate.cjs
 !test/console-honest-status-harness.cjs
+!test/prepush-marker-contract.cjs
