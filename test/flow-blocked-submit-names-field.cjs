@@ -50,13 +50,26 @@ function visiblePages(d) {
 function redFields(d) {
   return [...d.querySelectorAll('[data-field].is-invalid')].map((w) => w.getAttribute('data-field'));
 }
-// Records what scrollIntoView was called on, so the "is the box actually on
-// screen" property is measurable in jsdom (which has no layout). Pins WHICH
-// element the form chose to reveal, not the pixel result.
+// Records WHICH element the form chose to reveal, so that property is
+// measurable in jsdom (which has no layout). Pins the choice, never the pixel
+// result - the pixel result is the CDP pass's job.
+//
+// Two mechanisms to catch, because the bounce path no longer uses
+// scrollIntoView. The in-page path still does (focusAndReveal -> inp), so that
+// is recorded directly. The bounce path computes an absolute scroll position
+// from the summary box's own rect (revealWithContext_), so the box is recorded
+// via the getBoundingClientRect call that the position is derived FROM. Same
+// property either way: the summary box, and not a field far below it, is what
+// the scroll is aimed at.
 function trackReveals(rig) {
   const seen = [];
   rig.window.Element.prototype.scrollIntoView = function () {
     seen.push(this.id || (this.tagName + '.' + (this.className || '')));
+  };
+  const realRect = rig.window.Element.prototype.getBoundingClientRect;
+  rig.window.Element.prototype.getBoundingClientRect = function () {
+    if (this.id && /^lvp-.*-summary$/.test(this.id)) seen.push(this.id);
+    return realRect.apply(this, arguments);
   };
   return seen;
 }
@@ -91,6 +104,21 @@ ok('S8 focusAndReveal takes the reveal target and does not let focus undo it',
   /function focusAndReveal\(el, revealEl\)/.test(html) && /inp\.focus\(\{ preventScroll: !!revealEl \}\)/.test(html));
 ok('S9 summary items are display:block so a wrapped item keeps its bullet',
   /\.lvp-error-summary a, \.lvp-error-summary button \{[^}]*display: block;/.test(html));
+// Framing pass, 2026-09-07. Revealing the box with scrollIntoView({block:'start'})
+// pinned it to y=0 and took the page title, progress bar and logo off screen with
+// it (title top -51 on every request-page bounce, -147..-203 at 320px), so the LP
+// saw a red box on a page with no heading and no step. The reveal now scrolls by
+// the MINIMUM that puts the box fully on screen, which keeps everything above it.
+ok('S10 the bounce reveal is position-computed, not edge-pinned',
+  /function revealWithContext_\(box\)/.test(html)
+  && /if \(revealEl\) \{ revealWithContext_\(revealEl\); return; \}/.test(html)
+  && !/scrollIntoView\(\{ block: revealEl/.test(html));
+ok('S11 the floor keeps the box BOTTOM on screen (short-viewport case)',
+  /var want = boxBottom - vh \+ PAD;/.test(html));
+ok('S12 the ceiling keeps the box TOP on screen (box taller than viewport)',
+  /var ceilY = boxTop - PAD;[^\n]*\n\s*if \(want > ceilY\) want = ceilY;/.test(html));
+ok('S13 the in-page (non-bounce) reveal still centres the FIELD, unchanged',
+  /inp\.scrollIntoView\(\{ block: 'center', behavior: 'smooth' \}\);/.test(html));
 
 (async () => {
   // =========================================================================
