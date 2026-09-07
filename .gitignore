@@ -8,6 +8,7 @@ test/*
 !test/sign-preview-race-harness.cjs
 !test/sign-stub-harness.cjs
 !test/console-action-contract.cjs
+!test/wire-letter-empty-state-harness.cjs
 !test/console-recovery-contract.cjs
 !test/lvp-token-consistency.cjs
 !test/atrium-palette-sync.cjs

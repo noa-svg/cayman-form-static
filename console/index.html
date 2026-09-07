@@ -4248,7 +4248,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-07-cayman-money-lane';
+  window.__BUILD_TAG = 'console-2026-09-07-honest-empty-state';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -9638,8 +9638,13 @@ document.addEventListener('keydown',function(e){
       // here would risk repeating).
       apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month), false, JU_API).then(function(r){
         if(rid!==awaitSeq)return;
+        wlLastAwaiting=(r&&r.ok)?(r.rows||[]):null;
         awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
-      }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
+        // This list is the evidence the empty state needs, and it can land
+        // after peekRows has already painted. Re-render rather than leave a
+        // "nothing is awaiting" reading that this response just disproved.
+        wlRenderEmptyState();
+      }).catch(function(){ if(rid===awaitSeq){wlLastAwaiting=null;awaitEl.innerHTML='';} });
     }
     function peekParked(){
       if(!parkedEl)return;
@@ -9824,18 +9829,75 @@ document.addEventListener('keydown',function(e){
     // on it. On 2026-08-16 that reading cost real time on an already-late batch:
     // the July tab reviewed green while August was the tab with the money.
     // Saying so, and withholding Generate, is the whole fix.
-    function wlApplyEmptyBatchState(transfers){
-      var empty=!transfers||!transfers.length;
-      if(reviewBtn)reviewBtn.disabled=empty;
-      if(empty){
-        wlCloseGate('Nothing to wire this month.');
-        if(findEl)findEl.innerHTML='';
-        rowsEl.innerHTML='<div style="padding:14px 0;font-size:var(--text-sm);color:var(--color-ink-muted)">'
-          +'<span style="color:var(--color-ink)">Nothing to wire this month.</span><br>'
-          +'Every row on this tab has already been paid or moved to trading. A letter generated here would have no rows on it.'
-          +'</div>';
+    // THE FALSE SENTENCE (2026-09-07). The copy below used to explain an empty
+    // list as "every row on this tab has already been paid or moved to trading",
+    // which is a claim about EVERY row on the tab, asserted without looking at
+    // any of them. On 09/2026 it printed that under an Awaiting-money list
+    // holding two Pending rows worth 380,000, in EUR and USD, under a NIS
+    // selector. Three statements in one viewport, two of them contradicting the
+    // third, and the true reason (nothing is `Received in transit` yet, and the
+    // money that exists is in other currencies) appeared nowhere.
+    //
+    // It also printed the same sentence twice: once here and once as the gate
+    // reason beside Generate.
+    //
+    // The state is now DERIVED from what the two peeks actually returned. Where
+    // there is no evidence for a reason, no reason is given. The settled claim
+    // is made only when it is true: nothing awaiting, nothing excluded, nothing
+    // unreadable.
+    var wlLastAwaiting=null;   // rows from opPeekAwaitingMoney (currency-blind by design)
+    var wlLastExcluded=null;   // {total, byCurrency} from opPeekMonthTransfers
+    var wlLastUnresolved=null; // currency cells nobody can read; these BLOCK generation
+
+    function wlCcyLabel_(n,tok){ return n+' '+(n===1?'row':'rows')+' in '+tok; }
+
+    function wlEmptyReasons_(ccy){
+      var out=[];
+      var awaiting=(wlLastAwaiting||[]).length;
+      if(awaiting){
+        // Group the awaiting money by its own currency: "still awaiting" and
+        // "in a currency this letter cannot carry" are different facts and an
+        // operator needs both, not a merged count.
+        var by={};
+        (wlLastAwaiting||[]).forEach(function(r){ var c=String(r.currency||'').trim()||'?'; by[c]=(by[c]||0)+(Number(r.amount)||0); });
+        var parts=Object.keys(by).map(function(c){ return wlAmountText(by[c])+' '+esc2(c); });
+        out.push('<b>'+awaiting+' '+(awaiting===1?'row is':'rows are')+' still awaiting money</b>, worth '+parts.join(' and ')
+          +'. Mark a row received once the credit lands and it moves onto this letter.');
       }
+      var ex=wlLastExcluded&&wlLastExcluded.total?wlLastExcluded:null;
+      if(ex){
+        var toks=Object.keys(ex.byCurrency||{}).map(function(t){ return wlCcyLabel_(ex.byCurrency[t],esc2(t)); });
+        out.push('<b>'+ex.total+' '+(ex.total===1?'row is':'rows are')+' ready to wire in another currency</b> ('+toks.join(', ')
+          +'). A letter carries one currency, so switch the selector to put '+(ex.total===1?'it':'them')+' on one.');
+      }
+      if(wlLastUnresolved&&wlLastUnresolved.length){
+        out.push('<b class="t-danger">'+wlLastUnresolved.length+' '+(wlLastUnresolved.length===1?'row has':'rows have')
+          +' a currency cell nobody can read</b>, which blocks generation for the whole month: '
+          +esc2(wlLastUnresolved.join('; '))+'. Fix the CURRENCY cell to NIS, USD or EUR.');
+      }
+      if(!out.length){
+        out.push('Every row on this tab has already been paid or moved to trading.');
+      }
+      return out;
     }
+
+    function wlRenderEmptyState(){
+      var ccy=esc2((ccyEl&&ccyEl.value)||'NIS');
+      var empty=!wlLastTransfers||!wlLastTransfers.length;
+      if(reviewBtn)reviewBtn.disabled=empty;
+      if(!empty)return;
+      wlCloseGate('Generate stays off until a row is ready to wire.');
+      if(findEl)findEl.innerHTML='';
+      rowsEl.innerHTML='<div style="padding:14px 0;font-size:var(--text-sm);color:var(--color-ink-muted);line-height:1.6">'
+        +'<span style="color:var(--color-ink);font-weight:600">No '+ccy+' row is ready to wire.</span><br>'
+        +wlEmptyReasons_(ccy).join('<br>')
+        +'</div>';
+    }
+
+    // Kept as the name the peek callback calls; the two peeks land in either
+    // order, so both now re-render this one state rather than one of them
+    // painting a reason it does not have yet.
+    function wlApplyEmptyBatchState(){ wlRenderEmptyState(); }
     // Finding 8: both failure branches below used to leave lastGo and genBtn
     // exactly as the last successful Review left them, so the operator saw
     // "Could not load rows" beside a live Generate button.
@@ -9847,13 +9909,19 @@ document.addEventListener('keydown',function(e){
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
         wlLastTransfers=r.transfers;
+        // Additive fields from the 2026-09-07 currency fix (ju-service
+        // transferformpeek.ts). Defaulted, never assumed: an older deployed
+        // service simply omits them and the empty state falls back to the
+        // reasons it can still prove.
+        wlLastExcluded=r.excluded||null;
+        wlLastUnresolved=r.unresolvedCurrency||null;
         renderWlRows();
-        wlApplyEmptyBatchState(r.transfers);
+        wlApplyEmptyBatchState();
       }).catch(function(err){
         if(rid!==peekSeq)return;
-        wlLastTransfers=null;
+        wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;
         wlCloseGate('Rows could not be loaded. Review again before generating.');
         rowsEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
       });
