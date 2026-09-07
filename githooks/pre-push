@@ -117,44 +117,95 @@ HARNESSES=(
   israel-cp-english-address-fatca-gate
   flow-blocked-submit-names-field
   console-honest-status-harness
+  prepush-marker-contract
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
 # reported in one pass, not just the first. The explicit exit below restores
 # fail-closed behaviour.
 set +e
-# OUT is exported, NOT interpolated into the -c string: interpolating it made
-# the assembled command line long enough that BSD xargs refused with "command
-# line cannot be assembled, too long", ran NOTHING, and the gate then printed
-# "all green" in 5 seconds. A gate that passes without running is the worst
-# possible failure mode, so the runner is kept deliberately tiny and the
-# all-green line below is guarded by the ran-count check.
+# OUT is exported, NOT interpolated into the worker command: interpolating it
+# made the assembled command line long enough that BSD xargs refused with
+# "command line cannot be assembled, too long", ran NOTHING, and the gate then
+# printed "all green" in 5 seconds. A gate that passes without running is the
+# worst possible failure mode. The worker body used to be an inline `bash -c`
+# string kept deliberately tiny for that reason; it now lives in
+# githooks/run-harness.sh, so the xargs line is a fixed handful of bytes however
+# much the worker does and the length hazard cannot come back at all.
 export OUT
-printf '%s\n' "${HARNESSES[@]}" | xargs -P "$JOBS" -I{} bash -c '
-  if node "test/$1.cjs" > "$OUT/$1.log" 2>&1; then echo "  OK   $1"; else touch "$OUT/$1.failed"; echo "  FAIL $1"; fi
-' _ {}
+printf '%s\n' "${HARNESSES[@]}" | xargs -P "$JOBS" -I{} ./githooks/run-harness.sh {}
 set -e
 
-# RAN-COUNT GUARD. The 2026-08-06 first cut of this parallel gate reported
+# REPORTED-COUNT GUARD. The 2026-08-06 first cut of this parallel gate reported
 # "all green" having executed zero harnesses, because xargs bailed before
-# starting any. Never trust an absence of failures as evidence of success:
-# assert that every harness actually produced a log.
-RAN=$(ls "$OUT"/*.log 2>/dev/null | wc -l | tr -d ' ')
+# starting any. Never trust an absence of failures as evidence of success.
+#
+# 2026-09-07: this guard used to count *.log files, and a log file is not a
+# result. The redirect in the worker creates it the instant the process starts,
+# so a harness killed one second in satisfied the guard with an empty log. That
+# happened live: a concurrent session's `pkill -f 'node
+# test/beneficiary-declaration-harness'` (pkill matches machine-wide, not per
+# worktree) SIGTERMed the harness mid-run, xargs printed "bash: terminated with
+# signal 15; aborting", the harness produced neither an OK line nor a marker,
+# and the gate printed "all green" having heard back from 44 of 45.
+#
+# So count RESULT MARKERS instead (githooks/run-harness.sh writes exactly one
+# .done/.failed/.killed per invocation, and writes it only AFTER node returns).
+# A harness that dies without reporting now leaves no marker and the count is
+# short, whatever killed it and whether or not xargs went on to abort the rest.
+DONE=$(ls "$OUT"/*.done 2>/dev/null | wc -l | tr -d ' ')
+FAILED=$(ls "$OUT"/*.failed 2>/dev/null | wc -l | tr -d ' ')
+KILLED=$(ls "$OUT"/*.killed 2>/dev/null | wc -l | tr -d ' ')
+REPORTED=$((DONE + FAILED + KILLED))
 EXPECTED=${#HARNESSES[@]}
-if [ "$RAN" != "$EXPECTED" ]; then
+
+# Killed harnesses are reported separately from failures because they are a
+# DIFFERENT PROBLEM: nothing is wrong with the code, something killed the
+# process. Conflating the two costs the next person twenty minutes debugging a
+# test that never actually complained.
+if [ "$KILLED" != "0" ]; then
   echo ""
-  echo "pre-push: only $RAN of $EXPECTED harnesses actually RAN - the runner itself failed."
+  echo "pre-push: $KILLED harness(es) were KILLED BY A SIGNAL, not failed:"
+  for f in "$OUT"/*.killed; do
+    echo "  - $(basename "$f" .killed) (signal $(cat "$f"))"
+  done
+  echo "This is an environment problem, not a test failure: the harness never"
+  echo "reported on the code. Common cause is another process pattern-killing"
+  echo "node (pkill matches machine-wide), or memory pressure at high PREPUSH_JOBS."
+  echo "Re-run the push once the machine is quiet; do not read this as a red test."
+fi
+
+if [ "$REPORTED" != "$EXPECTED" ]; then
+  echo ""
+  echo "pre-push: only $REPORTED of $EXPECTED harnesses REPORTED A RESULT."
+  echo "Never heard back from:"
+  for h in "${HARNESSES[@]}"; do
+    if [ ! -e "$OUT/$h.done" ] && [ ! -e "$OUT/$h.failed" ] && [ ! -e "$OUT/$h.killed" ]; then
+      if [ -e "$OUT/$h.log" ]; then
+        echo "  - $h (started, died mid-run without reporting)"
+      else
+        echo "  - $h (never started)"
+      fi
+    fi
+  done
   echo "Refusing to deploy on an unproven gate. (git push --no-verify overrides, emergencies only)"
   exit 1
 fi
-FAILED=$(ls "$OUT"/*.failed 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$KILLED" != "0" ]; then
+  echo ""
+  echo "pre-push: refusing to deploy on a gate that was interrupted."
+  echo "(git push --no-verify overrides, emergencies only)"
+  exit 1
+fi
+
 if [ "$FAILED" != "0" ]; then
   echo ""
   echo "pre-push: $FAILED harness(es) FAILED - refusing to deploy. Output follows:"
   for f in "$OUT"/*.failed; do
     n=$(basename "$f" .failed)
     echo ""
-    echo "----- $n -----"
+    echo "----- $n (exit $(cat "$f")) -----"
     cat "$OUT/$n.log"
   done
   echo ""

@@ -97,6 +97,21 @@ Test deps are separate from the (dependency-free) site: `npm install --prefix te
 installs jsdom for the harnesses. The hook preflights this and refuses with the
 install command if it is missing (added 2026-08-07).
 
+A green gate means every harness REPORTED, not that no failure was seen. Each
+worker (`githooks/run-harness.sh`) writes one `.done`/`.failed`/`.killed` marker
+after node returns, and the hook counts markers. It used to count log files,
+which the `> $OUT/$1.log` redirect creates the moment a worker starts: on
+2026-09-07 a harness SIGTERMed one second in still satisfied the guard and the
+gate printed all-green having heard back from 43 of 44. Do not reintroduce any
+check that treats a log, or an absence of `.failed`, as evidence a harness ran.
+
+What killed it: another session in a DIFFERENT worktree ran
+`pkill -f 'node test/beneficiary-declaration-harness'`. pkill matches by pattern
+across the whole machine, and every worktree runs identically-named harnesses,
+so a pattern kill reaches into every concurrent gate run. Kill by PID, or scope
+to your own process tree. The gate now reports a signalled harness as `KILL`
+rather than `FAIL`, so this reads as the environment problem it is.
+
 The hook travels with the checkout: a worktree or clone checked out at a commit
 before 8ea9996 (2026-08-06) runs the OLD sequential hook, which had a real hole
 (harness failures did not block the push; only coupling-check did, because bash
