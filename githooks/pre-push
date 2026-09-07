@@ -118,6 +118,7 @@ HARNESSES=(
   flow-blocked-submit-names-field
   console-honest-status-harness
   prepush-marker-contract
+  wire-letter-empty-state-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
