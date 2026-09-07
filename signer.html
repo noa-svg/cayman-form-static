@@ -73,7 +73,12 @@
     .field textarea:focus { outline:none; border-color:var(--navy); }
     .signer-check { display:flex; align-items:flex-start; gap: 8px; font-size: 15px; font-weight:500; color:var(--navy); cursor:pointer; }
     .signer-check input { width:auto; margin-top: 4px; flex:0 0 auto; }
-    .signer-note { font-size:13px; color:var(--error); margin: 4px 0 0; }
+    /* display:block (2026-09-07). Every .signer-note is a standalone line under
+       its control, but most of them are <span>, so they were inline: the stamp
+       field's per-field error and its "JPG/PNG only" hint rendered CONCATENATED
+       on one line, and the `margin-top` above silently did nothing on any of the
+       span variants. The two ID-upload slots carried the same collision. */
+    .signer-note { display:block; font-size:13px; color:var(--error); margin: 4px 0 0; }
     .save-status { font-size:13px; color:#5a6b7b; margin: 8px 0 0; }
 
     /* Paper return, as a disclosure. Signing IS the page; this is the way out of it.
@@ -317,7 +322,12 @@
             <span style="flex:1"></span>
             <button type="button" class="btn btn--primary" id="done">Sign and submit</button>
           </div>
-          <div class="err" id="err"></div>
+          <!-- role=alert + aria-live: this is the page-level refusal line for the
+               gates that have no single field to point at (doc-ready, and the
+               server-declared-but-unrenderable field). Without it a refusal was
+               written here and announced to nobody. #paper-err, added 2026-08-24,
+               already carried both; this is the same wiring on the older element. -->
+          <div class="err" id="err" role="alert" aria-live="assertive"></div>
           <!-- Paper return: the attester downloads the form, signs it by hand and
                uploads the scan instead of signing on screen. Lawyer role only.
                MOVED HERE 2026-08-24. It used to sit above the documents section,
@@ -371,7 +381,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-25-1-accept-heic';
+    window.__BUILD_TAG = 'signer-2026-09-07-1-upload-gates-name-the-field';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -987,9 +997,16 @@
       var html = '<h2>' + esc(tHe('Identification')) + '</h2>' +
         '<p class="signer-note">' + esc(tHe('Upload a copy of your passport or national ID. Maximum file size: 10MB.')) + '</p>';
       CP_ID_SLOTS.forEach(function (s) {
+        // Same per-field message element the editable fields get from
+        // controlMarkup (id="err-<key>", aria-describedby, hidden until marked).
+        // A file input carries no `name` (deliberately: it must never reach
+        // collectFormData as a fake form value), so markField keys these off the
+        // input's id instead. Without it the KYC gate had nowhere to write, and
+        // refused with the message ~800px below the fold.
         html += '<div class="field" data-id-slot="' + esc(s.slot) + '">' +
           '<label for="id-' + esc(s.slot) + '">' + esc(tHe(s.label)) + '</label>' +
-          '<input type="file" id="id-' + esc(s.slot) + '" data-id-upload="' + esc(s.slot) + '" accept="image/*,application/pdf">' +
+          '<input type="file" id="id-' + esc(s.slot) + '" data-id-upload="' + esc(s.slot) + '" accept="image/*,application/pdf" aria-describedby="err-id-' + esc(s.slot) + '">' +
+          '<span class="signer-note" id="err-id-' + esc(s.slot) + '" hidden></span>' +
           (s.hint ? '<span class="signer-note">' + esc(tHe(s.hint)) + '</span>' : '') +
           '</div>';
       });
@@ -1162,9 +1179,13 @@
         return;
       }
       pendingLawyerStamp = {};
+      // Per-field message element, same convention as controlMarkup and the ID
+      // slots above. The stamp gate now writes HERE, next to the control it is
+      // talking about, instead of only into #err at the bottom of the page.
       var html = '<div class="field" data-stamp-slot="lawyer_stamp">' +
         '<label for="stamp-lawyer_stamp">' + esc(tHe('Lawyer / accountant stamp')) + '</label>' +
-        '<input type="file" id="stamp-lawyer_stamp" data-stamp-upload="lawyer_stamp" accept="image/jpeg,image/png,image/heic,image/heif">' +
+        '<input type="file" id="stamp-lawyer_stamp" data-stamp-upload="lawyer_stamp" accept="image/jpeg,image/png,image/heic,image/heif" aria-describedby="err-stamp-lawyer_stamp">' +
+        '<span class="signer-note" id="err-stamp-lawyer_stamp" hidden></span>' +
         '<span class="signer-note">' + esc(tHe('Please upload a JPG or PNG file only.')) + '</span>' +
         '</div>';
       host.innerHTML = html;
@@ -1663,6 +1684,16 @@
           var inp = e.target;
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-id-upload')) return;
           handleIdUpload(inp.getAttribute('data-id-upload'), inp, errEl);
+          // A mark the KYC gate left behind is stale the moment a file is chosen:
+          // either the gate is now satisfied, or handleIdUpload has just written a
+          // more specific message (too large / unreadable) into #err and the gate
+          // will re-mark on the next submit. Passport and national-ID front are
+          // alternatives, so a file in either clears the one marked slot.
+          if (inp.files && inp.files.length) {
+            var idMarked = document.getElementById('id-passportPrimary');
+            if (idMarked) markField(idMarked, '');
+            rebuildErrSummary();
+          }
         });
       }
       // Wire the lawyer stamp input (present only for the 'lawyer' role;
@@ -1674,6 +1705,10 @@
           var inp = e.target;
           if (!inp || !inp.getAttribute || !inp.getAttribute('data-stamp-upload')) return;
           handleLawyerStamp(inp.getAttribute('data-stamp-upload'), inp, errEl);
+          // Same reasoning as the ID uploads above: clear the stamp gate's mark
+          // as soon as a file is chosen, so the summary never names a field the
+          // attester has already dealt with.
+          if (inp.files && inp.files.length) { markField(inp, ''); rebuildErrSummary(); }
         });
       }
       // Paper return: same base64 read as the stamp above. The scan REPLACES the drawn
@@ -1688,6 +1723,11 @@
           var perr = document.getElementById('paper-err');
           if (perr) perr.textContent = '';
           if (!f) { pendingPaperScan = null; return; }
+          // The paper route EXEMPTS the digital stamp gate, so a mark that gate
+          // left on an earlier submit must not keep naming a field the attester
+          // no longer has to fill. Cleared here, where the route actually changes.
+          var stampMarked = document.getElementById('stamp-lawyer_stamp');
+          if (stampMarked) { markField(stampMarked, ''); rebuildErrSummary(); }
           // Type gate (2026-08-24, Noa-approved copy). The `accept` attribute is a
           // picker FILTER and many mobile pickers ignore it, so a .docx was reaching
           // the success screen and the fund would have received a Word file where a
@@ -1952,9 +1992,14 @@
       }
       // Apply or clear the invalid state for one field: error class, aria-invalid,
       // and the per-field message element tied via aria-describedby.
+      // The message element is keyed by `name` where there is one, falling back
+      // to `id`. The two file uploads (CP identification, lawyer stamp) carry no
+      // `name` on purpose - a file input must never land in collectFormData as a
+      // form value - so `err-<name>` resolved to `err-undefined` for them and
+      // their gates had nowhere on screen to write.
       function markField(inp, msg) {
         var field = inp.closest('.field');
-        var msgEl = document.getElementById('err-' + inp.name);
+        var msgEl = document.getElementById('err-' + (inp.name || inp.id));
         if (msg) {
           if (field) field.classList.add('field--error');
           inp.setAttribute('aria-invalid', 'true');
@@ -2052,7 +2097,13 @@
           var lbl = field.querySelector('label');
           if (lbl) return lbl.textContent.replace(/\*/g, '').trim();
         }
-        return inp.name;
+        return inp.name || inp.id || '';
+      }
+      // Label for a marked .field container that has no control inside it (the
+      // server-declared-but-unrenderable field renders a label + note, no input).
+      function containerLabelText(field) {
+        var lbl = field.querySelector('label');
+        return lbl ? lbl.textContent.replace(/\*/g, '').trim() : '';
       }
       // Rebuild the top-of-page error summary from the current invalid fields.
       // Each entry is a link that focuses + scrolls to its field. Hidden when clean.
@@ -2061,27 +2112,60 @@
         var list = document.getElementById('err-summary-list');
         if (!summary || !list) return;
         var fields = document.querySelectorAll('#signer-form input[name], #signer-form select[name], #signer-form textarea[name]');
-        var items = [];
+        var items = [];   // { label, target } - target is what the jump link reveals
+        var seen = [];
         fields.forEach(function (inp) {
-          if (fieldError(inp)) items.push(inp);
+          if (fieldError(inp)) { items.push({ label: fieldLabelText(inp), target: inp }); seen.push(inp.closest('.field')); }
+        });
+        // Second pass: any field ALREADY MARKED invalid whose message fieldError
+        // cannot recompute. fieldError only knows required/format rules on named
+        // controls, so on its own the summary silently omitted:
+        //   - the two file uploads (no `name`: CP identification, lawyer stamp),
+        //     refused by their own submit-time gates;
+        //   - the lawyer-evidence group ("at least one box"), which carries no
+        //     per-field `required` because the server rule is a group rule;
+        //   - a server-declared field with no client renderer, which is marked
+        //     .field--error at render time and has no control at all.
+        // Every one of those is a real refusal, so every one belongs in the list.
+        // Reading the marks rather than re-deriving them is what makes this a
+        // union: the first pass is untouched, so no existing entry changes.
+        // Scoped to the whole form state, not #signer-form: #id-uploads and
+        // #lawyer-stamp-upload are siblings of the <form>, not children of it.
+        var formState = document.querySelector('[data-state="form"]') || document;
+        formState.querySelectorAll('.field--error').forEach(function (field) {
+          if (seen.indexOf(field) !== -1) return;
+          seen.push(field);
+          var ctrl = field.querySelector('input, select, textarea');
+          if (ctrl && ctrl.name && fieldError(ctrl)) return; // already listed above
+          items.push({
+            label: ctrl ? fieldLabelText(ctrl) : containerLabelText(field),
+            target: ctrl || field
+          });
         });
         if (!items.length) { summary.hidden = true; list.innerHTML = ''; return; }
         document.getElementById('err-summary-title').textContent = tHe('Please complete the highlighted fields.');
         list.innerHTML = '';
-        items.forEach(function (inp) {
+        items.forEach(function (it) {
+          if (!it.label) return;
           var li = document.createElement('li');
           var a = document.createElement('a');
           a.href = '#';
-          a.textContent = fieldLabelText(inp);
+          a.textContent = it.label;
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
-            inp.focus();
-            if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center' });
+            if (it.target.focus) it.target.focus();
+            if (it.target.scrollIntoView) it.target.scrollIntoView({ block: 'center' });
           });
           li.appendChild(a);
           list.appendChild(li);
         });
-        summary.hidden = false;
+        summary.hidden = !list.children.length;
+      }
+
+      // Scroll one element to the middle of the viewport. Same call every gate on
+      // this page already made inline; named so a refusal cannot ship without one.
+      function revealBlock_(el) {
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
       }
 
       doneBtn.addEventListener('click', function () {
@@ -2147,9 +2231,17 @@
         // signer was previously able to sign through and the server would catch
         // it downstream. Hard-block here so the operator must add the renderer
         // before the signer can proceed (Noa CTO finding 2).
-        var unsupported = document.querySelectorAll('#signer-form .field--unsupported').length;
-        if (unsupported > 0) {
+        // 2026-09-07: this refused with a sentence in #err at the very bottom of
+        // the page and named nothing. Every other gate on this page marks the
+        // field and lists it; this one now does too, through the same
+        // rebuildErrSummary. The .field--unsupported containers are already
+        // .field--error at render time, so the summary picks them up by name and
+        // the jump link scrolls to the one the fund has to complete.
+        var unsupportedEls = document.querySelectorAll('#signer-form .field--unsupported');
+        if (unsupportedEls.length > 0) {
           errEl.textContent = tHe('This detail needs to be completed with Legacy Value Partners.');
+          rebuildErrSummary();
+          revealBlock_(unsupportedEls[0]);
           return;
         }
         // Validate required + format fields (inputs, selects, textareas, checkboxes).
@@ -2209,6 +2301,12 @@
         if (!renderedDoc) {
           if (window.console) console.error('signer: refusing submit; no doc rendered (template miss or render error)');
           errEl.textContent = tHe('We could not record your signature. Please try again.');
+          // 2026-09-07: there is no field to mark here - the failure is the whole
+          // document pack, not one input - so the refusal stays in #err, which now
+          // carries role=alert. What was missing is that #err sits below the
+          // submit button and the page can be scrolled anywhere when the gate
+          // fires, so reveal it rather than trusting it to be on screen.
+          revealBlock_(errEl);
           return;
         }
 
@@ -2265,8 +2363,17 @@
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
           submitting = false;
+          // Mark and name it, same as every field-level gate on this page.
+          // Passport is the primary slot and the one the message leads with;
+          // either it or the national-ID front satisfies the gate, so exactly
+          // one entry is marked rather than two competing ones. Same message
+          // text, now written beside the control instead of only at the bottom
+          // of the page.
+          var idInpEl = document.getElementById('id-passportPrimary');
+          if (idInpEl) markField(idInpEl, tHe('Please upload your passport or national ID before submitting.'));
+          rebuildErrSummary();
           var idHostEl = document.getElementById('id-uploads');
-          if (idHostEl && idHostEl.scrollIntoView) idHostEl.scrollIntoView({ block: 'center' });
+          revealBlock_(idHostEl);
           return;
         }
 
@@ -2283,13 +2390,25 @@
         // above, which already exempts pendingPaperScan: on this route the scan IS
         // the signed and stamped instrument.
         var isLawyer = CTX && CTX.role === 'lawyer';
+        //
+        // 2026-09-07: this refused INVISIBLY. It scrolled the attester to the
+        // stamp control and wrote its only sentence into #err, which lives under
+        // the submit button - measured in headless Chrome at 1280x800, 375x812
+        // and 320x568, the stamp control landed on screen (viewport y 375 / 381 /
+        // 259) with the message 795-800px BELOW the fold and the field carrying
+        // no error mark at all. The page jumped and said nothing. Now it uses the
+        // machinery this file already has: mark the field, name it in the
+        // error summary, keep the reveal.
         if (isLawyer && !pendingPaperScan && !pendingLawyerStamp.lawyer_stamp) {
           errEl.textContent = tHe('Please upload the stamp before submitting.');
           doneBtn.textContent = tHe('Sign and submit');
           doneBtn.disabled = false; clearBtn.disabled = false;
           submitting = false;
+          var stampInpEl = document.getElementById('stamp-lawyer_stamp');
+          if (stampInpEl) markField(stampInpEl, tHe('Please upload the stamp before submitting.'));
+          rebuildErrSummary();
           var stampHostEl = document.getElementById('lawyer-stamp-upload');
-          if (stampHostEl && stampHostEl.scrollIntoView) stampHostEl.scrollIntoView({ block: 'center' });
+          revealBlock_(stampHostEl);
           return;
         }
 
