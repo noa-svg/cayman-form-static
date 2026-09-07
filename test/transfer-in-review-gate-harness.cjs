@@ -3,22 +3,24 @@
 // Two LP-visible defects on index.html, both proved here against the REAL file.
 //
 // A. applyExistingAmountGate_ ended its SUCCESS path with `if (missing)
-//    missing.hidden = true;` and `missing` was declared nowhere in the file.
-//    Reading an undeclared identifier throws a ReferenceError, so the gate never
-//    returned true. It is called from loadDocPreview (review page) and from the
-//    submit handler, and it only runs when transferInFromConfig_() is true - so
-//    every Israel-to-Cayman migrating LP hit a throw at Review and again at
-//    Submit, exactly where they sign.
+//    missing.hidden = true;` and `missing` was declared nowhere in the file, so
+//    every Israel-to-Cayman migrating LP hit a ReferenceError at Review and
+//    again at Submit, exactly where they sign.
 //
-//    Part A1 drives the REAL extracted applyExistingAmountGate_ source down its
-//    success path with a transfer-in config and asserts it RETURNS TRUE. A grep
-//    for the identifier would also pass against a `typeof` band-aid; a call that
-//    must return true would not.
-//
-//    Part A2 drives the whole real form in jsdom as a migrating LP, walks it to
-//    review, and asserts the review page actually renders (no ReferenceError
-//    escaped, the document pack and the signature section are on screen and the
-//    read-only figure is painted).
+//    2026-09-07, SECOND PASS: that whole gate is GONE. Noa ruled that no amount
+//    is captured on a migration at all (2026-09-07-cayman-fund-to-fund-SPEC.md
+//    section 5), so there is no operator figure for a gate to check and the
+//    refusal it painted would have fired on every migrating LP once the console
+//    stopped sending &amount=. Part A1, which drove the extracted function down
+//    its success path, is deleted with the function: a unit test for code that
+//    no longer exists is not a guard, it is a fixture pinning a deleted design.
+//    Part A2 stays and is the valuable half. It still walks the REAL form to
+//    review as a migrating LP and asserts the page renders with the pack, the
+//    signature and the submit button on screen and no ReferenceError escaping.
+//    Its config still carries the old minted figure on purpose: an old link
+//    minted before the console change must render fine and show no figure.
+//    The journey with NO amount anywhere, through to a successful submit, is
+//    owned by test/migration-carries-no-amount-harness.cjs.
 //
 // B. The wrong-form guard in handleCfgLoaded_ wrote its refusal into
 //    document.getElementById('lvp-loading'), and no element carried that id. The
@@ -37,66 +39,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : JSON.stringify(extra)); } }
 
-// Same brace-counting extraction resume-jump-harness.cjs uses: the logic under
-// test is the shipped source, not a hand copy that can drift.
-function extractFn(name) {
-  const start = html.indexOf('function ' + name + '(');
-  if (start < 0) throw new Error('function not found in index.html: ' + name);
-  let i = html.indexOf('{', start), depth = 0;
-  for (; i < html.length; i++) {
-    if (html[i] === '{') depth++;
-    else if (html[i] === '}') { depth--; if (depth === 0) return html.slice(start, i + 1); }
-  }
-  throw new Error('unbalanced braces for ' + name);
-}
-
-// ---- A1: the real gate, driven down its success path -----------------------
-(function () {
-  const src = extractFn('applyExistingAmountGate_');
-  function makeGate(transferIn, pos) {
-    const panel = { hidden: true };
-    const valueEl = { textContent: '' };
-    const form = {
-      querySelector(sel) {
-        if (sel === '[data-existing-amount]') return panel;
-        if (sel === '[data-existing-amount-value]') return valueEl;
-        return null;
-      }
-    };
-    const documentStub = { documentElement: { classList: { add() {} } } };
-    const factory = new Function(
-      'form', 'document', 'window', 'transferInFromConfig_', 'currentInvestmentAmount_',
-      src + '; return applyExistingAmountGate_;'
-    );
-    const gate = factory(form, documentStub, { console: null }, () => transferIn, () => pos);
-    return { gate, panel, valueEl };
-  }
-
-  // The defect's exact lane: transfer-in session WITH the operator's figure.
-  const t = makeGate(true, { amount: 1500000, currency: 'ILS' });
-  let threw = null, ret;
-  try { ret = t.gate(); } catch (e) { threw = e; }
-  ok('A1 transfer-in success path does not throw', threw === null, threw && String(threw && threw.message || threw));
-  ok('A1 transfer-in success path RETURNS TRUE (a throw or a falsy return blocks review and submit)', ret === true, { ret: ret, threw: threw && String(threw.message || threw) });
-  ok('A1 the read-only figure is painted, grouped, with its currency', t.valueEl.textContent === '1,500,000 ILS', t.valueEl.textContent);
-  ok('A1 the panel is revealed', t.panel.hidden === false);
-
-  // A fractional figure keeps two decimals (money formatting, not number formatting).
-  const f = makeGate(true, { amount: 500000.5, currency: 'USD' });
-  let fThrew = null, fRet;
-  try { fRet = f.gate(); } catch (e) { fThrew = e; }
-  ok('A1 fractional transfer-in figure also completes without throwing', fThrew === null && fRet === true, fThrew && String(fThrew.message || fThrew));
-  ok('A1 fractional figure renders with two decimals', f.valueEl.textContent === '500,000.50 USD', f.valueEl.textContent);
-
-  // Non-transfer-in (new LP) short-circuits before the defect line ever ran, so
-  // this branch was never broken. Asserted so a future edit cannot break it.
-  const n = makeGate(false, null);
-  ok('A1 a new LP still passes the gate with the panel hidden', n.gate() === true && n.panel.hidden === true);
-
-  // Fail-closed: a transfer-in session with no figure must still refuse.
-  const m = makeGate(true, null);
-  ok('A1 a transfer-in session with no figure still refuses (fail closed)', m.gate() === false);
-})();
 
 // ---- A2: the real form, walked to review as a migrating LP ------------------
 const SLOTS = ['articlesOfIncorporation', 'bankAccountConfirmation', 'certificateOfIncorporation', 'corporateResolution', 'listOfAuthorizedSignatories', 'partnershipAgreement', 'proofOfRegisteredAddress', 'trustAgreement', 'passportPrimary', 'proofOfAddress', 'qualification.preSignedUpload'];
@@ -162,10 +104,12 @@ function fill(h) {
   ok('A2 the signature section is on screen for a migrating LP', !!sigSection && sigSection.hidden === false, sigSection && sigSection.hidden);
   ok('A2 the submit button is on screen for a migrating LP', !!submitBtn && submitBtn.hidden === false, submitBtn && submitBtn.hidden);
 
-  const valueEl = document.querySelector('[data-existing-amount-value]');
-  const panel = document.querySelector('[data-existing-amount]');
-  ok('A2 the read-only transferring figure is painted on review', !!valueEl && valueEl.textContent === '1,500,000 ILS', valueEl && valueEl.textContent);
-  ok('A2 the transferring-position panel is revealed', !!panel && panel.hidden === false);
+  // The read-only figure panel is GONE (2026-09-07). No amount is captured on a
+  // migration, so there is nothing to paint, and an empty bordered box with a
+  // label and note that no code ever wrote is worse than nothing at all.
+  ok('A2 the read-only transferring-figure panel no longer exists', !document.querySelector('[data-existing-amount]'));
+  ok('A2 a stale minted figure is not painted anywhere on review',
+    (document.querySelector('[data-page="review"]').textContent || '').indexOf('1,500,000') === -1);
 
   // ---- B: the wrong-form refusal must reach the LP's eyes ----
   const APPROVED = 'This link belongs to a different form. Please use the link sent to you, or contact us.';

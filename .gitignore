@@ -57,3 +57,4 @@ test/*
 !test/prepush-marker-contract.cjs
 !test/transfer-in-review-gate-harness.cjs
 !test/wire-letter-worklist-harness.cjs
+!test/migration-carries-no-amount-harness.cjs
