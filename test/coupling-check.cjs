@@ -17,12 +17,20 @@
 //       permanently suspended - see DECISIONS-PARKED.md 2026-09-06). Both
 //       pages leave C1's ">=1 /exec" presence assertion and instead assert
 //       ju-api primary exactly once and ZERO /exec occurrences.
-//       flow.html and signer.html are NOT included in this removal: Cayman
+//       flow.html and signer.html are NOT included in this removal, but the
+//       REASON changed on 2026-09-07 and is corrected here rather than left
+//       stating the opposite of the console. This used to read "Cayman
 //       (non-Israel) money still mints on GAS today by design
 //       (moneyMintBaseForLane_ is isIsrael-gated), so their GAS gateway is a
-//       live primary, not a legacy fallback - removing it would break
-//       current Cayman increase/redemption traffic. C1f/C1s below are
-//       unchanged.
+//       live primary". It is not: CAYMAN_MONEY_MINT_ON_JU_API moved every
+//       Cayman money mint to ju-service, so on both pages the GAS gateway is
+//       now a legacy FALLBACK, exactly as it is on index/israel.
+//       It stays anyway, and that is the load-bearing part: unlike the two
+//       onboarding pages, these two still carry live GAS-minted sessions from
+//       before the flip, and flow.html's fallback is sticky per session and
+//       engaged only on an unknown token, never on a bare 5xx. Removing it
+//       would strand those. Retire it when no GAS-minted money session can
+//       still be resumed, not on the mint flip. C1f/C1s below are unchanged.
 //   C1j CONSOLE SEAM EXCEPTION (2026-08-07, Israeli-onboarding mint reroute):
 //       console/index.html carries the ju-api base (GW_JU) exactly once, ON
 //       TOP OF its unchanged C1 obligations (it still carries the one GAS
@@ -39,7 +47,12 @@
 //       gets its own flag (MONEY_MINT_ON_JU_API, default false) and its own
 //       dispatcher (moneyMintBaseForLane_), independently reversible from
 //       the onboarding seam (C1c); sendIsraeliInvite always threads the same
-//       base the mint used.
+//       base the mint used. EXTENDED 2026-09-07: the Cayman money lane gets
+//       its OWN second flag (CAYMAN_MONEY_MINT_ON_JU_API) inside that same
+//       dispatcher, so the two money lanes are independently reversible from
+//       each other too. The lane -> base MAP itself is pinned separately, by
+//       test/money-mint-lane-routing.cjs: C1m proves the parts are present
+//       and wired, that harness proves they resolve to the right engine.
 //   C2  index/israel/signer/flow each bake window.__BUILD_TAG exactly once,
 //       the tag prefix matches the file name, and every tag is unique;
 //   C3  console/index.html carries a build tag too (console- prefix,
@@ -226,6 +239,23 @@ for (const f of ['israel.html', 'index.html']) {
       && /FLIPPED TRUE 2026-08-09 after the gate above cleared:[\s\S]{0,600}proof-e2683ad8-e517-4451-a273-fa7c06bd1c79[\s\S]{0,120}terminal `complete` stage on ju-service/.test(c));
   ok('C1m console carries its own moneyMintBaseForLane_ dispatcher (not a reuse of mintBaseForLane_)',
     c.indexOf('function moneyMintBaseForLane_(') !== -1);
+  // 2026-09-07. Same shape as the Israel-lane assertion above: the flag AND
+  // the citation of what closed its gate, so a bare flip fails and a stale
+  // justification left behind after a revert fails too. The two layers named
+  // are initiateCaymanMoneyFlow.ts's own stated blockers.
+  ok('C1m CAYMAN_MONEY_MINT_ON_JU_API is true AND cites the two layers that closed (a bare flip with no cited proof fails; a stale citation after reverting also fails)',
+    /var CAYMAN_MONEY_MINT_ON_JU_API\s*=\s*true\s*;/.test(c)
+      && /LAYER 2[\s\S]{0,400}flow-cayman-lane-harness\.cjs[\s\S]{0,400}LAYER 3[\s\S]{0,400}Approved by Noa 2026-09-04/.test(c));
+  ok('C1m the Cayman money flag is a SEPARATE flag, not a reuse of the Israel one (the two money lanes stay independently reversible)',
+    /var MONEY_MINT_ON_JU_API\s*=\s*true\s*;/.test(c)
+      && /var CAYMAN_MONEY_MINT_ON_JU_API\s*=\s*true\s*;/.test(c)
+      && /if \(isIsrael\) return MONEY_MINT_ON_JU_API \? JU_API : GW;\s*\n\s*return CAYMAN_MONEY_MINT_ON_JU_API \? JU_API : GW;/.test(c));
+  // A Cayman money invite composed by a ju-service older than 6713d010 quotes
+  // the ISRAELI receiving account (867519) to a Cayman LP. The console cannot
+  // enforce the other repo's deploy order, so the constraint is at least kept
+  // legible at the flag rather than living only in a merged commit message.
+  ok('C1m the Cayman money flag states its ju-service deploy-order constraint (6713d010)',
+    c.indexOf('6713d010') !== -1);
   ok('C1m the money mint call site routes through moneyMintBaseForLane_, exactly once',
     (c.match(/moneyMintBaseForLane_\(state\.lane\)/g) || []).length === 1);
   ok('C1m auto-send invite after a money mint threads moneyBase_ (never a bare GW default)',
