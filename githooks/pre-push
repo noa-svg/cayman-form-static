@@ -116,6 +116,7 @@ HARNESSES=(
   israel-cp-english-address-fatca-gate
   flow-blocked-submit-names-field
   console-honest-status-harness
+  prepush-marker-contract
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
