@@ -9,8 +9,12 @@
 // B. The client DOES re-validate on the final Submit click, even for a
 //    field tampered with directly via the DOM (bypassing the normal input
 //    flow) rather than left empty through the UI: clearing the required
-//    firstName field and clicking Submit navigates back to the page that
-//    owns it with a validation error, and the gateway is never called.
+//    firstName field and clicking Submit lands the LP on the page that
+//    owns it WITH THAT FIELD NAMED, and the gateway is never called.
+//    (2026-09-06: B's assertions were rewritten. They previously passed on
+//    an exception artifact rather than on the real path, and they asserted
+//    the navigation mechanism instead of the property that actually
+//    protects the LP. See the long note at the B assertions below.)
 //    (The original version of this probe assumed the OPPOSITE - that submit
 //    skipped re-validation and only the server caught a tampered field.
 //    Verified against the live doSubmit()/doSubmitNow_() flow in index.html:
@@ -116,9 +120,55 @@ async function walkToReview(d, nextBtn) {
     'B: submit re-validates and blocks a tampered required field - the gateway is never called',
     window.__submit === false
   );
+  // 2026-09-06. This assertion used to pass WITHOUT EVER OBSERVING NAVIGATION.
+  // test/rig.cjs did not stub Element.prototype.scrollIntoView (test/rig-israel.cjs
+  // has stubbed it all along, with a comment saying exactly why). jsdom has no
+  // scrollIntoView, so validatePage's jump-to-first-error threw
+  // "firstError.scrollIntoView is not a function" INSIDE the submit sweep at
+  // index.html:3303, before showPage(pi) at :3304 ever ran. The throw aborted the
+  // handler between `pg.hidden = false` and `pg.hidden = wasHidden`, leaving the
+  // offending page unhidden, so `cur()` picked it up as an artifact of a leaked
+  // hidden flag - TWO pages were visible at once. The companion "gateway is never
+  // called" assertion was passing for the same wrong reason: the handler had died,
+  // not blocked. The rig now stubs scrollIntoView, so both assertions measure the
+  // real path. Locked by the single-visible-page assertion below.
   ok(
-    'B: a blocked submit navigates back to the page that owns the invalid field',
+    'B: a blocked submit lands the LP on the page that owns the invalid field',
     cur(document) === 'individual.subscriber'
+  );
+  ok(
+    'B: exactly one page is visible after a blocked submit (no leaked hidden flag)',
+    document.querySelectorAll('.lvp-page:not([hidden])').length === 1,
+    document.querySelectorAll('.lvp-page:not([hidden])').length + ' visible'
+  );
+  // THE ONE THAT MATTERS (ינאי אורון, Israeli form, 2026-09-04 to 2026-09-06).
+  // He completed the whole form, pressed submit, and was thrown into a dead end
+  // whose message named NO field. He stopped for two days. Noa's requirement is
+  // that the LP is told WHICH field, visibly, wherever they are standing.
+  //
+  // Navigation is NOT the defect and must not be "fixed" by deleting it. Measured
+  // 2026-09-06 on this exact rig: delete showPage(pi) from index.html:3304 and the
+  // error summary is still rendered, but onto a page that stays HIDDEN - the LP
+  // sits on review with zero error-marked holders and nothing named, which is
+  // precisely the dead end above. israel.html reaches the same conclusion from the
+  // other direction: its surviving server-refusal path (focusServerValidation_,
+  // israel.html:5011-5017) deliberately walks the LP to the page carrying the named
+  // field. Both forms must name the field where the LP can see it; how they get the
+  // LP there is an implementation detail.
+  //
+  // So this asserts the property, not the mechanism: whatever page the LP ends up
+  // on, that page must NAME the offending field. Deleting the navigation turns this
+  // RED, which is the point.
+  const landedPage = document.querySelector('.lvp-page:not([hidden])');
+  const summary = landedPage && landedPage.querySelector('[data-error-summary]');
+  ok(
+    'B: the page the LP lands on NAMES the offending field (never an unnamed dead end)',
+    !!summary && /First name/i.test(summary.textContent || ''),
+    summary ? JSON.stringify(summary.textContent.trim()) : 'no error summary visible to the LP'
+  );
+  ok(
+    'B: the offending field is visibly marked in error on the page the LP lands on',
+    !!landedPage && landedPage.querySelectorAll('.lvp-field--error, .lvp-fieldset--error, .lvp-field--value-error').length >= 1
   );
 
   console.log(pass + ' pass, ' + fail + ' fail');
