@@ -4248,7 +4248,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-08-26-6-w8-test-rows';
+  window.__BUILD_TAG = 'console-2026-09-07-cayman-money-lane';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -4354,18 +4354,23 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // console action stays on GAS, because that is where existing processes and
   // their registry live.
   //
-  // The MONEY mint (increase / withdrawal) deliberately does NOT use this, even
-  // though it is also Israel-lane. Two hard blockers, both verified in source:
-  //   - money links land on flow.html, whose gateway is a hardcoded GAS /exec
-  //     with NO ju-api primary and NO fallback (flow.html GATEWAY_URL). A
-  //     ju-service-minted money token would hit a page that only ever asks GAS.
-  //   - the money mint is immediately followed by ?admin=sendIsraeliInvite with
-  //     no base override, so the invite would be sent from GAS for a process
-  //     that exists only in ju-service's Postgres, and fail.
-  // Moving the money lane needs flow.html taught the same primary+fallback
-  // israel.html already has, and the invite call threaded. Until then this
-  // helper must stay onboarding-only or flipping the flag strands real money
-  // events.
+  // The MONEY mint (increase / withdrawal / transfer) deliberately does NOT use
+  // this helper, and still does not: it has its own dispatcher
+  // (moneyMintBaseForLane_ below) on its own flags, so the two seams stay
+  // independently reversible. What has changed is WHY.
+  //
+  // The two hard blockers this comment used to name are both closed, and the
+  // text is corrected rather than left standing as a false description of the
+  // code below it:
+  //   - flow.html's gateway is no longer a hardcoded GAS /exec. It carries the
+  //     ju-api primary + sticky legacy fallback (its own MONEY-FLOW GATEWAY
+  //     SEAM comment), so a ju-service-minted money token reaches ju-service.
+  //   - the mint's ?admin=sendIsraeliInvite IS base-threaded now: the create
+  //     path resolves moneyBase_ once and passes it to both calls, and stashes
+  //     it on the result panel's resend button as data-base. Asserted by
+  //     test/coupling-check.cjs's C1m.
+  // Separate dispatcher, then, for reversibility - not because money is stuck
+  // on GAS.
   function mintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
     if (isIsrael) return ISRAEL_MINT_ON_JU_API ? JU_API : GW;
@@ -4412,9 +4417,57 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // (same file, different flowType branch) so was not re-proven separately,
   // matching the onboarding flip's own one-proof precedent.
   var MONEY_MINT_ON_JU_API = true;
+
+  // ---- CAYMAN MONEY LANE (2026-09-07) --------------------------------------
+  // THE DEFECT THIS CLOSES: "Transfer to Cayman" could not be started at all.
+  // The dispatcher below was isIsrael-gated, so every non-Israel money mint
+  // returned GW - and ju-cayman (GAS) is permanently retired and Drive-trashed
+  // (see C1p's note in test/coupling-check.cjs), so its production build
+  // refuses the mint. The operator got a failed create on a flow whose engine,
+  // seal branch, completion mail and tests have all been live on ju-service
+  // since resolveMintRoute learned `transfer` on 2026-08-30. A built flow with
+  // no reachable ignition.
+  //
+  // A SEPARATE FLAG from MONEY_MINT_ON_JU_API above, exactly as
+  // mintBaseForLane_ splits ISRAEL_MINT_ON_JU_API / CAYMAN_MINT_ON_JU_API: the
+  // two money lanes must stay independently reversible, so flipping one back
+  // can never move the other.
+  //
+  // THE TWO BLOCKERS initiateCaymanMoneyFlow.ts's header named are BOTH closed,
+  // verified in source rather than assumed (that header is now stale and is
+  // corrected in the same pass):
+  //   LAYER 2 - flow.html hardcoded lane 'israeli' with no English copy or LTR
+  //     layout. Closed 2026-09-04: flow.html has a real lane==='cayman' build
+  //     (dir/lang flip, English labels, no Bank-of-Israel registry gate, ISO
+  //     currency codes) proved through the REAL file by
+  //     test/flow-cayman-lane-harness.cjs, which also holds the Israeli lane as
+  //     a byte-for-byte regression guard.
+  //   LAYER 3 - invite_increase / invite_redemption had no `en` copy key.
+  //     Closed 2026-09-04: both carry an `en` body in ju-service's
+  //     domain/emailCopy.ts, each marked "Approved by Noa 2026-09-04", faithful
+  //     translations of the approved Hebrew with no new wording.
+  //
+  // DEPLOY ORDER, NOT OPTIONAL. This must not go live before ju-service serves
+  // 6713d010 or later. Before that commit domain/sendIsraeliInvite.ts composed
+  // every non-transfer money invite with a hardcoded copyLane 'israeli' and
+  // language 'he', so a Cayman increase minted here would email the LP a Hebrew
+  // invite quoting the ISRAELI receiving account 867519 instead of the Cayman
+  // 963513. A wrong bank account, in writing, to an LP. Read
+  // `?api=config`.serverBuild and `git merge-base --is-ancestor 6713d010 <it>`
+  // in the same breath as the push, never from a cached value.
+  //
+  // AN UNKNOWN LANE ROUTES HERE, not to GAS. Same convention mintBaseForLane_
+  // and enginesForLane_ already use (non-Israel is Cayman), and it is the safe
+  // direction now that GAS is retired: the alternative is dispatching an
+  // unrecognised lane onto a dead engine. Pinned by
+  // test/money-mint-lane-routing.cjs.
+  //
+  // ROLLBACK: set this back to false. Nothing else changes.
+  var CAYMAN_MONEY_MINT_ON_JU_API = true;
   function moneyMintBaseForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
-    return (MONEY_MINT_ON_JU_API && isIsrael) ? JU_API : GW;
+    if (isIsrael) return MONEY_MINT_ON_JU_API ? JU_API : GW;
+    return CAYMAN_MONEY_MINT_ON_JU_API ? JU_API : GW;
   }
 
   // ---- W-8 RENEWAL SIDEBAR FLIP (2026-08-23) --------------------------------
@@ -4519,18 +4572,25 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // not at all.
   //
   // DEFAULT false, and this one is NOT mine to flip. This panel is the LP-facing
-  // email copy. GAS still SENDS from its own copy store for every GAS-born
-  // process (the whole pre-flip back catalogue) and for Cayman money, whose mint
-  // is still GAS (moneyMintBaseForLane_ is isIsrael-gated). Arming this would let
-  // an operator edit copy that the engine actually sending to those LPs never
-  // reads, i.e. a silent two-version divergence in LP-facing wording. That is a
-  // Noa decision about LP copy, not a routing decision.
+  // email copy. GAS still SENDS from its own copy store for the whole pre-flip
+  // back catalogue of GAS-born processes, which can still be nudged and resent.
+  // Arming this would let an operator edit copy that the engine actually sending
+  // to those LPs never reads, i.e. a silent two-version divergence in LP-facing
+  // wording. That is a Noa decision about LP copy, not a routing decision.
+  //
+  // CORRECTED 2026-09-07: this used to name "Cayman money, whose mint is still
+  // GAS (moneyMintBaseForLane_ is isIsrael-gated)" as a second reason. That is
+  // no longer true - CAYMAN_MONEY_MINT_ON_JU_API above moved it - so the
+  // reason is struck rather than left contradicting the dispatcher. The
+  // remaining reason (the back catalogue) is untouched and still holds, so the
+  // flag's value does not change.
   //
   // GATE, do not flip before both hold:
   //   1. Noa approves that the console's copy editor becomes ju-service-only.
-  //   2. Either GAS no longer sends any LP mail (Cayman money mint moved off it
-  //      and no GAS-born process can still be nudged/resent), or the two copy
-  //      stores have been reconciled and a check exists that keeps them so.
+  //   2. Either GAS no longer sends any LP mail (no GAS-born process can still
+  //      be nudged/resent - the mints have all moved, the back catalogue has
+  //      not), or the two copy stores have been reconciled and a check exists
+  //      that keeps them so.
   var CONSOLE_MESSAGES_ON_JU_API = false;
   function consoleMessagesBase_() {
     return CONSOLE_MESSAGES_ON_JU_API ? JU_API : GW;
@@ -4563,9 +4623,9 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // engines; PORT-MAP.md marks every console read/action route gap `none`
   // for BOTH lanes; consolelist.ts's `?lane=cayman` filter already existed).
   // SUPERSEDED 2026-08-21: Cayman ONBOARDING now mints on ju-service
-  // (CAYMAN_MINT_ON_JU_API above). Cayman MONEY still mints on GAS -
-  // moneyMintBaseForLane_ remains isIsrael-gated, deliberately, because the
-  // money lane is the LP's actual capital event and moves separately.
+  // (CAYMAN_MINT_ON_JU_API above). SUPERSEDED AGAIN 2026-09-07: Cayman MONEY
+  // now mints there too (CAYMAN_MONEY_MINT_ON_JU_API above). It moved
+  // separately from onboarding, as intended, and on its own flag.
   // This dual-read line remains correct and necessary either way: it is what
   // makes a ju-service-born Cayman process visible and actionable on the
   // board, which matters MORE now that real Cayman processes are born there.
