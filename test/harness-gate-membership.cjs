@@ -3,32 +3,19 @@
  *
  * THE CLASS THIS PREVENTS: a harness nothing runs.
  *
- * test/api-fetch-nonjson-harness.cjs sat DEAD on main from 2026-08-23 to
- * 2026-09-07 - all 12 of its assertions failing with
- * `ReferenceError: JU_API is not defined`, because it
- * extracted apiFetch into a synthetic scope that never learned about apiFetch's
- * required `base` argument. Nobody noticed, and the reason nobody noticed is
- * structural rather than accidental: the harness was never in githooks/pre-push's
- * HARNESSES list, so the deploy gate did not run it, and a repo with no CI (the
- * gate is the only automated check - most of test/ is deliberately gitignored,
- * see CLAUDE.md) has no other place for it to be seen. It protected the operator
- * console's non-JSON handling - the retry, the auth-page path that ends a dead
- * session, the {ok:false} envelope that must throw rather than paint a false
- * all-clear - and for that whole period nothing verified any of it.
+ * test/api-fetch-nonjson-harness.cjs was dead from 2026-08-23 to 2026-09-07,
+ * all 12 assertions failing on `ReferenceError: JU_API is not defined`. Nobody
+ * noticed for a structural reason: it was never in githooks/pre-push's
+ * HARNESSES list, and with no CI the gate is the only place a harness is seen.
+ * Five more tracked harnesses were in the same position, one of them also red.
  *
- * Four more tracked harnesses were in the same position when this was written
- * (mint-pick-binding, money-flow-fallback, sign-preview-race, sign-stub). One of
- * them, mint-pick-binding, was ALSO red and had been for a while.
+ * PREVENT: every tracked, runnable test/*.cjs must appear in HARNESSES, so
+ * forgetting to wire one in fails the gate at the push that adds it.
+ * DETECT: this file.
  *
- * PREVENT: every tracked, runnable test/*.cjs must appear in HARNESSES. Adding a
- * harness and forgetting to wire it into the gate now fails the gate itself, at
- * the push that adds it. DETECT: this file.
- *
- * The only exemptions are the shared rig LIBRARIES, which export helpers and
- * assert nothing when run directly. They are listed BY NAME below, with the
- * reason, so an exemption is a deliberate written act rather than an omission -
- * and the exemption is itself checked: a "library" that stops exporting is no
- * longer a library and must join the gate.
+ * The only exemptions are the rig LIBRARIES, listed by name below with their
+ * reason so an exemption is a written act rather than an omission. Each is
+ * re-checked: a "library" that stops exporting must join the gate.
  *
  * Run: node test/harness-gate-membership.cjs
  */
@@ -52,17 +39,13 @@ const LIBRARIES = {
   'rig-signer': 'boots signer.html; exports loadSignerPage/makeSignerCtx',
 };
 
-// TRACKED files only. An untracked harness is invisible on a fresh clone
-// (test/* is gitignored with a by-name allowlist), so the gate could not run it
-// there even if it were listed - which is a different bug, and coupling-check
-// already guards the .gitignore allowlist side of it.
+// TRACKED files only: an untracked harness is invisible on a fresh clone, and
+// coupling-check already guards the .gitignore allowlist side of that.
 //
-// Read from the INDEX (ls-files), not from HEAD: pre-push runs after the commit
-// so the two agree at gate time, but ls-files also sees a harness staged in the
-// very commit that adds it. With ls-tree HEAD, wiring a new harness into the
-// gate correctly - file, .gitignore line and HARNESSES entry in one commit -
-// would fail this check until a SECOND commit, which teaches the next author
-// that the check is noise.
+// Read the INDEX, not HEAD. They agree at gate time, but ls-files also sees a
+// harness staged in the commit that adds it. With ls-tree HEAD, wiring one in
+// correctly (file + .gitignore + HARNESSES in one commit) would fail until a
+// SECOND commit, teaching the next author that the check is noise.
 const tracked = execFileSync('git', ['ls-files', 'test/'], { cwd: repo, encoding: 'utf8' })
   .split('\n').filter((l) => l.endsWith('.cjs'))
   .map((l) => path.basename(l, '.cjs')).sort();
@@ -77,8 +60,7 @@ const listed = block[1].split('\n').map((l) => l.trim()).filter(Boolean);
 ok('no harness is listed in the gate twice', new Set(listed).size === listed.length,
   listed.filter((n, i) => listed.indexOf(n) !== i).join(', '));
 
-// Every listed name must actually exist, or the gate refuses to push at all
-// (node exits non-zero on a missing file and the runner marks it failed).
+// A listed name that does not exist makes the gate refuse every push.
 const missingFile = listed.filter((n) => !tracked.includes(n));
 ok('every name in the gate is a tracked harness that exists', missingFile.length === 0, missingFile.join(', '));
 
@@ -87,8 +69,8 @@ const orphans = tracked.filter((n) => !listed.includes(n) && !Object.prototype.h
 ok('every tracked, runnable harness is in the deploy gate', orphans.length === 0,
   'not in HARNESSES: ' + orphans.join(', '));
 
-// An exemption has to keep being true. A rig that no longer exports helpers is
-// a harness in hiding, and would slip through the check above forever.
+// An exemption has to keep being true: a rig that stops exporting is a harness
+// in hiding, and would slip through the check above forever.
 Object.keys(LIBRARIES).forEach((lib) => {
   const p = path.join(repo, 'test', lib + '.cjs');
   const exists = fs.existsSync(p);

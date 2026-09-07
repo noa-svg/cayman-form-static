@@ -81,15 +81,13 @@ if (pickerSrc.indexOf('window.__onbPick=pick') === -1) throw new Error('extracte
 
   // 4: the email-equality gate, driven LIVE on the real console.
   //
-  // REPAIRED 2026-09-07. This block used to pin four assertions to the literal
-  // source string `var pickedId=(window.__onbPickItemId&&window.__onbPickEmail`.
-  // That expression was refactored into the helper onbPickedItemId_
-  // (console/index.html:6922) and the anchor stopped matching, so indexOf
-  // returned -1, html.slice(-1, ...) produced garbage, and all four assertions
-  // failed while the protections they name were fully intact and live. Same
-  // failure mode that killed test/api-fetch-nonjson-harness.cjs: a harness
-  // pinned to a spelling rather than to a behaviour reports on a copy nobody
-  // ships. The gate is now DRIVEN instead of matched.
+  // REPAIRED 2026-09-07. Four assertions used to pin to the literal string
+  // `var pickedId=(window.__onbPickItemId&&window.__onbPickEmail`, refactored
+  // into onbPickedItemId_ (console/index.html:6922). indexOf returned -1,
+  // slice(-1, ...) produced garbage, and all four failed while the protections
+  // they name were intact. Same failure mode that killed
+  // api-fetch-nonjson-harness: pinned to a spelling, reporting on a copy nobody
+  // ships. Now DRIVEN instead of matched.
   {
     const dom = new JSDOM(html, {
       url: 'http://localhost:8000/console/', runScripts: 'dangerously', pretendToBeVisual: true,
@@ -116,17 +114,14 @@ if (pickerSrc.indexOf('window.__onbPick=pick') === -1) throw new Error('extracte
   }
 
   // 5: the ONBOARDING mint call site carries that id and names its engine.
-  // Static, on the live call site: this is a wiring fact about a single line,
-  // and driving the whole mint UI to observe it would test the UI, not the
-  // wiring. Anchored on the ROUTE + its first parameter - the thing that cannot
-  // change without changing the server - rather than on the spelling of an
-  // expression inside it.
+  // Static, because this is a wiring fact about one line and driving the mint
+  // UI to see it would test the UI instead. Anchored on the ROUTE plus its
+  // first parameter, which cannot change without changing the server.
   //
-  // ?admin=mintLink has TWO call sites and only this one is the pick-binding
-  // path: the money lane mints at console/index.html:8986 with `&process=` /
-  // `&mondayId=` through moneyMintBaseForLane_, and has no pick to bind. The
-  // 2026-08-08 anchor did not distinguish them, so a plain indexOf on the route
-  // now lands on the money mint - which is why this asserts the count too.
+  // ?admin=mintLink has TWO call sites; only this one binds a pick. The money
+  // lane mints at console/index.html:8986 through moneyMintBaseForLane_ and has
+  // no pick. The 2026-08-08 anchor did not distinguish them and a plain indexOf
+  // now lands on the money mint, so the count is asserted too.
   {
     const ONB = "apiFetch('?admin=mintLink&type=";
     const mintIdx = html.indexOf(ONB);
@@ -159,9 +154,8 @@ if (pickerSrc.indexOf('window.__onbPick=pick') === -1) throw new Error('extracte
   }
 
   console.log(pass + ' passed, ' + fail + ' failed');
-  // Explicit exit: booting the real console (section 4) arms its own timers -
-  // the 45s auto-refresh interval among them - and dom.window.close() does not
-  // always drain them, so without this the harness passes and then HANGS,
-  // which in the parallel deploy gate looks exactly like a stuck runner.
+  // Explicit exit: section 4 boots the console, which arms a 45s auto-refresh
+  // interval that dom.window.close() does not always drain. Without this the
+  // harness passes and then HANGS, which in the gate looks like a stuck runner.
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

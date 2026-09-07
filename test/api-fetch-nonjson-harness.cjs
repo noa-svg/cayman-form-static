@@ -1,53 +1,33 @@
 /**
  * api-fetch-nonjson-harness.cjs
  *
- * THE BUG (Noa hit it herself in the console, 2026-08-04):
+ * THE BUG (Noa hit it in the console, 2026-08-04):
  *   "Server error: Unexpected token '<', "<!DOCTYPE "... is not valid JSON"
  *
- * apiFetch called r.json() unconditionally. Neither Ju backend returns JSON
- * unconditionally: the GAS deployment intermittently serves Google's own HTML
- * (a Drive "cannot open the file" page - seen 8+ times on this deployment, and
- * twice more during the session that fixed this - a 302 interstitial, or a login
- * page), and ju-service behind Cloud Run can serve an HTML 502/503 or an IAM
- * redirect. So the operator got a JavaScript parser message for a transient
- * server hiccup, with no hint that retrying would just work.
+ * apiFetch called r.json() unconditionally. Neither backend returns JSON
+ * unconditionally: GAS intermittently serves Google's own HTML (a Drive
+ * "cannot open the file" page, a 302 interstitial, a login page) and
+ * ju-service behind Cloud Run serves HTML 502/503 and IAM redirects. The
+ * operator got a parser message for a transient hiccup, with no hint that
+ * retrying would work.
  *
- * PREVENT: read the body as text, classify it, retry once, and report in words
- * that say what to do. DETECT: this harness, which executes the REAL apiFetch
- * against stubbed responses rather than regexing its source, so it fails if the
- * behaviour regresses even when the code still "looks right".
+ * PREVENT: read the body as text, classify it, retry once, report in words
+ * that say what to do. DETECT: this harness. Both engines are covered, and
+ * every scenario runs against BOTH gateways, because the retry carries `base`
+ * and an engine it silently fell back to would be invisible otherwise.
  *
- * Deliberately written against BOTH Ju architectures (Noa: "adjust for both ju
- * architects"): the GAS HTML shapes and the Cloud Run ones are both covered, so
- * the guard survives the ju-service cutover. Every scenario is run against BOTH
- * gateways (GW and JU_API), because the retry now carries `base` and a retry
- * that silently fell back to the other engine would be invisible otherwise.
+ * REWRITTEN 2026-09-07, dead on main since 2026-08-23. It extracted apiFetch
+ * and eval'd it in a hand-built scope naming the globals apiFetch used the day
+ * it was written. d6eb87f gave apiFetch its required `base` (the guard at
+ * console/index.html:4943), the scope had no JU_API, and all 12 assertions
+ * failed on `ReferenceError` before any of them could be evaluated. Unnoticed
+ * for 15 days because it was not in githooks/pre-push's HARNESSES list.
  *
- * ---------------------------------------------------------------------------
- * REWRITTEN 2026-09-07. It had been dead on main since 2026-08-23 (15 days,
- * commit d6eb87f), all 12 assertions failing.
- *
- * The original harness EXTRACTED apiFetch out of console/index.html by
- * brace-counting and eval'd it in a hand-built scope. That scope named the
- * globals apiFetch happened to use ON THE DAY IT WAS WRITTEN (2026-08-04,
- * commit 607e6fd, the only commit that ever touched this file until today).
- * When d6eb87f gave apiFetch its required `base` argument - the guard at
- * console/index.html:4943
- * that rejects anything which is not GW or JU_API - the synthetic scope had no
- * JU_API, so EVERY call threw `ReferenceError: JU_API is not defined` before a
- * single assertion could be evaluated. The harness reported 12 failures that
- * said nothing about non-JSON classification, and it had been doing so unnoticed
- * because it is not in githooks/pre-push's HARNESSES list.
- *
- * That is the failure mode extraction always has: the harness drifts from the
- * file it claims to test and reports on a copy nobody ships. So this now drives
- * the REAL console/index.html in jsdom (runScripts:'dangerously') with a
- * scriptable window.fetch and calls the REAL window.apiFetch, the way
- * console-honest-status-harness.cjs does. The console is Google-SSO gated in
- * production, so the harness seeds a syntactically valid, unexpired id_token in
- * localStorage - the console only reads its exp/email claims client-side and
- * lets the server be the real boundary - which reaches the authed board without
- * touching DEMO mode and its fixtures.
+ * So it now drives the REAL console/index.html in jsdom with a scriptable
+ * window.fetch and calls the real window.apiFetch, as
+ * console-honest-status-harness.cjs does. The board is SSO-gated, so the
+ * harness seeds a valid unexpired id_token in localStorage (the console reads
+ * only its exp/email claims client-side) to reach it without DEMO fixtures.
  *
  * Run: node test/api-fetch-nonjson-harness.cjs
  */
@@ -77,8 +57,8 @@ function fakeIdToken() {
     + b64u({ email: 'noa@legacyvpartners.com', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.sig';
 }
 
-// A benign answer for every route the console fetches while booting, so the
-// board reaches its authed steady state without the harness having to model it.
+// Benign answers for the boot fetches, so the board reaches its authed steady
+// state without the harness modelling it.
 function bootAnswer(route) {
   if (route === 'list') return { processes: [], generatedAt: '' };
   if (route === 'opNotes') return { notes: {} };
@@ -90,13 +70,10 @@ function bootAnswer(route) {
   return { ok: true };
 }
 
-// ---------------------------------------------------------------------------
-// Boot the real console once. Scenarios then install their own response QUEUE:
-// each entry is {status, body} and is handed to the next apiFetch call, so the
-// retry recursion consumes the second entry exactly as a real second HTTP round
-// trip would. Calls are recorded (query string + which gateway they went to) so
-// "retried once" and "did not silently switch engines" are both assertable.
-// ---------------------------------------------------------------------------
+// Boot the console once; each scenario installs its own response QUEUE, so the
+// retry recursion consumes the next entry as a real second round trip would.
+// Calls record query string + gateway, making "retried once" and "did not
+// switch engines" both assertable.
 const settle = (ms) => new Promise((r) => setTimeout(r, ms === undefined ? 200 : ms));
 
 async function bootConsole() {
@@ -114,10 +91,8 @@ async function bootConsole() {
           state.calls.push({ q, base: String(url).replace(/\?source=op$/, '') });
           const next = state.queue.shift();
           if (!next) return Promise.reject(new Error('stub ran out of responses for ' + q));
-          // A faithful Response stub: text() only, which is all the fixed
-          // apiFetch uses. json() is deliberately ABSENT - if apiFetch ever
-          // regresses to r.json() this fails loudly with "r.json is not a
-          // function" instead of quietly parsing and hiding the regression.
+          // text() only. json() is deliberately ABSENT so a regression back
+          // to r.json() fails loudly instead of parsing and hiding itself.
           return Promise.resolve({
             status: next.status,
             text: () => Promise.resolve(next.body),
@@ -137,10 +112,9 @@ async function bootConsole() {
 
 let ENV = null;
 
-// Run one scenario: install a queue, call the REAL apiFetch on `base`, capture
-// resolution or rejection. clearAuth is spied (and restored) so the session
-// effects are observable without the login screen tearing the DOM down between
-// scenarios; the REAL clearAuth is exercised separately at the end.
+// clearAuth is spied and restored, so session effects are observable without
+// the login screen tearing the DOM down between scenarios. The real one is
+// exercised at the end.
 async function probe(qs, base, responses) {
   const win = ENV.win;
   ENV.state.queue = responses.slice();
@@ -167,9 +141,8 @@ async function onBoth(fn) {
   ENV = await bootConsole();
   const { win } = ENV;
 
-  // 0. The harness is testing the shipped file, not a copy of it. This is the
-  // assertion the extract-and-eval version could not make, and its absence is
-  // exactly how that version went dead unnoticed.
+  // 0. Testing the shipped file, not a copy. The assertion the extract-and-eval
+  // version could not make, which is how it went dead unnoticed.
   ok('apiFetch under test is the one console/index.html actually ships',
     html.indexOf(String(win.apiFetch)) >= 0, String(win.apiFetch).slice(0, 90));
   ok('base is REQUIRED: a call naming no gateway throws instead of defaulting to GAS',
@@ -192,9 +165,8 @@ async function onBoth(fn) {
       r.calls.map((c) => c.base).join(' | '));
   });
 
-  // 2. THE COMMON CASE: these shapes clear on one retry, and the operator should
-  // never see them at all. Every live instance recorded on this deployment
-  // cleared on the immediate retry.
+  // 2. THE COMMON CASE: every live instance on this deployment cleared on the
+  // immediate retry, so the operator should never see these at all.
   await onBoth(async (base, eng) => {
     const r = await probe('?admin=searchLps&q=maxim', base, [
       { status: 404, body: DRIVE_HTML },
@@ -271,10 +243,9 @@ async function onBoth(fn) {
       r.err && r.err.serverError === 'That row still holds a placeholder amount.', r.err && r.err.serverError);
   });
 
-  // 6. END TO END through the REAL clearAuth, not the spy. Every assertion
-  // above proves apiFetch CALLS clearAuth; this one proves the call actually
-  // ends the session, which is the protection the operator depends on. Run last
-  // because the real clearAuth tears the board down and shows the login screen.
+  // 6. END TO END through the REAL clearAuth. The assertions above prove
+  // apiFetch CALLS it; this proves the call ends the session. Last, because the
+  // real clearAuth tears the board down.
   {
     ENV.state.queue = [{ status: 200, body: LOGIN_HTML }];
     ENV.state.calls.length = 0;

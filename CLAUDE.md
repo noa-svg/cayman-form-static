@@ -175,31 +175,26 @@ test file that should ship, add a matching `!test/<name>.cjs` line to
   `test/console-honest-status-harness.cjs` and
   `test/api-fetch-nonjson-harness.cjs` do.
 
-  Extraction drifts from the file it claims to test, silently and without
-  touching the harness. Both live cases were found on 2026-09-07:
-  `api-fetch-nonjson-harness` eval'd `apiFetch` in a synthetic scope that had
-  no `JU_API`, so every call threw `ReferenceError` once `apiFetch` gained its
-  required `base` argument in `d6eb87f` (2026-08-23), and all 12 assertions
-  had been failing for the 15 days since. `test/console-harness.cjs` extracts
-  the same function and survived only because its sandbox happens to name
-  `JU_API`; nothing made the two agree.
-  `mint-pick-binding-harness` pinned four assertions to the literal string
-  `var pickedId=(window.__onbPickItemId&&...`, which was refactored into the
-  helper `onbPickedItemId_`; `indexOf` returned -1, the slice produced garbage,
-  and the harness reported four failures about protections that were fully
-  intact. A harness pinned to a spelling reports on a copy nobody ships.
+  Extraction drifts from the file it claims to test, silently. Both live cases
+  were found on 2026-09-07. `api-fetch-nonjson-harness` eval'd `apiFetch` in a
+  scope with no `JU_API`, so every call threw `ReferenceError` once `d6eb87f`
+  made `base` required, and all 12 assertions failed for the 15 days after.
+  `console-harness` extracts the same function and survived only because its
+  sandbox happens to name `JU_API`; nothing made the two agree.
+  `mint-pick-binding-harness` pinned four assertions to a string refactored
+  into `onbPickedItemId_`, so `indexOf` returned -1 and it reported failures
+  about protections that were fully intact.
 
-  When a wiring fact genuinely can only be read statically (which single call
-  site passes which gateway, say), anchor on the thing that cannot change
-  without changing the server - the route name - assert the match COUNT so a
-  second call site cannot silently capture the anchor, and A/B the assertion
-  against a deliberately broken copy before trusting it.
+  When a wiring fact genuinely can only be read statically (which call site
+  passes which gateway, say), anchor on what cannot change without changing the
+  server, assert the match COUNT so a second call site cannot capture the
+  anchor, and A/B the assertion against a deliberately broken copy first.
 
   Every tracked harness must be listed in `githooks/pre-push`'s `HARNESSES`
-  array. `test/harness-gate-membership.cjs` enforces that: this repo has no CI,
-  so a harness outside the gate is a harness nothing runs, which is how
-  `api-fetch-nonjson-harness` stayed dead. The only exemptions are the four
-  `rig*.cjs` shared libraries, named in that file with their reason.
+  array; `test/harness-gate-membership.cjs` enforces that. With no CI, a
+  harness outside the gate is a harness nothing runs, which is how
+  `api-fetch-nonjson-harness` stayed dead. The four `rig*.cjs` shared libraries
+  are the only exemptions, named in that file.
 
 ## The gateway URL is duplicated 5 times
 
