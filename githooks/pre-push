@@ -115,6 +115,7 @@ HARNESSES=(
   israel-english-address-fallback-harness
   israel-cp-english-address-fatca-gate
   flow-blocked-submit-names-field
+  terminal-vocab-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

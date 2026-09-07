@@ -22,6 +22,7 @@ test/*
 !test/flow-double-submit-harness.cjs
 !test/resume-jump-harness.cjs
 !test/signer-vocab-harness.cjs
+!test/terminal-vocab-harness.cjs
 !test/attribute-escaping-harness.cjs
 !test/select-default-probe.cjs
 !test/joint-probe.cjs
