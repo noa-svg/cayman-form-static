@@ -631,6 +631,13 @@
     <span class="lvp-gate__icon" role="img" aria-label="Broken link">⛓️‍💥</span>
     <h1 class="lvp-done__msg">Link unavailable</h1>
     <p class="lvp-done__sub">This link is invalid.</p>
+    <!-- Wrong-form refusal line. The guard in handleCfgLoaded_ writes its
+         approved sentence here and unhides it; before this element existed the
+         lookup returned null, the write was skipped, and an LP whose link
+         resolved to the wrong form got silence. Uses the .lvp-gate__recover
+         pair, which had styles (and a reduced-motion rule) but no element.
+         The id is the one the guard already looks up. -->
+    <p id="lvp-loading" class="lvp-gate__recover lvp-gate__recover--en" hidden></p>
   </div>
   <div id="lvp-done">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
@@ -1471,7 +1478,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-08-25-6-il-subaccount';
+    window.__BUILD_TAG = 'index-2026-09-07-1-review-gate-and-wrong-form-notice';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -1613,6 +1620,11 @@
                 + '" - this page renders Cayman ONBOARDING only. A money or transfer flow belongs on flow.html.');
             } catch (e) { /* console unavailable */ }
           }
+          // Show the gate screen, exactly as the empty-flowType branch above
+          // does. Without this the form stays on screen and the refusal is
+          // written into a container the LP never sees: a token in the URL
+          // means the boot script did NOT set lvp-gate-mode.
+          document.documentElement.classList.add('lvp-gate-mode');
           var wrongForm = document.getElementById('lvp-loading');
           if (wrongForm) {
             wrongForm.textContent = 'This link belongs to a different form. Please use the link sent to you, or contact us.';
@@ -2116,7 +2128,14 @@
         }) + ' ' + pos.currency;
       }
       if (panel) panel.hidden = false;
-      if (missing) missing.hidden = true;
+      // No "missing figure" card is hidden here on purpose. An earlier draft of
+      // this gate painted a bespoke card asking the LP to chase us about the
+      // number; the shipped design (see the no-amount branch above, 2026-08-23)
+      // deliberately reuses the standard "Link unavailable" gate screen instead,
+      // so no such element exists in the markup. The line that hid it survived
+      // the rewrite and referenced an undeclared `missing`, which threw a
+      // ReferenceError on this success path - i.e. on every migrating LP, at
+      // Review and again at Submit. Removed 2026-09-07.
       return true;
     }
 
