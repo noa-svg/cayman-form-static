@@ -187,6 +187,7 @@ function planOf(awaiting, transfers, parked, extra) {
     ok('W9 a control with id="' + id + '" exists', new RegExp('id="' + id + '"').test(html));
   });
   ok('W9 the announce region is aria-live', /id="wlAnnounce"[^>]*aria-live="polite"/.test(html));
+  ok('W9 the announce region is not markup-hidden', !/id="wlAnnounce"[^>]*\shidden/.test(html));
   ok('W9 motion is behind prefers-reduced-motion',
     /@media \(prefers-reduced-motion: reduce\)\{[\s\S]{0,400}\.wl-primary/.test(html));
   ok('W9 the primary action is a 44px target', /\.wl-primary,\.wl-more\{min-height:44px/.test(html));
@@ -372,8 +373,13 @@ function planOf(awaiting, transfers, parked, extra) {
     const said = t.txt('wlAnnounce') || '';
     ok('W9 the result reaches the aria-live region', /Recorded the money/.test(said), said);
     ok('W9 and it names WHO', said.indexOf(HE.a) >= 0, said);
-    ok('W9 the announce region is not hidden once it has something to say',
+    // The region is never `hidden`: a live region that leaves and re-enters the
+    // accessibility tree is one some screen readers stop watching. Its chrome
+    // is hidden by :empty instead, which keeps the node itself present.
+    ok('W9 the announce region is never hidden out of the tree',
       !!t.el('wlAnnounce') && t.el('wlAnnounce').hidden === false);
+    ok('W9 and its chrome is collapsed by :empty rather than by hidden',
+      /\.wl-announce:empty\{display:none\}/.test(html));
     ok('W9 the route called is the real one, keyed on the master rid',
       t.fetches.some((f) => /^opMarkMoneyReceived.*processId=r1/.test(f)), t.fetches.join(' | '));
     t.dom.window.close();

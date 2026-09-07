@@ -3219,10 +3219,13 @@ body.side-coll .ss-lbl { display: none; }
 .wl-fld input,.wl-fld select{min-height:44px;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink)}
 .wl-fld input:focus-visible,.wl-fld select:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:1px}
 /* Visible, not screen-reader-only. What a row action actually did is worth
-   saying to everyone: the old surface changed one button's own label and
-   told a screen reader nothing at all. Empty and hidden until it has
-   something to say, so a quiet screen carries no empty box. */
+   saying to everyone: the old surface changed one button's own label and told
+   a screen reader nothing at all. It is NEVER `hidden` - a live region that
+   comes and goes out of the accessibility tree is one some screen readers stop
+   watching - so `:empty` hides the chrome instead and a quiet screen still
+   carries no empty box. */
 .wl-announce{margin:0 0 var(--space-3);padding:10px 12px;border-radius:var(--radius-md);background:var(--color-info-bg);border:1px solid var(--color-info);font-size:13px;line-height:1.5;color:var(--color-ink)}
+.wl-announce:empty{display:none}
 .wl-done-line{font-size:13px;line-height:1.55;color:var(--color-ink)}
 .wl-done-detail{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--color-ink-sub)}
 .wl-sort-arrow{font-size:9px;opacity:0.5}
@@ -3892,7 +3895,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
           <div id="wlOpenMonth" class="wl-openmonth-host"></div>
           <!-- Every row action reports into here. Before this, "Mark received"
                changed one button's own label and told a screen reader nothing. -->
-          <div id="wlAnnounce" role="status" aria-live="polite" class="wl-announce" hidden></div>
+          <div id="wlAnnounce" role="status" aria-live="polite" class="wl-announce"></div>
           <div id="wlBlockers"></div>
           <div id="wlGroups">
             <div id="wlBlocked"></div>
@@ -9990,7 +9993,6 @@ document.addEventListener('keydown',function(e){
     // could not see the button had no way to know the write had landed.
     function wlAnnounce(msg){
       if(!announceEl)return;
-      announceEl.hidden=!msg;
       announceEl.textContent=msg||'';
     }
     // Generate is NEVER silently greyed. A `disabled` button answers a click
