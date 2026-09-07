@@ -56,3 +56,4 @@ test/*
 !test/console-honest-status-harness.cjs
 !test/prepush-marker-contract.cjs
 !test/transfer-in-review-gate-harness.cjs
+!test/wire-letter-worklist-harness.cjs

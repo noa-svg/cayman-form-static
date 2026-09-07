@@ -117,6 +117,7 @@ HARNESSES=(
   israel-cp-english-address-fatca-gate
   flow-blocked-submit-names-field
   console-honest-status-harness
+  wire-letter-worklist-harness
   prepush-marker-contract
   transfer-in-review-gate-harness
 )
