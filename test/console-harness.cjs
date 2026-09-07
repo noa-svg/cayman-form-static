@@ -27,7 +27,24 @@ let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra === undefined ? '' : extra); } }
 
 // Brace-counting extractor: grabs `function NAME(...) { ... }` from the live source.
+// The three stage predicates now DERIVE from BOARD_TERMINAL_ (2026-09-07: the
+// terminal vocabulary was hand-written in three places that disagreed, and an
+// abandoned row that only one of them retired blanked the live board). Every
+// composition below that pulls one of them needs the map in scope, so
+// extractFn carries it rather than making fourteen call sites remember. `var`
+// redeclaration inside one Function body is legal, so pulling two predicates
+// at once is harmless.
+const VOCAB_DEPENDENTS = ['isTerminalStage', 'isCompletedStage', 'isCanceledStage'];
+// stageMilestone reads RETIRED_LABEL for the same reason: what to CALL a
+// retired row became a lookup instead of an equality chain, so the chain could
+// not drift from the vocabulary that decides which rows are retired at all.
+const LABEL_DEPENDENTS = ['stageMilestone'];
 function extractFn(name) {
+  if (VOCAB_DEPENDENTS.includes(name)) return extractVarObj('BOARD_TERMINAL_') + rawFn(name);
+  if (LABEL_DEPENDENTS.includes(name)) return extractVarObj('RETIRED_LABEL') + rawFn(name);
+  return rawFn(name);
+}
+function rawFn(name) {
   const start = html.indexOf('function ' + name + '(');
   if (start < 0) throw new Error('function not found: ' + name);
   let i = html.indexOf('{', start), depth = 0;
@@ -417,8 +434,13 @@ function extractVarObj(name) {
   const deadRow = rowHtml({ pid: 's5', name: 'Rivka Sela', stage: 'voided' });
   ok('K12 voided row looks dead (done+dead classes)', deadRow.includes('class="row done dead"'));
   ok('K12 voided row says Canceled in plain words', deadRow.includes('>Canceled</span>'));
-  const revokedRow = rowHtml({ pid: 's6', name: 'Ronen Alon', stage: 'token_revoked' });
-  ok('K12 token_revoked reads as Link revoked, dead class', revokedRow.includes('Link revoked') && revokedRow.includes(' dead"'));
+  // Was 'token_revoked' until 2026-09-07. That stage was never written to the
+  // registry by either engine (revocation is an attribute of the revoked set;
+  // its audit trail is a NON-STAGE state-log row), so this asserted a row
+  // shape no operator could ever see. 'abandoned' is the real stage with the
+  // same shape: retired, canceled bucket, dead class.
+  const parkedRow = rowHtml({ pid: 's6', name: 'Ronen Alon', stage: 'abandoned' });
+  ok('K12 abandoned reads as Abandoned, dead class', parkedRow.includes('Abandoned') && parkedRow.includes(' dead"'));
 
   const staleRow = rowHtml({ pid: 's7', name: 'Jonathan Pearl', stage: 'complete', stale: true, wait: 'Sealed, but a records write failed. Needs review' });
   ok('K12 stale-complete row is attention-class, never quietly faded as done', /class="row attn"/.test(staleRow));
@@ -1226,15 +1248,15 @@ function extractVarObj(name) {
 //
 // The guard was `!rows.length`. The empty state is not decided by rows.length.
 // renderRows decides it on the IN-FLIGHT set - rows minus isTerminalStage -
-// and the two engines do NOT filter the same terminal vocabulary that this
-// client does. isTerminalStage counts seven stages; ju-service's server-side
-// includeDone filter counts three (domain/consoleShared.ts's
-// CAYMAN_CONSOLE_TERMINAL) and GAS's counts five. 'abandoned' and
-// 'token_revoked' are terminal HERE and terminal on NEITHER server, and
-// ju-service's abandonSweep.ts documents that omission as deliberate
-// ("REVERSIBLE BY CONSTRUCTION"). So ?api=list&includeDone=0 can return a
-// non-empty list whose board is completely empty, the guard counts the list,
-// sees rows, and paints the blank.
+// and an engine can filter a DIFFERENT terminal vocabulary than this client.
+// That gap was three-way (seven stages here, three on ju-service, four on
+// ju-cayman) until 2026-09-07, when BOARD_TERMINAL_ and ju-service's
+// CAYMAN_BOARD_TERMINAL became one vocabulary under a gate. It is not zero:
+// ju-cayman is RETIRED and cannot be redeployed, so its literal still ships
+// 'sealed' and 'void' at includeDone=0 while this client retires them. So
+// ?api=list&includeDone=0 can still return a non-empty list whose board is
+// completely empty, the guard counts the list, sees rows, and paints the
+// blank. This harness is why that is survivable rather than an outage.
 //
 // The O-block missed it for two compounding reasons, and this block fixes both:
 //   1. Its oracle was a STUB render that recorded pids. A stub render can never
@@ -1341,13 +1363,18 @@ function extractVarObj(name) {
     return { load: built.load, renderRows: built.renderRows, arrive, flush, GWU, JUU, listRows, listEl };
   }
 
-  // The fixture. 'abandoned' is the cheapest true instance of the divergence:
-  // NOT terminal to either server (so ?api=list&includeDone=0 returns it), and
-  // terminal to isTerminalStage (so renderRows shows nothing). 'token_revoked'
-  // behaves identically. These are the rows that blanked the board.
+  // The fixture, re-pointed 2026-09-07 at a divergence that still EXISTS.
+  // 'abandoned' and 'token_revoked' were the original instances; the shared
+  // vocabulary closed the first and deleted the second (it was never a
+  // registry stage on either engine). What remains is the GAS residual: the
+  // retired ju-cayman engine's own CAYMAN_CONSOLE_TERMINAL_ predates the
+  // legacy spellings, so it still ships 'sealed' and 'void' at
+  // includeDone=0 while this client retires them - and ju-cayman can never be
+  // redeployed to fix it. The guard under test is exactly that shape: a
+  // NON-EMPTY answer whose rows all render as nothing.
   const serverKeepsClientHides = [
-    { processId: 'ju-ab-1', currentStage: 'abandoned', lpDisplayName: 'A', lane: 'israeli' },
-    { processId: 'ju-ab-2', currentStage: 'token_revoked', lpDisplayName: 'B', lane: 'israeli' },
+    { processId: 'ju-ab-1', currentStage: 'sealed', lpDisplayName: 'A', lane: 'israeli' },
+    { processId: 'ju-ab-2', currentStage: 'void', lpDisplayName: 'B', lane: 'israeli' },
   ];
   const liveRow = { processId: 'b-L06SCwQLI', currentStage: 'needs_attention', lpDisplayName: 'C', lane: 'israeli' };
 
@@ -1377,7 +1404,7 @@ function extractVarObj(name) {
   // engine happens to be empty", it is "no empty state while a request is out".
   (async () => {
     const r = makeBoardRig('cayman');
-    r.listRows[r.JUU] = [{ processId: 'ju-ab-c', currentStage: 'abandoned', lpDisplayName: 'A', lane: 'cayman' }];
+    r.listRows[r.JUU] = [{ processId: 'ju-ab-c', currentStage: 'sealed', lpDisplayName: 'A', lane: 'cayman' }];
     r.listRows[r.GWU] = [{ processId: 'gas-live', currentStage: 'needs_attention', lpDisplayName: 'C', lane: 'cayman' }];
     r.load(false);
     await r.flush();
@@ -1459,21 +1486,31 @@ function extractVarObj(name) {
       r.listEl.innerHTML.indexOf('No processes match') !== -1, r.listEl.innerHTML.slice(0, 160));
   })();
 
-  // P5: the divergence itself, asserted rather than described. If a future edit
-  // ever aligns isTerminalStage with the servers' terminal maps, this goes red
-  // and whoever did it can retire the whole hazard deliberately instead of
-  // leaving a stale comment behind.
+  // P5: the divergence itself, asserted rather than described. Its own note
+  // used to say that aligning isTerminalStage with the servers would turn this
+  // red so the hazard could be retired DELIBERATELY rather than leaving a stale
+  // comment behind. That is what happened on 2026-09-07, and this is the
+  // deliberate retirement.
+  //
+  // What closed: ju-service. BOARD_TERMINAL_ here and CAYMAN_BOARD_TERMINAL
+  // there are one vocabulary, held equal by test/terminal-vocab-harness.cjs and
+  // by the mono side's terminal-stage-vocabulary.test.mjs.
+  // What did NOT close, and cannot: ju-cayman is retired and can never be
+  // redeployed, so its CAYMAN_CONSOLE_TERMINAL_ still ships 'sealed' and 'void'
+  // at includeDone=0 while this client retires them. The empty-board hazard is
+  // therefore SMALLER but still real, which is why the guard above still must
+  // ask the renderer rather than count rows.
   {
     const { isTerminalStage } = new Function(extractFn('isTerminalStage') + '; return { isTerminalStage: isTerminalStage };')();
-    // ju-service domain/consoleShared.ts CAYMAN_CONSOLE_TERMINAL, verbatim.
-    const JU_SERVICE_TERMINAL = ['complete', 'voided', 'expired'];
-    // ju-cayman's literal terminal object, per caymanMint.ts's own note.
-    const GAS_TERMINAL = ['complete', 'sealed', 'voided', 'void', 'expired'];
-    const clientOnly = ['sealed', 'void', 'abandoned', 'token_revoked'].filter((s) => isTerminalStage(s));
-    ok('P5 the client still hides stages neither server filters (the guard cannot count raw rows)',
-      clientOnly.indexOf('abandoned') !== -1 && clientOnly.indexOf('token_revoked') !== -1
-      && JU_SERVICE_TERMINAL.indexOf('abandoned') === -1 && GAS_TERMINAL.indexOf('abandoned') === -1,
-      clientOnly.join(','));
+    // ju-cayman server/CaymanConsole.ts CAYMAN_CONSOLE_TERMINAL_, verbatim.
+    const GAS_TERMINAL = ['complete', 'voided', 'expired', 'abandoned'];
+    const gasShipsClientHides = ['sealed', 'void'].filter((s) => isTerminalStage(s) && GAS_TERMINAL.indexOf(s) === -1);
+    ok('P5 the GAS residual is real: rows that engine ships at includeDone=0 and this client hides',
+      gasShipsClientHides.length === 2, gasShipsClientHides.join(','));
+    ok('P5a and the ju-service half is closed: abandoned is terminal on BOTH sides now',
+      isTerminalStage('abandoned') === true);
+    ok('P5a2 token_revoked is gone from the vocabulary (it was never a registry stage on either engine)',
+      isTerminalStage('token_revoked') === false);
   }
 
   // P5b: inflightOf_ now carries the C1 (2026-07-19) carve-out - a COMPLETE row
@@ -1491,8 +1528,8 @@ function extractVarObj(name) {
     const got = inflightOf_([staleComplete, cleanComplete, signing]).map((r) => r.pid);
     ok('P5b a stale-complete row stays in flight (C1), a clean complete one does not',
       got.join(',') === 's,g', got.join(','));
-    ok('P5c abandoned and token_revoked are out of the in-flight set - the rows that blanked the board',
-      inflightOf_([{ pid: 'a', stage: 'abandoned' }, { pid: 't', stage: 'token_revoked' }]).length === 0);
+    ok('P5c the rows that can still blank the board are out of the in-flight set',
+      inflightOf_([{ pid: 'a', stage: 'abandoned' }, { pid: 's', stage: 'sealed' }, { pid: 'v', stage: 'void' }]).length === 0);
   }
 
   // P6 STRUCTURAL: one table, two readers. The renderer and the guard must both

@@ -133,6 +133,7 @@ HARNESSES=(
   upload-accept-allowlist-harness
   zz-cayman-lawyer-fields
   zz-cayman-verified-on-copy
+  terminal-vocab-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
