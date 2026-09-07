@@ -72,6 +72,7 @@ trap 'rm -rf "$OUT"' EXIT
 
 HARNESSES=(
   coupling-check
+  console-transfer-one-mint
   money-mint-lane-routing
   client-honesty-harness
   index-honesty-harness
