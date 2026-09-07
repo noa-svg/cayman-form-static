@@ -120,6 +120,7 @@ HARNESSES=(
   wire-letter-worklist-harness
   prepush-marker-contract
   transfer-in-review-gate-harness
+  migration-carries-no-amount-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
