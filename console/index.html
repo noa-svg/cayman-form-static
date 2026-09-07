@@ -3129,22 +3129,113 @@ body.side-coll .ss-lbl { display: none; }
 .lp-sub{font-size:11px;color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top: 1px}
 .lp-empty{padding: 12px 12px;font-size:13px;color:var(--color-ink-muted)}
 .lp-empty-detail{margin-top:4px;font-size:11px;color:var(--color-ink-muted);word-break:break-word}
-/* Transfer Form rows peek (2026-08-02): same bordered-card + row shell as
-   .board-lp-results below, so the always-on rows table reads as part of the
-   same design language instead of a bare unstyled <table>. */
-.wl-rows{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card)}
-.wl-rows-hdr{display:grid;grid-template-columns:1fr 110px 130px;gap:12px;padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
-.wl-rows-hdr span:last-child{text-align:right}
-.wl-rows-hdr button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font:inherit;text-transform:inherit;letter-spacing:inherit;color:inherit}
-.wl-rows-hdr button:hover{color:var(--color-ink)}
-.wl-rows-hdr span:last-child button{flex-direction:row-reverse}
+/* THE MONTH WORKLIST (rebuilt 2026-09-07, design approved by Noa).
+   Replaces the Transfer Form's row peek + awaiting-money table. What the old
+   shape got wrong, measured on the file this replaced, so nobody restores it:
+   .wl-await-row was a five-column grid needing 686px minimum with NO media
+   query, and .side above clips horizontal overflow, so at 375px the amount and
+   all three action buttons sat past the right edge with nothing able to scroll
+   them into view. The operator could not work a money row on a phone at all.
+   ONE COLUMN is therefore the BASE layout here, not a fallback. The columns are
+   the enhancement a wide screen earns, expressed in a min-width query, and the
+   base rule below must never grow a multi-column grid-template-columns. */
+.wl-group{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-bottom:var(--space-3)}
+.wl-group-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:10px 14px;border-bottom:1px solid var(--color-border-subtle)}
+/* The header names the JOB, not the database token. "Needs you" tells an
+   operator whether to act; "Pending" first requires knowing what the tracker
+   means by it, which is knowledge the screen should be supplying, not asking for. */
+.wl-group-ttl{font-size:14px;font-weight:800;color:var(--color-ink);letter-spacing:.01em}
+.wl-group-job{font-size:12px;color:var(--color-ink-sub)}
+.wl-group-empty{padding:14px;font-size:13px;line-height:1.55;color:var(--color-ink-muted)}
+.wl-group-empty strong{color:var(--color-ink);font-weight:700}
+.wl-card{display:block;padding:12px 14px;border-bottom:1px solid var(--color-border-subtle)}
+.wl-card:last-child{border-bottom:none}
+/* Focused by the blocker links above the list, so it needs a ring of its own:
+   a programmatic focus() with no visible mark moves the screen and tells the
+   operator nothing about which row she was sent to. */
+.wl-card:focus{outline:3px solid var(--color-border-focus);outline-offset:-3px}
+.wl-card-id{min-width:0}
+.wl-card-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--color-ink-sub)}
+.wl-card-amt{margin-top:8px}
+.wl-card-note{margin-top:8px;font-size:12px;line-height:1.55;color:var(--color-ink-sub)}
+.wl-card-note strong{color:var(--color-ink);font-weight:700}
+.wl-card-acts{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+/* 44px and full width. The old row carried THREE 24px chips 6px apart, two of
+   which asserted opposite things about money (Mark received / Not this month),
+   which is half a thumb target for the most consequential click on the page. */
+.wl-primary,.wl-more{min-height:44px;width:100%;box-sizing:border-box;padding:10px 14px;font:inherit;font-size:14px;font-weight:700;border-radius:var(--radius-sm);cursor:pointer;text-align:center;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
+.wl-primary{border:1px solid var(--color-green);background:var(--color-green);color:var(--color-ink-inverse)}
+.wl-primary:hover:not(:disabled){filter:brightness(1.06)}
+.wl-primary:disabled,.wl-more:disabled{opacity:.55;cursor:default}
+.wl-primary.wl-primary-done{cursor:default}
+.wl-more{border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-ink);font-weight:600}
+.wl-more:hover:not(:disabled){background:var(--color-bg-hover)}
+.wl-primary:focus-visible,.wl-more:focus-visible,.wl-menu button:focus-visible,.wl-blockers button:focus-visible,.wl-month-nav button:focus-visible,.wl-group-hd button:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:2px}
+.wl-menu{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:8px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-sm);background:var(--color-bg-hover)}
+/* Every item is a full sentence naming the outcome AND its target. "Not this
+   month" named only the negative: it never said where the row went, and it sat
+   6px from a button meaning the money DID arrive. */
+.wl-menu button{min-height:44px;width:100%;box-sizing:border-box;display:block;text-align:left;padding:9px 12px;font:inherit;font-size:13px;line-height:1.4;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer;transition:background 180ms ease}
+.wl-menu button:hover:not(:disabled){background:var(--color-bg-hover)}
+.wl-menu button:disabled{opacity:.55;cursor:default}
+.wl-menu-what{display:block;font-weight:700}
+.wl-menu-why{display:block;font-weight:400;font-size:12px;color:var(--color-ink-sub);margin-top:2px}
+/* A fact about WHERE the row lives or WHEN it is dated, never hidden: both are
+   reasons a row the operator is looking at will not behave the way this month's
+   list implies. */
+.wl-flag{display:inline-block;padding:3px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;background:var(--color-bg-hover);color:var(--color-ink-sub)}
+.wl-flag-bad{background:var(--color-danger-bg);color:var(--color-danger)}
+.wl-flag-off{background:var(--color-amber-tint);color:var(--color-amber)}
+/* The month is the screen's CONTEXT: a heading with prev/next, not one select
+   sitting between Struck NAV and Currency as though the three were peers. The
+   select survives as a labelled jump-to, because prev/next alone makes reaching
+   a month eleven clicks away worse, not better. */
+.wl-month{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 var(--space-3)}
+.wl-month-ttl{font-size:20px;font-weight:800;color:var(--color-ink);margin:0;line-height:1.2}
+.wl-month-nav{display:flex;gap:6px}
+.wl-month-nav button{min-height:44px;min-width:44px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);font:inherit;font-size:16px;cursor:pointer;transition:background 180ms ease}
+.wl-month-nav button:hover:not(:disabled){background:var(--color-bg-hover)}
+.wl-month-nav button:disabled{opacity:.45;cursor:default}
+.wl-jump{display:flex;align-items:center;gap:8px;font-size:var(--text-xs);color:var(--color-ink-muted)}
+.wl-jump select{min-height:44px;padding:8px 10px;font:inherit;font-size:13px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink)}
+.wl-jump select:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:1px}
+/* The blocker summary sits ABOVE the list, and each item carries a control that
+   focuses the row causing it. A blocker the operator has to go and find is a
+   blocker she works around. */
+.wl-blockers{margin:0 0 var(--space-3);padding:12px 14px;border-radius:var(--radius-md);background:var(--color-danger-bg);border:1px solid var(--color-danger)}
+.wl-blockers h4{margin:0 0 6px;font-size:13px;font-weight:800;color:var(--color-danger)}
+.wl-blockers ul{margin:0;padding-left:18px;list-style:disc}
+.wl-blockers li{margin:6px 0;font-size:13px;line-height:1.55;color:var(--color-ink)}
+.wl-blockers button{min-height:44px;padding:10px 0;margin-left:2px;background:none;border:none;font:inherit;font-size:13px;color:var(--color-danger);text-decoration:underline;cursor:pointer}
+/* The artifact, stated before it is made: rows, sum, currency, month, AND what
+   is being left off with the reason. The operator used to learn the second half
+   only by comparing the finished letter against the tracker. */
+.wl-artifact{margin-top:var(--space-4);padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg-strip);font-size:13px;line-height:1.6;color:var(--color-ink)}
+.wl-artifact-hd{font-weight:700}
+.wl-artifact-off{margin:6px 0 0;padding-left:18px;color:var(--color-ink-sub)}
+.wl-artifact-off li{margin:2px 0}
+.wl-settings{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-3)}
+.wl-fld label{display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px}
+.wl-fld input,.wl-fld select{min-height:44px;box-sizing:border-box;padding:10px 12px;font:inherit;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink)}
+.wl-fld input:focus-visible,.wl-fld select:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:1px}
+/* Visible, not screen-reader-only. What a row action actually did is worth
+   saying to everyone: the old surface changed one button's own label and told
+   a screen reader nothing at all. It is NEVER `hidden` - a live region that
+   comes and goes out of the accessibility tree is one some screen readers stop
+   watching - so `:empty` hides the chrome instead and a quiet screen still
+   carries no empty box. */
+.wl-announce{margin:0 0 var(--space-3);padding:10px 12px;border-radius:var(--radius-md);background:var(--color-info-bg);border:1px solid var(--color-info);font-size:13px;line-height:1.5;color:var(--color-ink)}
+.wl-announce:empty{display:none}
+.wl-done-line{font-size:13px;line-height:1.55;color:var(--color-ink)}
+.wl-done-detail{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--color-ink-sub)}
 .wl-sort-arrow{font-size:9px;opacity:0.5}
 .wl-sort-arrow.active{opacity:1;color:var(--color-atrium)}
-.wl-row{display:grid;grid-template-columns:1fr 110px 130px;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
-.wl-row:last-child{border-bottom:none}
-.wl-row-nm{min-width:0;text-align:left}
-.wl-row-nm-he{font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.wl-row-nm-en{font-weight:400;color:var(--color-ink-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;direction:ltr;text-align:left}
+/* The sort controls are 44px like everything else here; they used to be bare
+   `all:unset` text in a 6px-tall header strip. */
+.wl-group-hd button[data-sort]{min-height:44px;padding:0 8px;background:none;border:none;font:inherit;font-size:12px;font-weight:700;color:var(--color-ink-sub);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.wl-group-hd button[data-sort]:hover{color:var(--color-ink)}
+.wl-row-nm-he{font-weight:700;font-size:15px;color:var(--color-ink);display:block;overflow-wrap:anywhere}
+.wl-row-nm-en{font-weight:400;color:var(--color-ink-sub);font-size:12px;display:block;direction:ltr;text-align:left;overflow-wrap:anywhere}
 .wl-type-badge{display:inline-block;padding:2px 8px;border-radius:var(--radius-pill);font-size:11px;font-weight:700}
 .wl-type-in{background:rgba(46,133,64,0.12);color:var(--color-green)}
 /* Twin of .flowchip.f-out on the board, changed with it: an outgoing
@@ -3152,49 +3243,41 @@ body.side-coll .ss-lbl { display: none; }
    the word (2026-08-26 review, item 4). */
 .wl-type-out{background:var(--color-bg-hover);color:var(--color-ink);border:1px solid var(--color-border)}
 /* Matching TRANSPARENT border so an outgoing badge and an incoming one occupy
-   the same box. .wl-row has no fixed height, so the border alone made a
+   the same box. The card has no fixed height, so the border alone made a
    Redemption row 1.5px taller than a Join row. */
 .wl-type-in{border:1px solid transparent}
-.wl-row-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--color-ink);white-space:nowrap}
-.wl-row-ccy{color:var(--color-ink-muted);font-size:11px;margin-left:3px}
-.wl-row-empty{padding:12px;font-size:13px;color:var(--color-ink-muted)}
-/* Awaiting-money list (2026-08-03/04, Noa: "can i edit it in console? itll
-   be easier" - after a direct sheet edit didn't persist and once wrote the
-   wrong value). Every signed real-amount row not yet at a terminal exec
-   status, with a one-click "Mark received" that calls the same
-   ?api=opMarkMoneyReceived route the Board drawer already uses (idempotent,
-   forward-only, Tier-1 auth) - no cell editing needed. */
-.wl-await{border:var(--bw) solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-card);margin-bottom:12px}
-.wl-await-acts{display:flex;gap:6px;align-items:center;justify-content:flex-end}
-.wl-await-btn--quiet{background:transparent;border:1px solid var(--color-border);color:var(--color-ink-muted);font-weight:600}
-.wl-await-btn--quiet:hover:not(:disabled){color:var(--color-ink);border-color:var(--color-ink-muted)}
+.wl-row-amt{font-variant-numeric:tabular-nums;color:var(--color-ink);font-size:16px;font-weight:700;white-space:nowrap}
+.wl-row-ccy{color:var(--color-ink-sub);font-size:12px;font-weight:400;margin-left:4px}
 .wl-openmonth-host{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
-.wl-openmonth{border:1px solid var(--color-accent,#1F5DB0);background:var(--color-accent,#1F5DB0);color:#fff;border-radius:var(--radius-sm,4px);cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;letter-spacing:.02em}
+.wl-openmonth{min-height:44px;border:1px solid var(--color-atrium);background:var(--color-atrium);color:var(--color-ink-inverse);border-radius:var(--radius-sm);cursor:pointer;font:inherit;font-size:13px;font-weight:700;padding:8px 14px;letter-spacing:.02em}
 .wl-openmonth:hover:not(:disabled){filter:brightness(1.08)}
 .wl-openmonth:disabled{opacity:.55;cursor:default}
-.wl-openmonth-why{font-size:11px;color:var(--color-ink-muted)}
-.wl-await-hdr{padding:6px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
-.wl-await-cols{display:grid;grid-template-columns:minmax(140px,1fr) 90px 130px 150px 120px;gap:14px;padding:6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-ink-muted);border-bottom:1px solid var(--color-border-subtle)}
-.wl-await-cols span:nth-child(3){text-align:right}
-.wl-await-row{display:grid;grid-template-columns:minmax(140px,1fr) 90px 130px 150px 120px;align-items:center;gap:14px;padding:9px 14px;border-bottom:1px solid var(--color-border-subtle);font-size:13px}
-.wl-await-row:last-child{border-bottom:none}
-/* Material chip, not text color (Ive E1) - this column is the whole reason
-   the list exists, so it earns the same fill treatment the Type badge gets,
-   not a weaker one. */
-.wl-await-exec{display:inline-block;padding:3px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;background:var(--color-bg-hover);color:var(--color-ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.wl-await-exec.wl-await-invalid{background:rgba(216,94,76,0.14);color:var(--color-coral)}
-.wl-await-btn{padding:5px 10px;font-size:12px;font-weight:700;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
-.wl-await-btn:hover{background:var(--color-bg-hover)}
-.wl-await-acts{display:flex;gap:6px;align-items:center}
-.wl-await-btn.wl-await-park{font-weight:600;color:var(--color-ink-muted)}
-/* Parked is quieter than the awaiting list on purpose: present and reversible,
+.wl-openmonth:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:2px}
+.wl-openmonth-why{font-size:12px;color:var(--color-ink-sub)}
+/* Parked is quieter than the needs-you list on purpose: present and reversible,
    never a call to action. Expressed with the muted INK token and a tinted
    surface rather than opacity (2026-08-31 review) - dimming the whole block
-   also dims the already-muted column headers and the small print, which drops
-   them below AA contrast. Colour choices stay explicit and legible. */
-.wl-parked{background:var(--color-bg-subtle,var(--color-bg-hover))}
-.wl-parked .wl-await-hdr{font-weight:700;color:var(--color-ink-muted)}
-.wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-muted)}
+   also dims the already-muted headers and the small print, which drops them
+   below AA contrast. Colour choices stay explicit and legible. */
+.wl-parked{background:var(--color-bg-hover)}
+.wl-parked .wl-group-ttl{color:var(--color-ink-sub)}
+.wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-sub)}
+/* WIDE SCREENS EARN THE COLUMNS. `order` puts the note and the menu on their own
+   full-width rows below the identity/amount/actions row without named areas,
+   which would reserve empty rows (and their gaps) on the many cards that carry
+   neither. */
+@media (min-width:760px){
+  .wl-card{display:grid;grid-template-columns:minmax(0,1.5fr) 120px minmax(110px,0.8fr) minmax(190px,1fr);align-items:start;column-gap:14px;row-gap:8px}
+  .wl-card-meta,.wl-card-amt,.wl-card-acts{margin-top:0}
+  .wl-card-amt{text-align:right}
+  .wl-card-acts{order:4}
+  .wl-card-note{order:5;grid-column:1/-1;margin-top:0}
+  .wl-menu{order:6;grid-column:1/-1;margin-top:0}
+  .wl-primary,.wl-more{width:100%}
+}
+@media (prefers-reduced-motion: reduce){
+  .wl-primary,.wl-more,.wl-menu button,.wl-month-nav button,.wl-park-in,.wl-park-go{transition:none}
+}
 /* Paused reminders. Quiet, never alarming: an LP who asked for time is a
    normal state of affairs, not a fault, so no red and no warning tint. */
 .cs-remind{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -3209,16 +3292,17 @@ body.side-coll .ss-lbl { display: none; }
 .rp-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
 .rp-acts{display:flex;gap:6px;margin-top:8px}
 .rp-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted)}
-.wl-await-note{font-size:11px;color:var(--color-ink-muted);font-style:italic;white-space:nowrap}
-.wl-park-form{padding:10px 14px 12px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-hover)}
-.wl-park-lbl{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-ink-muted);margin-bottom:5px}
-.wl-park-in{width:100%;max-width:520px;padding:6px 9px;font:inherit;font-size:13px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
-.wl-park-in:focus{outline:2px solid var(--color-ink);outline-offset:1px}
-.wl-park-acts{display:flex;gap:6px;margin-top:8px}
+.wl-park-form{margin-top:8px;padding:10px 12px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-sm);background:var(--color-bg-hover)}
+.wl-park-lbl{display:block;font-size:12px;font-weight:700;color:var(--color-ink);margin-bottom:6px;line-height:1.45}
+.wl-park-in{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;font:inherit;font-size:14px;color:var(--color-ink);background:var(--color-bg-card);border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm)}
+.wl-park-in:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:1px}
+.wl-park-acts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.wl-park-acts button{min-height:44px;width:100%;box-sizing:border-box;padding:10px 14px;font:inherit;font-size:14px;font-weight:700;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink);cursor:pointer}
+.wl-park-acts button:hover:not([disabled]){background:var(--color-bg-hover)}
+.wl-park-acts button:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:2px}
 .wl-park-acts button[disabled]{opacity:0.5;cursor:not-allowed}
-.wl-park-hint{margin:8px 0 0;font-size:11px;line-height:1.45;color:var(--color-ink-muted);max-width:520px}
-.wl-await-btn:disabled{opacity:0.55;cursor:default}
-.wl-await-btn.wl-await-done{border-color:var(--color-green);background:var(--color-green);color:#fff;cursor:default}
+.wl-park-hint{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--color-ink-sub)}
+@media (min-width:760px){.wl-park-acts{flex-direction:row}.wl-park-acts button{width:auto;min-width:140px}}
 /* Manual-row form (2026-08-04 redesign): grouped sections instead of one
    flat grid, so Name/Type/Currency (required) read as a different KIND of
    information than Amount/Bank details/Notes (optional, transaction-level).
@@ -3484,6 +3568,12 @@ body[data-lane="cayman"] .top h1::after{content:'Cayman'}
 .btn.btn-quiet:hover{background:var(--color-bg-hover);color:var(--color-ink);transform:none;box-shadow:none}
 .btn:disabled,.btn[disabled]{background:var(--color-neutral-bg);color:var(--color-ink-muted);border-color:var(--color-border);box-shadow:none;cursor:not-allowed;transform:none}
 .btn:disabled:hover,.btn[disabled]:hover{background:var(--color-neutral-bg);color:var(--color-ink-muted);transform:none;box-shadow:none}
+/* A gate that is CLOSED but still clickable. Generate is never `disabled`: a
+   disabled button answers a click with nothing, so a shut gate and a broken
+   button looked identical. It reads as unavailable and still answers, saying
+   what is missing and moving focus to the first blocker. */
+.btn[aria-disabled="true"]{background:var(--color-neutral-bg);color:var(--color-ink-muted);border-color:var(--color-border);box-shadow:none;transform:none}
+.btn[aria-disabled="true"]:hover{background:var(--color-neutral-bg);color:var(--color-ink-muted);transform:none;box-shadow:none}
 
 /* ---- inputs ---- */
 input,textarea,select{border-radius:var(--radius-md)!important}
@@ -3686,7 +3776,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       <button class="nav on" data-view="board" aria-current="page" title="Board"><i class="ti ti-layout-board nav-ic" aria-hidden="true"></i><span class="nav-lbl">Board</span><span class="badge" id="nav-board-badge" hidden></span></button>
       <button class="nav" data-view="messages" title="Messages"><i class="ti ti-mail nav-ic" aria-hidden="true"></i><span class="nav-lbl">Messages</span></button>
       <button class="nav" data-view="w8" title="W-8"><i class="ti ti-clock nav-ic" aria-hidden="true"></i><span class="nav-lbl">W-8</span><span class="badge" id="nav-w8-badge" hidden></span></button>
-      <button class="nav" data-view="wireletter" title="Transfer Form"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Transfer Form</span></button>
+      <button class="nav" data-view="wireletter" title="The Month Worklist"><i class="ti ti-file-invoice nav-ic" aria-hidden="true"></i><span class="nav-lbl">Month Worklist</span></button>
     </nav>
     <!-- Quick stats (2026-07-15, Noa: sidebar "isn't baked" / "not showing lots
          of data we need to see"). Filled from the SAME allRows the board already
@@ -3784,46 +3874,72 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
     </div>
     <div class="view" id="v-wireletter" hidden>
-      <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form, generated from Ju's own tracker rows. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
+      <div class="top"><div><h1>The Month Worklist</h1><div class="sub">Every money row this month owes you something, grouped by the job it needs. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
       <div class="content">
         <div class="set-card tf-card" style="max-width:900px">
-          <h3 class="set-h">Generate</h3>
-          
-          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
-            <div id="wlNavLine" style="font-size:var(--text-sm);color:var(--color-ink-muted);margin:0 0 12px;min-width:180px;flex:1 1 auto"></div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Month</label>
-              <select id="wlMonth" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
-                <option value="">Loading...</option>
-              </select>
-              <div id="wlOpenMonth" class="wl-openmonth-host"></div>
+          <!-- The month is the screen's CONTEXT, so it is a heading with
+               prev/next, not the first of three peer selects. The <select>
+               survives as a labelled jump-to: prev/next alone would make a
+               month eleven steps back eleven clicks away. -->
+          <div class="wl-month">
+            <div class="wl-month-nav">
+              <button type="button" id="wlPrevMonth" aria-label="Go to the previous month" title="Previous month">&#8592;</button>
+              <button type="button" id="wlNextMonth" aria-label="Go to the next month" title="Next month">&#8594;</button>
             </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Struck NAV <span style="opacity:.7">(override)</span></label>
-              <input id="wlNavMonth" type="text" placeholder="YYYY-MM" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none;width:120px">
+            <h2 class="wl-month-ttl" id="wlMonthTtl">Loading months&#8230;</h2>
+            <div class="wl-jump">
+              <label for="wlMonth">Jump to</label>
+              <select id="wlMonth"><option value="">Loading&#8230;</option></select>
             </div>
-            <div>
-              <label style="display:block;font-size:var(--text-xs);color:var(--color-ink-muted);margin-bottom:4px">Currency</label>
-              <select id="wlCurrency" style="padding:10px 12px;font-size:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-input);color:var(--color-ink);outline:none">
+          </div>
+          <div id="wlOpenMonth" class="wl-openmonth-host"></div>
+          <!-- Every row action reports into here. Before this, "Mark received"
+               changed one button's own label and told a screen reader nothing. -->
+          <div id="wlAnnounce" role="status" aria-live="polite" class="wl-announce"></div>
+          <div id="wlBlockers"></div>
+          <div id="wlGroups">
+            <div id="wlBlocked"></div>
+            <div id="wlAwaiting"></div>
+            <div id="wlRows"></div>
+            <div id="wlDone"></div>
+          </div>
+          <div id="wlParked"></div>
+          <!-- Findings sit ABOVE the buttons on purpose. They used to render
+               below, so Review armed Generate and the operator's pointer was
+               already past the warnings she had been told to read before
+               signing (2026-08-26 review, finding 7). -->
+          <div id="wlFindings" role="status" aria-live="polite" aria-label="Review findings" style="margin-top:12px"></div>
+          <!-- Says what the letter WILL be before it exists: rows, sum,
+               currency, month, and what is left off with the reason. -->
+          <div id="wlArtifact" class="wl-artifact"></div>
+          <div class="wl-settings">
+            <div class="wl-fld">
+              <label for="wlNavMonth">Struck NAV month (override)</label>
+              <!-- inputmode="numeric": the value is YYYY-MM and type="text"
+                   with no inputmode hands a phone a letter keyboard for a
+                   field that is digits and one dash. -->
+              <input id="wlNavMonth" type="text" inputmode="numeric" autocomplete="off" placeholder="YYYY-MM" style="width:150px">
+              <div id="wlNavLine" style="font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;max-width:280px"></div>
+            </div>
+            <div class="wl-fld">
+              <label for="wlCurrency">Currency</label>
+              <select id="wlCurrency">
                 <option value="NIS">NIS</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
             </div>
           </div>
-          <div id="wlAwaiting" style="margin-top:16px"></div>
-          <div id="wlParked" style="margin-top:12px"></div>
-          <div id="wlRows" style="margin-top:16px"></div>
-          <!-- Findings sit ABOVE the buttons on purpose. They used to render
-               below, so Review armed Generate and the operator's pointer was
-               already past the warnings she had been told to read before
-               signing (2026-08-26 review, finding 7). -->
-          <div id="wlFindings" role="status" aria-live="polite" aria-label="Review findings" style="margin-top:12px"></div>
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button id="wlReviewBtn" class="btn">Review</button>
-            <button id="wlGenerateBtn" class="btn" disabled>Generate + settle</button>
+            <!-- NOT `disabled`. A greyed Generate answered a click with
+                 nothing at all, so a closed gate and a broken button looked
+                 identical. It stays clickable and aria-disabled; a click while
+                 the gate is shut moves focus to the first blocker and says
+                 what is missing, in wlRefuseGenerate(). -->
+            <button id="wlGenerateBtn" class="btn" aria-disabled="true">Generate + settle</button>
             <button id="wlVerifyBtn" class="btn btn-quiet">Verification copy</button>
-            <label style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
+            <label for="wlCreateDraft" style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
           </div>
           <!-- Why the gate note exists: the disabled Generate button had no
                :disabled style and no adjacent copy, so a closed gate looked
@@ -3844,7 +3960,8 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
               <span style="color:var(--color-ink)">Letter template</span>
               &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
-              &nbsp;<input id="tplWidths" type="text" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
+              &nbsp;<label for="tplWidths" style="color:var(--color-ink-muted)">widths</label>
+              &nbsp;<input id="tplWidths" type="text" inputmode="numeric" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
               <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
           </div>
           <div id="wlResult" role="status" aria-live="polite" aria-label="Transfer form result" style="margin-top:12px"></div>
@@ -4248,7 +4365,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-07-cayman-money-lane';
+  window.__BUILD_TAG = 'console-2026-09-07-month-worklist';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -9346,17 +9463,67 @@ document.addEventListener('keydown',function(e){
     if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
     return h;
   }
+  // ---- THE MONTH WORKLIST render layer (rebuilt 2026-09-07, design approved
+  // by Noa) --------------------------------------------------------------
+  // Rows are grouped by the JOB they need, not by the tracker token they
+  // carry. The tokens are still the input; they are no longer the vocabulary
+  // the operator has to think in.
+  //
+  //   Blocked          the tracker cannot state this row's money status, so
+  //                    nothing this month can go on a letter until it is fixed.
+  //   Needs you        money not in yet. ONE primary action: "Money arrived".
+  //   Goes on a letter the rows this month's letter will actually carry.
+  //   Done             collapsed to one summary line.
+  //   Parked           unchanged in meaning, still its own list.
+  //
+  // Every field the awaiting feed grew on 2026-09-07 (sourceTab, recovered,
+  // datedFor) is read through wlStr/wlFlag rather than touched directly, so a
+  // console talking to an older deployed ju-service that omits them renders the
+  // row plainly instead of printing "undefined" or throwing on a missing value.
+  function wlStr(v){ return (v===undefined||v===null)?'':String(v); }
+  function wlFlag(v){ return v===true||v==='true'||v===1||v==='1'; }
   function wlAmountText(amount){
     var n=typeof amount==='number'?amount:parseFloat(amount);
-    return isFinite(n)?n.toLocaleString('en-US'):String(amount);
+    return isFinite(n)?n.toLocaleString('en-US'):wlStr(amount);
+  }
+  function wlAmountNum(amount){
+    var n=typeof amount==='number'?amount:parseFloat(amount);
+    return isFinite(n)?n:0;
+  }
+  var WL_MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // Month TABS are MM/YYYY. Feeding that shape to a YYYY-MM formatter silently
+  // returns the input unchanged, which is how "Open 09/2026" reached the screen
+  // where "Open September 2026" was meant. Converted explicitly, and the guard
+  // returns the input rather than throwing so an unknown shape still renders.
+  function wlTabMonthWords(mmYyyy){
+    var m=/^(\d{2})\/(\d{4})$/.exec(wlStr(mmYyyy));
+    if(!m)return wlStr(mmYyyy);
+    var name=WL_MONTH_NAMES_[parseInt(m[1],10)-1];
+    return name?(name+' '+m[2]):wlStr(mmYyyy);
+  }
+  // Next month relative to the tab being VIEWED, never to today: the operator
+  // is looking at August's list in September and saying "this one is September",
+  // and today's date is not what decides that.
+  function wlNextTabOf(mmYyyy){
+    var m=/^(\d{2})\/(\d{4})$/.exec(wlStr(mmYyyy));
+    if(!m)return '';
+    var mo=parseInt(m[1],10)+1,yr=parseInt(m[2],10);
+    if(mo>12){mo=1;yr+=1;}
+    return (mo<10?'0':'')+mo+'/'+yr;
   }
   // Redemption is the fund's own single outgoing type (see the "Add a manual
   // row" Type options); Join/Increase are the only incoming types. Material
   // (fill color), not a symbol, carries the meaning - ive-pass E1.
   function wlTypeBadge(type){
-    var out=/redemption/i.test(type||'');
-    return '<span class="wl-type-badge '+(out?'wl-type-out':'wl-type-in')+'">'+esc2(type)+'</span>';
+    var out=/redemption/i.test(wlStr(type));
+    return '<span class="wl-type-badge '+(out?'wl-type-out':'wl-type-in')+'">'+esc2(wlStr(type))+'</span>';
   }
+  function wlIsOutgoing(type){ return /redemption/i.test(wlStr(type)); }
+  // A DOM id per row so the blocker summary can move focus to the row that
+  // caused it. Master RIDs are opaque tracker strings, so anything outside
+  // [A-Za-z0-9_-] is folded rather than trusted inside a selector.
+  function wlSafeId(s){ return wlStr(s).replace(/[^A-Za-z0-9_-]/g,'_'); }
+  function wlRowDomId(rid){ return 'wl-row-'+wlSafeId(rid); }
   var wlSortState={key:'name',dir:1};
   function wlSortIcon(key){
     if(wlSortState.key!==key)return '<span class="wl-sort-arrow">↕</span>';
@@ -9365,99 +9532,335 @@ document.addEventListener('keydown',function(e){
   function wlSortRows(transfers){
     var key=wlSortState.key,dir=wlSortState.dir;
     return transfers.slice().sort(function(a,b){
-      var av=key==='amount'?(typeof a.amount==='number'?a.amount:parseFloat(a.amount)||0):String(a[key]||'').toLowerCase();
-      var bv=key==='amount'?(typeof b.amount==='number'?b.amount:parseFloat(b.amount)||0):String(b[key]||'').toLowerCase();
+      var av=key==='amount'?wlAmountNum(a.amount):wlStr(a[key]).toLowerCase();
+      var bv=key==='amount'?wlAmountNum(b.amount):wlStr(b[key]).toLowerCase();
       if(av<bv)return -1*dir;
       if(av>bv)return 1*dir;
       return 0;
     });
   }
-  // Awaiting-money list: rows signed + real-amount but not yet at a terminal
-  // exec status (Pending, OR an invalid/mistyped value like the STATUS word
-  // "Completed" landing here by mistake - flagged red so it reads as wrong,
-  // not just unfinished). "Mark received" reuses the exact route/action the
-  // Board drawer's own button calls, keyed on this row's masterRid - no
-  // dependency on the LP having a Ju processId/registry entry, so this also
-  // covers rows onboarded the old way (docs exchanged by email).
-  // Only Join/Increase rows ever reach this list now (Redemption is excluded
-  // server-side - "received in transit" is not a concept that applies to
-  // money going out), and the server only sends a row here when it is
-  // Pending or garbage - never a genuinely-progressed status, since
-  // caymanOpPeekAwaitingMoney_ excludes Received in transit. So "valid" here
-  // means exactly Pending; anything else is, by construction, wrong data.
-  function wlAwaitingHtml(rows){
-    if(!rows||!rows.length)return '';
-    var hdr='<div class="wl-await-cols"><span>Name</span><span>Type</span><span>Amount</span><span>Status</span><span></span></div>';
-    var body=rows.map(function(r){
-      // 'Parked' is a LEGITIMATE execution state (2026-08-31), not garbage.
-      // The server already excludes parked rows from this list, so one showing
-      // up here means the deployed GAS build predates the token - which is a
-      // reason to render it plainly and let the operator act, not to brand a
-      // deliberate decision red and " - invalid".
-      var validExec=/^(Pending|טרם הועבר|Parked)$/.test(r.execStatus||'');
-      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
-        +(r.nameEn?'<span class="wl-row-nm-en">'+esc2(r.nameEn)+'</span>':'');
-      return '<div class="wl-await-row">'
-        +'<div class="wl-row-nm">'+nmHtml+'</div>'
-        +'<div>'+wlTypeBadge(r.type)+'</div>'
-        +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
-        +'<div><span class="wl-await-exec'+(validExec?'':' wl-await-invalid')+'">'+esc2(r.execStatus)+(validExec?'':' - invalid')+'</span></div>'
-        +'<div class="wl-await-acts">'
-          +'<button type="button" class="wl-await-btn" data-act="markMoneyReceived" data-rid="'+esc2(r.masterRid)+'">Mark received</button>'
-          // "Not this month" (2026-09-01). An LP who signs at month end has
-          // their money land in the NEXT month, so their row is sitting in a
-          // month whose letter will never carry it. The tab is chosen at seal
-          // time and nobody knows then when the money will arrive, so this is
-          // the operator saying what only she knows. One button: it sets the
-          // row's date to the next month's 1st, which is the only date the
-          // fund ever prices on.
-          +'<button type="button" class="wl-await-btn wl-await-btn--quiet" data-act="rowNextMonth" data-rid="'+esc2(r.masterRid)+'" title="Their money lands next month, not this one">Not this month</button>'
-          +'<button type="button" class="wl-await-btn wl-await-park" data-act="parkRow" data-rid="'+esc2(r.masterRid)+'">Park</button>'
-        +'</div>'
-        +'</div>';
-    }).join('');
-    return '<div class="wl-await"><div class="wl-await-hdr">Awaiting money ('+rows.length+')</div>'+hdr+body+'</div>';
+  // ONE card shape for every group. `o` is a plain description, never a raw
+  // feed row, so four groups cannot drift into four layouts. o.note is already
+  // escaped HTML (its callers build it with esc2 around every value); every
+  // other field is escaped here.
+  function wlCardHtml(o){
+    var mid='wl-menu-'+wlSafeId(o.rid||o.id||'');
+    var h='<div class="wl-card"'+(o.id?(' id="'+esc2(o.id)+'" tabindex="-1"'):'')+'>'
+      +'<div class="wl-card-id">'
+        +'<span class="wl-row-nm-he" dir="auto">'+esc2(wlStr(o.name))+'</span>'
+        +(o.nameEn?'<span class="wl-row-nm-en" dir="ltr">'+esc2(wlStr(o.nameEn))+'</span>':'')
+      +'</div>'
+      +'<div class="wl-card-meta">'+wlTypeBadge(o.type)
+        +(o.age?'<span>'+esc2(o.age)+'</span>':'')
+        +(o.flags||[]).map(function(f){return '<span class="wl-flag'+(f.tone?' wl-flag-'+f.tone:'')+'">'+esc2(f.text)+'</span>';}).join('')
+      +'</div>'
+      +'<div class="wl-card-amt"><span class="wl-row-amt">'+wlAmountText(o.amount)+'<span class="wl-row-ccy">'+esc2(wlStr(o.currency))+'</span></span></div>';
+    var acts='';
+    if(o.primary){
+      acts+='<button type="button" class="wl-primary" data-act="'+esc2(o.primary.act)+'" data-rid="'+esc2(wlStr(o.rid))+'">'+esc2(o.primary.label)+'</button>';
+    }
+    if(o.menu&&o.menu.length){
+      acts+='<button type="button" class="wl-more" data-wl-more="'+esc2(mid)+'" aria-expanded="false" aria-controls="'+esc2(mid)+'">Other options</button>';
+    }
+    if(acts)h+='<div class="wl-card-acts">'+acts+'</div>';
+    if(o.note)h+='<div class="wl-card-note">'+o.note+'</div>';
+    if(o.menu&&o.menu.length){
+      h+='<div class="wl-menu" id="'+esc2(mid)+'" hidden>'
+        +o.menu.map(function(m){
+          return '<button type="button" data-act="'+esc2(m.act)+'" data-rid="'+esc2(wlStr(o.rid))+'">'
+            +'<span class="wl-menu-what">'+esc2(m.what)+'</span>'
+            +'<span class="wl-menu-why">'+esc2(m.why)+'</span>'
+            +'</button>';
+        }).join('')
+      +'</div>';
+    }
+    return h+'</div>';
   }
-  // The PARKED list (2026-08-31). Rows deliberately taken out of Awaiting
-  // money without being deleted, kept visible here so parking is not the same
-  // thing as disappearing: the only other route back would be hand-editing the
-  // tracker cell, which is exactly what the Mark-received button was built to
-  // stop. Renders nothing at all when there are no parked rows, so a normal
-  // month is not carrying a permanently empty box.
+  function wlGroupHtml(o){
+    return '<div class="wl-group'+(o.cls?' '+o.cls:'')+'">'
+      +'<div class="wl-group-hd"><span class="wl-group-ttl">'+esc2(o.title)+'</span>'
+      +'<span class="wl-group-job">'+esc2(o.job)+'</span>'
+      +(o.extra||'')
+      +'</div>'
+      +(o.body||('<div class="wl-group-empty">'+o.empty+'</div>'))
+      +'</div>';
+  }
+  // The server only ever sends Pending (or its Hebrew twin) here, plus Parked
+  // for a build that predates the token. Anything ELSE in that cell is, by
+  // construction, wrong data - the STATUS word "Completed" landing in the
+  // EXECUTION_STATUS column is the case that happened - and a row whose money
+  // state the tracker cannot state is a row no letter can be generated around.
+  function wlValidExecToken(exec){ return /^(Pending|טרם הועבר|Parked)$/.test(wlStr(exec)); }
+  function wlSplitAwaiting(rows){
+    var blocked=[],needs=[];
+    (rows||[]).forEach(function(r){ (wlValidExecToken(r.execStatus)?needs:blocked).push(r); });
+    return {blocked:blocked,needs:needs};
+  }
+  // sourceTab / recovered / datedFor, all added to the awaiting feed on
+  // 2026-09-07. `recovered` means the row PHYSICALLY lives on another tab and
+  // was recovered into this month's answer; `datedFor` means it sits on this
+  // tab but is dated for a different month, so this month's letter will not
+  // carry it. Neither is hidden: both change what the operator is looking at,
+  // and the second is a row silently missing from the letter she is about to
+  // sign. Both are read defensively - an older service omits them entirely.
+  function wlRowFlags(r,viewTab){
+    var flags=[],notes=[];
+    var src=wlStr(r.sourceTab),dated=wlStr(r.datedFor);
+    if(wlFlag(r.recovered)){
+      flags.push({text:src?('Lives on '+src):'Lives on another tab',tone:''});
+      notes.push('This row is not on the '+esc2(wlTabMonthWords(viewTab))+' tab. It lives on <strong>'
+        +esc2(src?wlTabMonthWords(src):'another tab')+'</strong>'
+        +' and is shown here because its money is still owed. Acting on it acts on that row wherever it lives.');
+    }else if(src&&viewTab&&src!==viewTab){
+      flags.push({text:'From '+src,tone:''});
+      notes.push('Carried in from <strong>'+esc2(wlTabMonthWords(src))+'</strong>.');
+    }
+    if(dated&&viewTab&&dated!==viewTab){
+      flags.push({text:'Dated for '+dated,tone:'off'});
+      notes.push('This row sits on the '+esc2(wlTabMonthWords(viewTab))+' tab but is dated for <strong>'
+        +esc2(wlTabMonthWords(dated))+'</strong>, so this month’s letter will not carry it.');
+    }
+    return {flags:flags,notes:notes};
+  }
+  function wlAgeText(r){
+    var d=r&&r.ageDays;
+    var n=(typeof d==='number')?d:parseFloat(d);
+    if(!isFinite(n)||n<0)return '';
+    return n===1?'waiting 1 day':('waiting '+Math.round(n)+' days');
+  }
+  // The two menu items, built once so Blocked and Needs-you cannot describe the
+  // same action in two different ways. Each names the OUTCOME and its TARGET in
+  // a full sentence: the button this replaced said only "Not this month", which
+  // named the negative, never where the row went, and sat six pixels from a
+  // button asserting the money HAD arrived.
+  function wlRowMenu(viewTab){
+    var nxt=wlNextTabOf(viewTab);
+    return [
+      {act:'rowNextMonth',what:'Move to '+(nxt?wlTabMonthWords(nxt):'the next month'),
+       why:'Their money lands next month. The row leaves this list.'},
+      {act:'parkRow',what:'Park this row',
+       why:'The money is not coming. Stays visible, off every letter.'}
+    ];
+  }
+  function wlBlockedHtml(rows,viewTab){
+    var body=(rows||[]).map(function(r){
+      var f=wlRowFlags(r,viewTab);
+      var notes=['The tracker holds <strong>'+esc2(wlStr(r.execStatus)||'(nothing)')
+        +'</strong> where this row’s money status should be. That is not a state the letter can be built around, so it stops the whole month. Fix the cell on the tracker sheet, or take the row off this month with the options below.'].concat(f.notes);
+      return wlCardHtml({
+        id:wlRowDomId(r.masterRid),rid:wlStr(r.masterRid),
+        name:r.name,nameEn:r.nameEn,type:r.type,amount:r.amount,currency:r.currency,
+        age:wlAgeText(r),
+        flags:[{text:wlStr(r.execStatus)||'no status',tone:'bad'}].concat(f.flags),
+        note:notes.join('<br>'),
+        // No primary. There is no one-click fix for a cell this console cannot
+        // interpret, and offering "Money arrived" here would ask the operator
+        // to assert funds landed on a row whose state nothing can read.
+        menu:wlRowMenu(viewTab)
+      });
+    }).join('');
+    return wlGroupHtml({
+      title:'Blocked'+(rows&&rows.length?(' · '+rows.length):''),
+      job:'stops every letter this month',
+      body:body,
+      empty:'<strong>Nothing is blocking the letter.</strong> Every row on this tab carries a money status the letter can be built around.'
+    });
+  }
+  function wlNeedsHtml(rows,viewTab){
+    var body=(rows||[]).map(function(r){
+      var f=wlRowFlags(r,viewTab);
+      return wlCardHtml({
+        id:wlRowDomId(r.masterRid),rid:wlStr(r.masterRid),
+        name:r.name,nameEn:r.nameEn,type:r.type,amount:r.amount,currency:r.currency,
+        age:wlAgeText(r),flags:f.flags,
+        note:f.notes.join('<br>'),
+        primary:{act:'markMoneyReceived',label:'Money arrived'},
+        menu:wlRowMenu(viewTab)
+      });
+    }).join('');
+    return wlGroupHtml({
+      title:'Needs you'+(rows&&rows.length?(' · '+rows.length):''),
+      job:'money not in yet',
+      body:body,
+      empty:'<strong>Nothing is waiting on money.</strong> No signed row on this tab is still owed funds.'
+    });
+  }
+  // THE HEDGE (closed 2026-09-07). This group's empty copy used to read "Either
+  // the money is not in yet, or every row has already been paid or moved to
+  // trading." The screen does not need to guess between those two: it is holding
+  // the Needs-you rows, the excluded-by-currency tally and the blocked list, so
+  // it KNOWS which it is. An "either/or" is the polite descendant of the sentence
+  // Noa hit on 2026-09-07, which asserted the tab was settled while two Pending
+  // rows worth 380,000 sat above it. Where there is no evidence for a reason, no
+  // reason is given, and the settled claim is made only when it is true.
+  function wlLetterEmptyHtml_(ctx){
+    ctx = ctx || {};
+    var ccy = esc2(ctx.currency || 'NIS');
+    var out = [];
+    var needs = ctx.needs || [];
+    if (needs.length) {
+      var by = {};
+      needs.forEach(function(r){ var c=String(r.currency||'').trim()||'?'; by[c]=(by[c]||0)+(Number(r.amount)||0); });
+      var parts = Object.keys(by).map(function(c){ return wlAmountText(by[c])+' '+esc2(c); });
+      // Oxford-free list: "a and b", "a, b and c". `parts.join(' and ')` gave
+      // "a and b and c" on a three-currency month, which reads as a typo on a
+      // money screen.
+      var worth = parts.length>1 ? (parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1]) : parts[0];
+      out.push('<strong>'+needs.length+' '+(needs.length===1?'row is':'rows are')+' still awaiting money</strong>, worth '
+        +worth+'. Mark a row arrived once the credit lands and it moves here.');
+    }
+    var ex = ctx.excluded;
+    if (ex && ex.total) {
+      var toks = Object.keys(ex.byCurrency||{}).map(function(t){
+        var n = ex.byCurrency[t];
+        return n+' '+(n===1?'row':'rows')+' in '+esc2(t);
+      });
+      out.push('<strong>'+ex.total+' '+(ex.total===1?'row is':'rows are')+' ready to wire in another currency</strong> ('
+        +toks.join(', ')+'). A letter carries one currency, so switch the selector to put '
+        +(ex.total===1?'it':'them')+' on one.');
+    }
+    var un = ctx.unresolved || [];
+    if (un.length) {
+      out.push('<strong class="t-danger">'+un.length+' '+(un.length===1?'row has':'rows have')
+        +' a currency cell nobody can read</strong>, which blocks generation for the whole month: '
+        +esc2(un.join('; '))+'. Fix the CURRENCY cell to NIS, USD or EUR.');
+    }
+    if (!out.length) {
+      out.push('<strong>Every row on this tab has already been paid or moved to trading.</strong>');
+    }
+    return '<strong>No '+ccy+' row is ready to wire.</strong><br>'+out.join('<br>');
+  }
+  function wlLetterHtml(transfers, ctx){
+    var sortHd='<button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button>'
+      +'<button type="button" data-sort="type">Type '+wlSortIcon('type')+'</button>'
+      +'<button type="button" data-sort="amount">Amount '+wlSortIcon('amount')+'</button>';
+    var rows=(transfers||[]);
+    var body=rows.length?wlSortRows(rows).map(function(t,i){
+      return wlCardHtml({
+        id:'wl-let-'+i,name:t.name,nameEn:t.nameEn,type:t.type,amount:t.amount,currency:t.currency
+      });
+    }).join(''):'';
+    return wlGroupHtml({
+      title:'Goes on a letter'+(rows.length?(' · '+rows.length):''),
+      job:'these rows, in this currency, on this month’s letter',
+      extra:rows.length?('<span style="margin-left:auto">'+sortHd+'</span>'):'',
+      body:body,
+      empty:wlLetterEmptyHtml_(ctx)
+    });
+  }
+  // DONE, collapsed to one summary line. There is no endpoint that reports the
+  // rows a PREVIOUS run settled - opPeekMonthTransfers answers what is still
+  // eligible, opPeekAwaitingMoney what is still owed - so this counts exactly
+  // what this session finished on this screen and says so in the line itself.
+  // Claiming more than that would be the false all-clear this console has
+  // already been bitten by twice.
+  function wlDoneHtml(done){
+    var n=(done&&done.length)||0;
+    if(!n){
+      return '<div class="wl-group"><div class="wl-group-hd"><span class="wl-group-ttl">Done</span>'
+        +'<span class="wl-group-job">finished on this screen</span></div>'
+        +'<div class="wl-group-empty">Nothing finished here yet this session.</div></div>';
+    }
+    // The caret is drawn explicitly, the way #tfCorrections already does it:
+    // a <summary> with display:flex loses its native marker in Chrome, so a
+    // collapsed group would carry no sign that it opens.
+    return '<div class="wl-group"><details><summary class="wl-group-hd" style="cursor:pointer;list-style:none">'
+      +'<span aria-hidden="true" style="display:inline-block;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px"></span>'
+      +'<span class="wl-group-ttl">Done · '+n+'</span>'
+      +'<span class="wl-group-job">finished on this screen this session</span>'
+      +'</summary><div class="wl-group-empty"><ul class="wl-done-detail" style="padding-left:18px">'
+      +done.map(function(d){return '<li>'+esc2(d)+'</li>';}).join('')
+      +'</ul><p class="wl-done-detail">Rows settled on an earlier run are not listed: no endpoint reports them to this screen.</p></div></details></div>';
+  }
+  // The PARKED list (2026-08-31). Rows deliberately taken out of the needs-you
+  // list without being deleted, kept visible so parking is not the same thing as
+  // disappearing: the only other route back would be hand-editing the tracker
+  // cell, which is exactly what the money buttons were built to stop. Renders
+  // nothing at all when there are none, so a normal month is not carrying a
+  // permanently empty box. It is an archive, not a job, which is why it is the
+  // one list here that does not state its own empty case.
   function wlParkedHtml(rows){
     if(!rows||!rows.length)return '';
-    var hdr='<div class="wl-await-cols"><span>Name</span><span>Type</span><span>Amount</span><span>Reason</span><span></span></div>';
     var body=rows.map(function(r){
-      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(r.name)+'</span>'
-        +(r.nameEn?'<span class="wl-row-nm-en">'+esc2(r.nameEn)+'</span>':'');
-      return '<div class="wl-await-row">'
-        +'<div class="wl-row-nm">'+nmHtml+'</div>'
-        +'<div>'+wlTypeBadge(r.type)+'</div>'
-        +'<div class="wl-row-amt">'+wlAmountText(r.amount)+'<span class="wl-row-ccy">'+esc2(r.currency)+'</span></div>'
-        +'<div><span class="wl-await-exec" title="'+esc2(r.reason||'')+'">'+esc2(r.reason||'parked')+'</span></div>'
-        +'<div class="wl-await-acts">'
-          +(r.canUnpark===false
-            ? '<span class="wl-await-note" title="Un-park is keyed on Master RID, and this row has none. Fix it on the sheet.">no Master RID</span>'
-            : '<button type="button" class="wl-await-btn" data-act="unparkRow" data-rid="'+esc2(r.masterRid)+'">Un-park</button>')
-        +'</div>'
-        +'</div>';
+      var canUnpark=r.canUnpark!==false;
+      return wlCardHtml({
+        id:wlRowDomId(r.masterRid),rid:wlStr(r.masterRid),
+        name:r.name,nameEn:r.nameEn,type:r.type,amount:r.amount,currency:r.currency,
+        flags:[{text:wlStr(r.reason)||'parked',tone:''}],
+        note:canUnpark
+          ? 'Parked: '+esc2(wlStr(r.reason)||'no reason recorded')+'. Un-park returns it to the needs-you list; it does not assert the money arrived.'
+          : 'Un-park is keyed on Master RID and this row has none, so it cannot be returned from here. Fix it on the tracker sheet.',
+        primary:canUnpark?{act:'unparkRow',label:'Un-park this row'}:null
+      });
     }).join('');
-    return '<div class="wl-await wl-parked"><div class="wl-await-hdr">Parked ('+rows.length+') &middot; not awaiting money, not deleted</div>'+hdr+body+'</div>';
+    return wlGroupHtml({
+      cls:'wl-parked',
+      title:'Parked · '+rows.length,
+      job:'not awaiting money, not deleted',
+      body:body
+    });
   }
-  function wlTransfersHtml(transfers){
-    var hdr='<div class="wl-rows-hdr">'
-      +'<span><button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button></span>'
-      +'<span><button type="button" data-sort="type">Type '+wlSortIcon('type')+'</button></span>'
-      +'<span><button type="button" data-sort="amount">Amount '+wlSortIcon('amount')+'</button></span>'
-      +'</div>';
-    if(!transfers||!transfers.length)return '<div class="wl-rows">'+hdr+'<div class="wl-row-empty">No transfers on this tab.</div></div>';
-    var rows=wlSortRows(transfers).map(function(t){
-      var nmHtml='<span class="wl-row-nm-he" dir="auto">'+esc2(t.name)+'</span>'
-        +(t.nameEn?'<span class="wl-row-nm-en">'+esc2(t.nameEn)+'</span>':'');
-      return '<div class="wl-row"><div class="wl-row-nm">'+nmHtml+'</div><div class="wl-row-type">'+wlTypeBadge(t.type)+'</div>'
-        +'<div class="wl-row-amt">'+wlAmountText(t.amount)+'<span class="wl-row-ccy">'+esc2(t.currency)+'</span></div></div>';
-    }).join('');
-    return '<div class="wl-rows">'+hdr+rows+'</div>';
+  // THE BLOCKER SUMMARY. Every item names what is wrong and carries a control
+  // that focuses the row causing it: a blocker the operator has to go and find
+  // is a blocker she works around. Server findings that name a row are linked
+  // the same way; ones that do not still get listed rather than dropped.
+  function wlBlockerItems(blockedRows,serverBlocking){
+    var items=[];
+    (blockedRows||[]).forEach(function(r){
+      items.push({
+        target:wlRowDomId(r.masterRid),
+        text:(wlStr(r.name)||'A row with no name')+': the tracker holds "'
+          +(wlStr(r.execStatus)||'nothing')+'" where its money status should be.'
+      });
+    });
+    (serverBlocking||[]).forEach(function(f){
+      var rid=wlStr(f&&(f.masterRid||f.rid||f.processId));
+      items.push({
+        target:rid?wlRowDomId(rid):'',
+        text:wlStr(f&&(f.detail||f.flag))||'A blocking finding the server did not describe.'
+      });
+    });
+    return items;
+  }
+  function wlBlockersHtml(items){
+    if(!items||!items.length)return '';
+    var one=items.length===1;
+    return '<div class="wl-blockers" role="alert" tabindex="-1"><h4>'+items.length+' thing'+(one?'':'s')
+      +' stop'+(one?'s':'')+' this month’s letter</h4><ul>'
+      +items.map(function(it){
+        return '<li>'+esc2(it.text)
+          +(it.target?(' <button type="button" data-wl-focus="'+esc2(it.target)+'">Go to the row</button>'):'')
+          +'</li>';
+      }).join('')+'</ul></div>';
+  }
+  // THE ARTIFACT, stated before it is made. Rows, sum, currency, month, AND
+  // what is being left off with the reason for each. The second half used to be
+  // learnable only by diffing the finished letter against the tracker, which is
+  // after the settle has already stamped the ledger.
+  function wlArtifactHtml(c){
+    if(!c.month)return '<span class="wl-artifact-hd">Pick a month to see what the letter would carry.</span>';
+    var inRows=[],outRows=[];
+    (c.transfers||[]).forEach(function(t){ (wlIsOutgoing(t.type)?outRows:inRows).push(t); });
+    var sum=function(a){var s=0;a.forEach(function(t){s+=wlAmountNum(t.amount);});return s;};
+    var total=(c.transfers||[]).length;
+    var h='<span class="wl-artifact-hd">'+esc2(String(total))+' row'+(total===1?'':'s')
+      +' on a '+esc2(wlStr(c.currency))+' letter for '+esc2(wlTabMonthWords(c.month))+'.</span>'
+      +' One currency at a time: a row in any other currency belongs to its own letter.';
+    if(total){
+      h+='<br>Incoming '+esc2(wlAmountText(sum(inRows)))+' '+esc2(wlStr(c.currency))+' across '+inRows.length+' row'+(inRows.length===1?'':'s')
+        +'. Outgoing '+esc2(wlAmountText(sum(outRows)))+' '+esc2(wlStr(c.currency))+' across '+outRows.length+' row'+(outRows.length===1?'':'s')+'.';
+    }
+    var off=[];
+    if(c.needsCount)off.push(c.needsCount+' row'+(c.needsCount===1?'':'s')+' whose money has not arrived yet.');
+    if(c.blockedCount)off.push(c.blockedCount+' row'+(c.blockedCount===1?'':'s')+' the tracker cannot state a money status for.');
+    if(c.datedForCount)off.push(c.datedForCount+' row'+(c.datedForCount===1?'':'s')+' dated for another month.');
+    if(c.recoveredCount)off.push(c.recoveredCount+(c.recoveredCount===1?' row that lives':' rows that live')+' on another tab.');
+    if(c.parkedCount)off.push(c.parkedCount+' parked row'+(c.parkedCount===1?'':'s')+' (the money is not coming).');
+    h+=off.length
+      ? ('<br><span class="wl-artifact-hd">Left off, and why:</span><ul class="wl-artifact-off">'
+         +off.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>')
+      : '<br>Nothing on this tab is left off.';
+    return h;
   }
   // ---- THE MONEY / WIRE-LETTER PANEL: MOSTLY GAS-ONLY (2026-08-23 seam audit,
   // corrected 2026-09-03) -----
@@ -9519,6 +9922,15 @@ document.addEventListener('keydown',function(e){
         draftEl=document.getElementById('wlCreateDraft'),findEl=document.getElementById('wlFindings'),
         rowsEl=document.getElementById('wlRows'),resEl=document.getElementById('wlResult'),
         awaitEl=document.getElementById('wlAwaiting'),
+        blockedEl=document.getElementById('wlBlocked'),
+        blockersEl=document.getElementById('wlBlockers'),
+        groupsEl=document.getElementById('wlGroups'),
+        doneEl=document.getElementById('wlDone'),
+        artifactEl=document.getElementById('wlArtifact'),
+        announceEl=document.getElementById('wlAnnounce'),
+        monthTtlEl=document.getElementById('wlMonthTtl'),
+        prevMonthEl=document.getElementById('wlPrevMonth'),
+        nextMonthEl=document.getElementById('wlNextMonth'),
         parkedEl=document.getElementById('wlParked');
     if(!reviewBtn)return;
     // The struck-NAV month, appended to every generate/review/verify call.
@@ -9540,7 +9952,6 @@ document.addEventListener('keydown',function(e){
       mo-=1; if(mo<1){mo=12;yr-=1;}
       return yr+'-'+(mo<10?'0':'')+mo;
     }
-    var WL_MONTH_NAMES_=['January','February','March','April','May','June','July','August','September','October','November','December'];
     // A REAL month, not just four digits, a dash and two digits. The old test
     // was the bare shape, so 1999-13 passed the Review guard AND the Generate
     // guard, reached the server, and rendered back to the operator as
@@ -9574,8 +9985,8 @@ document.addEventListener('keydown',function(e){
       var el=document.getElementById('wlNavMonth');
       var overridden=!!(el&&(el.value||'').trim());
       // If the OVERRIDE is what is malformed, say so against the override.
-      // Blaming the Month select, which is correctly set, sent the operator to
-      // the wrong control.
+      // Blaming the Month control, which is correctly set, sent the operator to
+      // the wrong place.
       if(!eff&&overridden){
         lineEl.innerHTML='<span class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</span>';
         return;
@@ -9604,6 +10015,15 @@ document.addEventListener('keydown',function(e){
     // have diverged. Only the empty-month path used to clear it; every input
     // now clears it.
     var lastGo=null,peekSeq=0,wlLastTransfers=null,awaitSeq=0,parkedSeq=0;
+    // Additive fields from the 2026-09-07 ju-service currency fix. Defaulted,
+    // never assumed: an older deployed service omits them and the empty state
+    // falls back to the reasons it can still prove.
+    var wlLastExcluded=null,wlLastUnresolved=null;
+    // Everything the four groups are rendered from lives here, so one render
+    // pass reads one set of facts. Three independently-writing peeks is how the
+    // blocker summary and the artifact line would otherwise disagree with the
+    // list sitting between them.
+    var wlAwaitRows=null,wlParkedRows=null,wlServerBlocking=null,wlDone=[],wlMonths=[],wlGateReason='';
     var gateNoteEl=document.getElementById('wlGateNote'),
         confirmEl=document.getElementById('wlConfirm'),
         confirmMsgEl=document.getElementById('wlConfirmMsg'),
@@ -9617,17 +10037,138 @@ document.addEventListener('keydown',function(e){
     function wlSameInputs(a,b){
       return !!a&&!!b&&a.month===b.month&&a.currency===b.currency&&a.navMonth===b.navMonth;
     }
+    // Every row action reports here. The old surface changed one button's own
+    // label and said nothing at all to a screen reader, so an operator who
+    // could not see the button had no way to know the write had landed.
+    function wlAnnounce(msg){
+      if(!announceEl)return;
+      announceEl.textContent=msg||'';
+    }
+    // Generate is NEVER silently greyed. A `disabled` button answers a click
+    // with nothing, so a closed gate and a dead button looked identical; the
+    // operator's only signal was a line of small print she had already scrolled
+    // past. It stays clickable and aria-disabled, and wlRefuseGenerate() below
+    // turns the click into an answer.
+    function wlArmGenerate(on){
+      if(!genBtn)return;
+      genBtn.setAttribute('aria-disabled',on?'false':'true');
+    }
+    function wlGenerateArmed(){ return !!genBtn && genBtn.getAttribute('aria-disabled')==='false'; }
     // One place that closes the gate, so a new input can never be added without
     // it. Says WHY, because a silently dead button is the defect one level down.
     function wlCloseGate(why){
       lastGo=null;
-      if(genBtn)genBtn.disabled=true;
+      wlArmGenerate(false);
       wlDisarmConfirm();
-      if(why&&gateNoteEl)gateNoteEl.textContent=why;
+      if(why){wlGateReason=why;if(gateNoteEl)gateNoteEl.textContent=why;}
     }
+    // The click a closed gate answers. It moves focus to the FIRST blocker and
+    // says what is missing, rather than doing nothing and letting the operator
+    // conclude the console is broken.
+    function wlRefuseGenerate(){
+      var msg=wlGateReason||'Generate is not ready yet.';
+      // The FIRST blocker on screen, whether or not it names a row. A server
+      // finding (an unsigned HY close, say) has no masterRid to focus, and the
+      // first cut fell through to a generic "review first" that never quoted
+      // what was actually wrong - which is the same dead click, one layer down.
+      var li=blockersEl&&blockersEl.querySelector('li');
+      if(li){
+        msg='Generate is off: '+li.textContent.replace(/Go to the row\s*$/,'').trim();
+        var link=li.querySelector('[data-wl-focus]');
+        if(link)wlFocusRow(link.getAttribute('data-wl-focus'));
+        else{var box=blockersEl.querySelector('.wl-blockers');if(box){try{box.focus();}catch(e){}}}
+      }else if(!lastGo&&reviewBtn&&!reviewBtn.disabled){
+        msg=msg+' Review this month first.';
+        try{reviewBtn.focus();}catch(e){}
+      }
+      if(gateNoteEl)gateNoteEl.textContent=msg;
+      wlAnnounce(msg);
+    }
+    // scrollIntoView is guarded: it is absent in jsdom and in some embedded
+    // webviews, and an exception here would abandon the focus move that is the
+    // whole point of the call.
+    function wlFocusRow(domId){
+      if(!domId)return;
+      var t=document.getElementById(domId);
+      if(!t)return;
+      try{t.focus();}catch(e){}
+      if(t.scrollIntoView){try{t.scrollIntoView({block:'center'});}catch(e){}}
+    }
+    function wlViewMonth(){ return (monthEl&&monthEl.value||'').trim(); }
+    function wlValidMonth(m){ return /^\d{2}\/\d{4}$/.test(m||''); }
+    // ONE render pass over the whole screen. Blockers, the four groups, the
+    // parked list and the artifact line are all derived from the same three
+    // fetch results in the same tick, so they cannot state different totals.
+    function wlRender(){
+      var month=wlViewMonth();
+      if(monthTtlEl)monthTtlEl.textContent=month?wlTabMonthWords(month):'No month selected';
+      wlSyncMonthNav();
+      var split=wlSplitAwaiting(wlAwaitRows);
+      if(blockedEl)blockedEl.innerHTML=wlAwaitRows?wlBlockedHtml(split.blocked,month):'';
+      if(awaitEl)awaitEl.innerHTML=wlAwaitRows?wlNeedsHtml(split.needs,month):'';
+      if(doneEl)doneEl.innerHTML=wlDoneHtml(wlDone);
+      if(parkedEl)parkedEl.innerHTML=wlParkedHtml(wlParkedRows);
+      var items=wlBlockerItems(split.blocked,wlServerBlocking);
+      if(blockersEl)blockersEl.innerHTML=wlBlockersHtml(items);
+      // A blocker on screen is a blocker on the gate. Without this the summary
+      // could say the letter is stopped while Generate sat armed beside it.
+      if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Fix it, then review again.');
+      // THE ORDERING BUG (2026-09-07). The two peeks land in either order, and
+      // the letter group's empty state is derived from the AWAITING rows. When
+      // awaiting answered second, the letter group had already painted a reason
+      // it had no evidence for, and nothing re-rendered it. Re-render here so a
+      // late awaiting answer corrects the reading instead of leaving it standing.
+      // Guarded on wlLastTransfers so the initial "Loading rows..." is not
+      // replaced by an empty state before the rows have answered at all.
+      if(wlLastTransfers!==null)renderWlRows();
+      wlRenderArtifact(split);
+    }
+    function wlRenderArtifact(split){
+      if(!artifactEl)return;
+      var month=wlViewMonth();
+      var needs=(split&&split.needs)||[];
+      var blocked=(split&&split.blocked)||[];
+      var dated=0,recov=0;
+      needs.concat(blocked).forEach(function(r){
+        var d=wlStr(r.datedFor);
+        if(d&&month&&d!==month)dated++;
+        if(wlFlag(r.recovered))recov++;
+      });
+      artifactEl.innerHTML=wlArtifactHtml({
+        month:month,currency:(ccyEl&&ccyEl.value)||'',
+        transfers:wlLastTransfers||[],
+        needsCount:needs.length,blockedCount:blocked.length,
+        datedForCount:dated,recoveredCount:recov,
+        parkedCount:(wlParkedRows&&wlParkedRows.length)||0
+      });
+    }
+    function wlSyncMonthNav(){
+      if(!prevMonthEl||!nextMonthEl)return;
+      // The tabs list is newest-first, so "previous month" is the NEXT index.
+      var i=wlMonths.indexOf(wlViewMonth());
+      prevMonthEl.disabled=(i<0||i>=wlMonths.length-1);
+      nextMonthEl.disabled=(i<=0);
+    }
+    function wlStepMonth(delta){
+      var i=wlMonths.indexOf(wlViewMonth());
+      if(i<0)return;
+      var j=i+delta;
+      if(j<0||j>=wlMonths.length)return;
+      monthEl.value=wlMonths[j];
+      // A real 'change' event, not a direct call to the handler: the jump-to
+      // select is a normal control and anything that later listens on it (not
+      // just the .onchange slot) has to see the same move.
+      try{monthEl.dispatchEvent(new Event('change'));}catch(e){}
+      // The heading changes silently for anyone not looking at it, so the move
+      // is announced rather than assumed. Focus stays on the arrow that was
+      // pressed, so a second step is one more press.
+      wlAnnounce('Showing '+wlTabMonthWords(wlMonths[j])+'.');
+    }
+    if(prevMonthEl)prevMonthEl.onclick=function(){wlStepMonth(1);};
+    if(nextMonthEl)nextMonthEl.onclick=function(){wlStepMonth(-1);};
     function peekAwaiting(){
-      var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){awaitEl.innerHTML='';return;}
+      var month=wlViewMonth();
+      if(!wlValidMonth(month)){wlAwaitRows=null;wlRender();return;}
       var rid=++awaitSeq;
       // Flipped to JU_API 2026-09-03: ported into routes/transferformpeek.ts
       // and wired at consoledispatch.ts:288-298 with a verified-console-identity
@@ -9638,172 +10179,230 @@ document.addEventListener('keydown',function(e){
       // here would risk repeating).
       apiFetch('?api=opPeekAwaitingMoney&monthTab='+encodeURIComponent(month), false, JU_API).then(function(r){
         if(rid!==awaitSeq)return;
-        awaitEl.innerHTML=(r&&r.ok)?wlAwaitingHtml(r.rows):'';
-      }).catch(function(){ if(rid===awaitSeq)awaitEl.innerHTML=''; });
+        wlAwaitRows=(r&&r.ok&&r.rows)?r.rows:[];
+        wlRender();
+      }).catch(function(){ if(rid===awaitSeq){wlAwaitRows=[];wlRender();} });
     }
     function peekParked(){
       if(!parkedEl)return;
-      var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){parkedEl.innerHTML='';return;}
+      var month=wlViewMonth();
+      if(!wlValidMonth(month)){wlParkedRows=null;wlRender();return;}
       var rid=++parkedSeq;
       apiFetch('?api=opPeekParked&monthTab='+encodeURIComponent(month), false, JU_API).then(function(r){
         if(rid!==parkedSeq)return;
-        parkedEl.innerHTML=(r&&r.ok)?wlParkedHtml(r.rows):'';
-      }).catch(function(){ if(rid===parkedSeq)parkedEl.innerHTML=''; });
+        wlParkedRows=(r&&r.ok&&r.rows)?r.rows:[];
+        wlRender();
+      }).catch(function(){ if(rid===parkedSeq){wlParkedRows=[];wlRender();} });
     }
-    // "Mark received" (2026-08-03/04, Noa: "can i edit it in console? itll be
-    // easier") - same route the Board drawer's own button calls
-    // (?api=opMarkMoneyReceived), keyed on masterRid instead of processId so
-    // it also covers rows with no Ju registry entry. Idempotent + forward-
-    // only server-side, so no confirm step here - a stray second click just
-    // reports "already advanced".
-    // "Park" (2026-08-31). Unlike Mark received, this one CONFIRMS and demands
-    // a reason: it is the action that takes a real, signed money row out of
-    // every "still owed" list, and a row parked by a slipped click with no
-    // stated reason is indistinguishable later from one parked deliberately.
-    // The reason is appended to the row's NOTES on the sheet, so the tracker
-    // explains itself without the console.
-    awaitEl.addEventListener('click',function(e){
-      var btn=e.target.closest('[data-act="parkRow"]');
-      if(!btn||btn.disabled)return;
-      var rid=btn.getAttribute('data-rid');
-      // An inline, styled two-step instead of window.prompt (2026-08-31
-      // review): prompt() is unstyleable next to the rest of this console,
-      // some browsers suppress it outright, and it enforced no length bound on
-      // a value that then travels in a query string. The row expands into a
-      // reason field; Park is armed only once something is typed.
-      var row=btn.closest('.wl-await-row');
-      if(!row)return;
-      if(row.querySelector('.wl-park-form'))return;   // already armed
-      var rid=btn.getAttribute('data-rid');
-      var form=document.createElement('div');
-      form.className='wl-park-form';
-      form.innerHTML='<label class="wl-park-lbl" for="wl-park-why">Why is this money not coming?</label>'
-        +'<input id="wl-park-why" class="wl-park-in" type="text" maxlength="'+PARK_REASON_MAX+'" '
-        +'placeholder="e.g. signed in April, never funded">'
-        +'<div class="wl-park-acts">'
-          +'<button type="button" class="wl-await-btn" data-park-go="1" disabled>Park</button>'
-          +'<button type="button" class="wl-await-btn wl-await-park" data-park-cancel="1">Cancel</button>'
-        +'</div>'
-        +'<p class="wl-park-hint">The row stays on its tab with all history. It leaves the Awaiting-money list and can be un-parked at any time.</p>';
-      row.insertAdjacentElement('afterend',form);
-      var input=form.querySelector('.wl-park-in');
-      var go=form.querySelector('[data-park-go]');
-      var cancel=form.querySelector('[data-park-cancel]');
-      input.addEventListener('input',function(){ go.disabled=!input.value.trim(); });
-      cancel.onclick=function(){ form.remove(); };
-      input.focus();
-      go.onclick=function(){
-        var reason=String(input.value||'').trim().slice(0,PARK_REASON_MAX);
-        if(!reason)return;
-        go.disabled=true;go.textContent='Parking...';
-        parkRow(rid,reason,form,go);
-      };
-    });
+    var PARK_REASON_MAX=200;
     // The maximum reason length, enforced in THREE places on purpose: the
     // input's maxlength (stops the typing), the slice (stops a paste), and the
     // server. It travels as a query parameter, and an unbounded value fails on
     // URL length as an opaque network error rather than as anything an
     // operator could act on.
-    var PARK_REASON_MAX=200;
+    //
+    // ONE delegated handler for every card action in every group, because the
+    // same row menu now appears under Blocked and under Needs you and a second
+    // listener is how the two would drift apart.
+    if(groupsEl)groupsEl.addEventListener('click',function(e){
+      var more=e.target.closest('[data-wl-more]');
+      if(more){
+        var menu=document.getElementById(more.getAttribute('data-wl-more'));
+        if(menu){
+          var open=menu.hidden;
+          menu.hidden=!open;
+          more.setAttribute('aria-expanded',open?'true':'false');
+        }
+        return;
+      }
+      var focusBtn=e.target.closest('[data-wl-focus]');
+      if(focusBtn){wlFocusRow(focusBtn.getAttribute('data-wl-focus'));return;}
+      var park=e.target.closest('[data-act="parkRow"]');
+      if(park&&!park.disabled){wlArmParkForm(park);return;}
+      var nxt=e.target.closest('[data-act="rowNextMonth"]');
+      if(nxt&&!nxt.disabled){wlMoveRowNextMonth(nxt);return;}
+      var got=e.target.closest('[data-act="markMoneyReceived"]');
+      if(got&&!got.disabled){wlMarkReceived(got);return;}
+    });
+    // The blocker links live OUTSIDE #wlGroups, so they need their own listener.
+    if(blockersEl)blockersEl.addEventListener('click',function(e){
+      var b=e.target.closest('[data-wl-focus]');
+      if(b)wlFocusRow(b.getAttribute('data-wl-focus'));
+    });
+    // "Park" CONFIRMS and demands a reason, unlike the money buttons: it is the
+    // action that takes a real, signed money row out of every "still owed" list,
+    // and a row parked by a slipped click with no stated reason is
+    // indistinguishable later from one parked deliberately. The reason is
+    // appended to the row's NOTES on the sheet, so the tracker explains itself
+    // without the console.
+    //
+    // An inline, styled two-step instead of window.prompt (2026-08-31 review):
+    // prompt() is unstyleable next to the rest of this console, some browsers
+    // suppress it outright, and it enforced no length bound on a value that then
+    // travels in a query string.
+    function wlArmParkForm(btn){
+      var card=btn.closest('.wl-card');
+      if(!card||card.querySelector('.wl-park-form'))return;
+      var rid=btn.getAttribute('data-rid');
+      var fid='wl-park-why-'+wlSafeId(rid);
+      var form=document.createElement('div');
+      form.className='wl-park-form';
+      form.innerHTML='<label class="wl-park-lbl" for="'+esc2(fid)+'">Why is this money not coming?</label>'
+        +'<input id="'+esc2(fid)+'" class="wl-park-in" type="text" maxlength="'+PARK_REASON_MAX+'" '
+        +'placeholder="e.g. signed in April, never funded">'
+        +'<div class="wl-park-acts">'
+          +'<button type="button" data-park-go="1" disabled>Park this row</button>'
+          +'<button type="button" data-park-cancel="1">Cancel, leave it here</button>'
+        +'</div>'
+        +'<p class="wl-park-hint">The row stays on its tab with all history. It leaves the needs-you list and can be un-parked at any time.</p>';
+      card.appendChild(form);
+      var input=form.querySelector('.wl-park-in');
+      var go=form.querySelector('[data-park-go]');
+      var cancel=form.querySelector('[data-park-cancel]');
+      input.addEventListener('input',function(){ go.disabled=!input.value.trim(); });
+      cancel.onclick=function(){ form.remove(); try{btn.focus();}catch(e){} };
+      try{input.focus();}catch(e){}
+      go.onclick=function(){
+        var reason=String(input.value||'').trim().slice(0,PARK_REASON_MAX);
+        if(!reason)return;
+        go.disabled=true;go.textContent='Parking...';
+        parkRow(rid,reason,form,go,wlRowName(card));
+      };
+    }
+    function wlRowName(card){
+      var n=card&&card.querySelector('.wl-row-nm-he');
+      return n?n.textContent:'that row';
+    }
     // NO &tab= (2026-09-02, corrected the same day it was added).
     //
     // The first cut sent the month this panel is showing, to stop the server
     // picking a row on a tab the operator is not looking at. That fixed the
     // wrong half. The tracker carries a signed, never-funded row forward into
     // each new month, so an old unpaid row is on every tab since it was signed
-    // - b-L06SCwQLI is on seven - and parking ONE month leaves it Pending on
-    // the other six, still on every still-owed surface. The click would look
-    // like it did nothing.
+    // - one row was on seven - and parking ONE month leaves it Pending on the
+    // other six, still on every still-owed surface. The click would look like
+    // it did nothing.
     //
     // A Master RID names one money event. Both engines now park every row
     // carrying it and report the list back, so the rid alone is the whole
     // instruction. &tab= still exists server-side for a deliberate single-month
     // park; this button is not that.
-    function parkRow(rid,reason,form,go){
+    function parkRow(rid,reason,form,go,who){
       // Flipped to JU_API 2026-09-03: ju-service's opParkRow now has a
       // verified-console-identity door (consoledispatch.ts), not just the
       // diag token. JU_API directly, not currentEngine - the tracker Sheet
       // this writes is shared and engine-agnostic (see opparkrow.ts's header),
       // unlike a session field which lives on exactly one engine.
       apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, JU_API).then(function(r){
-        if(!r||!r.ok){go.disabled=false;go.textContent='Park';go.title=(r&&r.error)||'Failed, try again';return;}
+        if(!r||!r.ok){go.disabled=false;go.textContent='Park this row';go.title=(r&&r.error)||'Failed, try again';return;}
         form.remove();
+        wlDone.push('Parked '+who+': '+reason);
+        wlAnnounce('Parked '+who+'. It is off every letter until it is un-parked.');
         wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
-        go.disabled=false;go.textContent='Park';go.title=(err&&err.serverError)||'Could not reach the server';
+        go.disabled=false;go.textContent='Park this row';go.title=(err&&err.serverError)||'Could not reach the server';
       });
     }
     // Item 9: the write resolves a row ACROSS month tabs, this panel lists ONE
     // month. Say where the row actually went, or a row parked on a tab the
-    // dropdown is not showing simply disappears with no explanation.
+    // month heading is not showing simply disappears with no explanation.
     function wlNoteLandingTab(r){
       var tab=r&&r.tab;
-      var shown=(monthEl.value||'').trim();
+      var shown=wlViewMonth();
       if(!tab||!shown||tab===shown)return;
-      setResult('<div class="t-muted">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month dropdown to see it.</div>','');
+      setResult('<div class="t-muted">That row lives on tab '+esc2(tab)+', not '+esc2(shown)+'. Switch the month to see it.</div>','');
     }
     // Un-park returns the row to Pending - "the park was wrong", NOT "the money
-    // arrived". Mark received is the other reversal and lands the row on
+    // arrived". Money arrived is the other reversal and lands the row on
     // Received in transit; keeping them separate means correcting a mis-click
     // never requires asserting that funds landed.
     if(parkedEl)parkedEl.addEventListener('click',function(e){
       var btn=e.target.closest('[data-act="unparkRow"]');
       if(!btn||btn.disabled)return;
       var rid=btn.getAttribute('data-rid');
+      var who=wlRowName(btn.closest('.wl-card'));
       btn.disabled=true;btn.textContent='Un-parking...';
       // Flipped to JU_API 2026-09-03, same reasoning as parkRow() above.
       apiFetch('?api=opUnparkRow&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
-        if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park';btn.title=(r&&r.error)||'Failed, try again';return;}
+        if(!r||!r.ok){btn.disabled=false;btn.textContent='Un-park this row';btn.title=(r&&r.error)||'Failed, try again';return;}
         btn.textContent='Un-parked';
+        wlAnnounce('Un-parked '+who+'. It is back on the needs-you list; this did not say the money arrived.');
         wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
-        btn.disabled=false;btn.textContent='Un-park';btn.title=(err&&err.serverError)||'Could not reach the server';
+        btn.disabled=false;btn.textContent='Un-park this row';btn.title=(err&&err.serverError)||'Could not reach the server';
       });
     });
-    awaitEl.addEventListener('click',function(e){
-      var nxt=e.target.closest('[data-act="rowNextMonth"]');
-      if(nxt){
-        var nrid=nxt.getAttribute('data-rid')||'';
-        if(!nrid)return;
-        // Next month relative to the month being VIEWED, not to today: the
-        // operator is looking at August's list in September and saying "this
-        // one is September", and today's date is not what decides that.
-        var viewing=(document.getElementById('wlMonth')||{}).value||'';
-        var mm=/^(\d{2})\/(\d{4})$/.exec(viewing);
-        if(!mm)return;
-        var m2=Number(mm[1])+1, y2=Number(mm[2]);
-        if(m2>12){m2=1;y2+=1;}
-        var target=(m2<10?'0':'')+m2+'/'+y2;
-        nxt.disabled=true;nxt.textContent='Moving\u2026';
-        // Hardcoded JU_API (2026-09-02 CTO review): diagCorrectTrackerDate is ju-service-only.
-        apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,JU_API)
-          .then(function(res){
-            if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
-            peekAwaiting();peekRows();
-          })
-          .catch(function(err){
-            nxt.disabled=false;nxt.textContent='Not this month';
-            alert((err&&(err.serverError||err.message))||'Could not set the month.');
-          });
-        return;
-      }
-      var btn=e.target.closest('[data-act="markMoneyReceived"]');
-      if(!btn||btn.disabled)return;
+    // "Not this month" (2026-09-01), renamed and moved into the row menu
+    // 2026-09-07. An LP who signs at month end has their money land in the NEXT
+    // month, so their row sits in a month whose letter will never carry it. The
+    // tab is chosen at seal time and nobody knows then when the money will
+    // arrive, so this is the operator saying what only she knows. It sets the
+    // row's date to the next month's 1st, the only date the fund ever prices on.
+    // The label now names the target month and the outcome, because "Not this
+    // month" named the negative and nothing else, six pixels from a button that
+    // meant the opposite thing about the same money.
+    function wlMoveRowNextMonth(nxt){
+      var nrid=nxt.getAttribute('data-rid')||'';
+      if(!nrid)return;
+      var target=wlNextTabOf(wlViewMonth());
+      if(!target)return;
+      var who=wlRowName(nxt.closest('.wl-card'));
+      nxt.disabled=true;
+      // Hardcoded JU_API (2026-09-02 CTO review): diagCorrectTrackerDate is ju-service-only.
+      apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,JU_API)
+        .then(function(res){
+          if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
+          wlDone.push('Moved '+who+' to '+wlTabMonthWords(target));
+          wlAnnounce('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.');
+          peekAwaiting();peekRows();
+        })
+        .catch(function(err){
+          nxt.disabled=false;
+          var why=(err&&(err.serverError||err.message))||'Could not set the month.';
+          nxt.title=why;
+          wlAnnounce('Could not move '+who+': '+why);
+        });
+    }
+    // "Money arrived" - the same route/action the Board drawer's own button
+    // calls (?api=opMarkMoneyReceived), keyed on masterRid instead of processId
+    // so it also covers rows with no Ju registry entry. Idempotent + forward-
+    // only server-side, so no confirm step - a stray second click just reports
+    // "already advanced". Renamed from "Mark received" because the operator is
+    // recording a fact about money, not performing a database verb.
+    function wlMarkReceived(btn){
       var rid=btn.getAttribute('data-rid');
-      btn.disabled=true;btn.textContent='Marking...';
+      var who=wlRowName(btn.closest('.wl-card'));
+      btn.disabled=true;btn.textContent='Recording...';
       apiFetch('?api=opMarkMoneyReceived&processId='+encodeURIComponent(rid), false, JU_API).then(function(r){
-        if(!r||!r.ok){btn.disabled=false;btn.textContent='Mark received';btn.title=(r&&r.error)||'Failed, try again';return;}
-        btn.textContent='Received';btn.className='wl-await-btn wl-await-done';
+        if(!r||!r.ok){
+          btn.disabled=false;btn.textContent='Money arrived';
+          var why=(r&&r.error)||'Failed, try again';
+          btn.title=why;wlAnnounce('Could not record the money for '+who+': '+why);
+          return;
+        }
+        btn.textContent='Money arrived, recorded';btn.className='wl-primary wl-primary-done';
+        wlDone.push('Recorded the money for '+who);
+        wlAnnounce('Recorded the money for '+who+'. It moves onto this month’s letter.');
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); },600);
       }).catch(function(err){
-        btn.disabled=false;btn.textContent='Mark received';btn.title=(err&&err.serverError)||'Could not reach the server';
+        btn.disabled=false;btn.textContent='Money arrived';
+        var why=(err&&err.serverError)||'Could not reach the server';
+        btn.title=why;wlAnnounce('Could not record the money for '+who+': '+why);
       });
-    });
+    }
     function setResult(html,cls){if(resEl){resEl.innerHTML=html;resEl.className=cls||'';}}
-    function renderWlRows(){rowsEl.innerHTML=wlTransfersHtml(wlLastTransfers);}
+    function renderWlRows(){
+      var split=wlSplitAwaiting(wlAwaitRows);
+      rowsEl.innerHTML=wlLetterHtml(wlLastTransfers,{
+        currency:(ccyEl&&ccyEl.value)||'NIS',
+        needs:split.needs,
+        excluded:wlLastExcluded,
+        unresolved:wlLastUnresolved
+      });
+      wlRenderArtifact(split);
+    }
     // Click-to-sort headers (Noa, 2026-08-02: "make the columns sort on click
     // on header"). Re-sorts the already-fetched rows client-side, no refetch.
     rowsEl.addEventListener('click',function(e){
@@ -9828,62 +10427,51 @@ document.addEventListener('keydown',function(e){
       var empty=!transfers||!transfers.length;
       if(reviewBtn)reviewBtn.disabled=empty;
       if(empty){
-        wlCloseGate('Nothing to wire this month.');
+        wlCloseGate('Generate stays off until a row is ready to wire.');
         if(findEl)findEl.innerHTML='';
-        rowsEl.innerHTML='<div style="padding:14px 0;font-size:var(--text-sm);color:var(--color-ink-muted)">'
-          +'<span style="color:var(--color-ink)">Nothing to wire this month.</span><br>'
-          +'Every row on this tab has already been paid or moved to trading. A letter generated here would have no rows on it.'
-          +'</div>';
       }
     }
     // Finding 8: both failure branches below used to leave lastGo and genBtn
     // exactly as the last successful Review left them, so the operator saw
     // "Could not load rows" beside a live Generate button.
     function peekRows(){
-      var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){wlLastTransfers=null;rowsEl.innerHTML='';return;}
+      var month=wlViewMonth();
+      if(!wlValidMonth(month)){wlLastTransfers=null;renderWlRows();return;}
       var rid=++peekSeq;
-      rowsEl.innerHTML='<div class="t-muted">Loading rows...</div>';
+      rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-muted">Loading rows...</div></div>';
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
         wlLastTransfers=r.transfers;
+        wlLastExcluded=r.excluded||null;
+        wlLastUnresolved=r.unresolvedCurrency||null;
         renderWlRows();
         wlApplyEmptyBatchState(r.transfers);
       }).catch(function(err){
         if(rid!==peekSeq)return;
-        wlLastTransfers=null;
+        wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;
         wlCloseGate('Rows could not be loaded. Review again before generating.');
-        rowsEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div></div>';
       });
     }
-    // Month dropdown (Noa, 2026-08-02: "it should have a dropdown for the
-    // month i want to see") - populated from the tracker's real month tabs,
-    // newest first. Defaults to the newest month, then peeks immediately.
-    // THE MISSING MONTH (2026-09-01, Noa: "wheres september?"). This dropdown
-    // lists the tracker's REAL month tabs, and until today the only things that
-    // could create one were the two seal-time writers - so a month with no
-    // completed subscription simply did not exist here, and the operator was
-    // waiting on a customer to be able to do her own job. If the CURRENT month
-    // has no tab, offer to open it right here rather than making her go
-    // somewhere else to find out why the month is absent.
+    // Month tabs (Noa, 2026-08-02: "it should have a dropdown for the month i
+    // want to see") - the tracker's REAL month tabs, newest first. Presented as
+    // the screen's heading with prev/next since 2026-09-07; the select survives
+    // as a labelled jump-to, because prev/next alone puts a month eleven steps
+    // back eleven clicks away.
+    // THE MISSING MONTH (2026-09-01, Noa: "wheres september?"). Until then the
+    // only things that could create a tab were the two seal-time writers - so a
+    // month with no completed subscription simply did not exist here, and the
+    // operator was waiting on a customer to be able to do her own job. If the
+    // CURRENT month has no tab, offer to open it right here rather than making
+    // her go somewhere else to find out why the month is absent.
     function currentMonthMMYYYY(){
       // Asia/Jerusalem, matching every tracker path. Never the browser's zone:
       // near midnight on the 1st those disagree, and this decides a money month.
       var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit'}).formatToParts(new Date());
       var o={};p.forEach(function(x){o[x.type]=x.value;});
       return o.month+'/'+o.year;
-    }
-    // wlMonthWords takes YYYY-MM (the struck-NAV shape). The month TABS are
-    // MM/YYYY, and feeding those to it silently returns the input unchanged -
-    // "Open 09/2026" instead of "Open September 2026". Its own guard makes that
-    // failure invisible, so this converts the tab shape explicitly.
-    function wlTabMonthWords(mmYyyy){
-      var m=/^(\d{2})\/(\d{4})$/.exec(String(mmYyyy||''));
-      if(!m)return mmYyyy||'';
-      var name=WL_MONTH_NAMES_[parseInt(m[1],10)-1];
-      return name?(name+' '+m[2]):(mmYyyy||'');
     }
     function renderOpenMonthOffer(months){
       var host=document.getElementById('wlOpenMonth');
@@ -9895,7 +10483,7 @@ document.addEventListener('keydown',function(e){
       var btn=document.getElementById('wlOpenMonthBtn');
       if(!btn)return;
       btn.onclick=function(){
-        btn.disabled=true;btn.textContent='Opening '+wlTabMonthWords(cur)+'\u2026';
+        btn.disabled=true;btn.textContent='Opening '+wlTabMonthWords(cur)+'…';
         // commit=1 straight away: the dry run exists for a scripted operator,
         // and a button that asks "are you sure" about creating an empty tab is
         // friction with nothing behind it. Opening the CURRENT month is inert
@@ -9918,21 +10506,28 @@ document.addEventListener('keydown',function(e){
     function loadMonths(selectAfter){
       return apiFetch('?api=listTrackerMonthTabs', false, consoleReadBase_()).then(function(r){
         var months=(r&&r.ok&&r.months&&r.months.length)?r.months:[];
-        if(!months.length){monthEl.innerHTML='<option value="">No months found</option>';renderOpenMonthOffer([]);return;}
-        monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(m)+'</option>';}).join('');
+        wlMonths=months;
+        if(!months.length){
+          monthEl.innerHTML='<option value="">No months found</option>';
+          if(monthTtlEl)monthTtlEl.textContent='No month tabs on the tracker';
+          renderOpenMonthOffer([]);wlSyncMonthNav();return;
+        }
+        monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(wlTabMonthWords(m))+'</option>';}).join('');
         if(selectAfter&&months.indexOf(selectAfter)>-1)monthEl.value=selectAfter;
         renderOpenMonthOffer(months);
         wlRenderNavLine();peekRows();peekAwaiting();peekParked();
       }).catch(function(){
         monthEl.innerHTML='<option value="">Could not load months</option>';
+        if(monthTtlEl)monthTtlEl.textContent='Could not load the month tabs';
+        wlSyncMonthNav();
       });
     }
     loadMonths();
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlRenderNavLine();peekRows();peekAwaiting();peekParked();};
-    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');peekRows();};
+    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlDone=[];wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();};
+    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
@@ -10010,13 +10605,20 @@ document.addEventListener('keydown',function(e){
         if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
+          // The server's blockers join the ones this screen already knows
+          // about, so the summary above the list is the ONE place an operator
+          // has to look to see what is stopping the letter.
+          wlServerBlocking=r.blocking||[];
           wlCloseGate('Blocking findings. Generate stays off until they clear.');
+          wlRender();
           return;
         }
         if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
+        wlServerBlocking=null;
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=wlInputs();lastGo.counts=r.counts||null;
-        genBtn.disabled=false;
+        wlArmGenerate(true);
+        wlRender();
         if(gateNoteEl){
           var c=r.counts;
           gateNoteEl.textContent='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
@@ -10033,7 +10635,10 @@ document.addEventListener('keydown',function(e){
     // a control changed after Review cannot reach the server even if some future
     // edit forgets to close the gate.
     genBtn.onclick=function(){
-      if(!lastGo)return;
+      // Never a dead click. A shut gate answers with the reason and the focus
+      // move (wlRefuseGenerate), which is the whole point of leaving the button
+      // aria-disabled rather than disabled.
+      if(!wlGenerateArmed()||!lastGo){wlRefuseGenerate();return;}
       var now=wlInputs();
       if(!wlSameInputs(lastGo,now)){
         wlCloseGate('Inputs changed since the review. Review again before generating.');
@@ -10056,15 +10661,19 @@ document.addEventListener('keydown',function(e){
         return;
       }
       wlDisarmConfirm();
+      // A REAL disabled here, unlike the gate: the request is in flight, the
+      // result line says so, and a second click would double-settle.
       genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
       setResult('<div class="t-muted">Generating and settling...</div>','');
       var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
+        wlAnnounce('Settled '+snap.month+' on the tracker.');
         // Finding 4: this used to re-enable Generate and leave the gate open, so
         // a second click returned the identical green message and the operator
         // could not tell a fresh settle from a no-op.
+        genBtn.disabled=false;
         wlCloseGate('Settled '+snap.month+'. Review again to re-run.');
         var h='<div style="color:var(--color-green)">Rows settled on the tracker. The document itself is still labeled "not for sending" until the parallel diff is verified.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
@@ -10710,7 +11319,7 @@ document.addEventListener('keydown',function(e){
   <button class="tab on" data-view="board"><span class="tab-icon" aria-hidden="true"><i class="ti ti-layout-board"></i></span><span class="tab-lbl">Board</span></button>
   <button class="tab" data-view="messages"><span class="tab-icon" aria-hidden="true"><i class="ti ti-mail"></i></span><span class="tab-lbl">Msgs</span></button>
   <button class="tab" data-view="w8"><span class="tab-icon" aria-hidden="true"><i class="ti ti-clock"></i></span><span class="tab-lbl">W-8</span><span class="tab-badge" id="tab-w8-badge" hidden></span></button>
-  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true"><i class="ti ti-file-invoice"></i></span><span class="tab-lbl">Transfer Form</span></button>
+  <button class="tab" data-view="wireletter"><span class="tab-icon" aria-hidden="true"><i class="ti ti-file-invoice"></i></span><span class="tab-lbl">Worklist</span></button>
   <button class="tab" data-view="settings"><span class="tab-icon" aria-hidden="true"><i class="ti ti-settings"></i></span><span class="tab-lbl">Settings</span></button>
 </nav>
 <script>
