@@ -946,8 +946,13 @@ function extractVarObj(name) {
   const flat = html.replace(/\s+/g, '');
   ok('N1 needs_attention still maps to "Stuck" for real Ju processes',
     /needs_attention:'Stuck'/.test(flat), 'STAGE_WORD mapping changed');
+  // 2026-09-07: the word slot gained a THIRD branch beside these two (an
+  // approved attention row says who cleared it instead of reading "Stuck" -
+  // see the honest-status harness's H7). The manual branch itself is unchanged
+  // and is still what this asserts: manual short-circuits FIRST, so a manual
+  // row can never reach either the review branch or stageWord.
   ok('N2 the manual row renders the off-pipeline word instead of a stage word',
-    /manual\?'OfftheJupipeline':stageWord\(st\)/.test(flat), 'off-pipeline word not wired into rowHtml');
+    /manual\?'OfftheJupipeline':\(cleared\?reviewedLine:stageWord\(st\)\)/.test(flat), 'off-pipeline word not wired into rowHtml');
   ok('N3 the manual row suppresses the stage rail (no invented pipeline position)',
     /\(manual\?'':railHtml\(r\)\)/.test(flat), 'rail not gated on manual');
   ok('N4 the manual row says where its real state lives',
@@ -974,7 +979,15 @@ function extractVarObj(name) {
   // render cannot see is the empty-state rule itself; that is block P's job.
   const src = extractFn('isTerminalStage') + ';' + extractFn('isCompletedStage') + ';'
     + extractFn('inflightOf_') + ';' + extractFn('rowHay') + ';' + extractFn('boardWouldReadEmpty_') + ';'
-    + extractFn('fetchEngineBoard_') + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
+    + extractFn('fetchEngineBoard_')
+    // 2026-09-07: load() reaches for the board-health and review-cache
+    // helpers now. They are EXTRACTED, not stubbed, so this rig keeps
+    // exercising the real ones (the harness header's standing warning about
+    // the stub list being a second copy of the dependency graph).
+    + ';' + extractVar('BOARD_HEALTH') + ';' + extractVar('REVIEW_CACHE') + ';'
+    + extractFn('boardDegraded_') + ';' + extractFn('paintVerLine_') + ';'
+    + extractFn('applyReviewCache_') + ';' + extractFn('reviewOverlayFailed_')
+    + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
 
   // One scriptable gateway for both engines. Each apiFetch call parks a
   // deferred keyed by engine so the test decides the arrival ORDER - which is
@@ -1160,21 +1173,43 @@ function extractVarObj(name) {
 
   // O5c/d: the structural guard itself.
   const loadSrc = extractFn('load');
-  const reviewIife = loadSrc.slice(loadSrc.indexOf('opGetRowReview') - 2000);
+  // Anchored on the CALL SITE, not on the bare route name. The bare name also
+  // appears in load()'s prose above the overlay, and on 2026-09-07 a comment
+  // added near the top of load() became the first match - which slid this
+  // window past the overlay entirely and reported zero guards, i.e. the check
+  // silently stopped checking anything. The call site is unambiguous.
+  const reviewCallIx = loadSrc.indexOf("apiFetch('?api=opGetRowReview");
+  ok('O5b the review overlay call site is still findable (a miss here makes O5c vacuous)',
+    reviewCallIx > 0, reviewCallIx);
+  const reviewIife = loadSrc.slice(Math.max(0, reviewCallIx - 2000));
   const renderCalls = (reviewIife.match(/render\(rows\)/g) || []).length;
   const guarded = (reviewIife.match(/pseq!==PAINT_SEQ|pseq===PAINT_SEQ/g) || []).length;
-  // Exactly three: the early return, the in-flight check, and the final render.
-  // A >= threshold let a dropped guard survive mutation M4 on 2026-09-06.
-  ok('O5c all three PAINT_SEQ guards in the review overlay are present',
-    renderCalls > 0 && guarded === 3, 'renders=' + renderCalls + ' guards=' + guarded);
+  // Exactly FOUR since 2026-09-07: the early return, the in-flight check, the
+  // final render, and the catch - which stopped swallowing and now reapplies
+  // the last known-good review state, so it has to be superseded-guarded like
+  // every other writer in this chain. It was three before that catch had a
+  // body. A >= threshold let a dropped guard survive mutation M4 on
+  // 2026-09-06, so this stays an exact count.
+  ok('O5c all four PAINT_SEQ guards in the review overlay are present',
+    renderCalls > 0 && guarded === 4, 'renders=' + renderCalls + ' guards=' + guarded);
   ok('O5d PAINT_SEQ is declared alongside LOAD_SEQ and bumped per paint',
     /var LOAD_SEQ=0, PAINT_SEQ=0/.test(html) && /var pseq=\+\+PAINT_SEQ;/.test(html));
 
   // O6: the old blocking shape must not come back, and both engines must stay.
   ok('O6 load() no longer Promise.all-blocks on the engine list',
     !/Promise\.all\(engines\.map/.test(loadSrc), 'Promise.all over engines is back');
-  ok('O6b fetchEngineBoard_ still fail-opens all three of its fetches',
-    (extractFn('fetchEngineBoard_').match(/\.catch\(function\(\)\{return/g) || []).length === 3);
+  // Still three catches, still fail-open - but since 2026-09-07 each one RECORDS
+  // the failure on its way through (`failed.<leg>=true`) so the caller can tell
+  // a dead leg from an empty answer. Both halves are asserted: dropping the
+  // catch breaks fail-open, dropping the flag brings back the silent outage.
+  {
+    const feb = extractFn('fetchEngineBoard_');
+    ok('O6b fetchEngineBoard_ still fail-opens all three of its fetches',
+      (feb.match(/\.catch\(function\(\)\{failed\.[a-z]+=true;return/g) || []).length === 3, feb);
+    ok('O6b2 and each of the three failures is RECORDED, never erased',
+      ['failed.list=true', 'failed.notes=true', 'failed.extras=true'].every((f) => feb.indexOf(f) >= 0)
+      && /failed:failed/.test(feb), feb);
+  }
   ok('O6c both lanes still read BOTH engines (dropping GW loses actionable rows)',
     /ENGINES_FOR_LANE_ = \{ cayman: \[GW, JU_API\], israel: \[GW, JU_API\] \}/.test(html));
   ok('O6d the stale "one engine for Cayman" comment is gone',
@@ -1293,7 +1328,14 @@ function extractVarObj(name) {
     const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true;'
       + 'var showDone=false,showCanceled=false,showTest=false,allRows=[];'
       + 'function render(rows){allRows=rows;applySearch();}';
-    const built = (new Function(...names, prelude + renderSrc + extractFn('applySearch') + ';'
+    // 2026-09-07: renderRows now asks boardDegraded_ whether the empty state is
+    // honest, and load() carries the board-health + review-cache helpers. All
+    // extracted from the live file, never restubbed here.
+    const healthSrc = extractVar('BOARD_HEALTH') + ';' + extractVar('REVIEW_CACHE') + ';'
+      + extractFn('boardDegraded_') + ';' + extractFn('paintVerLine_') + ';'
+      + extractFn('boardErrorHtml_') + ';' + extractFn('wireBoardRetry_') + ';'
+      + extractFn('applyReviewCache_') + ';' + extractFn('reviewOverlayFailed_') + ';';
+    const built = (new Function(...names, prelude + healthSrc + renderSrc + extractFn('applySearch') + ';'
       + extractFn('fetchEngineBoard_') + ';' + extractFn('load')
       + '; return { load: load, renderRows: renderRows };'))(...names.map((n) => scope[n]));
     return { load: built.load, renderRows: built.renderRows, arrive, flush, GWU, JUU, listRows, listEl };
