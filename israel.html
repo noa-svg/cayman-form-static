@@ -486,9 +486,10 @@
   <div id="lvp-gate">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <span class="lvp-gate__icon" role="img" aria-label="שגיאת טעינה">⛓️‍💥</span>
-    <!-- Same already-approved copy as index.html/signer.html, ported verbatim
-         (matching the #lvp-done pattern on this same file, which already ports
-         index.html's English text verbatim per Noa 2026-07-15). -->
+    <!-- CORRECTED 2026-09-08. This block used to say the copy was "the same
+         already-approved copy as index.html/signer.html, ported verbatim". That
+         stopped being true the moment the text became Hebrew, so it is rewritten
+         rather than left describing the opposite of the line below it. -->
     <!-- HEBREW, one line (Noa-approved 2026-09-08, verbatim: "just הקישור אינו
          זמין."). English source text on a Hebrew-only form whose toggle is
          deliberately hidden. Most-seen screen after any failure: expired token,
@@ -1510,7 +1511,6 @@
         // state is corrected in either direction when the fresh config lands.
         if (cfg.completed) {
           var dnMsg = document.querySelector('#lvp-done .lvp-done__msg');
-          var dnSub = document.querySelector('#lvp-done .lvp-done__sub');
           // HEBREW, headline only (Noa-approved 2026-09-08). Both branches were
           // English on a form whose language toggle is deliberately hidden.
           if (cfg.sealed === true) {
@@ -1518,7 +1518,9 @@
           } else {
             if (dnMsg) dnMsg.textContent = 'החלק שלך הושלם.';
           }
-          if (dnSub) dnSub.textContent = '';
+          // No sub-line element exists on this screen any more, so nothing is
+          // cleared here. The query for it was removed with it rather than left
+          // resolving to null forever behind an if-guard.
           document.documentElement.classList.add('lvp-done-mode');
         }
         for (var k in cfg) { if (Object.prototype.hasOwnProperty.call(cfg, k)) window.ISRAEL_CFG[k] = cfg[k]; }
