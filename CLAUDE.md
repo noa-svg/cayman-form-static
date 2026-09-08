@@ -168,9 +168,33 @@ test file that should ship, add a matching `!test/<name>.cjs` line to
   the REAL index.html/israel.html in a virtual DOM (inlining `<script src>`
   dependencies, since jsdom's `runScripts:'dangerously'` does not fetch
   external scripts) so tests exercise production code, not hand-written
-  copies. Most other harnesses extract real functions from the live HTML via
-  brace-counting (`extractFn`) and drive them directly. Prefer that pattern
-  over reimplementing logic by hand when adding a new test.
+  copies. Many older harnesses instead EXTRACT functions out of the live HTML
+  by brace-counting or source-string anchors and eval them in a hand-built
+  scope. **Do not add new harnesses that way.** Boot the real page in jsdom
+  with a scriptable `window.fetch` and call the real globals, as
+  `test/console-honest-status-harness.cjs` and
+  `test/api-fetch-nonjson-harness.cjs` do.
+
+  Extraction drifts from the file it claims to test, silently. Both live cases
+  were found on 2026-09-07. `api-fetch-nonjson-harness` eval'd `apiFetch` in a
+  scope with no `JU_API`, so every call threw `ReferenceError` once `d6eb87f`
+  made `base` required, and all 12 assertions failed for the 15 days after.
+  `console-harness` extracts the same function and survived only because its
+  sandbox happens to name `JU_API`; nothing made the two agree.
+  `mint-pick-binding-harness` pinned four assertions to a string refactored
+  into `onbPickedItemId_`, so `indexOf` returned -1 and it reported failures
+  about protections that were fully intact.
+
+  When a wiring fact genuinely can only be read statically (which call site
+  passes which gateway, say), anchor on what cannot change without changing the
+  server, assert the match COUNT so a second call site cannot capture the
+  anchor, and A/B the assertion against a deliberately broken copy first.
+
+  Every tracked harness must be listed in `githooks/pre-push`'s `HARNESSES`
+  array; `test/harness-gate-membership.cjs` enforces that. With no CI, a
+  harness outside the gate is a harness nothing runs, which is how
+  `api-fetch-nonjson-harness` stayed dead. The four `rig*.cjs` shared libraries
+  are the only exemptions, named in that file.
 
 ## The gateway URL is duplicated 5 times
 
