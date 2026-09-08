@@ -489,8 +489,12 @@
     <!-- Same already-approved copy as index.html/signer.html, ported verbatim
          (matching the #lvp-done pattern on this same file, which already ports
          index.html's English text verbatim per Noa 2026-07-15). -->
-    <h1 class="lvp-done__msg">Link unavailable</h1>
-    <p class="lvp-done__sub">This signing link is invalid or has expired. Please contact Legacy Value Partners.</p>
+    <!-- HEBREW, one line (Noa-approved 2026-09-08, verbatim: "just הקישור אינו
+         זמין."). English source text on a Hebrew-only form whose toggle is
+         deliberately hidden. Most-seen screen after any failure: expired token,
+         tokenless link, wrong flowType, config fetch failed three times. The
+         second sentence is dropped rather than translated, per her instruction. -->
+    <h1 class="lvp-done__msg">הקישור אינו זמין.</h1>
   </div>
   <!-- Completed-link terminal screen: ported VERBATIM from index.html (approved
        2026-06-28; Noa 2026-07-15: "use the cayman screen"). Shown on REOPENS of a
@@ -498,8 +502,9 @@
   <div id="lvp-done">
     <img class="lvp-gate__logo" src="brand-logo.png" alt="Legacy Value Partners">
     <span class="lvp-done__icon" aria-hidden="true"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2E9E5B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></span>
-    <p class="lvp-done__msg">Your request is complete.</p>
-    <p class="lvp-done__sub">A signed copy has been emailed to you.</p>
+    <!-- HEBREW, headline only (Noa-approved 2026-09-08). Shown on every reopen
+         of a completed link. Sub-line dropped, matching the screen above. -->
+    <p class="lvp-done__msg">התהליך הושלם.</p>
   </div>
   <!-- Israeli fund = Hebrew only: the EN option is removed and the toggle hidden.
        The he button stays in the DOM (aria-pressed) so the default-language init is
@@ -1463,7 +1468,7 @@
       // running tag no longer matches the served one. No server-side version
       // signal exists today (?api=config carries no build field), so the page
       // itself is the version source of truth.
-      window.__BUILD_TAG = 'israel-2026-09-06-english-address-visible-server-derived';
+      window.__BUILD_TAG = 'israel-2026-09-08-1-hebrew-terminals';
       var p = new URLSearchParams(location.search);
       // Phase 4 pilot (2026-08-05): israel.html ONLY repoints to ju-service via
       // ju-api.legacyvpartners.com. index/flow/signer/console stay on the GAS
@@ -1506,13 +1511,14 @@
         if (cfg.completed) {
           var dnMsg = document.querySelector('#lvp-done .lvp-done__msg');
           var dnSub = document.querySelector('#lvp-done .lvp-done__sub');
+          // HEBREW, headline only (Noa-approved 2026-09-08). Both branches were
+          // English on a form whose language toggle is deliberately hidden.
           if (cfg.sealed === true) {
-            if (dnMsg) dnMsg.textContent = 'Your request is complete.';
-            if (dnSub) dnSub.textContent = 'A signed copy has been emailed to you.';
+            if (dnMsg) dnMsg.textContent = 'התהליך הושלם.';
           } else {
-            if (dnMsg) dnMsg.textContent = 'Your part is complete.';
-            if (dnSub) dnSub.textContent = 'Once everything is completed and signed, you will receive signed copies by email.';
+            if (dnMsg) dnMsg.textContent = 'החלק שלך הושלם.';
           }
+          if (dnSub) dnSub.textContent = '';
           document.documentElement.classList.add('lvp-done-mode');
         }
         for (var k in cfg) { if (Object.prototype.hasOwnProperty.call(cfg, k)) window.ISRAEL_CFG[k] = cfg[k]; }

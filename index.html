@@ -616,9 +616,20 @@
     <p class="lvp-done__msg">Your request is complete.</p>
     <p class="lvp-done__sub">A signed copy has been emailed to you.</p>
   </div>
-  <div class="lvp-lang" role="group" aria-label="Language">
-    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="false">English</button>
-    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="true">עברית</button>
+  <!-- ENGLISH ONLY (Noa, 2026-09-08): "bi lingual form is too much work. go w
+       english and keep the option to add hebrew if i see its needed."
+       Hidden, not deleted: applyLang and HE_MAP stay intact so re-enabling is
+       removing an attribute, not rebuilding a mechanism. Same shape as
+       israel.html's mirror image, where the EN option is removed and its toggle
+       hidden because the Israeli fund is Hebrew only.
+       The pressed state flips to English at the same time. It shipped with עברית
+       pressed, so this form's own default was Hebrew.
+       IF HEBREW COMES BACK IT IS NOT A TOGGLE (Noa, 2026-09-08): "it would be an
+       option in the beginning and then unchangable since it can get confusing if
+       they toggle." One choice on the first screen, fixed thereafter. -->
+  <div class="lvp-lang" role="group" aria-label="Language" hidden>
+    <button type="button" class="lvp-lang__btn" data-lang-set="en" aria-pressed="true">English</button>
+    <button type="button" class="lvp-lang__btn" data-lang-set="he" aria-pressed="false">עברית</button>
   </div>
     <div class="lvp-app">
     <header class="lvp-header">
@@ -652,9 +663,21 @@
         <!-- ========================= PAGE 1: WELCOME (greeting only, no fields - EasySend parity) ========================= -->
         <section class="lvp-page" data-page="welcome">
           <h2 class="lvp-page__title">Welcome to Legacy Value Partners</h2>
-          <p class="lvp-page__hint">This form collects the information needed for your subscription to the fund. The subscription documents are in English, so all details must be completed in English only (except for your full name, which the form asks for in both English and Hebrew).</p>
-          <p class="lvp-page__hint">If a family office is helping you complete the form, they can open it through the link, fill in the details, and then forward the same link to the investor to sign.</p>
-          <p class="lvp-page__hint">Once everything is completed and signed, you will receive signed copies by email.</p>
+          <!-- ONE READER, THROUGHOUT (Noa-approved 2026-09-08). The old copy
+               addressed the investor in paragraphs 1 and 3, then demoted that same
+               reader to a third party in paragraph 2 ("forward the same link to the
+               investor to sign"). Whoever opened the link, one of the two was false
+               about them.
+               The parenthetical was also wrong on the entity lane: there is no
+               "full name" field there, there is an entity name in Hebrew whose own
+               help text calls it the one field written in Hebrew. Individuals have
+               two such fields, plus two more per additional investor. So the
+               exception is now a rule about marked fields, not a count that is
+               wrong for half the readers. -->
+          <p class="lvp-page__hint">This form collects the information needed for your subscription to the fund.</p>
+          <p class="lvp-page__hint">The subscription documents are in English, so please complete every field in English. A few name fields also ask for Hebrew, and those are marked.</p>
+          <p class="lvp-page__hint">You can pause and come back to this link at any time. If a family office is filling the form for you, they can use this same link and pass it back to you for signature.</p>
+          <p class="lvp-page__hint">Once everything is completed and signed, we will email you the signed copies.</p>
         </section>
 
         <!-- ========================= PAGE 2: DOCUMENTS (front-loaded, EasySend-style) ========================= -->
@@ -1102,7 +1125,6 @@
           <p class="lvp-hint-small" data-show-when="qualification.noneOfTheAbove=true" data-applicant="entity">We are joining as a non-qualified entity with the knowledge of the fund manager Omri Velvart.</p>
 
           <div data-show-when="qualification.noneOfTheAbove=false">
-            <p class="lvp-page__hint">A verifying party (lawyer or CPA) must approve the qualification form. They will receive a link to sign the qualification form after your documents are completed. Please notify them.</p>
             <!-- data-required is load-bearing here, not cosmetic. validatePage only
                  walks [data-required] holders, so without it Continue advanced with
                  this radio still blank. The server does NOT read blank as blank:
@@ -1127,6 +1149,12 @@
             </div>
             <div data-show-when="qualification.preSignedAvailable=false">
               <h3 class="lvp-subhead">Lawyer or CPA verification</h3>
+              <!-- MOVED INTO THIS BRANCH (Noa-approved 2026-09-08). It used to sit
+                   ABOVE the question, so an LP answering "yes, I already have a
+                   signed form" had been told as fact that a lawyer would be emailed
+                   a link. No link is minted on that branch, and "notify them" had no
+                   addressee. It is true only here. -->
+              <p class="lvp-page__hint">A lawyer or CPA needs to confirm your qualified investor status. Once you finish your part of the form, we will email them a link to sign. It helps if you let them know to expect it.</p>
               <div class="lvp-grid-2">
                 <label class="lvp-field" data-required><span class="lvp-field__label">Lawyer or CPA first name</span><input class="lvp-input" type="text" name="qualification.lawyer.firstName"></label>
                 <label class="lvp-field" data-required><span class="lvp-field__label">Last name</span><input class="lvp-input" type="text" name="qualification.lawyer.lastName"></label>
@@ -1446,7 +1474,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-09-07-2-migration-carries-no-amount';
+    window.__BUILD_TAG = 'index-2026-09-08-1-approved-copy';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -1600,8 +1628,15 @@
           }
           return;
         }
-        if (cfg.language === 'en' || cfg.language === 'he') {
-          var btn = document.querySelector('[data-lang-set="' + cfg.language + '"]');
+        // ENGLISH ONLY (Noa, 2026-09-08). A server-sent cfg.language of 'he' no
+        // longer flips this form: the Hebrew half of its copy is not maintained.
+        // The welcome and qualification paragraphs were rewritten in English on
+        // 2026-09-08 and their HE_MAP entries are now stale, so honouring 'he'
+        // would show an LP new English and old Hebrew saying different things.
+        // Re-enabling Hebrew means restoring this branch AND refreshing the map,
+        // together.
+        if (cfg.language === 'en') {
+          var btn = document.querySelector('[data-lang-set="en"]');
           if (btn && btn.getAttribute('aria-pressed') !== 'true') btn.click();
         }
         try { sessionStorage.setItem(cacheKey, JSON.stringify(cfg)); } catch(e) {}
