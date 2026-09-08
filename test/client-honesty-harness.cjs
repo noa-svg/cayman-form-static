@@ -351,8 +351,19 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
 // ---- G5: done-mode boot (jsdom) ----------------------------------------------
 (async function () {
   ok('G5 #lvp-done markup present', /<div id="lvp-done">/.test(israelHtml));
-  ok('G5 done copy verbatim line 1', israelHtml.indexOf('Your request is complete.') !== -1);
-  ok('G5 done copy verbatim line 2', israelHtml.indexOf('A signed copy has been emailed to you.') !== -1);
+  // INVERTED 2026-09-08. These pinned the English terminal copy on a form whose
+  // language toggle is deliberately hidden because the Israeli fund is Hebrew
+  // only. Noa approved the Hebrew and instructed that the sub-line be dropped
+  // rather than translated ("just הקישור אינו זמין."), so the assertion is now
+  // that no English terminal string survives AND the approved Hebrew is present.
+  ok('G5 no English terminal copy survives on a Hebrew-only form',
+    israelHtml.indexOf('Your request is complete.') === -1
+    && israelHtml.indexOf('A signed copy has been emailed to you.') === -1
+    && israelHtml.indexOf('Your part is complete.') === -1);
+  ok('G5 the approved Hebrew terminal copy is present verbatim',
+    israelHtml.indexOf('התהליך הושלם.') !== -1
+    && israelHtml.indexOf('החלק שלך הושלם.') !== -1
+    && israelHtml.indexOf('הקישור אינו זמין.') !== -1);
   ok('G5 done display CSS present', /\.lvp-done-mode #lvp-done \{ display: flex; \}/.test(israelHtml));
   ok('G5 done hides app chrome', /\.lvp-done-mode \.lvp-lang, \.lvp-done-mode \.lvp-app, \.lvp-done-mode #lvp-gate \{ display: none; \}/.test(israelHtml));
 
@@ -395,15 +406,18 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
   const sd = sealedDom.window.document;
   ok('G5 sealed flips lvp-done-mode', sd.documentElement.classList.contains('lvp-done-mode'));
   ok('G5 sealed does not gate', !sd.documentElement.classList.contains('lvp-gate-mode'));
-  ok('G5 sealed msg', sd.querySelector('#lvp-done .lvp-done__msg').textContent === 'Your request is complete.');
-  ok('G5 sealed sub', sd.querySelector('#lvp-done .lvp-done__sub').textContent === 'A signed copy has been emailed to you.');
+  ok('G5 sealed msg', sd.querySelector('#lvp-done .lvp-done__msg').textContent === 'התהליך הושלם.');
+  // The sub-line ELEMENT is gone, not merely emptied: Noa dropped it rather than
+  // translating it. Asserting its absence is what stops it being quietly restored
+  // in English by a later edit.
+  ok('G5 sealed has no sub-line element at all', sd.querySelector('#lvp-done .lvp-done__sub') === null);
   const partialDom = await boot(true, undefined);   // sealed field MISSING -> partial
   const pd = partialDom.window.document;
   ok('G5 partial flips lvp-done-mode', pd.documentElement.classList.contains('lvp-done-mode'));
-  ok('G5 partial msg', pd.querySelector('#lvp-done .lvp-done__msg').textContent === 'Your part is complete.');
-  ok('G5 partial sub', pd.querySelector('#lvp-done .lvp-done__sub').textContent === 'Once everything is completed and signed, you will receive signed copies by email.');
+  ok('G5 partial msg', pd.querySelector('#lvp-done .lvp-done__msg').textContent === 'החלק שלך הושלם.');
+  ok('G5 partial has no sub-line element at all', pd.querySelector('#lvp-done .lvp-done__sub') === null);
   const partialFalse = await boot(true, false);     // sealed:false explicit -> partial
-  ok('G5 sealed:false partial msg', partialFalse.window.document.querySelector('#lvp-done .lvp-done__msg').textContent === 'Your part is complete.');
+  ok('G5 sealed:false partial msg', partialFalse.window.document.querySelector('#lvp-done .lvp-done__msg').textContent === 'החלק שלך הושלם.');
   const live = await boot(false, undefined);
   ok('G5 completed:false stays live', !live.window.document.documentElement.classList.contains('lvp-done-mode'));
   // index.html got the same two-state pick; assert its source carries both pairs.
