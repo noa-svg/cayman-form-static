@@ -1456,7 +1456,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-09-07-2-migration-carries-no-amount';
+    window.__BUILD_TAG = 'index-2026-09-08-1-migration-inherits-comms';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
