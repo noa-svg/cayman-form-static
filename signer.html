@@ -1260,7 +1260,31 @@
         // by the lawyer-evidence group check in doSignSubmit_ below. Labels are
         // verbatim fragments of the shipped form's own clause text.
         evidenceDate: { label: 'מעודכן לתאריך (חובה למלא תאריך ב-3 החודשים האחרונים)', type: 'date' },
-        otherEvidence:{ label: 'יש לפרט כולל תאריך מ-3 החודשים האחרונים', type: 'textarea' }
+        otherEvidence:{ label: 'יש לפרט כולל תאריך מ-3 החודשים האחרונים', type: 'textarea' },
+        // F-cayman-attester (2026-09-08): the CAYMAN attester's own four fields.
+        // routes/signerform.ts:270-278 has declared them since 2026-08-26 and this
+        // table never had defs for them, so every Cayman attester rendered them as
+        // .field--unsupported error boxes and hard-blocked at Sign & Send (line
+        // ~2150). Individual attesters were missing one field, entity attesters
+        // four. Exactly the F10 / F-lawyer-evidence failure that took down a real
+        // Bermington signature in July, on the migration lane this time.
+        //
+        // English, not Hebrew: applyLang's lane gate forces the Cayman lane to
+        // English regardless of the requested language.
+        //
+        // The two corporate clauses are counsel's own words, lifted from
+        // CaymanSources.ts 'schedule-2-lawyer', not new copy. Neither carries a
+        // '*': like the three Israeli boxes above, their requirement is the
+        // server's "at least one evidence box", not each on its own.
+        checkAuditedFinancials: { label: 'Inspecting audited financial reports of the corporate Investor', type: 'checkbox' },
+        auditedFinancialsDate:  { label: 'Latest available report date', type: 'date' },
+        checkShareholders:      { label: 'Verifying that all shareholders of the corporate Investor are accredited investors', type: 'checkbox' },
+        // verifiedOn IS required (Noa, 2026-09-08), so it keeps its '*'. Counsel's
+        // clause reads "on {date} (date not older than 90 days from the date of
+        // subscription)". Blank used to seal __________ into the middle of that
+        // signed sentence. The server refuses it now; the window check below
+        // catches it here first so the attester is not bounced by a round-trip.
+        verifiedOn:   { label: "Date you checked the investor's documents *", type: 'date' }
       };
       // Entity clause text overrides the individual-lane default above for the two
       // fields whose wording differs by applicant type (CaymanSources.ts
@@ -1929,9 +1953,39 @@
       // Returns an error message (translated) for an invalid required/format field,
       // or '' when the field is valid. Used by blur validation, submit validation,
       // and the error-summary builder so the rules live in one place.
+      // Counsel's 90-day window, checked in the browser so the attester is told
+      // here rather than bounced by the server. The SERVER is the authority
+      // (domain/cayman/verificationWindow.ts + the verified_on_required /
+      // verified_on_out_of_window codes in domain/israeli/validate.ts); this is
+      // the same rule stated early, never a replacement for it.
+      //
+      // Measured back from TODAY, matching the server's default: Noa ruled
+      // 2026-09-08 that the 90 days run from the signing moment, not from the
+      // 2027-01-01 subscription date, because the literal reading would refuse
+      // every attester until 2026-10-03.
+      var VERIFIED_ON_WINDOW_DAYS = 90;
+      function verifiedOnOutOfWindow(value) {
+        var v = String(value || '').trim();
+        if (!v) return false; // emptiness is the required check's job, not this one
+        var d = new Date(v + 'T00:00:00Z');
+        if (isNaN(d.getTime())) return true;
+        var now = new Date();
+        var todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        if (d.getTime() > todayUtc) return true; // nobody verified tomorrow
+        return d.getTime() < todayUtc - VERIFIED_ON_WINDOW_DAYS * 86400000;
+      }
+
       function fieldError(inp) {
         var isReq = inp.hasAttribute('required');
         var empty = (inp.type === 'checkbox') ? !inp.checked : !String(inp.value).trim();
+        // The attester's verification date says what it wants, rather than the
+        // generic "This field is required." Copy approved by Noa 2026-09-08.
+        if (inp.name === 'verifiedOn') {
+          if (empty) return tHe("Enter the date you checked the investor's documents.");
+          if (verifiedOnOutOfWindow(inp.value)) {
+            return tHe("That date is outside the 90 days the form allows. Enter the date you checked the documents, within the last 90 days.");
+          }
+        }
         if (isReq && empty) return tHe('This field is required.');
         if (inp.type === 'email' && String(inp.value).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inp.value.trim())) {
           return tHe('Please enter a valid email address.');
@@ -2329,23 +2383,47 @@
         // real booleans: signerFormData's 'true'/'false' STRINGS would coerce
         // !!'false' -> true server-side, rendering every box checked on the
         // sealed legal doc regardless of what the lawyer actually chose.
-        var lawLiquid = efField_('checkLiquid');
-        var lawIncome = efField_('checkIncome');
-        var lawOther = efField_('checkOther');
-        if (isLawyer && lawLiquid && lawIncome && lawOther) {
-          function lawVal(name) { var el = efField_(name); return el ? String(el.value || '').trim() : ''; }
-          payloadObj.lawyer = {
-            firstName: lawVal('firstName'),
-            lastName: lawVal('lastName'),
-            email: lawVal('email'),
-            phone: lawVal('phone'),
-            licenseNumber: lawVal('licenseNumber'),
-            checkLiquid: !!lawLiquid.checked,
-            checkIncome: !!lawIncome.checked,
-            checkOther: !!lawOther.checked,
-            evidenceDate: lawVal('evidenceDate'),
-            otherEvidence: lawVal('otherEvidence')
-          };
+        // F-cayman-attester (2026-09-08). Two defects lived in the six lines this
+        // replaces, and both were invisible because the object was written as a
+        // hardcoded copy of ONE lane's field list:
+        //
+        //   1. The gate required checkLiquid AND checkIncome AND checkOther to all
+        //      exist. A Cayman ENTITY attester is shown the two CORPORATE boxes
+        //      instead (routes/signerform.ts:276), has no checkLiquid at all, and so
+        //      built no payload.lawyer whatsoever - falling back to the
+        //      signerFormData merge the comment above explains is exactly the path
+        //      that silently drops the evidence fields.
+        //   2. Even for an individual, the object never carried verifiedOn,
+        //      firmName or attestationConfirmed. verifiedOn is now REQUIRED
+        //      server-side (Noa 2026-09-08), so an attester would have filled the
+        //      date in, watched it never leave the browser, and been refused for
+        //      omitting it.
+        //
+        // Built from the fields that were actually RENDERED for this signer rather
+        // than a list retyped here, so the next field added to signerform.ts
+        // arrives on its own instead of being dropped for another two months.
+        // Read from the DOM (`data-field`, stamped by the editable-field renderer)
+        // and not from renderDynamic's `ef`, which is local to that function -
+        // touching it here is a ReferenceError that kills the submit handler
+        // silently, with no message on screen and no request sent.
+        //
+        // Checkboxes stay real booleans: signerFormData's 'true'/'false' strings
+        // coerce !!'false' -> true and would tick every box on the sealed legal doc.
+        var LAWYER_CHECKBOXES = ['checkLiquid', 'checkIncome', 'checkOther', 'checkAuditedFinancials', 'checkShareholders', 'attestationConfirmed'];
+        var lawyerFields = Array.prototype.map.call(
+          document.querySelectorAll('#signer-form [data-field]'),
+          function (el) { return el.getAttribute('data-field'); }
+        );
+        var hasEvidenceBox = LAWYER_CHECKBOXES.some(function (n) { return !!efField_(n); });
+        if (isLawyer && hasEvidenceBox) {
+          payloadObj.lawyer = {};
+          lawyerFields.forEach(function (name) {
+            var el = efField_(name);
+            if (!el) return;
+            payloadObj.lawyer[name] = (LAWYER_CHECKBOXES.indexOf(name) >= 0)
+              ? !!el.checked
+              : String(el.value || '').trim();
+          });
         }
         // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so
         // the server sees payload.uploads.lawyer_stamp with the same shape as a CP
