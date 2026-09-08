@@ -36,6 +36,21 @@ function extractFn(name) {
   throw new Error('unbalanced braces for ' + name);
 }
 
+// handleIdUpload gained a type gate (2026-09-08) that reads a module-level
+// allowlist, so the extracted function has one more free variable. Pull the
+// REAL object literal out of the file rather than restating it here: a second
+// copy in a test is exactly the drift the shared map exists to prevent.
+function extractObjectLiteral(name) {
+  const start = html.indexOf('var ' + name + ' = {');
+  if (start < 0) throw new Error('object literal not found: ' + name);
+  let i = html.indexOf('{', start), depth = 0;
+  for (; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    else if (html[i] === '}') { depth--; if (depth === 0) return html.slice(start, i + 1) + ';'; }
+  }
+  throw new Error('unbalanced braces for ' + name);
+}
+
 // Controllable mock: readAsDataURL does NOT fire onload synchronously (like
 // the real browser) - it only fires when the test calls flush(). This is
 // exactly the window the real bug lived in.
@@ -53,7 +68,8 @@ function makeMockFileReaderCtor(queue) {
 
 function runCase(label, assertFn) {
   const queue = [];
-  const src = extractFn('handleIdUpload') + ';'
+  const src = extractObjectLiteral('ID_UPLOAD_ACCEPT_TYPES')
+    + extractFn('handleIdUpload') + ';'
     + extractFn('handleLawyerStamp') + ';'
     + extractFn('uploadsReading') + ';'
     + extractFn('whenUploadsReady') + ';'

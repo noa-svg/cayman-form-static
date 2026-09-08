@@ -60,3 +60,5 @@ test/*
 !test/wire-letter-worklist-harness.cjs
 !test/migration-carries-no-amount-harness.cjs
 !test/harness-gate-membership.cjs
+!test/signer-cayman-attester-harness.cjs
+!test/upload-accept-allowlist-harness.cjs
