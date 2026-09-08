@@ -3146,7 +3146,10 @@ body.side-coll .ss-lbl { display: none; }
    means by it, which is knowledge the screen should be supplying, not asking for. */
 .wl-group-ttl{font-size:14px;font-weight:800;color:var(--color-ink);letter-spacing:.01em}
 .wl-group-job{font-size:12px;color:var(--color-ink-sub)}
-.wl-group-empty{padding:14px;font-size:13px;line-height:1.55;color:var(--color-ink-muted)}
+.wl-group-empty{padding:10px 14px;font-size:12px;line-height:1.5;color:var(--color-ink-muted)}
+/* Ive S1: an all-clear is the least important thing on a money screen. It is
+   stated, never announced, so the bold is dropped from the empty case only. */
+.wl-group-empty strong{font-weight:600;color:var(--color-ink-sub)}
 .wl-group-empty strong{color:var(--color-ink);font-weight:700}
 .wl-card{display:block;padding:8px 14px;border-bottom:1px solid var(--color-border-subtle)}
 .wl-card:last-child{border-bottom:none}
@@ -3168,12 +3171,13 @@ body.side-coll .ss-lbl { display: none; }
 /* 44px and full width. The old row carried THREE 24px chips 6px apart, two of
    which asserted opposite things about money (Mark received / Not this month),
    which is half a thumb target for the most consequential click on the page. */
-.wl-primary,.wl-more{min-height:44px;box-sizing:border-box;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;border-radius:var(--radius-sm);cursor:pointer;text-align:center;transition:background 180ms ease,border-color 180ms ease,color 180ms ease}
+.wl-primary,.wl-more{min-height:44px;box-sizing:border-box;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;border-radius:var(--radius-sm);cursor:pointer;text-align:center;transition:background 180ms ease,border-color 180ms ease,color 180ms ease,transform 90ms ease}
+.wl-primary:active,.wl-more:active{transform:translateY(1px)}
 .wl-primary{flex:1;border:1px solid var(--color-atrium);background:var(--color-atrium);color:var(--color-ink-inverse)}
 .wl-primary:hover:not(:disabled){filter:brightness(1.06)}
 .wl-primary:disabled,.wl-more:disabled{opacity:.55;cursor:default}
 .wl-primary.wl-primary-done{cursor:default}
-.wl-more{flex:0 0 auto;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-ink-sub);font-weight:600;white-space:nowrap}
+.wl-more{flex:0 0 auto;width:44px;padding:8px 0;border:1px solid var(--color-border);background:var(--color-bg-card);color:var(--color-ink-sub);font-weight:700;line-height:1}
 .wl-more:hover:not(:disabled){background:var(--color-bg-hover)}
 .wl-primary:focus-visible,.wl-more:focus-visible,.wl-menu button:focus-visible,.wl-blockers button:focus-visible,.wl-month-nav button:focus-visible,.wl-group-hd button:focus-visible{outline:3px solid var(--color-border-focus);outline-offset:2px}
 .wl-menu{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:8px;border:1px solid var(--color-border-subtle);border-radius:var(--radius-sm);background:var(--color-bg-hover)}
@@ -3252,7 +3256,7 @@ body.side-coll .ss-lbl { display: none; }
    Redemption row 1.5px taller than a Join row. */
 .wl-type-in{border:1px solid transparent}
 .wl-row-amt{font-variant-numeric:tabular-nums;color:var(--color-ink);font-size:16px;font-weight:700;white-space:nowrap}
-.wl-row-ccy{color:var(--color-ink-sub);font-size:12px;font-weight:400;margin-left:4px}
+.wl-row-ccy{color:var(--color-ink-sub);font-size:12px;font-weight:400;margin-left:2px}
 .wl-openmonth-host{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
 .wl-openmonth{min-height:44px;border:1px solid var(--color-atrium);background:var(--color-atrium);color:var(--color-ink-inverse);border-radius:var(--radius-sm);cursor:pointer;font:inherit;font-size:13px;font-weight:700;padding:8px 14px;letter-spacing:.02em}
 .wl-openmonth:hover:not(:disabled){filter:brightness(1.08)}
@@ -3267,6 +3271,10 @@ body.side-coll .ss-lbl { display: none; }
 .wl-parked{background:var(--color-bg-hover)}
 .wl-parked .wl-group-ttl{color:var(--color-ink-sub)}
 .wl-parked .wl-row-nm-he,.wl-parked .wl-row-amt{color:var(--color-ink-sub)}
+/* Ive Y3: when a row is done every element on it recedes, chips included,
+   and hover rehydrates it so reading stays easy. */
+.wl-done-row .wl-row-nm-he,.wl-done-row .wl-row-amt,.wl-done-row .wl-flag,.wl-done-row .wl-type-badge{opacity:.55;transition:opacity 180ms ease}
+.wl-done-row:hover .wl-row-nm-he,.wl-done-row:hover .wl-row-amt,.wl-done-row:hover .wl-flag,.wl-done-row:hover .wl-type-badge{opacity:.9}
 /* WIDE SCREENS EARN THE COLUMNS. `order` puts the note and the menu on their own
    full-width rows below the identity/amount/actions row without named areas,
    which would reserve empty rows (and their gaps) on the many cards that carry
@@ -3874,7 +3882,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       </div>
     </div>
     <div class="view" id="v-wireletter" hidden>
-      <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form, grouped by the job each row needs. Candidate docs only until the parallel diff against the old path is verified.</div></div></div>
+      <div class="top"><div><h1>Transfer Form</h1><div class="sub">Monthly bank transfer form</div></div></div>
       <div class="content">
         <div class="set-card tf-card" style="max-width:900px">
           <!-- The month is the screen's CONTEXT, so it is a heading with
@@ -9537,7 +9545,8 @@ document.addEventListener('keydown',function(e){
       acts+='<button type="button" class="wl-primary" data-act="'+esc2(o.primary.act)+'" data-rid="'+esc2(wlStr(o.rid))+'">'+esc2(o.primary.label)+'</button>';
     }
     if(o.menu&&o.menu.length){
-      acts+='<button type="button" class="wl-more" data-wl-more="'+esc2(mid)+'" aria-expanded="false" aria-controls="'+esc2(mid)+'">Other options</button>';
+      acts+='<button type="button" class="wl-more" data-wl-more="'+esc2(mid)+'" aria-expanded="false" aria-controls="'+esc2(mid)+'"'
+        +' aria-label="Other options" title="Other options"><span aria-hidden="true">&#8943;</span></button>';
     }
     if(acts)h+='<div class="wl-card-acts">'+acts+'</div>';
     if(o.note)h+='<div class="wl-card-note">'+o.note+'</div>';
