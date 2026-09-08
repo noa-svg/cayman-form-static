@@ -301,10 +301,22 @@ function planOf(awaiting, transfers, parked, extra) {
     // W4: recovered and datedFor are on screen, never hidden.
     const recov = t.doc.getElementById('wl-row-r-recov');
     ok('W4 the recovered row renders', !!recov, 'no #wl-row-r-recov');
-    ok('W4 it says the row lives on another tab',
-      TX(recov).indexOf('07/2026') >= 0 && /lives on/i.test(TX(recov)), TX(recov).slice(0, 300));
-    ok('W4 and names that tab in words, not only as a token',
-      TX(recov).indexOf('July 2026') >= 0, TX(recov).slice(0, 300));
+    // Changed 2026-09-08. This used to require BOTH '07/2026' and 'July 2026' in
+    // the row's visible text, which the chip plus a full-sentence paragraph
+    // satisfied. Noa saw the result live and the paragraph, repeated verbatim on
+    // every recovered row, is what made the list unreadable. The chip now carries
+    // the fact in words and the raw tab token moved into its title, so the row
+    // states the month ONCE and the token is still one hover away.
+    ok('W4 it says the row lives on another tab, in words',
+      /lives on/i.test(TX(recov)) && TX(recov).indexOf('July 2026') >= 0, TX(recov).slice(0, 300));
+    const recovChip = Array.prototype.slice.call(recov.querySelectorAll('.wl-flag'))
+      .find((e) => /lives on/i.test(e.textContent || ''));
+    ok('W4 and the raw tab token is still reachable on the chip',
+      !!recovChip && (recovChip.getAttribute('title') || '').indexOf('07/2026') >= 0,
+      recovChip ? recovChip.getAttribute('title') : 'no chip');
+    ok('W4 the month is not printed twice in one row',
+      (TX(recov).match(/July 2026/g) || []).length === 1,
+      'count=' + (TX(recov).match(/July 2026/g) || []).length);
     const dated = t.doc.getElementById('wl-row-r-dated');
     ok('W4 the datedFor row renders', !!dated, 'no #wl-row-r-dated');
     ok('W4 it says which month it is dated for',
