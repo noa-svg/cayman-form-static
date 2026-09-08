@@ -371,7 +371,7 @@
     // a tab whose running tag no longer matches the served one. No server-side
     // version signal exists today, so the page itself is the version source of
     // truth.
-    window.__BUILD_TAG = 'signer-2026-08-25-1-accept-heic';
+    window.__BUILD_TAG = 'signer-2026-09-08-cayman-attester-fields-upload-allowlist';
     // DUAL-GATEWAY SEAM (2026-08-17). Same shape israel.html (C1p) and
     // flow.html (C1f) already run, added here after a REAL LP was blocked.
     //
@@ -925,6 +925,35 @@
     // for them too. (Name kept for its call sites; semantics = "role needs ID upload".)
     function isControllingPersonRole(role) { return /^(cp|subscriber[23])/.test(String(role || '')); }
 
+    // The file types the SERVER's KYC gate actually stores, derived from the
+    // magic-byte sniff that decides it: apps/ju-service/src/domain/kyc.ts's
+    // sniffUploadMime (:76-93). Anything that sniff returns '' for is rejected
+    // server-side as UPLOAD_TYPE_REJECTED, so a client that lets it through is
+    // promising storage it will not get.
+    //
+    // This map is the single source for BOTH the runtime check below and the
+    // accept="" attribute renderIdUploads emits, so the two can never drift -
+    // test/upload-accept-allowlist-harness.cjs asserts exactly that invariant
+    // over every upload input on this page.
+    //
+    // NOT the "old three formats": HEIC/HEIF are here because the ingest side
+    // converts them (libheif-js, landed 2026-09-08) and the sniff has read the
+    // ISO-BMFF ftyp brand since 2026-08-25, and WEBP/GIF/TIFF/BMP are here
+    // because that same sniff has always accepted them - a scanner or an Android
+    // screenshot produces those and the server stores them happily.
+    var ID_UPLOAD_ACCEPT_TYPES = {
+      'application/pdf': 1,
+      'image/jpeg': 1,
+      'image/png': 1,
+      'image/heic': 1,
+      'image/heif': 1,
+      'image/webp': 1,
+      'image/gif': 1,
+      'image/tiff': 1,
+      'image/bmp': 1
+    };
+    var ID_UPLOAD_ACCEPT_ATTR = Object.keys(ID_UPLOAD_ACCEPT_TYPES).join(',');
+
     // Read a chosen file into pendingIdUploads as base64 (post-comma), matching the
     // main form's FileReader pattern. Rejects >10MB visibly (reuses the shared
     // error element). A cleared input removes the slot so the required-gate is honest.
@@ -937,6 +966,25 @@
     function handleIdUpload(slot, input, errEl) {
       var f = input.files && input.files[0];
       if (!f) { delete pendingIdUploads[slot]; return; }
+      // TYPE GATE (2026-09-08). This block had NO type check of any kind - only
+      // a size cap - and accept="image/*,application/pdf" is advisory (every
+      // picker offers an "all files" escape, and a renamed extension defeats it
+      // anyway). So a .docx sailed through the client, the server's magic-byte
+      // sniff rejected it, and the controlling person or joint holder was
+      // recorded as SIGNED with no identification on file. Nothing surfaced that
+      // until somebody opened the KYC folder.
+      //
+      // Reuses the already-approved sibling string on this same page (the paper-
+      // scan gate below), which names the three formats a signer will actually
+      // reach for; the wider set above is simply also accepted rather than
+      // refused. Browsers report an empty File.type for some unknown extensions,
+      // which falls through to the same visible refusal - loud, never silent.
+      if (!ID_UPLOAD_ACCEPT_TYPES[f.type]) {
+        if (errEl) errEl.textContent = tHe('Please upload a PDF, JPG or PNG file only.');
+        input.value = '';
+        delete pendingIdUploads[slot];
+        return;
+      }
       if (f.size > 10 * 1024 * 1024) {
         if (errEl) errEl.textContent = tHe('A file is larger than 10 MB. Please upload a smaller file.');
         input.value = '';
@@ -989,7 +1037,11 @@
       CP_ID_SLOTS.forEach(function (s) {
         html += '<div class="field" data-id-slot="' + esc(s.slot) + '">' +
           '<label for="id-' + esc(s.slot) + '">' + esc(tHe(s.label)) + '</label>' +
-          '<input type="file" id="id-' + esc(s.slot) + '" data-id-upload="' + esc(s.slot) + '" accept="image/*,application/pdf">' +
+          // accept comes from the SAME map the runtime gate reads, so the picker
+          // can never offer a type the gate refuses (image/* used to offer SVG,
+          // which the server sniff rejects). Advisory either way; the gate is the
+          // real enforcement.
+          '<input type="file" id="id-' + esc(s.slot) + '" data-id-upload="' + esc(s.slot) + '" accept="' + esc(ID_UPLOAD_ACCEPT_ATTR) + '">' +
           (s.hint ? '<span class="signer-note">' + esc(tHe(s.hint)) + '</span>' : '') +
           '</div>';
       });
@@ -1260,13 +1312,62 @@
         // by the lawyer-evidence group check in doSignSubmit_ below. Labels are
         // verbatim fragments of the shipped form's own clause text.
         evidenceDate: { label: 'מעודכן לתאריך (חובה למלא תאריך ב-3 החודשים האחרונים)', type: 'date' },
-        otherEvidence:{ label: 'יש לפרט כולל תאריך מ-3 החודשים האחרונים', type: 'textarea' }
+        otherEvidence:{ label: 'יש לפרט כולל תאריך מ-3 החודשים האחרונים', type: 'textarea' },
+        // F-cayman-attester (2026-09-08): the CAYMAN attester field set
+        // (routes/signerform.ts buildEditableFields, the role==='lawyer' branch
+        // below its israeli lane-gate) declares four fields the Israeli set never
+        // had - verifiedOn on every Cayman attester, plus the three CORPORATE
+        // measures on an entity applicant. None had a client def, so all four fell
+        // through to the field--unsupported note and doSignSubmit_'s hard block
+        // refused the submit: a Cayman lawyer or CPA could not sign ANY pack, at
+        // all, with no way through on the link.
+        //
+        // The guard was right to refuse (it exists precisely so a server-declared
+        // field is never silently dropped) and is untouched. The mismatch was the
+        // bug, and it is the CLIENT that was behind: counsel's Schedule 2 consumes
+        // every one of these four as a real token - schedule2.methods.verifiedOn /
+        // .checkAuditedFinancials / .auditedFinancialsDate / .checkShareholders in
+        // docpack/caymanSources.ts's 'schedule-2-lawyer' source - caymanScope.ts
+        // binds them (:648-660), recordSignature.ts persists them (:325-328), and
+        // domain/israeli/validate.ts:155-157 counts the two corporate boxes toward
+        // the at-least-one-evidence rule. Dropping them server-side would have
+        // sealed the corporate bullets permanently blank and lost the 90-day date
+        // the clause itself depends on.
+        //
+        // Labels are counsel's own Schedule 2 wording, the same rule the Israeli
+        // set above follows (verbatim approved clause text, not new copy): the two
+        // checkbox clauses are the source bullets with the token and the footnote
+        // marker removed, and auditedFinancialsDate is the source's own parenthetical
+        // fragment. No '*' on the two dates: their requirement is CONDITIONAL,
+        // enforced by the evidence-group check in doSignSubmit_ (same reasoning as
+        // evidenceDate above). verifiedOn IS required - the clause reads "on <date>
+        // (date not older than 90 days...)" and a blank there seals '__________'.
+        verifiedOn:   { label: 'Date of verification (not older than 90 days from the date of subscription) *', type: 'date' },
+        checkAuditedFinancials: { label: 'Inspecting audited financial reports of the corporate Investor.', type: 'checkbox' },
+        auditedFinancialsDate:  { label: 'Latest available report date', type: 'date' },
+        checkShareholders:      { label: 'Verifying that all shareholders of the corporate Investor are accredited investors.', type: 'checkbox' }
       };
       // Entity clause text overrides the individual-lane default above for the two
       // fields whose wording differs by applicant type (CaymanSources.ts
       // israeli-ent-qual, verbatim). checkOther's clause is identical in both
       // sources, so it needs no override.
-      if (ctx.lockedContext && ctx.lockedContext.companyName) {
+      // LANE-GATED (2026-09-08, same pass as the four Cayman attester fields
+      // above). The Cayman lane has its OWN Schedule 2 wording for these two
+      // bullets, in English, and it is a different pack from the Israeli 15A
+      // form - so a Cayman attester was being shown the Israeli Hebrew clause
+      // text for checkLiquid/checkIncome on an otherwise English pack. Both
+      // strings below are counsel's own Cayman Schedule 2 bullets (docpack/
+      // caymanSources.ts 'schedule-2-lawyer', the {{#if schedule2.isIndividual}}
+      // branch), with the {{schedule2.methods.evidenceDate}} token removed
+      // because that date has its own field. Verbatim approved text, no new copy,
+      // same rule the Israeli labels follow.
+      if (ctx.lane === 'cayman') {
+        fieldDefs.checkLiquid.label = 'Inspecting the Investor\'s bank statements showing Liquid Assets value.';
+        fieldDefs.checkIncome.label = 'Inspecting annual income or tax reports for the prior two years for the subscriber/spouse.';
+        fieldDefs.evidenceDate.label = 'Dated (from the last three months)';
+        fieldDefs.checkOther.label = 'Other measures (include date of inspection).';
+        fieldDefs.otherEvidence.label = 'Include date of inspection';
+      } else if (ctx.lockedContext && ctx.lockedContext.companyName) {
         fieldDefs.checkLiquid.label = 'בחינת הדוחות הכספיים של החברה, מהם עולה כי ההון העצמי שלה עולה על 50 מיליון שקלים חדשים.';
         fieldDefs.checkIncome.label = 'בחינת מרשם בעלי המניות של החברה וכשירותם, מהם עולה כי כל בעלי מניותיה הינם משקיעים כשירים.';
       }
@@ -2168,21 +2269,44 @@
         // checkLiquid needs the evidence date; checkOther needs the free-text
         // detail. checkIncome needs neither. Fields exist only on lawyer legs -
         // absent inputs skip the whole block (every other signer role unchanged).
+        //
+        // 2026-09-08: this used to require ALL THREE Israeli boxes to be present
+        // (`evLiquid && evIncome && evOther`), so on a CAYMAN ENTITY attester -
+        // whose set is checkAuditedFinancials / checkShareholders / checkOther,
+        // with no checkLiquid and no checkIncome at all - the whole group check
+        // silently did not run and that attester could submit having chosen no
+        // evidence whatsoever. Keyed off "how many evidence boxes are on the page"
+        // instead, which covers every Cayman/Israeli, individual/entity shape.
+        // The server rule this mirrors counts the corporate boxes too
+        // (domain/israeli/validate.ts:155-157).
         var evLiquid = efField_('checkLiquid');
         var evIncome = efField_('checkIncome');
         var evOther = efField_('checkOther');
-        if (evLiquid && evIncome && evOther) {
+        var evAudited = efField_('checkAuditedFinancials');
+        var evShareholders = efField_('checkShareholders');
+        var evBoxes = [evLiquid, evIncome, evOther, evAudited, evShareholders].filter(function (el) { return !!el; });
+        if (evBoxes.length) {
           var evDate = efField_('evidenceDate');
           var evText = efField_('otherEvidence');
-          if (!evLiquid.checked && !evIncome.checked && !evOther.checked) {
-            markField(evLiquid, tHe('Please check at least one option.'));
-            if (!firstInvalid) firstInvalid = evLiquid;
+          var evAudDate = efField_('auditedFinancialsDate');
+          var anyChecked = evBoxes.some(function (el) { return !!el.checked; });
+          if (!anyChecked) {
+            markField(evBoxes[0], tHe('Please check at least one option.'));
+            if (!firstInvalid) firstInvalid = evBoxes[0];
           }
-          if (evLiquid.checked && evDate && !String(evDate.value).trim()) {
+          if (evLiquid && evLiquid.checked && evDate && !String(evDate.value).trim()) {
             markField(evDate, tHe('This field is required.'));
             if (!firstInvalid) firstInvalid = evDate;
           }
-          if (evOther.checked && evText && !String(evText.value).trim()) {
+          // Counsel's corporate bullet carries its own date ("latest available
+          // report date"), the exact companion evidenceDate is for checkLiquid.
+          // Deliberately NO 3-month freshness rule on it: audited statements are
+          // annual, per the note in domain/israeli/validate.ts:159-164.
+          if (evAudited && evAudited.checked && evAudDate && !String(evAudDate.value).trim()) {
+            markField(evAudDate, tHe('This field is required.'));
+            if (!firstInvalid) firstInvalid = evAudDate;
+          }
+          if (evOther && evOther.checked && evText && !String(evText.value).trim()) {
             markField(evText, tHe('This field is required.'));
             if (!firstInvalid) firstInvalid = evText;
           }
@@ -2329,10 +2453,19 @@
         // real booleans: signerFormData's 'true'/'false' STRINGS would coerce
         // !!'false' -> true server-side, rendering every box checked on the
         // sealed legal doc regardless of what the lawyer actually chose.
-        var lawLiquid = efField_('checkLiquid');
-        var lawIncome = efField_('checkIncome');
-        var lawOther = efField_('checkOther');
-        if (isLawyer && lawLiquid && lawIncome && lawOther) {
+        //
+        // 2026-09-08: the trigger was `lawLiquid && lawIncome && lawOther`, all
+        // three Israeli boxes. A CAYMAN ENTITY attester has none of checkLiquid /
+        // checkIncome, so payload.lawyer was never built for them at all and the
+        // designed server leg never fired - their licence number and every
+        // evidence selection would have been dropped and the Schedule 2 sealed
+        // blank. Trigger on the evidence-box SET computed above (evBoxes) so every
+        // attester shape builds the object, and carry the Cayman corporate
+        // measures + verifiedOn, which routes/signerform.ts declares and
+        // domain/recordSignature.ts:325-328 types. Booleans, never the 'true'/
+        // 'false' STRINGS signerFormData posts: !!'false' is true and would tick
+        // every box on the sealed legal doc.
+        if (isLawyer && evBoxes.length) {
           function lawVal(name) { var el = efField_(name); return el ? String(el.value || '').trim() : ''; }
           payloadObj.lawyer = {
             firstName: lawVal('firstName'),
@@ -2340,11 +2473,15 @@
             email: lawVal('email'),
             phone: lawVal('phone'),
             licenseNumber: lawVal('licenseNumber'),
-            checkLiquid: !!lawLiquid.checked,
-            checkIncome: !!lawIncome.checked,
-            checkOther: !!lawOther.checked,
+            checkLiquid: !!(evLiquid && evLiquid.checked),
+            checkIncome: !!(evIncome && evIncome.checked),
+            checkOther: !!(evOther && evOther.checked),
+            checkAuditedFinancials: !!(evAudited && evAudited.checked),
+            checkShareholders: !!(evShareholders && evShareholders.checked),
             evidenceDate: lawVal('evidenceDate'),
-            otherEvidence: lawVal('otherEvidence')
+            auditedFinancialsDate: lawVal('auditedFinancialsDate'),
+            otherEvidence: lawVal('otherEvidence'),
+            verifiedOn: lawVal('verifiedOn')
           };
         }
         // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so

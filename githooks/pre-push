@@ -129,6 +129,8 @@ HARNESSES=(
   sign-preview-race-harness
   sign-stub-harness
   harness-gate-membership
+  signer-cayman-attester-harness
+  upload-accept-allowlist-harness
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
