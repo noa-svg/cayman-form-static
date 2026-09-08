@@ -122,6 +122,7 @@ HARNESSES=(
   prepush-marker-contract
   transfer-in-review-gate-harness
   migration-carries-no-amount-harness
+  migration-inherits-comms-emails-harness
   api-fetch-nonjson-harness
   mint-pick-binding-harness
   money-flow-fallback-harness

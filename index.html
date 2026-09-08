@@ -1362,7 +1362,17 @@
         </section>
 
         <!-- ========================= PAGE: COMMUNICATIONS (shared; additional emails + family-office opt-in) ========================= -->
-        <section class="lvp-page" data-page="comms">
+        <!-- MIGRATION NEVER SEES THIS PAGE (Noa, spec section 6c): a migrating LP already
+             has communication emails on file from the Israeli fund. They carry over
+             automatically and the LP is not asked again. Gated by the SAME data-page-when
+             engine the two money pages use (isTransferIn=false, seeded from cfg.isExistingLp
+             by seedTransferInFlag_), so visiblePages() drops it, the stage rail recomputes
+             without it, and validatePage never sees its controls. Nothing on this page is
+             data-required, so no required-field state is left behind either way; what the
+             gate additionally prevents is collectAll shipping comms keys the LP never
+             answered (see the comms skip there). For an ordinary new Cayman subscriber this
+             page is UNCHANGED: still shown, still validated, still submitted. -->
+        <section class="lvp-page" data-page="comms" data-page-when="isTransferIn=false" hidden>
           <h2 class="lvp-page__title">Communications</h2>
           <p class="lvp-page__hint">The signed documents and monthly updates go to your email. Add anyone else who should be copied.</p>
           <!-- Actual LP email, shown for reassurance. Non-translatable (dir=ltr), set by
@@ -1446,7 +1456,7 @@
     // reloads a tab whose running tag no longer matches the served one. It
     // complements the one-shot BUILD check below, which runs only at load and
     // cannot catch a tab that stays open across a deploy.
-    window.__BUILD_TAG = 'index-2026-09-07-2-migration-carries-no-amount';
+    window.__BUILD_TAG = 'index-2026-09-08-1-migration-inherits-comms';
     (function(){
       try{
         fetch(location.pathname+'?_b='+BUILD,{cache:'no-store'})
@@ -2501,6 +2511,15 @@
         // isTransferIn: an ordinary new subscriber, existing LP adding money
         // included, still submits every investment field exactly as before.
         if (isMigration && inp.name.indexOf('investment.') === 0) return;
+        // MIGRATION CARRIES NO COMMS BRANCH EITHER (Noa, spec section 6c). The comms
+        // page is gated out above, but collectAll walks every named control regardless
+        // of page visibility, and an unchecked checkbox is collected UNCONDITIONALLY
+        // (the branch below writes false rather than skipping, unlike a blank text
+        // input). Without this skip a migration would ship comms.ccFamilyOffice:false -
+        // an answer the LP was never asked for - next to a comms namespace that is
+        // supposed to be inherited untouched from their Israeli row. Scoped strictly to
+        // isTransferIn: an ordinary new subscriber still submits every comms field.
+        if (isMigration && inp.name.indexOf('comms.') === 0) return;
         // Qualification is a single-select radio group. A checked qualified radio
         // adds its value to conditions[]; the "none" radio adds nothing (the hidden
         // qualification.noneOfTheAbove field carries that, set on change).
@@ -3092,9 +3111,14 @@
       // the LP reaches the FATCA/CRS page (page 1 is filled by now). Idempotent
       // and only-if-empty, so it never fights the LP's own edits.
       if (page.getAttribute('data-page') === 'fatcaCrs') { seedTaxResidencyFirstRow_(); }
-      // One page before review (comms is always last before it): start the
-      // pack render in the background so review opens already loaded.
-      if (page.getAttribute('data-page') === 'comms') { prefetchDocPreview(); updateCommsEcho(); }
+      // Echo the LP's own email back at them on the comms page (ordinary
+      // subscribers only; a migration never reaches this page).
+      if (page.getAttribute('data-page') === 'comms') { updateCommsEcho(); }
+      // Start the pack render one page BEFORE review so review opens already loaded.
+      // That page is normally comms, but a migration gates comms out entirely, so key
+      // off position in the visible sequence instead of the page id (review is always
+      // the last page). prefetchDocPreview is idempotent.
+      if (idx === pages.length - 2) { prefetchDocPreview(); }
       if (page.getAttribute('data-page') === 'review') { loadDocPreview(); }
       setStatus('');
       window.scrollTo(0, 0);
