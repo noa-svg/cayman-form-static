@@ -59,3 +59,5 @@ test/*
 !test/transfer-in-review-gate-harness.cjs
 !test/wire-letter-worklist-harness.cjs
 !test/migration-carries-no-amount-harness.cjs
+!test/zz-cayman-lawyer-fields.cjs
+!test/zz-cayman-verified-on-copy.cjs
