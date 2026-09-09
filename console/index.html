@@ -4379,7 +4379,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-2-name-cell-legible';
+  window.__BUILD_TAG = 'console-2026-09-10-3-name-cell-id-shape';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -6052,7 +6052,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       return '<span class="rn-name" dir="auto" title="'+esc2(nm)+'">'+esc2(nm)+'</span>'
         +(he?'<span class="rhe" dir="auto" title="'+esc2(he)+'">'+esc2(he)+'</span>':'');
     }
+    // 'undefined' and 'null' arrive as literal STRINGS on some rows (one live
+    // canceled row carries data-pid="undefined"), and String(x||'') keeps them
+    // because they are truthy. Printing a JS sentinel onto an operator surface
+    // is the same defect as the "?" this branch exists to remove: it looks like
+    // an identifier and identifies nothing. No id line is more honest.
     var pid=String(r.pid||'');
+    if(pid==='undefined'||pid==='null')pid='';
     // NOT pid.split('-')[0]. Process ids are not all UUIDs: splitting on the
     // first hyphen turned every `proof-nightly-h1-<ts>` row into the identical
     // stem "proof" (94 of them, pixel pass 2026-09-10), `w8-renewal-scan` into
@@ -6061,7 +6067,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // by LENGTH instead, which assumes no structure: a short id is shown whole,
     // a long one keeps its head AND its tail so two ids sharing a prefix still
     // read apart. The title carries the id in full either way.
-    var stem=pid.length<=20?pid:(pid.slice(0,8)+'\u2026'+pid.slice(-4));
+    // 6 + 8, and elide past 15, so the RENDERED id is never longer than 15
+    // characters. Two constraints set those numbers. (1) Width: the phone name
+    // track is 110px and .rn-pid is 10px mono, where 15 characters measure
+    // ~93px; the previous 8+4-past-20 rule let `unresolved-10c1e42b` through
+    // whole at ~118px. (2) Collisions: a 4-character tail is not enough on one
+    // prefix family - two `proof-nightly-h1-<epoch-ms>` rows rendered the
+    // identical `proof-ni...9072`, which is exactly the failure the elision
+    // exists to prevent. The tail carries more entropy than the head on every
+    // live pid shape, so it gets the characters. The title has the id in full.
+    var stem=pid.length<=15?pid:(pid.slice(0,6)+'\u2026'+pid.slice(-8));
     return '<span class="rn-name is-noname" title="This process reached the board with no investor name.">(no name)</span>'
       +(stem?'<span class="rhe rn-pid" title="Process '+esc2(pid)+'">'+esc2(stem)+'</span>':'');
   }

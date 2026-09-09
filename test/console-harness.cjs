@@ -500,18 +500,44 @@ function extractVarObj(name) {
   ok('K14 a nameless row never renders the bare glyph ?', nameless.indexOf('>?<') === -1, nameless);
   ok('K14 a nameless row says so in words', nameless.includes('>(no name)<'), nameless);
   ok('K14 a nameless row is muted, not styled as a real name', nameless.includes('class="rn-name is-noname"'));
-  ok('K14 a nameless row is still identifiable by its pid', nameless.includes('class="rhe rn-pid" title="Process fa7607da-e3f3-48f0-8b0c-eba8faf8531c">fa7607da\u2026531c<'), nameless);
+  ok('K14 a nameless row is still identifiable by its pid', nameless.includes('class="rhe rn-pid" title="Process fa7607da-e3f3-48f0-8b0c-eba8faf8531c">fa7607\u2026faf8531c<'), nameless);
   // The stem must not assume a UUID. Splitting on the first hyphen collapsed 94
   // proof rows onto the identical stem 'proof' and reduced two others to 'w8'
   // and 'b' (pixel pass 2026-09-10). These are the real live pid shapes.
   const stemOf = (pid) => { const m = rowHtml({ pid: pid, name: '', stage: 'needs_attention' }).match(/class="rhe rn-pid"[^>]*>([^<]*)</); return m ? m[1] : null; };
   ok('K14 a long non-UUID pid keeps its tail, not just a shared prefix',
-    stemOf('proof-nightly-h1-1788480788638') === 'proof-ni\u20268638', stemOf('proof-nightly-h1-1788480788638'));
+    stemOf('proof-nightly-h1-1788480788638') === 'proof-\u2026' + '80788638', stemOf('proof-nightly-h1-1788480788638'));
   ok('K14 two pids sharing a long prefix render apart',
     stemOf('proof-nightly-h1-1788480788638') !== stemOf('proof-nightly-h1-1788480799999'));
   ok('K14 a short pid is shown whole rather than cut to a meaningless token',
     stemOf('w8-renewal-scan') === 'w8-renewal-scan' && stemOf('b-L06SCwQLI') === 'b-L06SCwQLI',
     stemOf('w8-renewal-scan') + ' / ' + stemOf('b-L06SCwQLI'));
+  // WIDTH INVARIANT. .rn-pid is 10px mono and the phone name track is 110px,
+  // where 15 characters measure ~93px. The rendered id must never exceed that,
+  // whatever shape the pid arrives in - a rule the old 8+4-past-20 form could
+  // not state, and `unresolved-10c1e42b` (19 chars, ~118px) slipped through it.
+  const SHAPES = ['fa7607da-e3f3-48f0-8b0c-eba8faf8531c', 'proof-nightly-h1-1788480788638',
+    'proof-nightly-h1-1788480789072', 'unresolved-10c1e42b', 'w8-renewal-scan', 'b-L06SCwQLI',
+    'wi1RJaJVBkE', 'manual__c27ed14e-6c41-4df1-8b57-6731289f08d3', 'x'.repeat(300)];
+  const tooWide = SHAPES.filter((pid) => (stemOf(pid) || '').length > 15);
+  ok('K14 no pid shape renders an id wider than the phone name track', tooWide.length === 0, JSON.stringify(tooWide.map((p) => [p, stemOf(p)])));
+  ok('K14 unresolved-10c1e42b elides rather than overflowing at phone width',
+    stemOf('unresolved-10c1e42b') === 'unreso\u2026' + '10c1e42b', stemOf('unresolved-10c1e42b'));
+  // The live collision: two nightly proof rows shared a first-8 AND a last-4,
+  // so an 8+4 elision printed the identical `proof-ni...9072` for both.
+  ok('K14 two proof pids sharing a prefix AND a 4-char tail still render apart',
+    stemOf('proof-nightly-h1-1788480789072') !== stemOf('proof-nightly-h1-1788999999072'),
+    stemOf('proof-nightly-h1-1788480789072'));
+  ok('K14 every distinct shape renders a distinct id',
+    new Set(SHAPES.map(stemOf)).size === SHAPES.length, JSON.stringify(SHAPES.map(stemOf)));
+  // A JS sentinel that arrived as a STRING is not an identifier.
+  ok('K14 a pid of the literal string "undefined" renders no id line at all',
+    !rowHtml({ pid: 'undefined', name: '', stage: 'needs_attention' }).includes('rn-pid'),
+    rowHtml({ pid: 'undefined', name: '', stage: 'needs_attention' }));
+  ok('K14 a pid of the literal string "null" renders no id line at all',
+    !rowHtml({ pid: 'null', name: '', stage: 'needs_attention' }).includes('rn-pid'));
+  ok('K14 the word undefined never reaches the rendered name cell',
+    rowHtml({ pid: 'undefined', name: '', stage: 'needs_attention' }).indexOf('>undefined<') === -1);
   ok('K14 two UUIDs differing only in their tail render apart',
     stemOf('fa7607da-e3f3-48f0-8b0c-eba8faf8531c') !== stemOf('fa7607da-e3f3-48f0-8b0c-eba8faf85999'));
   ok('K14 a nameless row with no pid at all renders no empty second line',
