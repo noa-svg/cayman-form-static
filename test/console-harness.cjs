@@ -39,9 +39,15 @@ const VOCAB_DEPENDENTS = ['isTerminalStage', 'isCompletedStage', 'isCanceledStag
 // retired row became a lookup instead of an equality chain, so the chain could
 // not drift from the vocabulary that decides which rows are retired at all.
 const LABEL_DEPENDENTS = ['stageMilestone'];
+// paintVerLine_ composes sinceDur's output through agoPhrase. Carrying it here
+// rather than at each call site is the same bargain the two lists above make:
+// a rig that pulled the painter alone got a ReferenceError, and load()'s catch
+// swallowed it into an unrelated board-error path.
+const AGO_DEPENDENTS = ['paintVerLine_'];
 function extractFn(name) {
   if (VOCAB_DEPENDENTS.includes(name)) return extractVarObj('BOARD_TERMINAL_') + rawFn(name);
   if (LABEL_DEPENDENTS.includes(name)) return extractVarObj('RETIRED_LABEL') + rawFn(name);
+  if (AGO_DEPENDENTS.includes(name)) return rawFn('agoPhrase') + ';' + rawFn(name);
   return rawFn(name);
 }
 function rawFn(name) {
@@ -1684,6 +1690,43 @@ function extractVarObj(name) {
     ok('P6e boardWouldReadEmpty_ reads inflightOf_ rather than reimplementing it',
       /inflightOf_\(visible\)\.length===0/.test(extractFn('boardWouldReadEmpty_')));
   }
+}
+
+// Q1: the freshness line's age/suffix pairing. sinceDur returns 'just now' for
+// anything under a minute, and paintVerLine_ used to append ' ago' to whatever
+// came back, so every sub-minute refresh read "synced just now ago" on both
+// lane tabs. The O/P rigs above STUB sinceDur (`() => '1m'`), which is exactly
+// why they could not see it: the defect lives in the pairing, not in either
+// half. This block stubs neither, and asserts both arms of agoPhrase.
+{
+  const src = extractVar('BOARD_HEALTH') + ';' + extractFn('boardDegraded_') + ';'
+    + extractFn('sinceDur') + ';' + extractFn('paintVerLine_')
+    + '; return { paint: paintVerLine_, BOARD_HEALTH: BOARD_HEALTH };';
+  // Stamps are derived from the live clock so the rig never depends on a fixed
+  // date, and carry the Z so Date.parse does not read them as local time.
+  const agoIso = (ms) => new Date(Date.now() - ms).toISOString();
+  function paintAt(ms) {
+    const verEl = { style: {}, textContent: '', title: '' };
+    const scope = { document: { getElementById: (id) => (id === 'ver-line' ? verEl : null) } };
+    const names = Object.keys(scope);
+    const built = (new Function(...names, src))(...names.map((n) => scope[n]));
+    built.BOARD_HEALTH.syncedAt = agoIso(ms);
+    built.paint();
+    return verEl.textContent;
+  }
+  const subMinute = paintAt(20 * 1000);
+  const normalAge = paintAt(3 * 60 * 1000);
+  ok('Q1 a sub-minute sync reads "synced just now", never "just now ago"',
+    subMinute === 'synced just now', subMinute);
+  ok('Q1b a normal age still carries the suffix',
+    normalAge === 'synced 3m ago', normalAge);
+  // The DETECT for the class: any future age string composed straight into the
+  // line reintroduces the same pairing bug. The suffix belongs to agoPhrase.
+  // rawFn, not extractFn: extractFn prepends agoPhrase, whose whole job IS the
+  // suffix, so reading through it would assert against the wrong body.
+  const painterSrc = rawFn('paintVerLine_');
+  ok('Q1c paintVerLine_ never appends the suffix itself',
+    !/'\s*ago/.test(painterSrc) && /agoPhrase\(/.test(painterSrc), painterSrc);
 }
 
 // The O-block's async IIFEs settle on the microtask queue; report after they do.
