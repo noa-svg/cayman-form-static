@@ -4332,7 +4332,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-07-2-one-mint-migration';
+  window.__BUILD_TAG = 'console-2026-09-09-1-orphan-rows-leg';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -4762,10 +4762,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // board, which matters MORE now that real Cayman processes are born there.
   // BOTH lanes read BOTH engines, and both entries are load-bearing (verified
   // live 2026-09-06, see load()'s header for the evidence): ju-service owns
-  // everything born since 2026-08-16, GAS owns the older spine rows AND is the
-  // only engine that surfaces the tracker's still-owed orphan/manual money
-  // rows. GAS is slow (~6-10s floor) but it is NOT redundant - load() pays for
-  // it off the critical path instead of dropping it.
+  // everything born since 2026-08-16, GAS owns the older spine rows. GAS is
+  // slow (~6-10s floor) but it is NOT redundant - load() pays for it off the
+  // critical path instead of dropping it.
+  // NARROWED 2026-09-09 (gate 3 item 1): GAS used to be listed here as the only
+  // engine that surfaces the tracker's still-owed orphan/manual money rows too.
+  // It is not any more - load()'s MANUAL leg reads them from ju-service's
+  // ?api=listManualTrackerRows. The older spine rows are now GW's whole
+  // remaining claim on this list, which is gate 3 item 5.
   var ENGINES_FOR_LANE_ = { cayman: [GW, JU_API], israel: [GW, JU_API] };
   function enginesForLane_(lane) {
     var isIsrael = (String(lane || '').toLowerCase().indexOf('isra') === 0);
@@ -6753,6 +6757,35 @@ document.addEventListener('keydown',function(e){
       return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed};
     });
   }
+  // The board's ORPHAN money rows - transfer-forms tracker rows with no ju
+  // process behind them - from ju-service's ?api=listManualTrackerRows. GAS
+  // concats the same rows onto its own ?api=list; ju-service's ?api=list is
+  // spine-only and structurally cannot, which is why this is a separate call.
+  //
+  // Returns the SAME {base,list,notes,extras,failed} shape fetchEngineBoard_
+  // does, with empty notes/extras, so paintBoard_'s merge, its first-wins pid
+  // dedupe, its _engine tagging and BOARD_HEALTH.legFail all work on it with no
+  // special case. These rows carry no notes and no board-detail overlay: a row
+  // with no process has nothing on either side to read.
+  //
+  // A FAILED LEG IS RED, NEVER EMPTY. That is the entire defect this leg was
+  // built to close: GAS answered a dead tracker with [] and the board painted a
+  // clean "nothing in flight" over live money. `ok:false` from the route (the
+  // tracker unwired, tab enumeration failed) and a rejected fetch are treated
+  // identically here, and `partial:true` - some tabs read, some did not - counts
+  // as failed too, because a half-read tracker must not look settled.
+  function fetchManualRowsLeg_(base,lane,wantDone){
+    var failed={list:false,notes:false,extras:false};
+    return apiFetch('?api=listManualTrackerRows&lane='+lane+'&includeDone='+(wantDone?'1':'0'),false,base)
+      .catch(function(){failed.list=true;return {processes:[]};})
+      .then(function(d){
+        if(!d||d.ok===false||d.partial){
+          failed.list=true;
+          console.warn('board: manual/orphan tracker rows leg degraded',(d&&(d.error||d.tabErrors))||'fetch failed');
+        }
+        return {base:base,list:{processes:(d&&d.processes)||[],generatedAt:(d&&d.generatedAt)||''},notes:{notes:{}},extras:{rows:{}},failed:failed};
+      });
+  }
   function load(silent){
     var rid=++LOAD_SEQ;
     // Per-load overlay health (2026-09-07 audit, defect 4). legFail is
@@ -6774,15 +6807,24 @@ document.addEventListener('keydown',function(e){
     //   - ju-service owns ju.process_registry (everything born since
     //     2026-08-16; its diagRegistryStats oldestCreatedAt proves nothing
     //     older exists there).
-    //   - GAS owns the spine sheet's process_registry AND is the ONLY engine
-    //     that surfaces the transfer-forms tracker's orphan/manual money rows
-    //     (CaymanGateway.ts:1713 concats caymanListManualTrackerRows_).
+    //   - GAS owns the spine sheet's process_registry. That alone is why GW is
+    //     still here; it is the remaining reason, not one of two.
+    //   - CORRECTED 2026-09-09 (gate 3 item 1). GAS used to be the ONLY engine
+    //     that surfaced the transfer-forms tracker's orphan/manual money rows
+    //     (CaymanGateway.ts:1713 concats caymanListManualTrackerRows_), because
     //     ju-service's ?api=list is spine-only (consolelist.ts:101-126, three
-    //     Postgres reads, no Sheets handle is even passed to it), so it cannot
-    //     reproduce them. Those rows are emitted `currentStage:'needs_attention',
-    //     stageIndex:-1` - the TOP of the board, still-owed money. Live on
-    //     2026-09-06 that is b-L06SCwQLI (pre-Ju EasySend) plus three manual__
-    //     rows in 08/2026 alone. Dropping GW silently deletes actionable rows.
+    //     Postgres reads, no Sheets handle is even passed to it) and cannot
+    //     reproduce them. It no longer is: ju-service answers
+    //     ?api=listManualTrackerRows (routes/consolemanualrows.ts) and the
+    //     MANUAL leg below carries those rows independently of GW. They are
+    //     still emitted `currentStage:'needs_attention', stageIndex:-1` - the
+    //     TOP of the board, still-owed money - and on 2026-09-09 that is one
+    //     row on the default board, גלבוע פאנד אוף פאנדס (manual__c27ed14e-...,
+    //     08/2026, 3,000,000 NIS, Received in transit), plus two settled
+    //     Klein-estate rows under Show completed. b-L06SCwQLI (אלמוג חזון) is
+    //     Parked and correctly off every still-owed surface.
+    //     Dropping GW is STILL not free - it takes the older spine rows with it
+    //     - but it no longer silently deletes tracker money rows.
     //
     // PROGRESSIVE ENGINE PAINT (2026-09-06): what WAS droppable is the WAIT.
     // This used to be Promise.all over the engines, so the board painted at the
@@ -6798,13 +6840,35 @@ document.addEventListener('keydown',function(e){
     // DECLARED engine order (never arrival order), so the final paint is
     // byte-identical to what the old Promise.all produced - including the
     // "first engine wins" pid dedupe below.
+    // THE ORPHAN ROWS ARE THEIR OWN LEG (ju-cayman retirement gate 3 item 1,
+    // 2026-09-09), not a fourth fetch inside ju-service's engine leg.
+    //
+    // ju-service now answers ?api=listManualTrackerRows (consolemanualrows.ts),
+    // so GAS is no longer the only engine that can surface a money row with no
+    // ju process behind it. But that route is a tab-by-tab Sheets read through
+    // ju-google-proxy, and ju-service's ?api=list is three Postgres reads that
+    // land in ~0.4s. Folding it into fetchEngineBoard_'s Promise.all would make
+    // the FAST leg wait on the slow one and undo the progressive paint above.
+    // As its own leg it costs what GAS's leg already costs, off the critical
+    // path, and it merges through the same slots/dedupe machinery unchanged.
+    //
+    // LEG ORDER IS [GW, JU_API, MANUAL] and it matters: the merge below is
+    // first-wins by pid, so while GW is still in ENGINES_FOR_LANE_ the GAS copy
+    // of each orphan row keeps rendering and this leg changes nothing on
+    // screen. When GW leaves (gate 3 items 2-7), this leg carries them. That is
+    // the whole point of introducing it before the removal rather than with it.
     var engines=enginesForLane_(state.lane);
-    var slots=engines.map(function(){return null;});
-    engines.forEach(function(base,slotIx){
-      // fetchEngineBoard_ never rejects (see its comment), so every engine
-      // settles and the fail-open posture is unchanged: a dead engine
-      // contributes an empty triple and the board renders the other one's rows.
-      fetchEngineBoard_(base,state.lane,wantDone,showTest).then(function(res){
+    var legs=engines.map(function(base){return {kind:'engine',base:base};});
+    legs.push({kind:'manual',base:JU_API});
+    var slots=legs.map(function(){return null;});
+    legs.forEach(function(leg,slotIx){
+      // Neither fetcher rejects (see fetchEngineBoard_'s comment), so every leg
+      // settles and the fail-open posture is unchanged: a dead leg contributes
+      // an empty triple and the board renders the other legs' rows.
+      var p=(leg.kind==='manual')
+        ? fetchManualRowsLeg_(leg.base,state.lane,wantDone)
+        : fetchEngineBoard_(leg.base,state.lane,wantDone,showTest);
+      p.then(function(res){
         if(rid!==LOAD_SEQ)return;
         slots[slotIx]=res;
         paintBoard_(slots.filter(Boolean),rid,wantDone,silent);
@@ -6891,13 +6955,15 @@ document.addEventListener('keydown',function(e){
       // renderer's own filters. It cannot drift from renderRows without
       // inflightOf_ itself changing, which changes both at once - which is the
       // point, and is what O9c locks.
-      if(perEngine.length<engines.length&&boardWouldReadEmpty_(rows))return;
-      // Review state lives on ju-service, but the manual rows that carry the
-      // "needs review" phrase are concatenated into ju-cayman's board response
-      // (CaymanGateway.ts:1640). Neither engine can read the other, so the
-      // console overlays it here - the same way it already merges board feeds
-      // from more than one engine. Without this the Approve button would write
-      // a record and change nothing on screen.
+      if(perEngine.length<legs.length&&boardWouldReadEmpty_(rows))return;
+      // Review state lives on ju-service, and the manual rows that carry the
+      // "needs review" phrase arrive on a DIFFERENT feed from it - historically
+      // ju-cayman's board response (CaymanGateway.ts:1640), and since 2026-09-09
+      // also ju-service's own ?api=listManualTrackerRows leg, which is a
+      // separate call that knows nothing about review records. No feed carries
+      // both, so the console overlays it here - the same way it already merges
+      // board feeds from more than one leg. Without this the Approve button
+      // would write a record and change nothing on screen.
       //
       // Fail-soft on purpose: if the overlay cannot load, rows render exactly as
       // they do today. A review is an annotation, and losing it must never cost

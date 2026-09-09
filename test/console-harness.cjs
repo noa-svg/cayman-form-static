@@ -476,9 +476,15 @@ function extractVarObj(name) {
   ok('K11 list and opNotes are fetched together via Promise.all', engineFetchSrc.includes('Promise.all('));
   // Was 'load() itself Promise.all's across every engine'. The Promise.all was
   // the DEFECT (it made the board wait on GAS's ~9s floor), not the contract.
-  // The contract is that load asks EVERY engine for the lane and merges all of
+  // The contract is that load asks EVERY leg for the lane and merges all of
   // them; how it awaits them is section O's business. Updated 2026-09-06.
-  ok('K11 load() asks every engine for the lane', /engines\.forEach\(function\(base,slotIx\)\{/.test(loadSrc));
+  // Widened 2026-09-09 (gate 3 item 1): the unit is now a LEG, not an engine.
+  // The orphan/manual tracker rows ride their own leg on ju-service rather than
+  // a fourth fetch inside an engine leg, so `engines` is what load asks and
+  // `legs` is what it awaits and merges. See O10 for the behavioural half.
+  ok('K11 load() asks every leg for the lane', /legs\.forEach\(function\(leg,slotIx\)\{/.test(loadSrc));
+  ok('K11 the manual/orphan leg is one of them, and rides ju-service',
+    /legs\.push\(\{kind:'manual',base:JU_API\}\)/.test(loadSrc), loadSrc.slice(0, 0));
   ok('K11 load() merges every engine that answers', loadSrc.includes('slots.filter(Boolean)'));
   ok('K11 row mapping pulls note text from the merged notes map, keyed by pid', loadSrc.includes('note:(n&&n.text)||\'\''));
 
@@ -1002,6 +1008,10 @@ function extractVarObj(name) {
   const src = extractFn('isTerminalStage') + ';' + extractFn('isCompletedStage') + ';'
     + extractFn('inflightOf_') + ';' + extractFn('rowHay') + ';' + extractFn('boardWouldReadEmpty_') + ';'
     + extractFn('fetchEngineBoard_')
+    // The orphan/manual tracker-rows leg (gate 3 item 1, 2026-09-09). EXTRACTED,
+    // never stubbed, for the same reason every other helper here is: a stub
+    // would be a second copy of the thing under test.
+    + ';' + extractFn('fetchManualRowsLeg_')
     // 2026-09-07: load() reaches for the board-health and review-cache
     // helpers now. They are EXTRACTED, not stubbed, so this rig keeps
     // exercising the real ones (the harness header's standing warning about
@@ -1009,7 +1019,11 @@ function extractVarObj(name) {
     + ';' + extractVar('BOARD_HEALTH') + ';' + extractVar('REVIEW_CACHE') + ';'
     + extractFn('boardDegraded_') + ';' + extractFn('paintVerLine_') + ';'
     + extractFn('applyReviewCache_') + ';' + extractFn('reviewOverlayFailed_')
-    + ';' + extractFn('load') + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_ };';
+    + ';' + extractFn('load')
+    // BOARD_HEALTH is returned, not read off `scope`: it is extracted INTO the
+    // rig's own function scope (extractVar above), so the outer scope object
+    // never had it and `scope.BOARD_HEALTH` was silently undefined.
+    + '; return { load: load, fetchEngineBoard_: fetchEngineBoard_, fetchManualRowsLeg_: fetchManualRowsLeg_, BOARD_HEALTH: BOARD_HEALTH };';
 
   // One scriptable gateway for both engines. Each apiFetch call parks a
   // deferred keyed by engine so the test decides the arrival ORDER - which is
@@ -1021,6 +1035,12 @@ function extractVarObj(name) {
     const painted = [];
     const dead = {};
     const listRows = { [GWU]: [], [JUU]: [] };
+    // The manual/orphan leg rides JU_API but is a SEPARATE call, so it parks on
+    // its own queue: arrive(JUU) must not settle it, or no test could tell the
+    // fast spine leg from the slow tracker leg that is the whole reason the
+    // orphan rows got their own slot instead of a fourth fetch inside one.
+    const parkedManual = [];
+    let manualAnswer = { ok: true, processes: [], generatedAt: '2026-09-09T10:00' };
     // The review overlay is parked SEPARATELY so O5 can resolve an EARLY
     // paint's overlay AFTER a later paint has already rendered - the exact
     // late-clobber shape PAINT_SEQ exists to stop.
@@ -1031,6 +1051,10 @@ function extractVarObj(name) {
       if (qs.indexOf('opGetRowReview') !== -1) {
         if (!parkReviews) return Promise.resolve({ ok: true, reviews: {} });
         return new Promise((resolve) => reviews.push(() => resolve({ ok: true, reviews: {} })));
+      }
+      if (qs.indexOf('?api=listManualTrackerRows') === 0) {
+        if (dead.manual) return Promise.reject(new Error('tracker leg down'));
+        return new Promise((resolve) => parkedManual.push(() => resolve(manualAnswer)));
       }
       if (dead[base]) return Promise.reject(new Error('engine down'));
       return new Promise((resolve) => {
@@ -1043,6 +1067,7 @@ function extractVarObj(name) {
     }
     const flush = () => new Promise((res) => { let n = 0; (function f() { if (++n > 40) return res(); Promise.resolve().then(f); })(); });
     const arrive = async (base) => { const q = parked[base].splice(0); q.forEach((fn) => fn()); await flush(); };
+    const arriveManual = async () => { const q = parkedManual.splice(0); q.forEach((fn) => fn()); await flush(); };
     const listEl = { innerHTML: '' };
     const verEl = { style: {}, textContent: '', title: '' };
     const scope = {
@@ -1075,7 +1100,9 @@ function extractVarObj(name) {
       await flush();
     };
     return {
-      load: built.load, painted, arrive, flush, GWU, JUU, listRows, dead,
+      load: built.load, painted, arrive, arriveManual, flush, GWU, JUU, listRows, dead,
+      setManualAnswer: (v) => { manualAnswer = v; },
+      boardHealth: () => built.BOARD_HEALTH,
       arriveReviews, parkReviews: (v) => { parkReviews = v; }, reviewsPending: () => reviews.length,
     };
   }
@@ -1180,7 +1207,9 @@ function extractVarObj(name) {
   })();
 
   // O7c: a genuinely empty board must still reach the empty state once all
-  // engines are in - the guard suppresses PARTIAL emptiness, not real emptiness.
+  // LEGS are in - the guard suppresses PARTIAL emptiness, not real emptiness.
+  // Widened 2026-09-09: "all legs" now includes the orphan/manual tracker leg,
+  // and O7d below is the reason that matters rather than being bookkeeping.
   (async () => {
     const r = makeRig();
     r.listRows[r.JUU] = [];
@@ -1189,8 +1218,100 @@ function extractVarObj(name) {
     await r.flush();
     await r.arrive(r.JUU);
     await r.arrive(r.GWU);
-    ok('O7c a truly empty board still renders once both engines answered',
+    ok('O7c a truly empty board does NOT render while the orphan leg is still out',
+      r.painted.length === 0, r.painted);
+    await r.arriveManual();
+    ok('O7c2 a truly empty board renders once every leg answered',
       r.painted.length === 1 && r.painted[0].length === 0, r.painted);
+  })();
+
+  // O7d: THE MONEY CASE, and the reason the guard had to start counting legs.
+  // Both engines answer empty and the orphan leg - the only one carrying the
+  // still-owed tracker rows - is still in the air. A guard still comparing
+  // against engines.length would call the board complete here and paint
+  // "Nothing in flight." over live money, which is the exact class of lie this
+  // whole item exists to remove.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [];
+    r.listRows[r.GWU] = [];
+    r.setManualAnswer({ ok: true, processes: [{ processId: 'manual__c27ed14e-6c41-4df1-8b57-6731289f08d3', currentStage: 'needs_attention', investmentAmount: 3000000 }] });
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU);
+    await r.arrive(r.GWU);
+    ok('O7d no false "Nothing in flight" while the orphan money leg is outstanding',
+      r.painted.length === 0, r.painted);
+    await r.arriveManual();
+    ok('O7e the orphan money row lands on the board from ju-service',
+      r.painted.length === 1 && r.painted[0].indexOf('manual__c27ed14e-6c41-4df1-8b57-6731289f08d3') !== -1, r.painted);
+  })();
+
+  // O8x: the orphan leg's own failure posture. GAS answered a dead tracker with
+  // [] and the board painted clean over live money; that silence IS the defect.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [{ processId: 'ju-1', currentStage: 'signing' }];
+    r.listRows[r.GWU] = [];
+    r.setManualAnswer({ ok: false, error: 'tracker not wired on this revision' });
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU); await r.arrive(r.GWU); await r.arriveManual();
+    ok('O8x an ok:false orphan leg still lets the other legs paint (fail-open)',
+      r.painted.length >= 1 && r.painted[r.painted.length - 1].indexOf('ju-1') !== -1, r.painted);
+    ok('O8y an ok:false orphan leg marks the board degraded - never a clean empty',
+      r.boardHealth().legFail === true, r.boardHealth());
+  })();
+
+  // O8z: PARTIAL counts as failed. Some tabs read, some did not, is not a
+  // settled tracker, and a board painted from half a read must not look calm.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [{ processId: 'ju-1', currentStage: 'signing' }];
+    r.listRows[r.GWU] = [];
+    r.setManualAnswer({ ok: true, partial: true, tabErrors: [{ tab: '08/2026', error: 'read failed' }], processes: [] });
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU); await r.arrive(r.GWU); await r.arriveManual();
+    ok('O8z a PARTIAL orphan-leg read marks the board degraded',
+      r.boardHealth().legFail === true, r.boardHealth());
+  })();
+
+  // O9x: a REJECTED orphan leg must not take the board down with it, and must
+  // still go red. Same fail-open posture every engine leg already has.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.JUU] = [{ processId: 'ju-1', currentStage: 'signing' }];
+    r.listRows[r.GWU] = [];
+    r.dead.manual = true;
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU); await r.arrive(r.GWU); await r.arriveManual();
+    ok('O9x a rejected orphan leg still lets the board paint',
+      r.painted.length >= 1 && r.painted[r.painted.length - 1].indexOf('ju-1') !== -1, r.painted);
+    ok('O9y a rejected orphan leg marks the board degraded',
+      r.boardHealth().legFail === true, r.boardHealth());
+  })();
+
+  // O9z: DEDUPE ACROSS THE SEAM. While GW is still in ENGINES_FOR_LANE_ both it
+  // and the new leg carry the same orphan row. Leg order is [GW, JU_API,
+  // MANUAL] and the merge is first-wins, so the row must appear ONCE, and it
+  // must be GAS's copy - which is what makes shipping this leg a no-op on
+  // screen and the transition risk-free.
+  (async () => {
+    const r = makeRig();
+    const PID = 'manual__c27ed14e-6c41-4df1-8b57-6731289f08d3';
+    r.listRows[r.JUU] = [];
+    r.listRows[r.GWU] = [{ processId: PID, currentStage: 'needs_attention', displayName: 'from-gas' }];
+    r.setManualAnswer({ ok: true, processes: [{ processId: PID, currentStage: 'needs_attention', displayName: 'from-ju-service' }] });
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.JUU); await r.arrive(r.GWU); await r.arriveManual();
+    const final = r.painted[r.painted.length - 1];
+    ok('O9z the row both legs carry is listed exactly ONCE',
+      final.filter((p) => p === PID).length === 1, final);
+    ok('O9z2 and it is GAS\'s copy that wins, per declared leg order',
+      final.names[final.indexOf(PID)] === 'from-gas', final.names);
   })();
 
   // O5c/d: the structural guard itself.
@@ -1314,6 +1435,11 @@ function extractVarObj(name) {
     };
     function apiFetch(qs, _retried, base) {
       if (qs.indexOf('opGetRowReview') !== -1) return Promise.resolve({ ok: true, reviews: {} });
+      // The orphan/manual leg settles immediately and empty here: block P is
+      // about the partial-paint guard's PREDICATE, not about this leg's
+      // contents, and leaving it outstanding would hold every paint in the
+      // block for a reason none of these tests are written about.
+      if (qs.indexOf('?api=listManualTrackerRows') === 0) return Promise.resolve({ ok: true, processes: [] });
       return new Promise((resolve) => {
         parked[base].push(() => {
           if (qs.indexOf('?api=list') === 0) resolve({ processes: listRows[base], generatedAt: '2026-09-06T10:00' });
@@ -1358,7 +1484,7 @@ function extractVarObj(name) {
       + extractFn('boardErrorHtml_') + ';' + extractFn('wireBoardRetry_') + ';'
       + extractFn('applyReviewCache_') + ';' + extractFn('reviewOverlayFailed_') + ';';
     const built = (new Function(...names, prelude + healthSrc + renderSrc + extractFn('applySearch') + ';'
-      + extractFn('fetchEngineBoard_') + ';' + extractFn('load')
+      + extractFn('fetchEngineBoard_') + ';' + extractFn('fetchManualRowsLeg_') + ';' + extractFn('load')
       + '; return { load: load, renderRows: renderRows };'))(...names.map((n) => scope[n]));
     return { load: built.load, renderRows: built.renderRows, arrive, flush, GWU, JUU, listRows, listEl };
   }
@@ -1543,10 +1669,17 @@ function extractVarObj(name) {
       /sortRows\(inflightOf_\(rows\)\)/.test(renderRowsSrc), renderRowsSrc.slice(0, 0));
     ok('P6b renderRows keeps no private copy of the terminal filter',
       !/rows\.filter\(function\(r\)\{return !isTerminalStage/.test(renderRowsSrc));
+    // Counts LEGS, not engines (2026-09-09): the orphan/manual rows are their
+    // own leg, so a guard still comparing against `engines.length` would call
+    // the board complete one leg early and could render "Nothing in flight."
+    // while the leg carrying the still-owed money rows was still in the air.
     ok('P6c the partial-paint guard asks the renderer\'s question, not the list\'s',
-      /perEngine\.length<engines\.length&&boardWouldReadEmpty_\(rows\)/.test(loadSrc), loadSrc.slice(0, 0));
+      /perEngine\.length<legs\.length&&boardWouldReadEmpty_\(rows\)/.test(loadSrc), loadSrc.slice(0, 0));
+    ok('P6c2 the guard counts every LEG, never just the engines',
+      !/perEngine\.length<engines\.length/.test(loadSrc),
+      'the guard is back to counting engines - the manual/orphan leg would not be waited for');
     ok('P6d the raw-row-count predicate that shipped in #16 is gone',
-      !/perEngine\.length<engines\.length&&!rows\.length/.test(loadSrc),
+      !/perEngine\.length<(engines|legs)\.length&&!rows\.length/.test(loadSrc),
       '#16\'s `!rows.length` guard is back - it blanked the Israel tab on 2026-09-06');
     ok('P6e boardWouldReadEmpty_ reads inflightOf_ rather than reimplementing it',
       /inflightOf_\(visible\)\.length===0/.test(extractFn('boardWouldReadEmpty_')));
