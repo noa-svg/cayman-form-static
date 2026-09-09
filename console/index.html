@@ -882,7 +882,14 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    where it stands in plain words, WHO it is waiting on and for how long,
    and an attention badge carrying the actual reason. Same palette
    (atrium-palette-sync.cjs enforced), new information hierarchy. */
-:root { --board-cols: minmax(190px, 1.4fr) 92px 116px minmax(250px, 2fr) 52px 76px; }
+/* The name track carries the row's primary job - WHO this money belongs to -
+   so it takes the larger share of whatever free width exists. Its MINIMUM is
+   deliberately unchanged (190px here, 160px in the <=1250 band): raising a
+   minimum is how the grid overflowed the card in the first place (finding 19
+   below). Names that outrun the track wrap to a second line instead, see
+   .rn-name. 1.4fr -> 1.8fr only moves slack, and minmax() keeps the status
+   track above its own 250px floor. */
+:root { --board-cols: minmax(190px, 1.8fr) 92px 116px minmax(250px, 2fr) 52px 76px; }
 #board-card {
   border: var(--bw) solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -1110,6 +1117,14 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   flex-direction: column;
   gap: 1px;
 }
+/* nowrap + ellipsis with no title meant a long name was simply UNREADABLE: no
+   hover, no widening, no recourse (2026-09-09). At the 160px track minimum a
+   35-character Hebrew partnership name measures 246px, and the widest case on
+   main had 14px of headroom left, i.e. two more characters would have clipped
+   it. Two lines of the 160px track hold 320px of text, so wrapping - not a
+   wider column - is what actually guarantees the name is readable at EVERY
+   width. The clamp keeps a pathological name from growing the row without
+   bound; rowHtml adds a title on every name as the floor under that. */
 .rn-name {
   font-size: 16px;
   font-weight: var(--weight-semi);
@@ -1117,8 +1132,22 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
+/* A row that reached the board with no investor name at all. Muted, so it
+   reads as an absence rather than as somebody called "(no name)". */
+.rn-name.is-noname {
+  color: var(--color-ink-muted);
+  font-weight: var(--weight-normal);
+  font-style: italic;
+}
+/* The pid stem stands in for the second name line on a nameless row: without
+   it the operator can see that a row has no name but not WHICH row it is. */
+.rhe.rn-pid { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.02em; }
 .rhe {
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
@@ -2891,7 +2920,7 @@ body.side-coll .ss-lbl { display: none; }
    rendered past the card's right edge, on a laptop, daily (2026-08-26 review,
    finding 19). 1250 is the width at which the pane can actually hold the grid. */
 @media (max-width: 1250px) and (min-width: 601px) {
-  :root { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
+  :root { --board-cols: minmax(160px, 1.7fr) 106px minmax(210px, 1.8fr) 46px 76px; }
   .rflow, .bhead .h-flow { display: none; }
 }
 
@@ -3073,6 +3102,14 @@ body.side-coll .ss-lbl { display: none; }
   :root { --board-cols: minmax(110px, 1fr) minmax(150px, 1.6fr) 60px; }
   .rflow, .ramt, .rage, .bhead .h-flow, .bhead .h-amt, .bhead .h-age { display: none; }
   .rwait { white-space: normal; }
+  /* The two-line clamp is a desktop bound and it is WRONG here: at the 110px
+     phone track a 35-character Hebrew partnership name needs three lines, and
+     two clipped it mid-word (pixel pass 2026-09-10, 371px). Phone is also
+     where the title floor does not exist - there is no hover on touch - and
+     where the name carries most of the row, since the amount and age columns
+     are hidden above. Four lines hold ~440px of text against the 246px real
+     case, and still bound a pathological name from running the row away. */
+  .rn-name { -webkit-line-clamp: 4; }
   .row { gap: 10px; padding: 10px; }
   .bhead { gap: 10px; padding: 8px 10px; }
   /* Filter row tracks the table's text column, which tightens to 10px here. */
@@ -4342,7 +4379,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-1-freshness-just-now-ago';
+  window.__BUILD_TAG = 'console-2026-09-10-2-name-cell-legible';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -5994,9 +6031,41 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<span class="battn"><span class="battn-tag">Needs you</span>'
       +'<span class="battn-why" title="'+esc2(why)+'">'+esc2(why)+'</span></span>';
   }
+  // The name cell. A board row can arrive with EVERY identity field empty -
+  // name, he, lane, type all '' - while stage/age/lastActivityTs are populated
+  // (2026-09-09: five lane_unresolved Cayman rows, and ~100 synthetic proof
+  // rows once the view filters are expanded). That case used to render the
+  // single character '?', which states only that the renderer had nothing to
+  // print. It does not say the row HAS no name, and it leaves five identical
+  // '?' rows with no way to tell them apart. Name the condition, and put the
+  // pid stem where the Hebrew name would go so the row is still identifiable.
+  // Empty-vs-whitespace is not a distinction worth carrying into the UI, so
+  // both trim to the same nameless case.
+  function nameCellHtml(r){
+    var nm=String(r.name||'').trim();
+    var he=String(r.he||'').trim();
+    if(!nm){ nm=he; he=''; }
+    if(he===nm) he='';
+    if(nm){
+      // title on EVERY name, not only ones that look long: whether a name fits
+      // depends on the pane width at render time, which CSS cannot tell us.
+      return '<span class="rn-name" dir="auto" title="'+esc2(nm)+'">'+esc2(nm)+'</span>'
+        +(he?'<span class="rhe" dir="auto" title="'+esc2(he)+'">'+esc2(he)+'</span>':'');
+    }
+    var pid=String(r.pid||'');
+    // NOT pid.split('-')[0]. Process ids are not all UUIDs: splitting on the
+    // first hyphen turned every `proof-nightly-h1-<ts>` row into the identical
+    // stem "proof" (94 of them, pixel pass 2026-09-10), `w8-renewal-scan` into
+    // "w8" and `b-L06SCwQLI` into "b" - a disambiguator that disambiguates
+    // nothing is worse than none, because it looks like it did the job. Elide
+    // by LENGTH instead, which assumes no structure: a short id is shown whole,
+    // a long one keeps its head AND its tail so two ids sharing a prefix still
+    // read apart. The title carries the id in full either way.
+    var stem=pid.length<=20?pid:(pid.slice(0,8)+'\u2026'+pid.slice(-4));
+    return '<span class="rn-name is-noname" title="This process reached the board with no investor name.">(no name)</span>'
+      +(stem?'<span class="rhe rn-pid" title="Process '+esc2(pid)+'">'+esc2(stem)+'</span>':'');
+  }
   function rowHtml(r,folded){
-    var nm=r.name||r.he||'?';
-    var he=(r.he&&r.name&&r.he!==r.name)?r.he:'';
     var st=String(r.stage||'');
     // C1 fix-of-the-fix (pixel pass 2026-07-19): a stale-complete row must not
     // get the .done 50%-opacity fade - the whole point is that it is NOT quietly
@@ -6032,7 +6101,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     var statSecond=manual?'<span class="rwait">Tracked in the transfer form</span>'
       :(attn?attnBadgeHtml(r,folded):(cleared?'':(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r))));
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
-      +'<span class="rn"><span class="rn-name" dir="auto">'+esc2(nm)+'</span>'+(he?'<span class="rhe" dir="auto">'+esc2(he)+'</span>':'')+'</span>'
+      +'<span class="rn">'+nameCellHtml(r)+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
       +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
       +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':(cleared?reviewedLine:stageWord(st)))+'</span>'+(manual?'':railHtml(r))+'</span>'
