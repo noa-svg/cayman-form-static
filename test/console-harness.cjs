@@ -39,9 +39,15 @@ const VOCAB_DEPENDENTS = ['isTerminalStage', 'isCompletedStage', 'isCanceledStag
 // retired row became a lookup instead of an equality chain, so the chain could
 // not drift from the vocabulary that decides which rows are retired at all.
 const LABEL_DEPENDENTS = ['stageMilestone'];
+// rowHtml delegates its who-cell to nameCellHtml (2026-09-10). Two separate
+// call sites below build a rowHtml sandbox; naming the dependency here rather
+// than in each of their string lists is what keeps the second one from
+// throwing ReferenceError the next time either list is edited.
+const NAMECELL_DEPENDENTS = ['rowHtml'];
 function extractFn(name) {
   if (VOCAB_DEPENDENTS.includes(name)) return extractVarObj('BOARD_TERMINAL_') + rawFn(name);
   if (LABEL_DEPENDENTS.includes(name)) return extractVarObj('RETIRED_LABEL') + rawFn(name);
+  if (NAMECELL_DEPENDENTS.includes(name)) return rawFn('nameCellHtml') + ';' + rawFn(name);
   return rawFn(name);
 }
 function rawFn(name) {
@@ -411,7 +417,10 @@ function extractVarObj(name) {
   const signingRow = rowHtml({ pid: 's1', name: 'Daniel Rosen', he: 'דניאל רוזן', stage: 'signing',
     typeLabel: 'onboarding', amountNum: 250000, ccy: 'USD', age: '4d',
     waitName: 'Sarah Rosen', waitIndex: 2, waitCount: 3, waitSince: new Date(Date.now() - 2 * 86400000).toISOString() });
-  ok('K12 row carries the Hebrew name RTL-safe (dir=auto)', signingRow.includes('dir="auto">דניאל רוזן'));
+  // The secondary line gained a title of its own in K14, so this asserts the
+  // whole span rather than the attribute-adjacent-to-text it used to pin.
+  ok('K12 row carries the Hebrew name RTL-safe (dir=auto)',
+    signingRow.includes('<span class="rhe" dir="auto" title="דניאל רוזן">דניאל רוזן</span>'), signingRow);
   ok('K12 row carries the flow chip word', signingRow.includes('>Join</span>'));
   ok('K12 row carries the amount', signingRow.includes('$250,000'));
   ok('K12 row carries the plain stage word', signingRow.includes('>Signing</span>'));
@@ -459,6 +468,56 @@ function extractVarObj(name) {
   ok('K11 row with no note has no dot', !withoutNote.includes('rnote-dot'));
   ok('K11 row with no note shows the Add-a-note tooltip', withoutNote.includes('title="Add a note"'));
   ok('K11 note button always carries data-pid for the popover to key off', withoutNote.includes('data-pid="p3"'));
+
+  // ---- K14: the who-cell is legible in both directions (2026-09-10) --------
+  // Two defects found on the live board on 2026-09-09, neither caused by the
+  // change being verified at the time:
+  //   (a) a long name was truncated with no title and no way to reveal it;
+  //   (b) a row with every identity field empty rendered the bare glyph '?'.
+  // PREVENT for the whole class: the name is the row's primary job, so it may
+  // never render a value the operator cannot read or identify. These lock both
+  // halves - the title floor under any truncation, and an honest empty case.
+  const LONG_HE = 'גלבוע פאנד אוף פאנדס, שותפות מוגבלת';
+  const longRow = rowHtml({ pid: 'k14a', he: LONG_HE, stage: 'signing' });
+  ok('K14 a Hebrew-only name renders in the name slot, not the secondary slot',
+    longRow.includes('<span class="rn-name" dir="auto" title="' + LONG_HE + '">' + LONG_HE + '</span>'), longRow);
+  ok('K14 a long name carries a title so the clipped tail is recoverable',
+    longRow.includes('title="' + LONG_HE + '"'));
+  ok('K14 a Hebrew-only name is not ALSO repeated on the secondary line',
+    (longRow.match(/rhe/g) || []).length === 0, longRow);
+
+  const bothNames = rowHtml({ pid: 'k14b', name: 'Sharon Jospe', he: 'שרון יוספה', stage: 'signing' });
+  ok('K14 both name lines get their own title', bothNames.includes('title="Sharon Jospe"') && bothNames.includes('title="שרון יוספה"'));
+
+  // The five live lane_unresolved rows: name/he present as '', not absent.
+  const nameless = rowHtml({ pid: 'fa7607da-e3f3-48f0-8b0c-eba8faf8531c', name: '', he: '', lane: '', stage: 'needs_attention', age: '2d' });
+  ok('K14 a nameless row never renders the bare glyph ?', nameless.indexOf('>?<') === -1, nameless);
+  ok('K14 a nameless row says so in words', nameless.includes('>(no name)<'), nameless);
+  ok('K14 a nameless row is muted, not styled as a real name', nameless.includes('class="rn-name is-noname"'));
+  ok('K14 a nameless row is still identifiable by its pid', nameless.includes('class="rhe rn-pid" title="Process fa7607da-e3f3-48f0-8b0c-eba8faf8531c">fa7607da\u2026531c<'), nameless);
+  // The stem must not assume a UUID. Splitting on the first hyphen collapsed 94
+  // proof rows onto the identical stem 'proof' and reduced two others to 'w8'
+  // and 'b' (pixel pass 2026-09-10). These are the real live pid shapes.
+  const stemOf = (pid) => { const m = rowHtml({ pid: pid, name: '', stage: 'needs_attention' }).match(/class="rhe rn-pid"[^>]*>([^<]*)</); return m ? m[1] : null; };
+  ok('K14 a long non-UUID pid keeps its tail, not just a shared prefix',
+    stemOf('proof-nightly-h1-1788480788638') === 'proof-ni\u20268638', stemOf('proof-nightly-h1-1788480788638'));
+  ok('K14 two pids sharing a long prefix render apart',
+    stemOf('proof-nightly-h1-1788480788638') !== stemOf('proof-nightly-h1-1788480799999'));
+  ok('K14 a short pid is shown whole rather than cut to a meaningless token',
+    stemOf('w8-renewal-scan') === 'w8-renewal-scan' && stemOf('b-L06SCwQLI') === 'b-L06SCwQLI',
+    stemOf('w8-renewal-scan') + ' / ' + stemOf('b-L06SCwQLI'));
+  ok('K14 two UUIDs differing only in their tail render apart',
+    stemOf('fa7607da-e3f3-48f0-8b0c-eba8faf8531c') !== stemOf('fa7607da-e3f3-48f0-8b0c-eba8faf85999'));
+  ok('K14 a nameless row with no pid at all renders no empty second line',
+    !rowHtml({ pid: '', name: '', stage: 'needs_attention' }).includes('rn-pid'));
+  // Whitespace is the same absence as '' and must not render as a blank cell.
+  ok('K14 a whitespace-only name is treated as nameless',
+    rowHtml({ pid: 'k14c', name: '   ', he: '', stage: 'signing' }).includes('>(no name)<'));
+  // he duplicating name is not a second line (the pre-existing he!==name rule).
+  ok('K14 he identical to name does not render twice',
+    (rowHtml({ pid: 'k14d', name: 'Oren Jospe', he: 'Oren Jospe', stage: 'signing' }).match(/rhe/g) || []).length === 0);
+  ok('K14 the name is HTML-escaped in both the text and the title',
+    rowHtml({ pid: 'k14e', name: '<img onerror=alert(1)>', stage: 'signing' }).indexOf('<img onerror') === -1);
 })();
 
 (function () {
