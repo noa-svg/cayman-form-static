@@ -29,7 +29,12 @@
   --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
-  --text-2xs:   10px;  --text-xs:    12px; --text-sm:    13px;
+  /* --text-2xs is THE eyebrow role: a tracked uppercase label above content
+     that already labels itself. 9px, 10px, 11px and 11.5px were all in use for
+     that one job. Kept at its existing 10px so nothing already using it moves
+     (2026-09-09, Ive pass). */
+  --text-2xs:   10px;  --text-xs:    12px;
+  --text-sm:    13px;
   --text-base:  14px; --text-md:    16px; --text-lg:    20px;
   --text-xl:    22px; --text-2xl:   28px; --text-3xl:   36px;
   --leading-tight:   1.2;  --leading-normal:  1.5; --leading-loose:   1.75;
@@ -1126,7 +1131,7 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    width. The clamp keeps a pathological name from growing the row without
    bound; rowHtml adds a title on every name as the floor under that. */
 .rn-name {
-  font-size: 16px;
+  font-size: var(--text-md);
   font-weight: var(--weight-semi);
   color: var(--color-ink);
   line-height: 1.25;
@@ -1180,8 +1185,8 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   display: inline-block;
   padding: 2px 9px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semi);
   white-space: nowrap;
 }
 .flowchip.f-in  { background: rgba(46,133,64,0.12); color: var(--color-green); }
@@ -6118,7 +6123,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn">'+nameCellHtml(r)+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
-      +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
+      // No amount yet is not a value (2026-09-09, Ive pass). A pre-submit row
+      // has no figure because the LP has not stated one, and an em-dash in the
+      // money column reads as a datum at a glance - on a board where four rows
+      // of five are pre-submit, that is four false readings per screen. The
+      // cell renders empty; the column keeps its width so the numbers that DO
+      // exist stay aligned for scanning.
+      +'<span class="ramt">'+(amt?esc2(amt):'')+'</span>'
       +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':(cleared?reviewedLine:stageWord(st)))+'</span>'+(manual?'':railHtml(r))+'</span>'
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
@@ -6307,7 +6318,7 @@ document.addEventListener('keydown',function(e){
   //   syncedAt    the newest generatedAt any list leg has actually returned.
   //               '' means no list leg has ever answered - which is exactly
   //               when no freshness may be asserted (defect 2).
-  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:''};
+  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:'',engines:[]};
   function boardDegraded_(){return !!(BOARD_HEALTH.legFail||BOARD_HEALTH.overlayFail);}
   // The sync line is the console's only always-visible claim about how fresh
   // the board is, so it is also where "this board is INCOMPLETE" belongs.
@@ -6340,9 +6351,22 @@ document.addEventListener('keydown',function(e){
     var age=sinceDur(at);
     var stale=false;
     try{ stale=(Date.now()-Date.parse(at))>6*3600000; }catch(e){}
-    vl.title='Last synced '+t;
+    // The per-engine detail lives in the title on a healthy board (available
+    // without spending a pixel) and is promoted into the sentence the moment an
+    // engine stops answering.
+    var eng=BOARD_HEALTH.engines||[];
+    var engTxt=eng.map(function(e){return e.name+' '+(e.ok?(e.ms<1000?(e.ms+'ms'):(Math.round(e.ms/100)/10+'s')):'no answer');}).join(' · ');
+    var dead=eng.filter(function(e){return !e.ok;}).map(function(e){return e.name;});
+    vl.title='Last synced '+t+(engTxt?('  ·  '+engTxt):'');
     if(deg||stale){
-      vl.textContent=age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale';
+      // The shipped sentence is KEPT verbatim and the engine is appended, not
+      // substituted. console-honest-status-harness pins this wording on
+      // purpose, and replacing it traded a guaranteed claim for a new one -
+      // the operator gains the engine name without the file losing the
+      // sentence its own tests guarantee. agoPhrase is #45's fix for
+      // "just now ago" and stays.
+      var who=dead.length?(' · '+dead.join(' and ')+' did not answer'):'';
+      vl.textContent=(age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale')+who;
       vl.style.color='var(--color-danger)';
     }else{
       vl.textContent='synced '+(age?agoPhrase(age):('· '+t));
@@ -6851,11 +6875,19 @@ document.addEventListener('keydown',function(e){
   // taking every manual/orphan money row with it.
   function fetchEngineBoard_(base, lane, wantDone, wantTest){
     var failed={list:false,notes:false,extras:false};
+    // PER-LEG TIMING (2026-09-09). The board reads two engines whose physics
+    // differ by two orders of magnitude: ju-service answers in milliseconds,
+    // GAS routinely takes 20-90 seconds on this spreadsheet and has been
+    // measured at 185s. Both were reported identically - the board simply sat
+    // there - so a slow engine and a broken one looked the same, and a leg that
+    // failed named no engine. An operating console has to say which instrument
+    // is slow and which stopped answering.
+    var t0=Date.now();
     var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){failed.notes=true;return {notes:{}};});
     var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){failed.extras=true;return {rows:{}};});
     var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){failed.list=true;return {processes:[]};});
     return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
-      return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed};
+      return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed,ms:Date.now()-t0};
     });
   }
   // The board's ORPHAN money rows - transfer-forms tracker rows with no ju
@@ -7012,6 +7044,16 @@ document.addEventListener('keydown',function(e){
       // accumulated, so a recovered refresh clears the red on its own.
       BOARD_HEALTH.legFail=perEngine.some(function(e){
         var f=e.failed||{}; return !!(f.list||f.notes||f.extras);
+      });
+      // NAME the engine, and how long it took (2026-09-09). legFail was a
+      // boolean, so a degraded board could say "the board may be stale" without
+      // saying WHICH engine stopped answering - and on a board that reads two,
+      // that is the first question. Timing rides along for the same reason: a
+      // 41-second GAS answer is healthy and a 41-second wait with no answer is
+      // not, and until now they looked identical.
+      BOARD_HEALTH.engines=perEngine.map(function(e){
+        var f=e.failed||{};
+        return {name:(e.base===JU_API?'ju-service':'gas'),ms:e.ms||0,ok:!(f.list||f.notes||f.extras)};
       });
       if(latestGeneratedAt&&latestGeneratedAt>BOARD_HEALTH.syncedAt)BOARD_HEALTH.syncedAt=latestGeneratedAt;
       paintVerLine_();

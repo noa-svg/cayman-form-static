@@ -436,7 +436,14 @@ function extractVarObj(name) {
 
   const lpRow = rowHtml({ pid: 's2', name: 'Yael Adler', stage: 'link_sent', typeLabel: 'increase' });
   ok('K12 pre-submit row waits on the LP', lpRow.includes('Waiting on <b>the LP</b>'));
-  ok('K12 no amount renders a quiet dash, not blank', lpRow.includes('ramt-none'));
+  // REVERSED 2026-09-09, by decision, not by accident. The dash was deliberate
+  // and this line pinned it. On a board where most rows are pre-submit, four of
+  // five money cells held a dash, and at a glance a dash reads as a datum -
+  // four false readings per screen on the only live view of in-flight money.
+  // No amount yet is the absence of a figure, not a figure. The column keeps
+  // its width so the amounts that DO exist stay aligned for scanning.
+  ok('K12 no amount renders blank, not a dash', !lpRow.includes('ramt-none') && !lpRow.includes('&ndash;'));
+  ok('K12 the amount cell still exists, so the column stays aligned', /class="ramt"/.test(lpRow));
 
   const attnRow = rowHtml({ pid: 's3', name: 'Helena Brandt', stage: 'needs_attention',
     wait: 'The wire / money row did not reach the transfer-forms tracker' });
