@@ -2030,9 +2030,41 @@
       // Returns an error message (translated) for an invalid required/format field,
       // or '' when the field is valid. Used by blur validation, submit validation,
       // and the error-summary builder so the rules live in one place.
+      // Counsel's 90-day window (Schedule 2: "date not older than 90 days from
+      // the date of subscription"), checked in the browser so the attester is
+      // told on their own pane instead of bounced by a round-trip. The SERVER is
+      // the authority - domain/cayman/verificationWindow.ts and the
+      // verified_on_required / verified_on_out_of_window codes in
+      // domain/israeli/validate.ts. This is the same rule stated early, never a
+      // replacement for it.
+      //
+      // Measured back from TODAY, matching the server's default. Noa ruled
+      // 2026-09-08 that the 90 days run from the SIGNING moment and not from the
+      // 2027-01-01 subscription date: signing runs across H2 2026, so counsel's
+      // literal reference would refuse every attester until 2026-10-03.
+      var VERIFIED_ON_WINDOW_DAYS = 90;
+      function verifiedOnOutOfWindow(value) {
+        var v = String(value || '').trim();
+        if (!v) return false; // emptiness is the required check's job, not this one
+        var d = new Date(v + 'T00:00:00Z');
+        if (isNaN(d.getTime())) return true;
+        var now = new Date();
+        var todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        if (d.getTime() > todayUtc) return true; // nobody verified tomorrow
+        return d.getTime() < todayUtc - VERIFIED_ON_WINDOW_DAYS * 86400000;
+      }
+
       function fieldError(inp) {
         var isReq = inp.hasAttribute('required');
         var empty = (inp.type === 'checkbox') ? !inp.checked : !String(inp.value).trim();
+        // The verification date says what it wants, rather than the generic
+        // "This field is required." Copy approved by Noa 2026-09-08.
+        if (inp.name === 'verifiedOn') {
+          if (empty) return tHe("Enter the date you checked the investor's documents.");
+          if (verifiedOnOutOfWindow(inp.value)) {
+            return tHe("That date is outside the 90 days the form allows. Enter the date you checked the documents, within the last 90 days.");
+          }
+        }
         if (isReq && empty) return tHe('This field is required.');
         if (inp.type === 'email' && String(inp.value).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inp.value.trim())) {
           return tHe('Please enter a valid email address.');
@@ -2465,24 +2497,40 @@
         // domain/recordSignature.ts:325-328 types. Booleans, never the 'true'/
         // 'false' STRINGS signerFormData posts: !!'false' is true and would tick
         // every box on the sealed legal doc.
+        // 2026-09-09: the list above was still RETYPED here, and two fields the
+        // page renders were missing from it - firmName and attestationConfirmed.
+        // An attester filled both in, watched them never leave the browser, and
+        // the server recorded a Schedule 2 with no firm and no confirmation. That
+        // is the third time this object has been fixed by adding the field that
+        // was forgotten, so build it from the fields actually RENDERED instead
+        // and the next one arrives on its own.
+        //
+        // Read from the DOM (`data-field`, stamped by the editable-field
+        // renderer) rather than renderDynamic's `ef`, which is local to that
+        // function - touching it here is a ReferenceError that kills the submit
+        // handler silently, with no message on screen and no request sent.
+        //
+        // Checkboxes stay real booleans: signerFormData's 'true'/'false' STRINGS
+        // coerce !!'false' -> true and would tick every box on the sealed doc.
+        var LAWYER_CHECKBOXES = ['checkLiquid', 'checkIncome', 'checkOther', 'checkAuditedFinancials', 'checkShareholders', 'attestationConfirmed'];
+        // The five EVIDENCE booleans are always present, false when the attester
+        // was never shown that box. That is a contract the server leg relies on
+        // and signer-cayman-attester-harness locks: an individual's payload still
+        // carries checkAuditedFinancials:false, and an entity's still carries
+        // checkLiquid:false. Rendered fields overlay this seed; they never remove
+        // a key from it.
+        var LAWYER_EVIDENCE_SEED = ['checkLiquid', 'checkIncome', 'checkOther', 'checkAuditedFinancials', 'checkShareholders'];
         if (isLawyer && evBoxes.length) {
-          function lawVal(name) { var el = efField_(name); return el ? String(el.value || '').trim() : ''; }
-          payloadObj.lawyer = {
-            firstName: lawVal('firstName'),
-            lastName: lawVal('lastName'),
-            email: lawVal('email'),
-            phone: lawVal('phone'),
-            licenseNumber: lawVal('licenseNumber'),
-            checkLiquid: !!(evLiquid && evLiquid.checked),
-            checkIncome: !!(evIncome && evIncome.checked),
-            checkOther: !!(evOther && evOther.checked),
-            checkAuditedFinancials: !!(evAudited && evAudited.checked),
-            checkShareholders: !!(evShareholders && evShareholders.checked),
-            evidenceDate: lawVal('evidenceDate'),
-            auditedFinancialsDate: lawVal('auditedFinancialsDate'),
-            otherEvidence: lawVal('otherEvidence'),
-            verifiedOn: lawVal('verifiedOn')
-          };
+          payloadObj.lawyer = {};
+          LAWYER_EVIDENCE_SEED.forEach(function (n) { payloadObj.lawyer[n] = false; });
+          Array.prototype.forEach.call(document.querySelectorAll('#signer-form [data-field]'), function (wrap) {
+            var name = wrap.getAttribute('data-field');
+            var el = efField_(name);
+            if (!el) return;
+            payloadObj.lawyer[name] = (LAWYER_CHECKBOXES.indexOf(name) >= 0)
+              ? !!el.checked
+              : String(el.value || '').trim();
+          });
         }
         // Merge CP ID slots and the lawyer stamp slot into ONE uploads object so
         // the server sees payload.uploads.lawyer_stamp with the same shape as a CP
