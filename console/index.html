@@ -7960,6 +7960,29 @@ document.addEventListener('keydown',function(e){
     } else {
       dactBtns+='<button class="dreviewed" data-act="rowReviewed">Approved</button>';
     }
+    // PAUSE AT PROCESS LEVEL (2026-09-09, Noa: "no way to pause zuri").
+    //
+    // Pause already existed, but only inside the Current Signer card, which
+    // does not render before 'signing'. So a row at 'opened' or 'link_sent'
+    // offered no way to stop chasing an LP who had said "not this month" -
+    // צורי סבן sat at 'opened' for 50 days with no control. The server was
+    // always willing: the reminder scan checks the SESSION flag and skips the
+    // row before it resolves any target, and ?api=opPauseReminders is keyed on
+    // processId. Only the response hid the state, by hanging it off
+    // currentSigner (ju-service routes/opprocess.ts, ju-cayman
+    // CaymanOperatorApi.ts - both now also expose it at the top level).
+    //
+    // Rendered ONLY when there is no signer card, so the control appears
+    // exactly once and never twice on the same drawer. The signer-card
+    // placement stays as-is for the signing window: it sits beside Remind on
+    // purpose (2026-09-01), because the moment you learn an LP needs time is
+    // the moment you are looking at that card.
+    if(!isTerminal && !d.currentSigner){
+      var procPaused=!!(d && d.remindersPaused && d.remindersPaused.at);
+      dactBtns+=(procPaused
+        ?'<button class="rp-btn" data-act="resumeReminders">Resume reminders</button>'
+        :'<button class="rp-btn" data-act="pauseReminders">Pause reminders</button>');
+    }
     if(!isTerminal){
       dactBtns+='<button class="dvoid" data-act="void">Void</button>';
     }
