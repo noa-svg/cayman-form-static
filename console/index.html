@@ -4342,7 +4342,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-09-1-orphan-rows-leg';
+  window.__BUILD_TAG = 'console-2026-09-10-1-freshness-just-now-ago';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -5736,6 +5736,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     if(h<48)return h+'h';
     return Math.floor(h/24)+'d';
   }
+  // sinceDur's sub-minute value ('just now') is already a complete phrase; every
+  // other value it returns is a bare duration. Suffixing blindly shipped the
+  // freshness line as "synced just now ago" on both lane tabs.
+  function agoPhrase(age){
+    if(!age)return '';
+    return age==='just now'?age:(age+' ago');
+  }
   // snake_case / camelCase machine key -> "Title Case" label (for Details rows etc.).
   function humanKey(k){
     return String(k==null?'':k)
@@ -6251,10 +6258,10 @@ document.addEventListener('keydown',function(e){
     try{ stale=(Date.now()-Date.parse(at))>6*3600000; }catch(e){}
     vl.title='Last synced '+t;
     if(deg||stale){
-      vl.textContent=age?('last synced '+age+' ago · the board may be stale'):'the board may be stale';
+      vl.textContent=age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale';
       vl.style.color='var(--color-danger)';
     }else{
-      vl.textContent='synced '+(age?(age+' ago'):('· '+t));
+      vl.textContent='synced '+(age?agoPhrase(age):('· '+t));
       vl.style.color='';
     }
   }
