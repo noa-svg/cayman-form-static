@@ -69,3 +69,4 @@ test/*
 !test/zz-cayman-lp-shapes.cjs
 !test/zz-cayman-lp-primary-entity.cjs
 !test/zz-console-reseal-gate.cjs
+!test/lib-mono-source.cjs

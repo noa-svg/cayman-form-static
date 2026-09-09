@@ -38,6 +38,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { monoSource } = require('./lib-mono-source.cjs');
 const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'console', 'index.html'), 'utf8');
@@ -174,9 +175,9 @@ ok('V3 token_revoked is not in the board vocabulary', !('token_revoked' in CLIEN
 
 // ---- V4: cross-repo equality with ju-service -------------------------------
 const MONO_ROOT = process.env.JU_MONO_ROOT || path.join(os.homedir(), 'Desktop', 'legacy-tools-mono');
-const SHARED = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'domain', 'consoleShared.ts');
+const SHARED = 'apps/ju-service/src/domain/consoleShared.ts';
 let ts = '';
-try { ts = fs.readFileSync(SHARED, 'utf8'); } catch (e) { ts = ''; }
+ts = monoSource(SHARED);
 ok('V4 ju-service domain/consoleShared.ts is readable (a vacuous contract is a FAIL, not a skip)', !!ts,
   SHARED + ' - set JU_MONO_ROOT to the mono worktree carrying the paired change');
 

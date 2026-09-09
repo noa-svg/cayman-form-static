@@ -37,6 +37,7 @@ const LIBRARIES = {
   'rig-flow': 'boots flow.html; exports loadFlowForm/makeFlowCfg/tokenUnknownCfg',
   'rig-israel': 'boots israel.html; exports the Israeli-lane loaders',
   'rig-signer': 'boots signer.html; exports loadSignerPage/makeSignerCtx',
+  'lib-mono-source': 'reads a mono source from git show origin/main:<path>; exports monoSource',
 };
 
 // TRACKED files only: an untracked harness is invisible on a fresh clone, and
