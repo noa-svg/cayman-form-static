@@ -1342,7 +1342,20 @@
         // enforced by the evidence-group check in doSignSubmit_ (same reasoning as
         // evidenceDate above). verifiedOn IS required - the clause reads "on <date>
         // (date not older than 90 days...)" and a blank there seals '__________'.
-        verifiedOn:   { label: 'Date of verification (not older than 90 days from the date of subscription) *', type: 'date' },
+        // The label used to quote counsel's own reference: "not older than 90 days
+        // from the date of subscription". The form no longer enforces that. Noa
+        // ruled 2026-09-08 that the 90 days run from the SIGNING moment, because
+        // signing runs across H2 2026 while subscription is 2027-01-01 and the
+        // literal reference would refuse every attester until 2026-10-03. So the
+        // sentence on screen was telling the attester a rule the page does not
+        // apply, and quoting a date they cannot act on.
+        //
+        // It now asks for the fact, and the window is stated only where it can
+        // actually be violated - the error message, which names the real bound.
+        // Counsel's sentence is UNCHANGED in the sealed document
+        // (docpack/caymanSources.ts 'schedule-2-lawyer'): that text is frozen and
+        // is not this page's to edit. Wording approved by Noa 2026-09-08.
+        verifiedOn:   { label: "Date you checked the investor's documents *", type: 'date' },
         checkAuditedFinancials: { label: 'Inspecting audited financial reports of the corporate Investor.', type: 'checkbox' },
         auditedFinancialsDate:  { label: 'Latest available report date', type: 'date' },
         checkShareholders:      { label: 'Verifying that all shareholders of the corporate Investor are accredited investors.', type: 'checkbox' }
