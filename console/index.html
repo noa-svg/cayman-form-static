@@ -5584,9 +5584,49 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     all_signed:3, docs_assembled:3, dispatched:3,
     complete:3, sealed:3
   };
-  function isTerminalStage(st){return st==='complete'||st==='sealed'||st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
-  function isCompletedStage(st){return st==='complete'||st==='sealed';}
-  function isCanceledStage(st){return st==='voided'||st==='void'||st==='expired'||st==='abandoned'||st==='token_revoked';}
+  // ---- BEGIN BOARD TERMINAL VOCABULARY (generated contract, do not hand-fork) ----
+  // THE definition of "which stages the live board retires, and into which
+  // bucket". It is the CLIENT HALF of one vocabulary whose authority is
+  // ju-service's domain/consoleShared.ts CAYMAN_BOARD_TERMINAL. The two are
+  // held byte-equal by test/terminal-vocab-harness.cjs here and by
+  // apps/ju-service/tests/terminal-stage-vocabulary.test.mjs there (which
+  // reads the vendored copy of THIS file), so a divergence fails a gate
+  // instead of blanking a board.
+  //
+  // Every consumer in this file derives from this map. Do not write a second
+  // stage test anywhere: both harnesses fail on a hand-forked one, which is
+  // the whole point of the block markers.
+  //
+  // Values: 'completed' feeds the Show completed chip, 'canceled' the Show
+  // canceled chip. A stage absent from the map is in flight.
+  //
+  // 'sealed' / 'void' are LEGACY SPELLINGS. Neither engine can emit them today
+  // (both hard-throw on a non-canonical stage: ju-service domain/spine.ts
+  // emitStage, ju-cayman server/Spine.ts caymanEmitStage_), but an old registry
+  // row predating those guards can still carry one, which is exactly why
+  // ju-cayman's own Foundation.ts REGISTRY_TERMINAL_STAGES_ keeps them. Kept
+  // here for the same reason: a legacy row must retire, not sit on the live
+  // board forever.
+  //
+  // 'token_revoked' was REMOVED here 2026-09-07. It was never a registry stage
+  // on either engine - revocation is an attribute of the revoked set, and the
+  // audit trail is a NON-STAGE state-log row (ju-service routes/consoledispatch.ts
+  // admin==='revoke', ju-cayman server/CaymanAuthHardening.ts). ju-cayman's own
+  // CaymanStallWatchdog.ts dropped its matching entry on 2026-08-05 for the same
+  // reason: it "matched a value that could not exist and papered over the real
+  // mechanism".
+  var BOARD_TERMINAL_={
+    complete:'completed',
+    sealed:'completed',
+    voided:'canceled',
+    "void":'canceled',
+    expired:'canceled',
+    abandoned:'canceled'
+  };
+  // ---- END BOARD TERMINAL VOCABULARY ----
+  function isTerminalStage(st){return !!BOARD_TERMINAL_[st];}
+  function isCompletedStage(st){return BOARD_TERMINAL_[st]==='completed';}
+  function isCanceledStage(st){return BOARD_TERMINAL_[st]==='canceled';}
   // inflightOf_ - THE definition of "what the default board actually shows".
   // renderRows' empty state and load()'s progressive-paint guard MUST both read
   // this one function. They did not on 2026-09-06 (#16), and that is the whole
@@ -5594,16 +5634,22 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // gap between them is every row whose stage is terminal HERE but not on the
   // server that sent it.
   //
-  // That gap is real and permanent, not a transient. isTerminalStage above
-  // counts SEVEN stages; ju-service's server-side includeDone filter counts
-  // THREE (domain/consoleShared.ts's CAYMAN_CONSOLE_TERMINAL = {complete,
-  // voided, expired}) and GAS's counts FIVE (adds sealed, void). So a row in
-  // 'abandoned' or 'token_revoked' is NOT terminal to either server, is
-  // returned by ?api=list even with includeDone=0, and is then filtered out
-  // HERE. 'abandoned' being outside the server's terminal map is deliberate and
-  // documented - ju-service's domain/abandonSweep.ts calls it "REVERSIBLE BY
-  // CONSTRUCTION" - so this is not a server bug to go fix, it is a divergence
-  // the client has to be honest about.
+  // That gap WAS real: this file's stage test counted seven stages, ju-service's
+  // includeDone filter three, ju-cayman's four. A row in 'abandoned' passed the
+  // server filter at includeDone=0 and was then dropped HERE, so a non-empty
+  // list rendered an empty board (2026-09-06, four live rows).
+  //
+  // Closed 2026-09-07: BOARD_TERMINAL_ above and ju-service's
+  // CAYMAN_BOARD_TERMINAL are one vocabulary held equal by a gate on each side.
+  // Two things did NOT change and are not bugs:
+  //   - LIFECYCLE terminality is a different predicate from BOARD terminality
+  //     and stays separate. 'abandoned' is REVERSIBLE BY CONSTRUCTION
+  //     (ju-service domain/abandonSweep.ts), so the mint double-guard and the
+  //     bounce scan still treat it as a LIVE process via CAYMAN_CONSOLE_TERMINAL
+  //     while the board retires it. Conflating the two is what made this look
+  //     like a contradiction rather than two questions.
+  //   - ju-cayman is retired and its literal cannot be changed, so the
+  //     ju-service side was moved to match GAS, not the other way round.
   //
   // Consequence, and the reason this function exists rather than a second copy
   // of the filter: an engine can answer with a NON-EMPTY list that renders a
@@ -5632,12 +5678,18 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // Human milestone label for any canonical stage. Reuses the board rail's map so the
   // drawer + activity read the SAME words the board shows; laterals get their own words.
   // Unknown stages fall back to a humanized key rather than a raw machine string.
+  // Operator words for a retired row. Every key must be in BOARD_TERMINAL_;
+  // test/terminal-vocab-harness.cjs holds the two in step.
+  var RETIRED_LABEL={voided:'Canceled',"void":'Canceled',expired:'Expired',abandoned:'Abandoned'};
   function stageMilestone(st){
     st=String(st==null?'':st);
-    if(st==='voided'||st==='void')return 'Canceled';
-    if(st==='expired')return 'Expired';
-    if(st==='abandoned')return 'Abandoned';
-    if(st==='token_revoked')return 'Link revoked';
+    // A LABEL lookup, not a membership test (2026-09-07): this was an
+    // equality chain that re-listed voided/void/expired/abandoned and a dead
+    // 'token_revoked', which made it read like a fourth copy of the terminal
+    // vocabulary. Which stages are terminal is BOARD_TERMINAL_'s question;
+    // this only answers what to call one.
+    var m=RETIRED_LABEL[st];
+    if(m)return m;
     if(st==='needs_attention')return 'Needs a look';
     if(st==='seal_stuck_retrying')return 'Seal retrying';
     if(st==='seal_quarantined')return 'Seal failed';
@@ -7827,9 +7879,17 @@ document.addEventListener('keydown',function(e){
     // Nudge duplicated the automatic caymanReminderScan invite_reminder.
     // The automatic reminder stays as-is.
     var dstage=String(d.stage||d.currentStage||'');
-    var isComplete=(dstage==='complete');
-    var isVoided=(dstage==='voided'||dstage==='void');
-    var isTerminal=isComplete||isVoided;
+    // 2026-09-07: these three used to re-derive terminality from their own
+    // literals (complete / voided|void), so the drawer offered VOID - an
+    // irreversible action - on an 'expired' or 'abandoned' row the BOARD had
+    // already retired, and the "No actions available" fallback could never
+    // fire for them. A fourth copy of the vocabulary is exactly the defect
+    // BOARD_TERMINAL_ exists to prevent; the drawer now reads that one map.
+    // Reseal is unaffected: docsExist below is a different question (has this
+    // process produced a sealed pack) and none of the newly-terminal stages
+    // are in it.
+    var isComplete=isCompletedStage(dstage);
+    var isTerminal=isTerminalStage(dstage);
     // Docs exist once signing has produced a sealed pack.
     var docsExist=(dstage==='all_signed'||dstage==='docs_assembled'||dstage==='dispatched'||dstage==='complete');
     // A signer is still awaited during the pre-seal signing window. The current signer
@@ -8499,11 +8559,20 @@ document.addEventListener('keydown',function(e){
         if(!others.length){el.remove();return;}
         var FLOW_LABEL={cayman_subscription:'Sub',cayman_increase:'Increase',cayman_withdrawal:'Withdrawal',cayman_transfer:'Transfer',israeli_increase:'Increase',israeli_withdrawal:'Withdrawal'};
         // Dot color from the design-system CSS vars (not raw hex), matching the board.
-        var STAGE_DOT={complete:'var(--color-green)',sealed:'var(--color-green)',voided:'var(--color-ink-muted)',void:'var(--color-ink-muted)',needs_attention:'var(--color-red)'};
+        // Derived from the shared vocabulary, not a hand-listed copy of it
+        // (2026-09-07): this map named complete/sealed/voided/void and so was
+        // one more place the stage list could drift. Amber is the default, so
+        // a stage it forgot rendered as in flight in the LP's own history.
+        var stageDot_=function(st){
+          if(isCompletedStage(st))return 'var(--color-green)';
+          if(isCanceledStage(st))return 'var(--color-ink-muted)';
+          if(st==='needs_attention')return 'var(--color-red)';
+          return 'var(--color-amber)';
+        };
         var rows='';
         others.forEach(function(p){
           var label=FLOW_LABEL[p.flowType]||p.flowType||'Process';
-          var dot=STAGE_DOT[p.currentStage]||'var(--color-amber)';
+          var dot=stageDot_(p.currentStage);
           var when=p.daysAgo!=null?(p.daysAgo===0?'today':p.daysAgo+'d ago'):'';
           rows+='<div class="kv hist" data-pid="'+esc2(p.processId)+'" tabindex="0" role="button" style="cursor:pointer;border-radius:6px;padding: 4px 8px;transition:background .12s">'
             +'<span class="k" style="display:flex;align-items:center;gap: 8px"><span style="width:7px;height:7px;border-radius:50%;background:'+dot+';flex-shrink:0;display:inline-block"></span>'+esc2(label)+'</span>'
