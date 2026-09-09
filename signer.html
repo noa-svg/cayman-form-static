@@ -1361,13 +1361,21 @@
       // branch), with the {{schedule2.methods.evidenceDate}} token removed
       // because that date has its own field. Verbatim approved text, no new copy,
       // same rule the Israeli labels follow.
-      if (ctx.lane === 'cayman') {
+      // GATED THE SAME WAY THE LANGUAGE IS (2026-09-09), not on lane === 'cayman'.
+      // laneIsHebrew_() is `LANE === 'israeli'`, and setLaneFromCtx_ deliberately
+      // resolves anything it does not recognise to '' so an unknown lane keeps
+      // English. The label gate read `=== 'cayman'` instead, so on an UNRESOLVED
+      // lane the page rendered every other string in English and these five
+      // clause labels in Hebrew - a half-Hebrew attestation pane, in the one case
+      // where we know least about who is reading it. Hebrew clause text is now
+      // the Israeli branch, and everything else falls to counsel's English.
+      if (!laneIsHebrew_()) {
         fieldDefs.checkLiquid.label = 'Inspecting the Investor\'s bank statements showing Liquid Assets value.';
         fieldDefs.checkIncome.label = 'Inspecting annual income or tax reports for the prior two years for the subscriber/spouse.';
         fieldDefs.evidenceDate.label = 'Dated (from the last three months)';
         fieldDefs.checkOther.label = 'Other measures (include date of inspection).';
         fieldDefs.otherEvidence.label = 'Include date of inspection';
-      } else if (ctx.lockedContext && ctx.lockedContext.companyName) {
+      } else if (ctx.lockedContext && ctx.lockedContext.companyName) { // israeli entity
         fieldDefs.checkLiquid.label = 'בחינת הדוחות הכספיים של החברה, מהם עולה כי ההון העצמי שלה עולה על 50 מיליון שקלים חדשים.';
         fieldDefs.checkIncome.label = 'בחינת מרשם בעלי המניות של החברה וכשירותם, מהם עולה כי כל בעלי מניותיה הינם משקיעים כשירים.';
       }

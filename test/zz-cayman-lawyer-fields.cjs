@@ -92,5 +92,29 @@ function has(rig, name) { return !!rig.document.querySelector('#signer-form [nam
     ok('IL1 the Israeli lawyer set renders with no unsupported field', unsupported(rig).length === 0, JSON.stringify(unsupported(rig)));
   }
 
+  // ---- Clause-label language follows the LANGUAGE gate, not a lane literal ---
+  // The five Schedule 2 clause labels are Hebrew on the Israeli lane and
+  // counsel's English everywhere else. laneIsHebrew_() is `LANE === 'israeli'`
+  // and setLaneFromCtx_ resolves an unrecognised lane to '', so an UNRESOLVED
+  // lane must land on English like every other string on the page - it used to
+  // land on Hebrew, giving a half-Hebrew attestation pane in the one case where
+  // we know least about who is reading it.
+  const HEBREW = /[\u0590-\u05FF]/;
+  for (const [lane, want] of [['cayman', false], ['', false], ['nonsense', false], ['israeli', true]]) {
+    const ctx = makeSignerCtx({
+      role: 'lawyer',
+      docs: [{ key: 'q', title: 'Q', html: '<p>b</p>' }],
+      lockedContext: { companyName: 'Acme Ltd' },
+      editableFields: { type: 'lawyer_attestation', fields: ['checkLiquid', 'checkIncome', 'checkOther', 'evidenceDate', 'otherEvidence'] }
+    });
+    ctx.lane = lane;
+    if (ctx.meta) ctx.meta.lane = lane;
+    const rig = await loadSignerPage({ ctx });
+    const text = Array.from(rig.document.querySelectorAll('#signer-form [data-field]')).map(e => e.textContent).join(' ');
+    ok('LG lane=' + JSON.stringify(lane) + ' clause labels are ' + (want ? 'Hebrew' : 'English'),
+       HEBREW.test(text) === want, text.replace(/\s+/g, ' ').slice(0, 90));
+  }
+
   console.log('\n' + pass + ' pass, ' + fail + ' fail');
+  if (fail) process.exit(1);
 })().catch(e => { console.error('THREW', e); process.exit(2); });
