@@ -131,6 +131,8 @@ HARNESSES=(
   harness-gate-membership
   signer-cayman-attester-harness
   upload-accept-allowlist-harness
+  zz-cayman-lawyer-fields
+  zz-cayman-verified-on-copy
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
