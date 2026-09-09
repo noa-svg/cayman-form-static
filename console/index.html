@@ -8013,7 +8013,25 @@ document.addEventListener('keydown',function(e){
     // has nothing to re-drive (the server-side re-drive would no-op with
     // "0 resealed", which reads as a failure to the operator). Gate it on
     // !isTerminal, not just !isVoided (2026-07-16 console hygiene).
-    if(docsExist&&!isTerminal){
+    // RESEAL DOCS, gate rewritten 2026-09-09.
+    //
+    // It used to be docsExist && !isTerminal, and docsExist was four stage
+    // literals. That put the button on 3 of 19 stages and, worse, HID it on
+    // needs_attention, which is exactly where a quarantined seal sits: a
+    // quarantine's own emitStage('needs_attention') overwrites currentStage
+    // (ju-service spine.ts:278), so the broad sweep cannot re-find the row
+    // either and the only way in is a scoped call the console had no button
+    // for. The operator had to already know the processId to repair a pack.
+    //
+    // It also rendered on 'dispatched', which the server refuses as terminal
+    // (spine.ts:130): a guaranteed silent no-op.
+    //
+    // seal_quarantined and seal_stuck_retrying are dead vocabulary: they only
+    // ever appear as detail.stage reason codes under a needs_attention emit,
+    // never as a stage. Carried through isAttnStage anyway so a stray value
+    // cannot lose the button, not because they occur.
+    var resealable=(dstage==='all_signed'||dstage==='docs_assembled'||isAttnStage(dstage));
+    if(resealable&&!isTerminal){
       dactBtns+='<button class="reseal" data-act="reseal">Reseal docs</button>';
     }
     // "Mark money received" (2026-08-01): Noa confirms, from her own FIBI login,
