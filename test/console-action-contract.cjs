@@ -168,6 +168,13 @@ const CROSS_ENGINE_REQUIRED = [
   'api:foShareLabels', 'admin:saveNote', 'admin:clearNote', 'api:opprocess',
   'admin:searchLps', 'api:opNotes', 'api:opBoardDetail', 'api:list',
   'api:lpHistory', 'admin:nudge', 'admin:resendInvite',
+  // Repointed from GAS_ONLY_ to currentEngine 2026-09-09 (gate 3 item 3). It
+  // was a dead button on ju-service-born rows for as long as the Cayman lane
+  // has minted there: the console sent GAS's api name, ju-service answered a
+  // different one (?admin=updateSignerContact), and A1 passed the whole time
+  // because it asks whether EITHER engine handles the route. Listing it here is
+  // what converts that into BOTH, so the two names cannot drift apart again.
+  'api:opUpdateSignerContact',
 ];
 CROSS_ENGINE_REQUIRED.forEach((ref) => {
   const cov = engineCoverage[ref];
