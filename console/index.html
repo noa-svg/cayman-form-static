@@ -1198,12 +1198,23 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .flowchip.f-neutral { background: var(--color-bg-hover); color: var(--color-ink-sub); }
 /* Status cell: plain-words stage + mini rail on line 1, waiting-on line 2. */
 .rstat { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.rstat-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* overflow:hidden added 2026-09-09. .rword is nowrap and .rstage is flex:0 0
+   auto, so a long status line cannot shrink and USED TO PAINT STRAIGHT OUT OF
+   the cell: with the record docked, the progress chip landed on top of the AGE
+   column and the two rendered as unreadable overlapping glyphs. min-width:0
+   alone does not stop that, it only permits the track to shrink. */
+.rstat-top { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; }
 .rword {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--color-ink);
   white-space: nowrap;
+  /* A hard clip mid-string reads as a rendering fault, not as truncation. The
+     sibling .rwait already ellipsises; this one cut "Approved by
+     noa@legacyvpartners.com" with no signal that anything was removed. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* --color-danger, not --color-coral. The attention row paints its own
    --color-coral-tint ground, and coral-on-coral-tint measured 3.32:1 in the
@@ -1584,15 +1595,53 @@ body.side-coll .ss-row.ss-total { display: none; }
   transform: translateX(0);
 }
 
-/* SIDE PANE (2026-09-09). Above 1400px the record sits BESIDE the board rather
-   than over it, so inspecting one LP never costs you the list. The panel stays
-   fixed; the shell is inset by its width instead, which keeps the transform
-   transition and needs no change to the grid. The heavy drawer shadow goes:
-   nothing is floating over anything, so the border alone defines the edge. */
+/* DOCKED RECORD (2026-09-09). Above 1400px the record sits BESIDE the board
+   rather than over it, so inspecting one LP never costs you the list. The panel
+   stays fixed; the shell is inset by its width instead, which keeps the
+   transform transition and needs no change to the grid. The heavy drawer shadow
+   goes: nothing is floating over anything, so the border alone defines the edge.
+
+   THE CLASS IS `dock`, NOT `side`. The first version of this used `side`, which
+   this stylesheet already owns for aside.side, the SIDEBAR. The drawer silently
+   matched four sidebar rules it was never meant to. Two of them were live
+   defects a pixel pass found: body.side-coll .side collapsed the open record to
+   a 52px unreadable sliver at 0-0-2-0 specificity (one click on the visible
+   collapse control, persisted across reloads via localStorage.lvp_side_coll),
+   and the mobile .side{display:none!important} made an open record vanish
+   entirely with no scrim and no close affordance. Never name a drawer state
+   after an element this file already styles. */
 @media (min-width: 1400px) {
-  .panel#drawer.side { box-shadow: none; }
-  body:has(.panel#drawer.side.on) .main { padding-right: var(--panel-w); }
-  body:has(.panel#drawer.side.on) .scrim { display: none; }
+  .panel#drawer.dock { box-shadow: none; }
+  body:has(.panel#drawer.dock.on) .main { padding-right: var(--panel-w); }
+  body:has(.panel#drawer.dock.on) .scrim { display: none; }
+
+  /* The board grid needs ~870px. Docking the 480px record leaves the content
+     pane 660px at a 1400 viewport and 760px at 1500, so the full column set
+     overflows and the AGE column and the per-row copy/note buttons slide UNDER
+     the pane, unreachable. The existing drop rule could not help: it is keyed on
+     the VIEWPORT (max-width:1250px), and the viewport here is 1400+.
+
+     Same finding as the 2026-08-26 review's #19, reintroduced at wide widths by
+     a pane the viewport cannot see. So drop the flow column on the same terms
+     the tablet rule uses, keyed on the pane instead: while the record is docked,
+     below the ~1650px at which the full grid genuinely fits beside it. */
+  #list { overflow-x: visible; }
+  body:has(.panel#drawer.dock.on) #list { overflow-x: auto; }
+}
+
+@media (min-width: 1400px) and (max-width: 1649px) {
+  /* A DOCKED record is narrower than a modal one. Dropping the flow column got
+     the grid from 870px to 690px, and at a 1400 viewport the 480px pane still
+     only leaves 660px, so the "Add a note" button sat 16px outside the clip and
+     did nothing when clicked. 420px gives the board 720px against the 690 it
+     needs, with headroom rather than a 30px deficit. The record itself loses
+     nothing that matters: it is a reading surface, and this only applies in the
+     250px band where the two genuinely compete for width. Both halves read
+     --panel-w, so the panel and the shell inset stay in step by construction. */
+  body:has(.panel#drawer.dock.on) { --panel-w: 420px; }
+  body:has(.panel#drawer.dock.on) { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
+  body:has(.panel#drawer.dock.on) .rflow,
+  body:has(.panel#drawer.dock.on) .bhead .h-flow { display: none; }
 }
 
 .panel h2 {
@@ -2917,9 +2966,15 @@ body.side-coll .nav .nav-ic { font-size: 18px; }
    essential (2026-08-26 review, finding 19). */
 body.side-coll .nav { position: relative; }
 body.side-coll .nav .badge { font-size: 0; min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; position: absolute; top: 6px; right: 8px; }
+/* !important on the signout link (2026-09-09): the rule is correct but
+   #sign-out-btn gets style.display='inline' assigned at runtime by the auth
+   code, and an inline style outranks a class rule. In the collapsed rail the
+   button was forced to 18px and the label wrapped to "Sig" over "out". Latent
+   for as long as the rail has existed; it became easy to hit the moment the
+   collapse control stopped mangling an open record. */
 body.side-coll .side-foot .auth-email,
-body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
+body.side-coll .side-foot .signout-link { display: none !important; }
 /* Collapsed quick-stats (audit finding #2): the collapsed rail is too narrow
    for "IN FLIGHT" / "NEED A LOOK" / "SIGNING" to wrap without breaking mid-
    word into unreadable fragments. Same icon/number-only treatment the nav
@@ -7628,7 +7683,37 @@ document.addEventListener('keydown',function(e){
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
   var drawerOpener=null;
-  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");drawer.classList.remove("side");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");drawer.classList.remove("dock");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  // RE-EVALUATE THE BRANCH ON RESIZE, not only at open time.
+  //
+  // openDrawer reads matchMedia ONCE. Without this, dragging a window from 1500
+  // to 1200 with a record open left the drawer non-modal while the 1400px media
+  // block stopped applying: a 480px pane sitting ON TOP of the board with no
+  // scrim, no inert shell and no scroll lock, which is precisely the state the
+  // narrow branch exists to prevent. Found in the 2026-09-09 pixel pass.
+  //
+  // Deliberately NOT called from openDrawer and deliberately not a helper it
+  // reaches: console-harness and drawer-race-harness both extract openDrawer
+  // from FIXED function lists, so anything it calls has to be stubbed twice by
+  // hand. This listens at top level and reads the drawer's own class instead.
+  (function(){
+    var mq=null; try{ mq=window.matchMedia('(min-width: 1400px)'); }catch(e){ mq=null; }
+    if(!mq)return;
+    function applyDrawerPresentation(){
+      if(!drawer.classList.contains("on"))return;
+      if(mq.matches){
+        drawer.classList.add("dock");
+        drawer.removeAttribute("aria-modal");
+        dscrim.classList.remove("on"); document.body.style.overflow=''; setShellInert(false);
+      }else{
+        drawer.classList.remove("dock");
+        drawer.setAttribute("aria-modal","true");
+        dscrim.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+      }
+    }
+    if(mq.addEventListener){mq.addEventListener('change',applyDrawerPresentation);}
+    else if(mq.addListener){mq.addListener(applyDrawerPresentation);}
+  })();
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
   // desktop sidebar collapse
   (function(){
@@ -8875,9 +8960,10 @@ document.addEventListener('keydown',function(e){
     // engine-timing helper hit earlier the same day.
     var side=false; try{ side=window.matchMedia('(min-width: 1400px)').matches; }catch(e){ side=false; }
     drawer.classList.add("on");
-    if(side){drawer.classList.add("side");}else{drawer.classList.remove("side");}
+    if(side){drawer.classList.add("dock");}else{drawer.classList.remove("dock");}
     if(side){
       drawer.removeAttribute("aria-modal");
+      dscrim.classList.remove("on"); document.body.style.overflow=''; setShellInert(false);
     }else{
       drawer.setAttribute("aria-modal","true");
       dscrim.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);

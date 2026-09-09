@@ -17,7 +17,7 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
 // classList stub: `contains`/`add` model the on/off state this harness actually
 // asserts on. `remove` and the `_cls` set were added 2026-09-09 when openDrawer
 // started choosing between a modal drawer and a docked side pane at 1400px and
-// therefore had to CLEAR the "side" class on the narrow branch. A partial DOM
+// therefore had to CLEAR the docked class on the narrow branch. A partial DOM
 // stub reads as a product break (TypeError: classList.remove is not a function)
 // when it is really the extract's environment being thinner than a browser.
 const drawer = {
