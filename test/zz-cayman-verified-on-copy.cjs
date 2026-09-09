@@ -79,6 +79,13 @@ const WINDOW_COPY = "That date is outside the 90 days the form allows. Enter the
     const inp = rig.document.querySelector('#signer-form [name="verifiedOn"]');
     ok('V2 and required to the browser and to a screen reader', !!inp && inp.hasAttribute('required') && inp.getAttribute('aria-required') === 'true');
     ok('V3 it is a date control, not a free-text box', inp && inp.getAttribute('type') === 'date', inp && inp.getAttribute('type'));
+    // The label must not quote a rule the page does not enforce. It used to read
+    // "not older than 90 days from the date of subscription" - counsel's own
+    // reference - while the form measures from the SIGNING moment (Noa,
+    // 2026-09-08). Counsel's sentence stays untouched in the SEALED document;
+    // this is only the field the attester fills in.
+    ok('V3b the label does not quote the subscription reference the form does not use',
+       !!lbl && !/date of subscription/i.test(lbl.textContent), lbl && lbl.textContent);
   }
 
   // 2. Blank: the approved wording, and no request sent.
