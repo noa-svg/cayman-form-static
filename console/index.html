@@ -2290,6 +2290,13 @@ input:focus {
   color: var(--color-ink);
   letter-spacing: -0.01em;
   line-height: var(--leading-tight);
+  /* .x is position:absolute over this line, so the title never knew it was
+     there. At 480px a long entity name cleared it by luck; at the docked 420px
+     the closing bracket painted under the multiplication sign. 34px is the
+     button's 28px plus a 6px gap. The inset does not protect an UNBREAKABLE
+     token, which painted 221px past the panel edge, hence the wrap rule. */
+  padding-right: 34px;
+  overflow-wrap: anywhere;
 }
 
 /* The one Hebrew-bearing span in the drawer header, carried inline instead
@@ -2527,7 +2534,33 @@ input:focus {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  /* The widest real row is five buttons (needs_attention with an empty signing
+     roster, the 2026-08-10 pre-submission-stall case): Resend invite reminder,
+     Reseal docs, Approved, Pause reminders, Void. It needs 474px. Nowrap with
+     shrinkable children squashed every label into two and three lines of
+     different heights and pushed Void 79px past the panel edge, where it was
+     clipped and unreachable. It clipped at the 480px modal too, so this is not
+     the docked width's doing. Wrap to a second line and keep each button its
+     own size: a ragged row of four heights was the squashing, not the labels. */
+  flex-wrap: wrap;
+  row-gap: var(--space-3);
 }
+.dact-btns > * { flex-shrink: 0; }
+/* .rp-btn is 5px/10px, sized for the signer-card confirm strip it shares, and
+   rendered short against its 34-35px neighbours on the same flex line. Scoped
+   to .dact, not .dact-btns: clicking Pause reminders injects .rp-form as a
+   SIBLING of the button row (b.parentNode.insertAdjacentElement('afterend')
+   where b.parentNode IS .dact-btns), so its own Pause and Cancel buttons fall
+   outside a .dact-btns scope and would stay 26px. The signer card's own strip
+   is .cs-remind, outside .dact, and keeps its size. */
+/* Radius only, not case. The row carries two deliberate registers: loud
+   affirmative actions in uppercase (Reseal docs, Approved) and quiet ones in
+   sentence case (Void, Pause reminders). The 3px corner was the one thing that
+   made Pause read as a foreign chip rather than a quiet sibling of Void. */
+.dact .rp-btn { padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); }
+/* .dvoid carries margin-left:auto to sit apart from the affirmative actions.
+   On a wrapped second line that auto margin is the whole line, which reads
+   fine, and it keeps Void last in every arrangement. */
 
 .dact .reseal {
   font-family: var(--font-body);
@@ -3402,7 +3435,11 @@ body.side-coll .ss-lbl { display: none; }
 /* Paused reminders. Quiet, never alarming: an LP who asked for time is a
    normal state of affairs, not a fault, so no red and no warning tint. */
 .cs-remind{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.rp-btn{padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
+/* font-family added 2026-09-09: without it the button fell back to the UA's
+   Arial, whose 12px line box is 14px against Assistant's 16px, so it rendered
+   short beside every sibling AND in a visibly different face. Same omission as
+   .dact .dreviewed had. */
+.rp-btn{font-family:var(--font-body);padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
 .rp-btn:hover{background:var(--color-bg-hover);color:var(--color-ink)}
 .rp-btn[disabled]{opacity:0.5;cursor:not-allowed}
 .rp-note{font-size:11px;color:var(--color-ink-muted);line-height:1.5}
@@ -3781,11 +3818,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:none;
   background:var(--color-green);color:#fff;
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  /* This rule declares border, radius, background and type and never declared
+     padding OR font-family, so both buttons rendered 16px tall in the UA's
+     Arial next to .reseal and .dvoid at 34-35px in the body face. Only the
+     mobile min-height rescued the height. Same values the two neighbours use. */
+  font-family: var(--font-body);
+  padding: var(--space-2) var(--space-4);
   transition:background var(--dur-fast) var(--ease-out);
 }
 .dact .dreviewed:hover,.dact .markreceived:hover{background:#256e35}
 .dact .dreviewed:active,.dact .markreceived:active{background:#1f5c2c}
+/* Same omission as its toggle partner .dreviewed above: no padding, no
+   font-family, so Undo approval rendered 16px tall in Arial beside a 35px
+   Void. Unreachable in demo mode, reachable on any approved row in production. */
 .dact .dreopen{
+  font-family:var(--font-body);padding:var(--space-2) var(--space-4);
   border:1px solid var(--color-border-strong);border-radius:var(--radius-md);
   background:transparent;color:var(--color-ink-sub);box-shadow:none;
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
