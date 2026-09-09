@@ -14,7 +14,24 @@ const src = m[1];
 let pass = 0, fail = 0;
 function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('FAIL', label, extra || ''); } }
 
-const drawer = { _on: false, classList: { contains: () => drawer._on, add: () => { drawer._on = true; } } };
+// classList stub: `contains`/`add` model the on/off state this harness actually
+// asserts on. `remove` and the `_cls` set were added 2026-09-09 when openDrawer
+// started choosing between a modal drawer and a docked side pane at 1400px and
+// therefore had to CLEAR the docked class on the narrow branch. A partial DOM
+// stub reads as a product break (TypeError: classList.remove is not a function)
+// when it is really the extract's environment being thinner than a browser.
+const drawer = {
+  _on: false,
+  _cls: new Set(),
+  _attr: {},
+  setAttribute: (k, v) => { drawer._attr[k] = String(v); },
+  removeAttribute: (k) => { delete drawer._attr[k]; },
+  classList: {
+    contains: (c) => (c === 'on' ? drawer._on : drawer._cls.has(c)),
+    add: (c) => { if (c === 'on') drawer._on = true; else drawer._cls.add(c); },
+    remove: (c) => { if (c === 'on') drawer._on = false; else drawer._cls.delete(c); },
+  },
+};
 const dscrim = { classList: { add: () => {} } };
 const bodyEl = { style: {} };
 const dbody = { innerHTML: '' };
@@ -40,8 +57,21 @@ function renderDrawer(d) { rendered.push(d); }
 // page is fine, the EXTRACT was missing a dependency.
 // This is the standing cost of testing an extract instead of the real file - the
 // stub list is a second copy of the function's dependencies and it drifts silently
-// the moment someone edits openDrawer. If this bites a third time, the fix is to
-// drive the real page, not to add another stub.
+// the moment someone edits openDrawer.
+//
+// It bit a THIRD time on 2026-09-09 (classList.remove, then setAttribute, when
+// openDrawer learned to dock as a side pane at 1400px). The earlier note here
+// said the third bite should trigger driving the real page instead. Recorded and
+// NOT done, deliberately: cayman-form-static has no package.json and no
+// node_modules, every harness in test/ is plain node with zero dependencies, and
+// a jsdom rig would be the first dependency this repo has ever carried. That is a
+// repo-shape decision, not a fix to fold into a design commit.
+//
+// What actually catches the drift is githooks/pre-push, which runs every harness
+// in test/ and refused both of the 2026-09-09 pushes. The mechanism works; the
+// failure mode is only that a raw TypeError from a thin stub READS like a product
+// break. So: when a harness dies on `<stub>.<method> is not a function`, check
+// the stub list here before believing console/index.html is broken.
 function setShellInert() { /* no-op: the harness has no shell to make inert */ }
 
 const openDrawer = (new Function('drawer', 'dscrim', 'document', 'allRows', 'esc2', 'stageMilestone', 'apiFetch', 'state', 'renderDrawer', 'GW', 'setShellInert',

@@ -436,7 +436,14 @@ function extractVarObj(name) {
 
   const lpRow = rowHtml({ pid: 's2', name: 'Yael Adler', stage: 'link_sent', typeLabel: 'increase' });
   ok('K12 pre-submit row waits on the LP', lpRow.includes('Waiting on <b>the LP</b>'));
-  ok('K12 no amount renders a quiet dash, not blank', lpRow.includes('ramt-none'));
+  // REVERSED 2026-09-09, by decision, not by accident. The dash was deliberate
+  // and this line pinned it. On a board where most rows are pre-submit, four of
+  // five money cells held a dash, and at a glance a dash reads as a datum -
+  // four false readings per screen on the only live view of in-flight money.
+  // No amount yet is the absence of a figure, not a figure. The column keeps
+  // its width so the amounts that DO exist stay aligned for scanning.
+  ok('K12 no amount renders blank, not a dash', !lpRow.includes('ramt-none') && !lpRow.includes('&ndash;'));
+  ok('K12 the amount cell still exists, so the column stays aligned', /class="ramt"/.test(lpRow));
 
   const attnRow = rowHtml({ pid: 's3', name: 'Helena Brandt', stage: 'needs_attention',
     wait: 'The wire / money row did not reach the transfer-forms tracker' });
@@ -855,8 +862,44 @@ function extractVarObj(name) {
     const i = html.indexOf(fn);
     ok('K16 ' + fn + ' toggles the shell', i > 0 && /setShellInert\(/.test(html.slice(i, i + 700)));
   });
-  ok('K16 openDrawer marks the shell inert',
-    /drawer\.classList\.add\("on"\); document\.body\.style\.overflow='hidden'; setShellInert\(true\)/.test(html));
+  // Re-pinned 2026-09-09: the drawer is modal BELOW 1400px and a side pane
+  // above it, so "always inert" stopped being the contract. Both halves are
+  // asserted, because each is a real hazard: a modal overlay that leaves the
+  // shell reachable is a focus trap failure, and a side pane that marks the
+  // shell inert makes the board it sits beside unusable - which is the whole
+  // reason the pane exists.
+  ok('K16 a MODAL drawer still locks scroll and marks the shell inert',
+    /dscrim\.classList\.add\("on"\); document\.body\.style\.overflow='hidden'; setShellInert\(true\)/.test(html));
+  ok('K16 the docked record is chosen by width, not by guesswork',
+    /window\.matchMedia\('\(min-width: 1400px\)'\)/.test(html) && /min-width: 1400px/.test(html));
+  // The drawer must NOT reuse `side`: this file already owns that class for
+  // aside.side. Reusing it collapsed the open record to a 52px sliver under
+  // body.side-coll and hid it outright under the mobile rule (2026-09-09 pixel
+  // pass, findings 11 and 13). Assert the drawer's docked class is `dock` and
+  // that nothing re-introduces a `.panel#drawer.side` rule.
+  ok('K16 the docked class is `dock`, never the sidebar\'s own `side`',
+    /drawer\.classList\.add\("dock"\)/.test(html) && !/\.panel#drawer\.side\b/.test(html));
+  // A branch read once at open time goes stale the moment the window is
+  // resized: a non-modal 480px pane over the board with no scrim and no inert
+  // shell (finding 12). The listener lives at TOP LEVEL, not inside openDrawer,
+  // because both drawer rigs extract that function from a fixed list.
+  ok('K16 the presentation is re-evaluated on resize, not frozen at open time',
+    /addEventListener\('change',applyDrawerPresentation\)/.test(html)
+    && html.indexOf('function applyDrawerPresentation') > html.indexOf('function dclose()'));
+  // The board grid needs ~870px and the docked record leaves 660px at a 1400
+  // viewport, so the AGE column and the per-row copy/note buttons slid UNDER
+  // the pane, unreachable (findings 1, 5 and 9). The existing drop rule is
+  // keyed on the VIEWPORT and cannot see a pane, so the drop has to be keyed on
+  // the docked state itself, with a scroll container as the backstop.
+  ok('K16 docking below ~1650px drops the flow column instead of hiding it under the pane',
+    /@media \(min-width: 1400px\) and \(max-width: 1649px\)/.test(html)
+    && /body:has\(\.panel#drawer\.dock\.on\) \.rflow/.test(html));
+  ok('K16 a docked board scrolls its overflow instead of losing it',
+    /body:has\(\.panel#drawer\.dock\.on\) #list \{ overflow-x: auto; \}/.test(html));
+  ok('K16 a side pane is NOT modal: it drops aria-modal and never marks the shell inert',
+    /if\(side\)\{\s*drawer\.removeAttribute\("aria-modal"\);/.test(html));
+  ok('K16 dclose clears the side class too, so a resize cannot strand it',
+    /dclose\(\)\{[^}]*drawer\.classList\.remove\("dock"\)/.test(html));
   ok('K16 signOut clears it, or the shell stays inert behind the login screen',
     /try\{setShellInert\(false\);\}catch\(e\)\{\}/.test(html));
   ok('K16 both overlays carry dialog semantics',

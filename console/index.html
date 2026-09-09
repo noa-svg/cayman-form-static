@@ -29,7 +29,12 @@
   --font-display:         'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-body:            'Assistant', 'Segoe UI', system-ui, sans-serif;
   --font-mono:            'JetBrains Mono', 'Courier New', monospace;
-  --text-2xs:   10px;  --text-xs:    12px; --text-sm:    13px;
+  /* --text-2xs is THE eyebrow role: a tracked uppercase label above content
+     that already labels itself. 9px, 10px, 11px and 11.5px were all in use for
+     that one job. Kept at its existing 10px so nothing already using it moves
+     (2026-09-09, Ive pass). */
+  --text-2xs:   10px;  --text-xs:    12px;
+  --text-sm:    13px;
   --text-base:  14px; --text-md:    16px; --text-lg:    20px;
   --text-xl:    22px; --text-2xl:   28px; --text-3xl:   36px;
   --leading-tight:   1.2;  --leading-normal:  1.5; --leading-loose:   1.75;
@@ -1126,7 +1131,7 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    width. The clamp keeps a pathological name from growing the row without
    bound; rowHtml adds a title on every name as the floor under that. */
 .rn-name {
-  font-size: 16px;
+  font-size: var(--text-md);
   font-weight: var(--weight-semi);
   color: var(--color-ink);
   line-height: 1.25;
@@ -1180,8 +1185,8 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   display: inline-block;
   padding: 2px 9px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semi);
   white-space: nowrap;
 }
 .flowchip.f-in  { background: rgba(46,133,64,0.12); color: var(--color-green); }
@@ -1193,12 +1198,23 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 .flowchip.f-neutral { background: var(--color-bg-hover); color: var(--color-ink-sub); }
 /* Status cell: plain-words stage + mini rail on line 1, waiting-on line 2. */
 .rstat { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.rstat-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* overflow:hidden added 2026-09-09. .rword is nowrap and .rstage is flex:0 0
+   auto, so a long status line cannot shrink and USED TO PAINT STRAIGHT OUT OF
+   the cell: with the record docked, the progress chip landed on top of the AGE
+   column and the two rendered as unreadable overlapping glyphs. min-width:0
+   alone does not stop that, it only permits the track to shrink. */
+.rstat-top { display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; }
 .rword {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--color-ink);
   white-space: nowrap;
+  /* A hard clip mid-string reads as a rendering fault, not as truncation. The
+     sibling .rwait already ellipsises; this one cut "Approved by
+     noa@legacyvpartners.com" with no signal that anything was removed. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* --color-danger, not --color-coral. The attention row paints its own
    --color-coral-tint ground, and coral-on-coral-tint measured 3.32:1 in the
@@ -1577,6 +1593,55 @@ body.side-coll .ss-row.ss-total { display: none; }
 
 .panel.on {
   transform: translateX(0);
+}
+
+/* DOCKED RECORD (2026-09-09). Above 1400px the record sits BESIDE the board
+   rather than over it, so inspecting one LP never costs you the list. The panel
+   stays fixed; the shell is inset by its width instead, which keeps the
+   transform transition and needs no change to the grid. The heavy drawer shadow
+   goes: nothing is floating over anything, so the border alone defines the edge.
+
+   THE CLASS IS `dock`, NOT `side`. The first version of this used `side`, which
+   this stylesheet already owns for aside.side, the SIDEBAR. The drawer silently
+   matched four sidebar rules it was never meant to. Two of them were live
+   defects a pixel pass found: body.side-coll .side collapsed the open record to
+   a 52px unreadable sliver at 0-0-2-0 specificity (one click on the visible
+   collapse control, persisted across reloads via localStorage.lvp_side_coll),
+   and the mobile .side{display:none!important} made an open record vanish
+   entirely with no scrim and no close affordance. Never name a drawer state
+   after an element this file already styles. */
+@media (min-width: 1400px) {
+  .panel#drawer.dock { box-shadow: none; }
+  body:has(.panel#drawer.dock.on) .main { padding-right: var(--panel-w); }
+  body:has(.panel#drawer.dock.on) .scrim { display: none; }
+
+  /* The board grid needs ~870px. Docking the 480px record leaves the content
+     pane 660px at a 1400 viewport and 760px at 1500, so the full column set
+     overflows and the AGE column and the per-row copy/note buttons slide UNDER
+     the pane, unreachable. The existing drop rule could not help: it is keyed on
+     the VIEWPORT (max-width:1250px), and the viewport here is 1400+.
+
+     Same finding as the 2026-08-26 review's #19, reintroduced at wide widths by
+     a pane the viewport cannot see. So drop the flow column on the same terms
+     the tablet rule uses, keyed on the pane instead: while the record is docked,
+     below the ~1650px at which the full grid genuinely fits beside it. */
+  #list { overflow-x: visible; }
+  body:has(.panel#drawer.dock.on) #list { overflow-x: auto; }
+}
+
+@media (min-width: 1400px) and (max-width: 1649px) {
+  /* A DOCKED record is narrower than a modal one. Dropping the flow column got
+     the grid from 870px to 690px, and at a 1400 viewport the 480px pane still
+     only leaves 660px, so the "Add a note" button sat 16px outside the clip and
+     did nothing when clicked. 420px gives the board 720px against the 690 it
+     needs, with headroom rather than a 30px deficit. The record itself loses
+     nothing that matters: it is a reading surface, and this only applies in the
+     250px band where the two genuinely compete for width. Both halves read
+     --panel-w, so the panel and the shell inset stay in step by construction. */
+  body:has(.panel#drawer.dock.on) { --panel-w: 420px; }
+  body:has(.panel#drawer.dock.on) { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
+  body:has(.panel#drawer.dock.on) .rflow,
+  body:has(.panel#drawer.dock.on) .bhead .h-flow { display: none; }
 }
 
 .panel h2 {
@@ -2225,6 +2290,13 @@ input:focus {
   color: var(--color-ink);
   letter-spacing: -0.01em;
   line-height: var(--leading-tight);
+  /* .x is position:absolute over this line, so the title never knew it was
+     there. At 480px a long entity name cleared it by luck; at the docked 420px
+     the closing bracket painted under the multiplication sign. 34px is the
+     button's 28px plus a 6px gap. The inset does not protect an UNBREAKABLE
+     token, which painted 221px past the panel edge, hence the wrap rule. */
+  padding-right: 34px;
+  overflow-wrap: anywhere;
 }
 
 /* The one Hebrew-bearing span in the drawer header, carried inline instead
@@ -2462,7 +2534,33 @@ input:focus {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  /* The widest real row is five buttons (needs_attention with an empty signing
+     roster, the 2026-08-10 pre-submission-stall case): Resend invite reminder,
+     Reseal docs, Approved, Pause reminders, Void. It needs 474px. Nowrap with
+     shrinkable children squashed every label into two and three lines of
+     different heights and pushed Void 79px past the panel edge, where it was
+     clipped and unreachable. It clipped at the 480px modal too, so this is not
+     the docked width's doing. Wrap to a second line and keep each button its
+     own size: a ragged row of four heights was the squashing, not the labels. */
+  flex-wrap: wrap;
+  row-gap: var(--space-3);
 }
+.dact-btns > * { flex-shrink: 0; }
+/* .rp-btn is 5px/10px, sized for the signer-card confirm strip it shares, and
+   rendered short against its 34-35px neighbours on the same flex line. Scoped
+   to .dact, not .dact-btns: clicking Pause reminders injects .rp-form as a
+   SIBLING of the button row (b.parentNode.insertAdjacentElement('afterend')
+   where b.parentNode IS .dact-btns), so its own Pause and Cancel buttons fall
+   outside a .dact-btns scope and would stay 26px. The signer card's own strip
+   is .cs-remind, outside .dact, and keeps its size. */
+/* Radius only, not case. The row carries two deliberate registers: loud
+   affirmative actions in uppercase (Reseal docs, Approved) and quiet ones in
+   sentence case (Void, Pause reminders). The 3px corner was the one thing that
+   made Pause read as a foreign chip rather than a quiet sibling of Void. */
+.dact .rp-btn { padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); }
+/* .dvoid carries margin-left:auto to sit apart from the affirmative actions.
+   On a wrapped second line that auto margin is the whole line, which reads
+   fine, and it keeps Void last in every arrangement. */
 
 .dact .reseal {
   font-family: var(--font-body);
@@ -2901,9 +2999,15 @@ body.side-coll .nav .nav-ic { font-size: 18px; }
    essential (2026-08-26 review, finding 19). */
 body.side-coll .nav { position: relative; }
 body.side-coll .nav .badge { font-size: 0; min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; position: absolute; top: 6px; right: 8px; }
+/* !important on the signout link (2026-09-09): the rule is correct but
+   #sign-out-btn gets style.display='inline' assigned at runtime by the auth
+   code, and an inline style outranks a class rule. In the collapsed rail the
+   button was forced to 18px and the label wrapped to "Sig" over "out". Latent
+   for as long as the rail has existed; it became easy to hit the moment the
+   collapse control stopped mangling an open record. */
 body.side-coll .side-foot .auth-email,
-body.side-coll .side-foot .signout-link,
 body.side-coll .side-foot a[href*="atrium" i] { display: none; }
+body.side-coll .side-foot .signout-link { display: none !important; }
 /* Collapsed quick-stats (audit finding #2): the collapsed rail is too narrow
    for "IN FLIGHT" / "NEED A LOOK" / "SIGNING" to wrap without breaking mid-
    word into unreadable fragments. Same icon/number-only treatment the nav
@@ -3331,7 +3435,11 @@ body.side-coll .ss-lbl { display: none; }
 /* Paused reminders. Quiet, never alarming: an LP who asked for time is a
    normal state of affairs, not a fault, so no red and no warning tint. */
 .cs-remind{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.rp-btn{padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
+/* font-family added 2026-09-09: without it the button fell back to the UA's
+   Arial, whose 12px line box is 14px against Assistant's 16px, so it rendered
+   short beside every sibling AND in a visibly different face. Same omission as
+   .dact .dreviewed had. */
+.rp-btn{font-family:var(--font-body);padding:5px 10px;font-size:12px;font-weight:600;border:var(--bw) solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);color:var(--color-ink-muted);cursor:pointer}
 .rp-btn:hover{background:var(--color-bg-hover);color:var(--color-ink)}
 .rp-btn[disabled]{opacity:0.5;cursor:not-allowed}
 .rp-note{font-size:11px;color:var(--color-ink-muted);line-height:1.5}
@@ -3710,11 +3818,21 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   border:1px solid var(--color-ink);border-radius:var(--radius-md);box-shadow:none;
   background:var(--color-green);color:#fff;
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
+  /* This rule declares border, radius, background and type and never declared
+     padding OR font-family, so both buttons rendered 16px tall in the UA's
+     Arial next to .reseal and .dvoid at 34-35px in the body face. Only the
+     mobile min-height rescued the height. Same values the two neighbours use. */
+  font-family: var(--font-body);
+  padding: var(--space-2) var(--space-4);
   transition:background var(--dur-fast) var(--ease-out);
 }
 .dact .dreviewed:hover,.dact .markreceived:hover{background:#256e35}
 .dact .dreviewed:active,.dact .markreceived:active{background:#1f5c2c}
+/* Same omission as its toggle partner .dreviewed above: no padding, no
+   font-family, so Undo approval rendered 16px tall in Arial beside a 35px
+   Void. Unreachable in demo mode, reachable on any approved row in production. */
 .dact .dreopen{
+  font-family:var(--font-body);padding:var(--space-2) var(--space-4);
   border:1px solid var(--color-border-strong);border-radius:var(--radius-md);
   background:transparent;color:var(--color-ink-sub);box-shadow:none;
   font-weight:800;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;
@@ -6118,7 +6236,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn">'+nameCellHtml(r)+'</span>'
       +'<span class="rflow">'+flowChipHtml(r)+'</span>'
-      +'<span class="ramt">'+(amt?esc2(amt):'<span class="ramt-none">&ndash;</span>')+'</span>'
+      // No amount yet is not a value (2026-09-09, Ive pass). A pre-submit row
+      // has no figure because the LP has not stated one, and an em-dash in the
+      // money column reads as a datum at a glance - on a board where four rows
+      // of five are pre-submit, that is four false readings per screen. The
+      // cell renders empty; the column keeps its width so the numbers that DO
+      // exist stay aligned for scanning.
+      +'<span class="ramt">'+(amt?esc2(amt):'')+'</span>'
       +'<span class="rstat"><span class="rstat-top"><span class="rword'+wordCls+'">'+esc2(manual?'Off the Ju pipeline':(cleared?reviewedLine:stageWord(st)))+'</span>'+(manual?'':railHtml(r))+'</span>'
       +statSecond+'</span>'
       +'<span class="rage">'+esc2(r.age||'')+'</span>'
@@ -6307,7 +6431,7 @@ document.addEventListener('keydown',function(e){
   //   syncedAt    the newest generatedAt any list leg has actually returned.
   //               '' means no list leg has ever answered - which is exactly
   //               when no freshness may be asserted (defect 2).
-  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:''};
+  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:'',engines:[]};
   function boardDegraded_(){return !!(BOARD_HEALTH.legFail||BOARD_HEALTH.overlayFail);}
   // The sync line is the console's only always-visible claim about how fresh
   // the board is, so it is also where "this board is INCOMPLETE" belongs.
@@ -6340,9 +6464,22 @@ document.addEventListener('keydown',function(e){
     var age=sinceDur(at);
     var stale=false;
     try{ stale=(Date.now()-Date.parse(at))>6*3600000; }catch(e){}
-    vl.title='Last synced '+t;
+    // The per-engine detail lives in the title on a healthy board (available
+    // without spending a pixel) and is promoted into the sentence the moment an
+    // engine stops answering.
+    var eng=BOARD_HEALTH.engines||[];
+    var engTxt=eng.map(function(e){return e.name+' '+(e.ok?(e.ms<1000?(e.ms+'ms'):(Math.round(e.ms/100)/10+'s')):'no answer');}).join(' · ');
+    var dead=eng.filter(function(e){return !e.ok;}).map(function(e){return e.name;});
+    vl.title='Last synced '+t+(engTxt?('  ·  '+engTxt):'');
     if(deg||stale){
-      vl.textContent=age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale';
+      // The shipped sentence is KEPT verbatim and the engine is appended, not
+      // substituted. console-honest-status-harness pins this wording on
+      // purpose, and replacing it traded a guaranteed claim for a new one -
+      // the operator gains the engine name without the file losing the
+      // sentence its own tests guarantee. agoPhrase is #45's fix for
+      // "just now ago" and stays.
+      var who=dead.length?(' · '+dead.join(' and ')+' did not answer'):'';
+      vl.textContent=(age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale')+who;
       vl.style.color='var(--color-danger)';
     }else{
       vl.textContent='synced '+(age?agoPhrase(age):('· '+t));
@@ -6851,11 +6988,19 @@ document.addEventListener('keydown',function(e){
   // taking every manual/orphan money row with it.
   function fetchEngineBoard_(base, lane, wantDone, wantTest){
     var failed={list:false,notes:false,extras:false};
+    // PER-LEG TIMING (2026-09-09). The board reads two engines whose physics
+    // differ by two orders of magnitude: ju-service answers in milliseconds,
+    // GAS routinely takes 20-90 seconds on this spreadsheet and has been
+    // measured at 185s. Both were reported identically - the board simply sat
+    // there - so a slow engine and a broken one looked the same, and a leg that
+    // failed named no engine. An operating console has to say which instrument
+    // is slow and which stopped answering.
+    var t0=Date.now();
     var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){failed.notes=true;return {notes:{}};});
     var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){failed.extras=true;return {rows:{}};});
     var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){failed.list=true;return {processes:[]};});
     return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
-      return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed};
+      return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed,ms:Date.now()-t0};
     });
   }
   // The board's ORPHAN money rows - transfer-forms tracker rows with no ju
@@ -7012,6 +7157,16 @@ document.addEventListener('keydown',function(e){
       // accumulated, so a recovered refresh clears the red on its own.
       BOARD_HEALTH.legFail=perEngine.some(function(e){
         var f=e.failed||{}; return !!(f.list||f.notes||f.extras);
+      });
+      // NAME the engine, and how long it took (2026-09-09). legFail was a
+      // boolean, so a degraded board could say "the board may be stale" without
+      // saying WHICH engine stopped answering - and on a board that reads two,
+      // that is the first question. Timing rides along for the same reason: a
+      // 41-second GAS answer is healthy and a 41-second wait with no answer is
+      // not, and until now they looked identical.
+      BOARD_HEALTH.engines=perEngine.map(function(e){
+        var f=e.failed||{};
+        return {name:(e.base===JU_API?'ju-service':'gas'),ms:e.ms||0,ok:!(f.list||f.notes||f.extras)};
       });
       if(latestGeneratedAt&&latestGeneratedAt>BOARD_HEALTH.syncedAt)BOARD_HEALTH.syncedAt=latestGeneratedAt;
       paintVerLine_();
@@ -7575,7 +7730,37 @@ document.addEventListener('keydown',function(e){
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
   var drawerOpener=null;
-  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");drawer.classList.remove("dock");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  // RE-EVALUATE THE BRANCH ON RESIZE, not only at open time.
+  //
+  // openDrawer reads matchMedia ONCE. Without this, dragging a window from 1500
+  // to 1200 with a record open left the drawer non-modal while the 1400px media
+  // block stopped applying: a 480px pane sitting ON TOP of the board with no
+  // scrim, no inert shell and no scroll lock, which is precisely the state the
+  // narrow branch exists to prevent. Found in the 2026-09-09 pixel pass.
+  //
+  // Deliberately NOT called from openDrawer and deliberately not a helper it
+  // reaches: console-harness and drawer-race-harness both extract openDrawer
+  // from FIXED function lists, so anything it calls has to be stubbed twice by
+  // hand. This listens at top level and reads the drawer's own class instead.
+  (function(){
+    var mq=null; try{ mq=window.matchMedia('(min-width: 1400px)'); }catch(e){ mq=null; }
+    if(!mq)return;
+    function applyDrawerPresentation(){
+      if(!drawer.classList.contains("on"))return;
+      if(mq.matches){
+        drawer.classList.add("dock");
+        drawer.removeAttribute("aria-modal");
+        dscrim.classList.remove("on"); document.body.style.overflow=''; setShellInert(false);
+      }else{
+        drawer.classList.remove("dock");
+        drawer.setAttribute("aria-modal","true");
+        dscrim.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+      }
+    }
+    if(mq.addEventListener){mq.addEventListener('change',applyDrawerPresentation);}
+    else if(mq.addListener){mq.addListener(applyDrawerPresentation);}
+  })();
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
   // desktop sidebar collapse
   (function(){
@@ -8803,7 +8988,33 @@ document.addEventListener('keydown',function(e){
   }
   function openDrawer(pid){
     if(!drawer.classList.contains("on"))drawerOpener=document.activeElement;
-    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+    // SIDE PANE ABOVE 1400px (2026-09-09, Noa: keep your place in the list).
+    // The drawer was modal at every width: scrim, aria-modal, the shell made
+    // inert and the body scroll locked. On an operating console that means
+    // inspecting one LP costs you the estate - you lose the list, look, close,
+    // and find your place again. Above 1400px there is room for both, so the
+    // drawer becomes a column beside the board and STOPS being modal: no
+    // scrim, no inert shell, no scroll lock, and the board stays live so the
+    // next row is one click away.
+    //
+    // Below 1400px nothing changes. There is no room for two columns, and a
+    // half-covered board behind a non-modal pane would be worse than the
+    // overlay: focus could land on a row the pane hides.
+    currentPid=pid;
+    // Inlined, not a helper: openDrawer is extracted by console-harness AND
+    // drawer-race-harness from FIXED function lists, so any helper it calls is
+    // invisible to both rigs and throws inside the extract. Same trap that the
+    // engine-timing helper hit earlier the same day.
+    var side=false; try{ side=window.matchMedia('(min-width: 1400px)').matches; }catch(e){ side=false; }
+    drawer.classList.add("on");
+    if(side){drawer.classList.add("dock");}else{drawer.classList.remove("dock");}
+    if(side){
+      drawer.removeAttribute("aria-modal");
+      dscrim.classList.remove("on"); document.body.style.overflow=''; setShellInert(false);
+    }else{
+      drawer.setAttribute("aria-modal","true");
+      dscrim.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+    }
     // Instant header from the board row already in memory (Noa 2026-07-20: the
     // drawer "takes forever to load"). The GAS round-trip still runs, but the
     // panel opens showing WHO and WHERE immediately instead of a bare Loading.
