@@ -133,6 +133,8 @@ HARNESSES=(
   upload-accept-allowlist-harness
   zz-cayman-lawyer-fields
   zz-cayman-verified-on-copy
+  zz-cayman-lp-shapes
+  zz-cayman-lp-primary-entity
   terminal-vocab-harness
 )
 

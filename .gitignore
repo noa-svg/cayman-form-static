@@ -66,3 +66,5 @@ test/*
 !test/upload-accept-allowlist-harness.cjs
 !test/zz-cayman-lawyer-fields.cjs
 !test/zz-cayman-verified-on-copy.cjs
+!test/zz-cayman-lp-shapes.cjs
+!test/zz-cayman-lp-primary-entity.cjs
