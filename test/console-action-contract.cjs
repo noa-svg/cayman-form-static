@@ -28,6 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { monoSource } = require('./lib-mono-source.cjs');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'console', 'index.html'), 'utf8');
 
@@ -40,17 +41,17 @@ function ok(label, cond, extra) { if (cond) pass++; else { fail++; console.log('
 // carries the matching route so the contract checks the pair that will actually
 // ship together, instead of failing against the not-yet-merged shared checkout).
 const MONO_ROOT = process.env.JU_MONO_ROOT || path.join(os.homedir(), 'Desktop', 'legacy-tools-mono');
-const GATEWAY = path.join(MONO_ROOT, 'apps', 'ju-cayman', 'src', 'server', 'CaymanGateway.ts');
+const GATEWAY = 'apps/ju-cayman/src/server/CaymanGateway.ts';
 let gw = '';
-try { gw = fs.readFileSync(GATEWAY, 'utf8'); } catch (e) { gw = ''; }
+gw = monoSource(GATEWAY);
 // The console talks to TWO backends, and has since the 2026-08-08 ju-service flip.
 // Checking only GAS made this contract half-blind: a route that ships ju-service-only
 // (consoledispatch.ts) reads here as a dead button when it is a live one, and - the
 // direction that actually bites - a route deleted from ju-service would NOT be caught
 // at all. Read both, and let a handler in either satisfy the contract.
-const DISPATCH = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'routes', 'consoledispatch.ts');
+const DISPATCH = 'apps/ju-service/src/routes/consoledispatch.ts';
 let jd = '';
-try { jd = fs.readFileSync(DISPATCH, 'utf8'); } catch (e) { jd = ''; }
+jd = monoSource(DISPATCH);
 // ju-service has a SECOND route table, app.ts (2026-09-02 CTO review finding).
 // consoledispatch.ts is what the console's ?source=op POST tunnel reaches, so
 // checking only it is enough to know the console itself is wired - but
@@ -61,9 +62,9 @@ try { jd = fs.readFileSync(DISPATCH, 'utf8'); } catch (e) { jd = ''; }
 // consoledispatch.ts made those read as "neither engine handles it" even
 // though ju-service genuinely does - the same half-blind failure A2b's own
 // comment above already named for consoledispatch.ts alone.
-const APP_TS = path.join(MONO_ROOT, 'apps', 'ju-service', 'src', 'app.ts');
+const APP_TS = 'apps/ju-service/src/app.ts';
 let appTs = '';
-try { appTs = fs.readFileSync(APP_TS, 'utf8'); } catch (e) { appTs = ''; }
+appTs = monoSource(APP_TS);
 ok('A2 mono gateway source present (absent = vacuous contract, hard fail)', gw.length > 0, GATEWAY);
 ok('A2b ju-service dispatch source present (absent = half-blind contract, hard fail)', jd.length > 0, DISPATCH);
 ok('A2c ju-service app.ts source present (absent = blind to its second route table, hard fail)', appTs.length > 0, APP_TS);
