@@ -1584,6 +1584,17 @@ body.side-coll .ss-row.ss-total { display: none; }
   transform: translateX(0);
 }
 
+/* SIDE PANE (2026-09-09). Above 1400px the record sits BESIDE the board rather
+   than over it, so inspecting one LP never costs you the list. The panel stays
+   fixed; the shell is inset by its width instead, which keeps the transform
+   transition and needs no change to the grid. The heavy drawer shadow goes:
+   nothing is floating over anything, so the border alone defines the edge. */
+@media (min-width: 1400px) {
+  .panel#drawer.side { box-shadow: none; }
+  body:has(.panel#drawer.side.on) .main { padding-right: var(--panel-w); }
+  body:has(.panel#drawer.side.on) .scrim { display: none; }
+}
+
 .panel h2 {
   font-family: var(--font-body);
   font-style: normal;
@@ -7617,7 +7628,7 @@ document.addEventListener('keydown',function(e){
   // process drawer
   var dscrim=document.getElementById("dscrim"),drawer=document.getElementById("drawer");
   var drawerOpener=null;
-  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
+  function dclose(){dscrim.classList.remove("on");drawer.classList.remove("on");drawer.classList.remove("side");document.body.style.overflow='';setShellInert(false);if(drawerOpener&&drawerOpener.focus){try{drawerOpener.focus();}catch(e){}}drawerOpener=null;}
   dscrim.onclick=dclose; document.getElementById("dclose").onclick=dclose;
   // desktop sidebar collapse
   (function(){
@@ -8845,7 +8856,32 @@ document.addEventListener('keydown',function(e){
   }
   function openDrawer(pid){
     if(!drawer.classList.contains("on"))drawerOpener=document.activeElement;
-    currentPid=pid; dscrim.classList.add("on"); drawer.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+    // SIDE PANE ABOVE 1400px (2026-09-09, Noa: keep your place in the list).
+    // The drawer was modal at every width: scrim, aria-modal, the shell made
+    // inert and the body scroll locked. On an operating console that means
+    // inspecting one LP costs you the estate - you lose the list, look, close,
+    // and find your place again. Above 1400px there is room for both, so the
+    // drawer becomes a column beside the board and STOPS being modal: no
+    // scrim, no inert shell, no scroll lock, and the board stays live so the
+    // next row is one click away.
+    //
+    // Below 1400px nothing changes. There is no room for two columns, and a
+    // half-covered board behind a non-modal pane would be worse than the
+    // overlay: focus could land on a row the pane hides.
+    currentPid=pid;
+    // Inlined, not a helper: openDrawer is extracted by console-harness AND
+    // drawer-race-harness from FIXED function lists, so any helper it calls is
+    // invisible to both rigs and throws inside the extract. Same trap that the
+    // engine-timing helper hit earlier the same day.
+    var side=false; try{ side=window.matchMedia('(min-width: 1400px)').matches; }catch(e){ side=false; }
+    drawer.classList.add("on");
+    if(side){drawer.classList.add("side");}else{drawer.classList.remove("side");}
+    if(side){
+      drawer.removeAttribute("aria-modal");
+    }else{
+      drawer.setAttribute("aria-modal","true");
+      dscrim.classList.add("on"); document.body.style.overflow='hidden'; setShellInert(true);
+    }
     // Instant header from the board row already in memory (Noa 2026-07-20: the
     // drawer "takes forever to load"). The GAS round-trip still runs, but the
     // panel opens showing WHO and WHERE immediately instead of a bare Loading.

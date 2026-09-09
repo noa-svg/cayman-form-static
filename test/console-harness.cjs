@@ -862,8 +862,20 @@ function extractVarObj(name) {
     const i = html.indexOf(fn);
     ok('K16 ' + fn + ' toggles the shell', i > 0 && /setShellInert\(/.test(html.slice(i, i + 700)));
   });
-  ok('K16 openDrawer marks the shell inert',
-    /drawer\.classList\.add\("on"\); document\.body\.style\.overflow='hidden'; setShellInert\(true\)/.test(html));
+  // Re-pinned 2026-09-09: the drawer is modal BELOW 1400px and a side pane
+  // above it, so "always inert" stopped being the contract. Both halves are
+  // asserted, because each is a real hazard: a modal overlay that leaves the
+  // shell reachable is a focus trap failure, and a side pane that marks the
+  // shell inert makes the board it sits beside unusable - which is the whole
+  // reason the pane exists.
+  ok('K16 a MODAL drawer still locks scroll and marks the shell inert',
+    /dscrim\.classList\.add\("on"\); document\.body\.style\.overflow='hidden'; setShellInert\(true\)/.test(html));
+  ok('K16 the side pane is chosen by width, not by guesswork',
+    /window\.matchMedia\('\(min-width: 1400px\)'\)/.test(html) && /min-width: 1400px/.test(html));
+  ok('K16 a side pane is NOT modal: it drops aria-modal and never marks the shell inert',
+    /if\(side\)\{\s*drawer\.removeAttribute\("aria-modal"\);/.test(html));
+  ok('K16 dclose clears the side class too, so a resize cannot strand it',
+    /dclose\(\)\{[^}]*drawer\.classList\.remove\("side"\)/.test(html));
   ok('K16 signOut clears it, or the shell stays inert behind the login screen',
     /try\{setShellInert\(false\);\}catch\(e\)\{\}/.test(html));
   ok('K16 both overlays carry dialog semantics',
