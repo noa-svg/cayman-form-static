@@ -11,8 +11,15 @@
 //       the amount and all three buttons were off-screen and unreachable. The
 //       base .wl-card rule must therefore stay single-column, and any
 //       multi-column grid for it must live inside a min-width query.
-//   W2  GROUPED BY JOB. Blocked / Needs you / Goes on a letter / Done are the
+//   W2  GROUPED BY JOB. Blocked / Needs you / Goes on a letter are the
 //       headings, not Pending / eligible / settled.
+//       DONE WAS REMOVED 2026-09-09 (Noa: "no thats shit"). It could only ever
+//       list what one browser tab had done since load, because no endpoint
+//       reports rows a previous run settled, so it emptied on every refresh and
+//       every month change. A panel that forgets is worse than none: it looks
+//       like a record. W2 and W10 asserted it was on screen, so they asserted
+//       the defect; both now assert it is GONE, which is what keeps it from
+//       creeping back.
 //   W3  ONE PRIMARY PER ROW, 44px, the rest behind a per-row menu whose items
 //       are full sentences naming the outcome AND its target.
 //   W4  THE NEW AWAITING FIELDS ARE SURFACED, NEVER HIDDEN. `recovered` (the
@@ -32,7 +39,8 @@
 //   W9  MECHANICS FLOOR: for=/id on every control, inputmode on the struck-NAV
 //       field, an aria-live region that actually receives the result of a row
 //       action, and motion behind prefers-reduced-motion.
-//   W10 EMPTY STATES. Every group empty, and one group empty, both say so
+//   W10 EMPTY STATES. Every group empty, and one group empty, both say so.
+//       Done is excluded: it no longer exists (see W2).
 //       rather than rendering nothing.
 //   W11 RTL. A Hebrew name renders with dir="auto" and is not mangled.
 //
@@ -225,9 +233,10 @@ function planOf(awaiting, transfers, parked, extra) {
 
     // W2: the headings are jobs.
     const titles = t.groupTitles().join(' | ');
-    ['Blocked', 'Needs you', 'Goes on a letter', 'Done'].forEach((g) => {
+    ['Blocked', 'Needs you', 'Goes on a letter'].forEach((g) => {
       ok('W2 the "' + g + '" group is on screen', titles.indexOf(g) >= 0, titles);
     });
+    ok('W2 the "Done" group is gone, not merely empty', titles.indexOf('Done') < 0, titles);
     ok('W2 no group is named after a tracker token',
       !/Awaiting money|Pending|EXECUTION_STATUS/.test(titles), titles);
 
@@ -413,7 +422,7 @@ function planOf(awaiting, transfers, parked, extra) {
     ok('W10 Blocked still renders when empty', titles.indexOf('Blocked') >= 0, titles);
     ok('W10 Needs you still renders when empty', titles.indexOf('Needs you') >= 0, titles);
     ok('W10 Goes on a letter still renders when empty', titles.indexOf('Goes on a letter') >= 0, titles);
-    ok('W10 Done still renders when empty', titles.indexOf('Done') >= 0, titles);
+    ok('W10 Done does not reappear on an empty month', titles.indexOf('Done') < 0, titles);
     const blockedTxt = TX(t.groupOf('Blocked'));
     ok('W10 Blocked states the all-clear as a fact, not as an absence',
       /Nothing is blocking the letter/.test(blockedTxt), blockedTxt.slice(0, 200));
