@@ -10294,7 +10294,11 @@ document.addEventListener('keydown',function(e){
       h+='<div style="margin-top:6px">'+esc2((mm.reasons||[]).join('; ')
         ||'The letter no longer matches the one you reviewed.')+'</div>';
     }
-    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above are being re-read from the tracker as it stands now. Check them. Generate arms itself again once they land.</div>';
+    // NO PROMISE ABOUT THE GATE. The re-read can itself fail, and this line then
+    // sat beside a failed render telling the operator Generate was about to arm
+    // when the honest answer was that it would stay off. The gate note under the
+    // button is the one place that says what the gate actually did.
+    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above are being re-read from the tracker as it stands now. Check them. The line under Generate says whether it re-armed.</div>';
     return h;
   }
   // ---- THE MONTH WORKLIST render layer (rebuilt 2026-09-07, design approved
@@ -10952,7 +10956,11 @@ document.addEventListener('keydown',function(e){
         var link=li.querySelector('[data-wl-focus]');
         if(link)wlFocusRow(link.getAttribute('data-wl-focus'));
         else{var box=blockersEl.querySelector('.wl-blockers');if(box){try{box.focus();}catch(e){}}}
-      }else if(!lastGo&&reviewBtn&&!reviewBtn.disabled){
+      }else if(!lastGo&&reviewBtn&&!reviewBtn.disabled&&!reviewBtn.hidden){
+        // Only while the button is actually on screen. The review runs itself
+        // now and the button is hidden, so this sentence was telling the
+        // operator to click something she cannot see, appended to a gate note
+        // that had already told her the real reason.
         msg=msg+' Review this month first.';
         try{reviewBtn.focus();}catch(e){}
       }
@@ -11337,16 +11345,41 @@ document.addEventListener('keydown',function(e){
     // and currency, and generate then runs unchecked exactly as it did before
     // this existed rather than being blocked by a hash nobody can produce.
     var wlApproved=null;
+    // WHAT THE LAST RENDER ACTUALLY DID, which is not the same question as
+    // "is there a hash". 'none' = no render was called for (no month yet);
+    // 'ok' = the server answered, whether or not that answer carried a hash;
+    // 'failed' = the render errored or could not be reached.
+    //
+    // The distinction is the whole fail-closed rule (2026-09-10). An arm with
+    // wlApproved===null after a render that SUCCEEDED is the deliberate
+    // unhashed path: a first-time generate, or an older ju-service that returns
+    // no factsHash, and both must keep working. An arm with wlApproved===null
+    // after a render that FAILED is a different thing entirely: the letter on
+    // screen is an error message, the hash the money call would have been held
+    // to does not exist, and the server guard is `if (expectedHash)`, so the
+    // click would generate AND settle unchecked on the very sheet whose change
+    // caused the refusal. Only that case is refused. runReview reads this,
+    // never wlApproved, to decide.
+    var wlRenderState='none';
+    // The way out of a failed render is drawn INTO the failure itself: the
+    // Review button is hidden now that the review runs itself, so the month and
+    // currency selects were the only retry left.
+    function wlRenderFailedHtml(why){
+      return '<div class="t-danger">The letter could not be rendered: '+esc2(why)
+        +'. The rows above are unaffected.</div>'
+        +'<div style="margin-top:6px"><button type="button" id="wlRenderRetry" class="btn btn-quiet">Retry the render</button></div>';
+    }
     // RETURNS A PROMISE that always resolves, never rejects, so a caller can
     // sequence behind it. runReview arms Generate, and arming it while this
     // render is still in flight leaves wlApproved null for that window: the
     // hash would simply not be sent and the money call would run unchecked.
     function renderLetter(){
       wlApproved=null;
+      wlRenderState='pending';
       var host=document.getElementById('wlRenderPanel');
-      if(!host)return Promise.resolve();
+      if(!host){wlRenderState='none';return Promise.resolve();}
       var month=wlViewMonth();
-      if(!wlValidMonth(month)){host.innerHTML='';return Promise.resolve();}
+      if(!wlValidMonth(month)){wlRenderState='none';host.innerHTML='';return Promise.resolve();}
       var ccy=ccyEl.value;
       var rid=++renderSeq;
       host.innerHTML='<div class="wl-render-hd"><span class="wl-render-ttl">The letter</span>'
@@ -11357,10 +11390,11 @@ document.addEventListener('keydown',function(e){
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
         if(!r||!r.ok){
-          body.innerHTML='<div class="t-danger">The letter could not be rendered: '
-            +esc2((r&&r.error)||'no answer from the server')+'. The rows above are unaffected.</div>';
+          wlRenderState='failed';
+          body.innerHTML=wlRenderFailedHtml((r&&r.error)||'no answer from the server');
           return;
         }
+        wlRenderState='ok';
         if(!((r.transfers||[]).length)){
           body.innerHTML='<div class="t-muted">No '+esc2(ccy)+' row is on this month&#8217;s letter yet, so there is nothing to render.</div>';
           return;
@@ -11381,10 +11415,10 @@ document.addEventListener('keydown',function(e){
         f.srcdoc=String(r.html||'');
       }).catch(function(err){
         if(rid!==renderSeq)return;
+        wlRenderState='failed';
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
-        body.innerHTML='<div class="t-danger">The letter could not be rendered: '
-          +esc2((err&&err.serverError)||'could not reach the server')+'. The rows above are unaffected.</div>';
+        body.innerHTML=wlRenderFailedHtml((err&&err.serverError)||'could not reach the server');
       });
     }
     // THE ONE WAY BACK IN. Review arms Generate against a letter, so the letter
@@ -11393,7 +11427,30 @@ document.addEventListener('keydown',function(e){
     // which is what turned a correct refusal into a loop: the refused letter
     // stayed on screen with its refused hash, and the only escapes were the
     // currency select, the month, or a reload.
-    function wlRelookAndReview(){ return renderLetter().then(runReview,runReview); }
+    // keepResult: the recovery after a refusal must NOT blank the result line,
+    // because the refusal is the only explanation the operator has for why
+    // nothing settled. It used to be repainted back afterwards, unconditionally,
+    // which silently erased whatever she had done in the meantime, a
+    // Verification copy and its Drive link most of all. Not clearing it in the
+    // first place removes the race instead of re-running it.
+    function wlRelookAndReview(opts){
+      var keep=!!(opts&&opts.keepResult===true);
+      function after(){ return runReview({keepResult:keep}); }
+      return renderLetter().then(after,after);
+    }
+    // Retry wired to the panel, not to the node: wlRenderFailedHtml redraws the
+    // button on every render.
+    (function(){
+      var host=document.getElementById('wlRenderPanel');
+      if(!host)return;
+      host.addEventListener('click',function(e){
+        var t=e&&e.target;
+        var btn=(t&&t.closest)?t.closest('#wlRenderRetry'):null;
+        if(!btn)return;
+        btn.disabled=true;
+        wlRelookAndReview({keepResult:true});
+      });
+    })();
     function peekRows(){
       var month=wlViewMonth();
       if(!wlValidMonth(month)){wlLastTransfers=null;renderWlRows();return;}
@@ -11564,13 +11621,16 @@ document.addEventListener('keydown',function(e){
     // It still arms the gate exactly as before, so Generate is armed only by a
     // review of the CURRENT inputs, and because the review now re-runs on every
     // change the two can no longer drift apart.
-    function runReview(){
+    function runReview(opts){
+      // Tolerant of any argument: this is reached through .then(after,after) and
+      // through DOM handlers, so it can be handed an Error or an Event.
+      var keepResult=!!(opts&&opts.keepResult===true);
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Choose a month first.</div>','');return;}
       if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
       reviewBtn.disabled=true;wlCloseGate('');
       findEl.innerHTML='<div class="t-muted">Reviewing...</div>';
-      setResult('','');
+      if(!keepResult)setResult('','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, JU_API).then(function(r){
         reviewBtn.disabled=false;
         if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
@@ -11586,6 +11646,35 @@ document.addEventListener('keydown',function(e){
         }
         if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
         wlServerBlocking=null;
+        // FAIL CLOSED ON A FAILED RENDER (2026-09-10). The review and the render
+        // are two different calls, so the review can pass cleanly while the
+        // panel beside it holds an error message. Arming there left the operator
+        // looking at "The letter could not be rendered" next to a live Generate
+        // whose gate note announced a row count, and that click carried no
+        // expectedFactsHash, so ju-service generated AND settled unchecked on
+        // the very sheet whose change caused the refusal. The refusal recovery
+        // is the exact path that reaches this.
+        // Positive test, not a blocklist: arm only on a render that FINISHED
+        // ('ok'), or where no render was ever called for ('none', the panel is
+        // not on this page at all). 'pending' is refused for the reason
+        // renderLetter's own comment names: a review that lands while a render
+        // is in flight arms Generate with wlApproved null, and the click then
+        // runs unchecked. It is reachable, not theoretical: a month flip starts
+        // render B, render A's chain resolves behind it, and A's review arms the
+        // gate against a letter B has not finished drawing.
+        if(wlRenderState!=='ok'&&wlRenderState!=='none'){
+          findEl.innerHTML=wlFindingsHtml([],r.warnings);
+          lastGo=null;
+          wlArmGenerate(false);
+          wlRender();
+          var rfMsg=(wlRenderState==='failed')
+            ? 'The letter did not render, so Generate stays off and nothing was settled. Retry the render above; Generate arms itself once the letter is back.'
+            : 'The letter is still being read, so Generate stays off. It arms itself when the letter lands.';
+          wlGateReason=rfMsg;
+          if(gateNoteEl)gateNoteEl.textContent=rfMsg;
+          wlAnnounce(rfMsg);
+          return;
+        }
         // A ZERO-ROW MONTH NEVER ARMS GENERATE (2026-09-10). The review can
         // pass cleanly on a month with nothing to wire - there is nothing to
         // find fault with - and before this the auto-review therefore armed a
@@ -11731,10 +11820,12 @@ document.addEventListener('keydown',function(e){
           // and only once the new letter is stored re-run the review that arms
           // Generate - so the next click carries the hash of the letter now on
           // screen instead of refusing on the same stale one forever.
-          // REPAINTED after the review, because runReview() blanks the result
-          // line on entry: without this the recovery erased the only
-          // explanation the operator had for why nothing settled.
-          peekRows();wlRelookAndReview().then(function(){setResult(refusalHtml,'');});
+          // keepResult, NOT a repaint afterwards: the review leaves the refusal
+          // where it is. The repaint this replaces fired unconditionally, so a
+          // Verification copy run during the re-read window had its success line
+          // and its Drive link overwritten by the stale refusal, with nothing on
+          // screen saying why the link had gone.
+          peekRows();wlRelookAndReview({keepResult:true});
           return;
         }
         setResult('<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');

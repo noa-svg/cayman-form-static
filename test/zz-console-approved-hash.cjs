@@ -21,6 +21,11 @@
 //       the operator can CLEAR it without leaving the screen.
 //   H5  The parameter names are the ones ju-service actually reads, checked
 //       against the mono repo's origin/main rather than against memory.
+//   H6  A render that FAILED leaves Generate disarmed. Fail closed: the arm
+//       that follows a failed render is not the same case as the arm that
+//       follows no render at all, and only the second one may run unhashed.
+//   H7  The refusal recovery cannot repaint over something the operator did
+//       while it was in flight.
 //
 // H4 IS EXECUTED, NOT GREPPED (rewritten 2026-09-10). The first cut of H4 was
 // ten string-index and regex matches over the HTML source. All ten passed over
@@ -162,6 +167,9 @@ const REFUSAL = {
 const plan = {
   letterHash: HASH_APPROVED,
   generate: null,   // set per phase
+  verify: { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/verifydoc/view', docId: 'verifydoc' },
+  renderFail: null, // when set, opRenderMonthLetter refuses with this sentence
+  renderBare: false,// when set, opRenderMonthLetter answers with a bodiless {}
   holdRender: null, // when set, opRenderMonthLetter parks here until released
   calls: [],
 };
@@ -171,10 +179,19 @@ function answerFor(q) {
   if (api === 'opPeekMonthTransfers') return { ok: true, transfers: [{ rowNum: 12, name: 'Test Row', amount: 1000, direction: 'out' }] };
   if (api === 'opPeekAwaitingMoney' || api === 'opPeekParked') return { ok: true, rows: [] };
   if (api === 'opRenderMonthLetter') {
+    // ok:false, the shape ju-service actually sends. apiFetch throws on every
+    // ok:false (console/index.html:5335), so this lands in renderLetter's
+    // .catch, which is where a real render outage lands too.
+    if (plan.renderFail) return { ok: false, error: plan.renderFail };
+    // A body with no ok and no letter in it. apiFetch passes a bare-data shape
+    // straight through (undefined !== false), so this is the one way
+    // renderLetter's `!r.ok` branch is actually reached in production.
+    if (plan.renderBare) return {};
     return { ok: true, transfers: [{ rowNum: 12 }], html: '<p>the letter</p>', factsHash: plan.letterHash, rowFacts: ROWFACTS_APPROVED };
   }
   if (api === 'opGenerateMonthlyWireLetter') {
     if (/dryRun=true/.test(q)) return { ok: true, go: true, counts: { incoming: 0, outgoing: 1, total: 1 } };
+    if (/verifyOnly=true/.test(q)) return plan.verify;
     return plan.generate;
   }
   if (api === 'list') return { processes: [], generatedAt: '' };
@@ -227,6 +244,13 @@ const txt = (win, id) => (win.document.getElementById(id) || {}).textContent || 
 const htm = (win, id) => (win.document.getElementById(id) || {}).innerHTML || '';
 const armed = (win) => win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled') === 'false';
 const genQs = () => plan.calls.filter((q) => /opGenerateMonthlyWireLetter/.test(q) && !/dryRun=true/.test(q));
+const renders = () => plan.calls.filter((q) => /opRenderMonthLetter/.test(q)).length;
+// Re-arms through the shipped month handler rather than by reaching into the
+// closure, so every phase below starts from a gate the console itself opened.
+async function rearm(win) {
+  win.document.getElementById('wlMonth').onchange();
+  await settle(400);
+}
 
 // ---- H5: the wire names, checked against the server that reads them ---------
 const dispatch = monoSource('apps/ju-service/src/routes/consoledispatch.ts');
@@ -339,6 +363,154 @@ if (render.length > 0) {
   ok('H4 a plain server error still renders as the ordinary error line',
     /Sheets quota exceeded/.test(generic) && !/Nothing was generated and nothing was settled/.test(generic),
     generic.slice(0, 300));
+
+  // ---- H6: THE FAILED RECOVERY RENDER, FAIL CLOSED ------------------------
+  // The money-grade case. renderLetter's .catch renders an error and RESOLVES,
+  // and wlRelookAndReview is .then(after,after), so runReview runs either way
+  // with wlApproved null. Before the fail-closed rule that produced: the render
+  // panel saying the letter could not be rendered, the gate note saying
+  // "Reviewed 09/2026 . NIS . 1 row. Generate will settle these 1", Generate
+  // aria-disabled=false, and the next click sending NO expectedFactsHash into a
+  // server whose guard is `if (expectedHash)` - generate and settle, unchecked,
+  // on the sheet whose change caused the refusal.
+  plan.renderFail = null;
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  ok('H6 the gate is armed off a good render before the outage', armed(win), txt(win, 'wlGateNote'));
+
+  plan.renderFail = 'render backend down';
+  plan.generate = REFUSAL;
+  const rendersBeforeFail = renders();
+  const gensBeforeFail = genQs().length;
+  await clickGenerate(win);
+  ok('H6 the recovery render was actually attempted and failed', renders() > rendersBeforeFail);
+  ok('H6 the operator sees the render failure in the letter panel',
+    /could not be rendered/.test(htm(win, 'wlRenderPanel')), htm(win, 'wlRenderPanel').slice(0, 200));
+  ok('H6 GENERATE IS DISARMED after a failed recovery render',
+    !armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+  ok('H6 the gate note says the render is why, in operator words, and does not announce a row count',
+    /did not render/.test(txt(win, 'wlGateNote')) && !/will settle/.test(txt(win, 'wlGateNote')),
+    txt(win, 'wlGateNote'));
+  ok('H6 the failure is spoken to a screen reader too',
+    /did not render/.test(txt(win, 'wlAnnounce')), txt(win, 'wlAnnounce'));
+  ok('H6 the refusal that started it is still on screen, not blanked by the recovery',
+    /Nothing was generated and nothing was settled/.test(htm(win, 'wlResult')), htm(win, 'wlResult').slice(0, 200));
+  ok('H6 the refusal copy no longer promises the gate will re-arm',
+    htm(win, 'wlResult').indexOf('Generate arms itself again once they land') < 0);
+
+  // THE CLICK CANNOT REACH THE NETWORK. Generate stays clickable on purpose
+  // (aria-disabled, so a click answers instead of dying silently), so "off" has
+  // to be proved at the wire, not at the attribute.
+  const gensAfterFail = genQs().length;
+  win.document.getElementById('wlGenerateBtn').click();
+  await settle(120);
+  ok('H6 a click on Generate opens no confirm', win.document.getElementById('wlConfirm').hidden);
+  ok('H6 the refused click does not tell her to click the hidden Review button',
+    txt(win, 'wlGateNote').indexOf('Review this month first') < 0, txt(win, 'wlGateNote'));
+  ok('H6 a click on Generate reaches no settle call at all',
+    genQs().length === gensAfterFail && gensAfterFail === gensBeforeFail + 1,
+    'before=' + gensBeforeFail + ' after=' + genQs().length);
+
+  // AND SHE CAN RETRY. The Review button is hidden, so the failed render draws
+  // its own way back.
+  const retry = win.document.getElementById('wlRenderRetry');
+  ok('H6 the failed render offers a retry the operator can reach', !!retry);
+  plan.renderFail = null;
+  plan.letterHash = HASH_NOW;
+  if (retry) retry.click();
+  await settle(500);
+  ok('H6 the retry re-renders and re-arms the gate', armed(win), txt(win, 'wlGateNote'));
+  plan.generate = { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/doc2/view', counts: { incoming: 0, outgoing: 1, total: 1 }, settled: [] };
+  await clickGenerate(win);
+  ok('H6 and the click after the retry carries the letter that actually rendered',
+    (genQs()[genQs().length - 1] || '').indexOf('expectedFactsHash=' + encodeURIComponent(HASH_NOW)) > 0,
+    genQs()[genQs().length - 1]);
+
+  // A GARBLED RENDER IS A FAILED RENDER. apiFetch throws on {ok:false} but
+  // passes a bare body through untouched, so renderLetter's `!r.ok` arm is the
+  // live path for a route that answers with nothing usable. It must fail closed
+  // exactly like an outage does.
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  ok('H6 armed before the garbled-render case', armed(win), txt(win, 'wlGateNote'));
+  plan.renderBare = true;
+  await rearm(win);
+  ok('H6 a render that answers with no letter at all also disarms Generate',
+    !armed(win), txt(win, 'wlGateNote'));
+  ok('H6 and it reads as a failed render, not as one still loading',
+    /did not render/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  plan.renderBare = false;
+
+  // THE IN-FLIGHT WINDOW, which is the same fail-open one tick earlier. Render A
+  // is held; the month flips and starts render B; A is released alone, so A's
+  // review runs while B is still drawing. Before the positive test that armed
+  // Generate with no hash stored, against a letter not yet on screen.
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  plan.holdRender = [];
+  win.document.getElementById('wlMonth').onchange(); // chain A, render held
+  await settle(60);
+  const heldA = plan.holdRender.splice(0);
+  win.document.getElementById('wlMonth').onchange(); // chain B, render also held
+  await settle(60);
+  heldA.forEach((release) => release());              // release A only
+  await settle(300);
+  ok('H6 a review that lands while a render is still in flight does NOT arm Generate',
+    !armed(win), txt(win, 'wlGateNote'));
+  ok('H6 and it says so plainly rather than announcing a row count',
+    /still being read/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  const heldB0 = plan.holdRender; plan.holdRender = null;
+  heldB0.forEach((release) => release());
+  await settle(400);
+  ok('H6 the gate arms once that render finishes', armed(win), txt(win, 'wlGateNote'));
+
+  // ---- H7: the recovery cannot clobber the operator's own result ----------
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  ok('H7 armed again for the clobber case', armed(win), txt(win, 'wlGateNote'));
+  plan.letterHash = HASH_NOW;
+  plan.generate = REFUSAL;
+  plan.holdRender = [];
+  await clickGenerate(win);
+  ok('H7 the refusal is on screen while the re-read is in flight',
+    /Nothing was generated and nothing was settled/.test(htm(win, 'wlResult')));
+  // She runs a Verification copy in the window between the refusal and the
+  // re-read landing. Nothing on screen stops her: the button is live, and the
+  // call never settles a row.
+  win.document.getElementById('wlVerifyBtn').click();
+  await settle(200);
+  ok('H7 the verification copy landed on the result line',
+    /Verification copy generated/.test(htm(win, 'wlResult')), htm(win, 'wlResult').slice(0, 200));
+  const heldB = plan.holdRender; plan.holdRender = null;
+  heldB.forEach((release) => release());
+  await settle(500);
+  ok('H7 THE RECOVERY DOES NOT ERASE HER DOCUMENT: the verification result survives',
+    /Verification copy generated/.test(htm(win, 'wlResult')), htm(win, 'wlResult').slice(0, 300));
+  ok('H7 and her Drive link is still there',
+    htm(win, 'wlResult').indexOf('verifydoc') > 0, htm(win, 'wlResult').slice(0, 300));
+  ok('H7 the gate still re-armed behind it, so the recovery still did its job',
+    armed(win), txt(win, 'wlGateNote'));
+
+  // ---- H1 EXECUTED: the entry-clear, proved at the wire -------------------
+  // Mutation 4 (delete `wlApproved=null` from the top of renderLetter) was
+  // caught only by a regex over the HTML source. Here it is at the wire: a
+  // render that answers WITHOUT a factsHash, after one that answered with it,
+  // must leave nothing stored, so the next generate carries nothing. With the
+  // entry-clear gone the stale hash rides along and the console holds the
+  // server to a letter nobody is looking at.
+  plan.generate = { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/doc3/view', counts: { incoming: 0, outgoing: 1, total: 1 }, settled: [] };
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  ok('H1 a hash was stored by the first render', armed(win), txt(win, 'wlGateNote'));
+  plan.letterHash = null; // an older ju-service: renders fine, returns no hash
+  await rearm(win);
+  ok('H1 a render with no hash still renders and still arms', armed(win), txt(win, 'wlGateNote'));
+  await clickGenerate(win);
+  const unhashed = genQs()[genQs().length - 1] || '';
+  ok('H1 EXECUTED a hash-less render leaves NOTHING stored, so the click carries no hash',
+    unhashed.indexOf('expectedFactsHash') < 0, unhashed);
+  ok('H1 EXECUTED and specifically not the previous render\'s hash',
+    unhashed.indexOf(encodeURIComponent(HASH_APPROVED)) < 0 && unhashed.indexOf(HASH_APPROVED) < 0, unhashed);
 
   win.close();
   console.log('\n' + pass + ' pass, ' + fail + ' fail');
