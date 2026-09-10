@@ -7220,7 +7220,7 @@ document.addEventListener('keydown',function(e){
       // Merge maps/lists across engines in order (GAS first, ju-service
       // second) - pids are random UUIDs with no cross-engine collision path
       // today, but a real-money board gets the cheap defensive dedupe anyway.
-      var extras={}, notes={}, src=[], seenPid={}, latestGeneratedAt='';
+      var extras={}, notes={}, src=[], seenPid={}, seenIdx={}, latestGeneratedAt='';
       perEngine.forEach(function(eng){
         var d=eng.list;
         Object.assign(extras,(eng.extras&&eng.extras.rows)||{});
@@ -7228,8 +7228,37 @@ document.addEventListener('keydown',function(e){
         var items=(d&&d.processes)||(d&&d.items)||[];
         items.forEach(function(it){
           var pid=it.processId||it.id||'';
-          if(pid&&seenPid[pid]){console.warn('board: pid seen on more than one engine, keeping first',pid);return;}
-          if(pid)seenPid[pid]=true;
+          if(pid&&seenPid[pid]){
+            // FIRST WINS, EXCEPT WHEN THE FIRST DOES NOT KNOW ITS LANE.
+            //
+            // Orphan money rows come off BOTH engines now: GAS reads the
+            // tracker and concats them onto its own list, and ju-service
+            // serves the same rows through ?api=listManualTrackerRows. GAS is
+            // merged first, so its copy wins unconditionally - and GAS's
+            // builder (CaymanWireLetterManualRow.ts:281) stamps the 'unknown'
+            // lane sentinel with no way to read a recorded one. A lane-less
+            // row shows on BOTH fund tabs and its money is attributed to
+            // neither, so first-wins here silently discards a lane the other
+            // engine DID resolve, and the board keeps saying "lane not
+            // recorded" about a row whose fund is on record.
+            //
+            // Between two copies of the same row, the one that knows its lane
+            // is strictly better and there is no case where preferring it is
+            // wrong. The two builders are parity-tested over one corpus
+            // (cross-engine-orphan-rows-parity, 23/23), so they agree on every
+            // other field and this swaps nothing else in practice.
+            var prevIdx=seenIdx[pid];
+            var prevLane=String((src[prevIdx]&&src[prevIdx].lane)||'');
+            var thisLane=String(it.lane||'');
+            if(prevIdx!==undefined&&prevLane==='unknown'&&thisLane&&thisLane!=='unknown'){
+              it._engine=eng.base;
+              src[prevIdx]=it;
+              console.warn('board: pid on more than one engine, taking the copy that knows its lane',pid,thisLane);
+              return;
+            }
+            console.warn('board: pid seen on more than one engine, keeping first',pid);return;
+          }
+          if(pid){seenPid[pid]=true;seenIdx[pid]=src.length;}
           it._engine=eng.base;
           src.push(it);
         });
