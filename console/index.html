@@ -11232,6 +11232,29 @@ document.addEventListener('keydown',function(e){
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
+        // THE SAME GUARD THE VERIFY PATH HAS HAD SINCE THE FIRST LIVE RUN, which
+        // this path never got (2026-09-10). The server returns ok:true with
+        // go:false and NO document when the HY-close gate refuses the batch
+        // (domain/generateWireLetter.ts:299-306). Checking only r.ok made the
+        // COMMIT path announce "Settled <month> on the tracker", close the gate,
+        // and render <a href="undefined">Open the doc</a> - claiming a
+        // settlement the server had just refused, on the money path.
+        //
+        // Wording and findings rendering are lifted verbatim from the verify
+        // branch below; nothing new is written here.
+        if(r.go===false){
+          genBtn.disabled=false;
+          findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
+          setResult('<div class="t-danger">Nothing was settled: the HY-close gate blocked this batch'+(r.verdict?' ('+esc2(r.verdict)+')':'')+'. Findings above.</div>','');
+          return;
+        }
+        // A settle with no document is not a settle. Same check the verify path
+        // makes, for the same reason: an empty link read as success once.
+        if(!r.docUrl){
+          genBtn.disabled=false;
+          setResult('<div class="t-danger">Server reported success but returned no document. Nothing was generated.</div>','');
+          return;
+        }
         wlAnnounce('Settled '+snap.month+' on the tracker.');
         // Finding 4: this used to re-enable Generate and leave the gate open, so
         // a second click returned the identical green message and the operator
