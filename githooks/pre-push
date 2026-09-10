@@ -137,6 +137,7 @@ HARNESSES=(
   zz-cayman-lp-primary-entity
   terminal-vocab-harness
   zz-console-reseal-gate
+  zz-console-money-received-truth
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
