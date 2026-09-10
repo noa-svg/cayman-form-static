@@ -5337,7 +5337,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // opSetRowAmount's placeholder guard - was rendering the bare word
       // "unknown" and throwing away the sentence explaining WHY the write was
       // refused. Every caller renders e.serverError, so this fixes them all.
-      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||d.reason||'unknown'; throw e; }
+      // 2026-09-10: the WHOLE envelope rides along on `body`. An ok:false is not
+      // always just a sentence: opGenerateMonthlyWireLetter's approved-letter
+      // refusal carries a structured `factsMismatch` (ju-service
+      // domain/generateWireLetter.ts:345) that the console has to render in the
+      // operator's words, and throwing only `serverError` threw that away, which
+      // made the whole refusal branch unreachable. Additive: every existing
+      // caller reads err.serverError / err.message and nothing enumerates the
+      // error, so no other call site can see this.
+      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||d.reason||'unknown'; e.body=d; throw e; }
       return d;
     });
   }
@@ -10286,7 +10294,7 @@ document.addEventListener('keydown',function(e){
       h+='<div style="margin-top:6px">'+esc2((mm.reasons||[]).join('; ')
         ||'The letter no longer matches the one you reviewed.')+'</div>';
     }
-    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above have been re-read from the tracker as it stands now. Review them, then generate again.</div>';
+    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above are being re-read from the tracker as it stands now. Check them. Generate arms itself again once they land.</div>';
     return h;
   }
   // ---- THE MONTH WORKLIST render layer (rebuilt 2026-09-07, design approved
@@ -11329,18 +11337,22 @@ document.addEventListener('keydown',function(e){
     // and currency, and generate then runs unchecked exactly as it did before
     // this existed rather than being blocked by a hash nobody can produce.
     var wlApproved=null;
+    // RETURNS A PROMISE that always resolves, never rejects, so a caller can
+    // sequence behind it. runReview arms Generate, and arming it while this
+    // render is still in flight leaves wlApproved null for that window: the
+    // hash would simply not be sent and the money call would run unchecked.
     function renderLetter(){
       wlApproved=null;
       var host=document.getElementById('wlRenderPanel');
-      if(!host)return;
+      if(!host)return Promise.resolve();
       var month=wlViewMonth();
-      if(!wlValidMonth(month)){host.innerHTML='';return;}
+      if(!wlValidMonth(month)){host.innerHTML='';return Promise.resolve();}
       var ccy=ccyEl.value;
       var rid=++renderSeq;
       host.innerHTML='<div class="wl-render-hd"><span class="wl-render-ttl">The letter</span>'
         +'<span class="wl-render-job">'+esc2(ccy)+' &middot; '+esc2(wlTabMonthWords(month))+'</span></div>'
         +'<div class="wl-render-body t-muted">Rendering&#8230;</div>';
-      apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API).then(function(r){
+      return apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API).then(function(r){
         if(rid!==renderSeq)return;
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
@@ -11375,6 +11387,13 @@ document.addEventListener('keydown',function(e){
           +esc2((err&&err.serverError)||'could not reach the server')+'. The rows above are unaffected.</div>';
       });
     }
+    // THE ONE WAY BACK IN. Review arms Generate against a letter, so the letter
+    // has to be re-read FIRST and the review has to run behind it. Before this
+    // the two were fired side by side and Review never re-rendered at all,
+    // which is what turned a correct refusal into a loop: the refused letter
+    // stayed on screen with its refused hash, and the only escapes were the
+    // currency select, the month, or a reload.
+    function wlRelookAndReview(){ return renderLetter().then(runReview,runReview); }
     function peekRows(){
       var month=wlViewMonth();
       if(!wlValidMonth(month)){wlLastTransfers=null;renderWlRows();return;}
@@ -11457,7 +11476,7 @@ document.addEventListener('keydown',function(e){
         monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(wlTabMonthWords(m))+'</option>';}).join('');
         if(selectAfter&&months.indexOf(selectAfter)>-1)monthEl.value=selectAfter;
         renderOpenMonthOffer(months);
-        wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();
+        wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();
       }).catch(function(){
         monthEl.innerHTML='<option value="">Could not load months</option>';
         if(monthTtlEl)monthTtlEl.textContent='Could not load the month tabs';
@@ -11468,8 +11487,8 @@ document.addEventListener('keydown',function(e){
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();};
-    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();renderLetter();runReview();};
+    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
+    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
@@ -11620,7 +11639,7 @@ document.addEventListener('keydown',function(e){
       confirmEl.hidden=false;
       confirmGoEl.focus();
     };
-    if(reviewBtn)reviewBtn.onclick=runReview;
+    if(reviewBtn)reviewBtn.onclick=wlRelookAndReview;
     if(confirmCancelEl)confirmCancelEl.onclick=function(){wlDisarmConfirm();};
     function wlDoGenerate(){
       if(!lastGo)return;
@@ -11645,17 +11664,6 @@ document.addEventListener('keydown',function(e){
         +'&expectedRowFacts='+encodeURIComponent(facts.rowFacts)):'';
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+factsQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
-        // The approved-letter refusal, BEFORE the generic error line: the
-        // server's own sentence names row keys, and a key is not something an
-        // operator can act on until it is turned back into a row.
-        if(r&&r.factsMismatch){
-          genBtn.disabled=false;
-          wlCloseGate('This month changed since the letter you reviewed. Review again before generating.');
-          setResult(wlFactsMismatchHtml(r.factsMismatch),'');
-          wlAnnounce('Nothing was settled: this month changed since the letter you reviewed.');
-          peekRows();renderLetter();
-          return;
-        }
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         // THE SAME GUARD THE VERIFY PATH HAS HAD SINCE THE FIRST LIVE RUN, which
         // this path never got (2026-09-10). The server returns ok:true with
@@ -11706,6 +11714,29 @@ document.addEventListener('keydown',function(e){
         setResult(h,'');
       }).catch(function(err){
         genBtn.disabled=false;reviewBtn.disabled=false;confirmGoEl.disabled=false;
+        // THE APPROVED-LETTER REFUSAL ARRIVES HERE, not in the .then above. The
+        // server refuses with {ok:false, error:<sentence>, factsMismatch:{...}}
+        // (domain/generateWireLetter.ts:345) and apiFetch throws on EVERY
+        // ok:false, so the first cut of this guard sat in the resolve path and
+        // could not run: the operator got the raw sentence naming row KEYS,
+        // Generate stayed armed, and the refused letter stayed on screen with
+        // the refused hash still stored behind it.
+        var mm=err&&err.body&&err.body.factsMismatch;
+        if(mm){
+          var refusalHtml=wlFactsMismatchHtml(mm);
+          wlCloseGate('This month changed since the letter you reviewed. Re-reading it now.');
+          setResult(refusalHtml,'');
+          wlAnnounce('Nothing was settled: this month changed since the letter you reviewed. The rows and the letter are being re-read.');
+          // The way out, taken FOR her. Re-read the rows, re-read the letter,
+          // and only once the new letter is stored re-run the review that arms
+          // Generate - so the next click carries the hash of the letter now on
+          // screen instead of refusing on the same stale one forever.
+          // REPAINTED after the review, because runReview() blanks the result
+          // line on entry: without this the recovery erased the only
+          // explanation the operator had for why nothing settled.
+          peekRows();wlRelookAndReview().then(function(){setResult(refusalHtml,'');});
+          return;
+        }
         setResult('<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
     }
