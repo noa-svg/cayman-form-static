@@ -350,8 +350,11 @@ function planOf(awaiting, transfers, parked, extra) {
     ok('W7 the artifact names the row count', /2 rows/.test(art), art.slice(0, 300));
     ok('W7 the currency', /NIS/.test(art), art.slice(0, 300));
     ok('W7 the month, in words', /September 2026/.test(art), art.slice(0, 300));
-    ok('W7 the incoming sum', /Incoming 250,000 NIS/.test(art), art.slice(0, 400));
-    ok('W7 the outgoing sum', /Outgoing 90,000 NIS/.test(art), art.slice(0, 400));
+    // Shortened 2026-09-10 ("messy"): the sides that exist, named "In" and
+    // "Out", and a side with no rows is not printed at all rather than shown as
+    // "Outgoing 0 NIS across 0 rows".
+    ok('W7 the incoming sum', /In 250,000 NIS/.test(art), art.slice(0, 400));
+    ok('W7 the outgoing sum', /Out 90,000 NIS/.test(art), art.slice(0, 400));
     ok('W7 it states what is LEFT OFF', /Left off, and why/.test(art), art.slice(0, 400));
     ok('W7 including the rows still awaiting money', /3 rows whose money has not arrived/.test(art), art.slice(0, 600));
     ok('W7 the blocked row', /1 row the tracker cannot state a money status for/.test(art), art.slice(0, 600));
@@ -419,15 +422,18 @@ function planOf(awaiting, transfers, parked, extra) {
     const t = boot(planOf([], [], []));
     await settle(400);
     const titles = t.groupTitles().join(' | ');
-    ok('W10 Blocked still renders when empty', titles.indexOf('Blocked') >= 0, titles);
-    ok('W10 Needs you still renders when empty', titles.indexOf('Needs you') >= 0, titles);
+    ok('W10 Blocked does not render when empty', titles.indexOf('Blocked') < 0, titles);
+    ok('W10 Needs you does not render when empty', titles.indexOf('Needs you') < 0, titles);
     ok('W10 Goes on a letter still renders when empty', titles.indexOf('Goes on a letter') >= 0, titles);
     ok('W10 Done does not reappear on an empty month', titles.indexOf('Done') < 0, titles);
-    const blockedTxt = TX(t.groupOf('Blocked'));
-    ok('W10 Blocked states the all-clear as a fact, not as an absence',
-      /Nothing is blocking the letter/.test(blockedTxt), blockedTxt.slice(0, 200));
-    const needsTxt = TX(t.groupOf('Needs you'));
-    ok('W10 Needs you states its empty case', /Nothing is waiting on money/.test(needsTxt), needsTxt.slice(0, 200));
+    // Blocked and Needs-you render NOTHING when empty (Noa 2026-09-10: "remove
+    // this its visually messy"). On a clean month their headings plus a sentence
+    // each explaining their own absence were most of what was on screen. These
+    // asserted that copy, so they asserted the noise; they now assert it is gone.
+    ok('W10 Blocked is absent when empty, heading included',
+      !t.groupOf('Blocked'), 'still rendered');
+    ok('W10 Needs you is absent when empty, heading included',
+      !t.groupOf('Needs you'), 'still rendered');
     ok('W10 the PARKED list stays absent when empty (it is an archive, not a job)',
       !!t.el('wlParked') && (t.el('wlParked').innerHTML || '').trim() === '',
       t.el('wlParked') ? t.el('wlParked').innerHTML.slice(0, 120) : 'no #wlParked');
@@ -459,8 +465,7 @@ function planOf(awaiting, transfers, parked, extra) {
       amount: 120000, currency: 'NIS', reason: 'signed in April, never funded' }];
     const t = boot(planOf([], [T(HE.a, 'Join', 250000), T(HE.b, 'Increase', 100000)], parked));
     await settle(400);
-    ok('W10b Needs you is empty and says so',
-      /Nothing is waiting on money/.test(TX(t.groupOf('Needs you'))));
+    ok('W10b Needs you is absent rather than empty', !t.groupOf('Needs you'), 'still rendered');
     ok('W10b the letter group still lists both rows', t.cardsIn('Goes on a letter').length === 2,
       t.cardsIn('Goes on a letter').length);
     ok('W10b the parked list renders when it has a row', t.cardsIn('Parked').length === 1,
@@ -543,10 +548,14 @@ function planOf(awaiting, transfers, parked, extra) {
         warnings: [] },
     }));
     await settle(400);
-    ok('W5b nothing is blocking before the review',
-      !!t.el('wlBlockers') && (t.el('wlBlockers').innerHTML || '').trim() === '',
-      t.el('wlBlockers') ? 'has content' : 'no #wlBlockers');
-    if (t.el('wlReviewBtn')) t.el('wlReviewBtn').click();
+    // The review RUNS ITSELF now (2026-09-10), so the blocking finding reaches
+    // the operator without her asking for it. This used to assert the opposite -
+    // that nothing was shown until she clicked Review - which was the flow, not
+    // a safety property. The safety property is below: the finding is surfaced
+    // and the gate is shut.
+    ok('W5b the blocker arrives without being asked for',
+      /June close is not signed off/.test(TX(t.el('wlBlockers'))),
+      TX(t.el('wlBlockers')).slice(0, 200));
     await settle(300);
     const bl = TX(t.el('wlBlockers'));
     ok('W5b the server finding is lifted into the summary ABOVE the list',
@@ -574,15 +583,26 @@ function planOf(awaiting, transfers, parked, extra) {
     ok('W2b a clean review arms Generate',
       !!t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled') === 'false',
       t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled'));
-    ok('W2b the artifact says nothing is left off',
-      /Nothing on this tab is left off/.test(t.txt('wlArtifact') || ''), t.txt('wlArtifact'));
+    // "Nothing on this tab is left off" was a line that said nothing on the
+    // common case. The artifact now states the left-off list only when there IS
+    // one (Noa 2026-09-10: "messy").
+    ok('W2b the artifact stays silent when nothing is left off',
+      !/Left off, and why/.test(t.txt('wlArtifact') || ''), t.txt('wlArtifact'));
     ok('W2b and states the single row', /1 row on a NIS letter for September 2026/.test(t.txt('wlArtifact') || ''),
       t.txt('wlArtifact'));
-    // Changing the month must shut it again (the pre-existing settle gate).
+    // Changing the month shuts the gate, and the self-running review then
+    // re-opens it FOR THE NEW MONTH. The invariant is not "shut" - that was the
+    // old flow's way of reaching it - it is that an ARMED gate is never armed by
+    // a review of different inputs. genBtn.onclick and the confirm both re-check
+    // wlSameInputs before anything settles, so a stale arm cannot fire.
     if (t.el('wlMonth')) { t.el('wlMonth').value = '08/2026'; if (t.el('wlMonth').onchange) t.el('wlMonth').onchange(); }
-    await settle(300);
-    ok('W2b changing the month shuts the gate again',
-      !!t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled') === 'true');
+    await settle(400);
+    const armed2b = t.el('wlGenerateBtn') && t.el('wlGenerateBtn').getAttribute('aria-disabled') === 'false';
+    const note2b = t.txt('wlGateNote') || '';
+    ok('W2b an armed gate always names the month it is armed for',
+      !armed2b || /08\/2026/.test(note2b), 'armed=' + armed2b + ' note=' + note2b);
+    ok('W2b the September review never carries over to August',
+      !/09\/2026/.test(note2b), note2b);
     t.dom.window.close();
   }
 

@@ -8,6 +8,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/dist/tabler-icons.min.css" rel="stylesheet">
 <style>
+/* ---- Transfer Form: the letter, and the two dates ----------------------
+   These rules were written on 2026-09-09 and never reached the file, so the
+   panel shipped completely unstyled: an iframe with no height, on a money
+   screen (Noa 2026-09-10: "render is ugly"). Kept at the top of the sheet
+   rather than appended, so a later merge cannot drop them silently again.
+
+   The panel is a MOUNT for a document, not a card around one. Chrome must not
+   compete with the letter's own typography: a heading, a hairline, the page. */
+.wl-render{margin-top:var(--space-6,28px)}
+.wl-render-hd{display:flex;align-items:baseline;gap:10px;padding:0 0 8px;
+  border-bottom:1px solid var(--color-rule,#e5e2dd)}
+.wl-render-ttl{font-weight:600}
+.wl-render-job{font-size:var(--text-xs,12px);color:var(--color-ink-muted,#6b6560);margin-left:auto}
+.wl-render-body{padding:0}
+/* The document sits on white with a soft lift, the way a page does, rather
+   than inside a boxed viewport. Tall enough for a real month; the FRAME
+   scrolls when a month runs long, never the console. */
+.wl-render-frame{width:100%;height:760px;border:0;background:#fff;display:block;
+  margin-top:14px;border-radius:2px;
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.07)}
+/* The dates read as metadata beside the type badge, never competing with the
+   name or the amount. nowrap because "signed 25 Aug . joins 1 Sep" wrapping
+   mid-phrase is worse than it overflowing. */
+.wl-row-dates{font-size:var(--text-xs,12px);color:var(--color-ink-muted,#6b6560);white-space:nowrap}
+
 /* ============================================================
    LEGACY VALUE PARTNERS - OPERATOR CONSOLE
    Token system v2 - Atrium palette, Vignelli grid, Tel Aviv warmth
@@ -4104,12 +4129,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             </div>
           </div>
           <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <button id="wlReviewBtn" class="btn">Review</button>
             <!-- NOT `disabled`. A greyed Generate answered a click with
                  nothing at all, so a closed gate and a broken button looked
                  identical. It stays clickable and aria-disabled; a click while
                  the gate is shut moves focus to the first blocker and says
                  what is missing, in wlRefuseGenerate(). -->
+            <!-- Kept in the DOM, hidden from the operator (2026-09-10). The review
+                 runs itself now, but `if(!reviewBtn)return;` guards a whole init
+                 block and several handlers still address this element, so removing
+                 the node silently disables them. Hidden, not deleted. -->
+            <button id="wlReviewBtn" class="btn" hidden>Review</button>
             <button id="wlGenerateBtn" class="btn" aria-disabled="true">Generate + settle</button>
             <button id="wlVerifyBtn" class="btn btn-quiet">Verification copy</button>
             <label for="wlCreateDraft" style="font-size:var(--text-xs);color:var(--color-ink-muted)"><input type="checkbox" id="wlCreateDraft"> also draft the covering email</label>
@@ -4130,13 +4159,13 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             </div>
           </div>
           <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
-            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
-              <span style="color:var(--color-ink)">Letter template</span>
+            <details style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
+              <summary style="cursor:pointer;list-style:none">Letter template</summary>
               &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
               &nbsp;<label for="tplWidths" style="color:var(--color-ink-muted)">widths</label>
               &nbsp;<input id="tplWidths" type="text" inputmode="numeric" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
               <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
-          </div>
+          </details>
           <div id="wlResult" role="status" aria-live="polite" aria-label="Transfer form result" style="margin-top:12px"></div>
         </div>
 
@@ -10113,6 +10142,13 @@ document.addEventListener('keydown',function(e){
     return h+'</div>';
   }
   function wlGroupHtml(o){
+    // A group with no rows and no empty-state copy renders NOTHING, heading
+    // included. Blocked and Needs-you are empty on a healthy month and used to
+    // print a heading plus a sentence explaining their own absence, which is
+    // most of what was on screen when nothing was wrong (Noa 2026-09-10:
+    // "remove this its visually messy"). Goes-on-a-letter keeps its empty
+    // state: an empty letter is a fact the operator needs stated.
+    if(!o.body && o.empty==null) return '';
     return '<div class="wl-group'+(o.cls?' '+o.cls:'')+'">'
       +'<div class="wl-group-hd"><span class="wl-group-ttl">'+esc2(o.title)+'</span>'
       +'<span class="wl-group-job">'+esc2(o.job)+'</span>'
@@ -10205,7 +10241,10 @@ document.addEventListener('keydown',function(e){
       title:'Blocked'+(rows&&rows.length?(' · '+rows.length):''),
       job:'stops every letter this month',
       body:body,
-      empty:'<strong>Nothing is blocking the letter.</strong> Every row on this tab carries a money status the letter can be built around.'
+      // An empty Blocked group is the normal case, so it says nothing. It used
+      // to print a full sentence explaining its own absence, on every clean
+      // month (Noa 2026-09-10: "remove this its visually messy").
+      empty:null
     });
   }
   function wlNeedsHtml(rows,viewTab){
@@ -10225,7 +10264,7 @@ document.addEventListener('keydown',function(e){
       title:'Needs you'+(rows&&rows.length?(' · '+rows.length):''),
       job:'money not in yet',
       body:body,
-      empty:'<strong>Nothing is waiting on money.</strong> No signed row on this tab is still owed funds.'
+      empty:null
     });
   }
   // THE HEDGE (closed 2026-09-07). This group's empty copy used to read "Either
@@ -10363,12 +10402,18 @@ document.addEventListener('keydown',function(e){
     (c.transfers||[]).forEach(function(t){ (wlIsOutgoing(t.type)?outRows:inRows).push(t); });
     var sum=function(a){var s=0;a.forEach(function(t){s+=wlAmountNum(t.amount);});return s;};
     var total=(c.transfers||[]).length;
+    // The currency selector is right there and says which currency this is, so
+    // the sentence explaining that a letter carries one currency is removed
+    // (Noa 2026-09-10: "messy", "keep it clean").
     var h='<span class="wl-artifact-hd">'+esc2(String(total))+' row'+(total===1?'':'s')
-      +' on a '+esc2(wlStr(c.currency))+' letter for '+esc2(wlTabMonthWords(c.month))+'.</span>'
-      +' One currency at a time: a row in any other currency belongs to its own letter.';
+      +' on a '+esc2(wlStr(c.currency))+' letter for '+esc2(wlTabMonthWords(c.month))+'.</span>';
     if(total){
-      h+='<br>Incoming '+esc2(wlAmountText(sum(inRows)))+' '+esc2(wlStr(c.currency))+' across '+inRows.length+' row'+(inRows.length===1?'':'s')
-        +'. Outgoing '+esc2(wlAmountText(sum(outRows)))+' '+esc2(wlStr(c.currency))+' across '+outRows.length+' row'+(outRows.length===1?'':'s')+'.';
+      // Only the sides that exist. "Outgoing 0 NIS across 0 rows" on an
+      // all-incoming month is a line that says nothing (Noa 2026-09-10).
+      var legs=[];
+      if(inRows.length)legs.push('In '+esc2(wlAmountText(sum(inRows)))+' '+esc2(wlStr(c.currency)));
+      if(outRows.length)legs.push('Out '+esc2(wlAmountText(sum(outRows)))+' '+esc2(wlStr(c.currency)));
+      if(legs.length)h+='<br>'+legs.join(' &middot; ');
     }
     var off=[];
     if(c.needsCount)off.push(c.needsCount+' row'+(c.needsCount===1?'':'s')+' whose money has not arrived yet.');
@@ -10379,7 +10424,7 @@ document.addEventListener('keydown',function(e){
     h+=off.length
       ? ('<br><span class="wl-artifact-hd">Left off, and why:</span><ul class="wl-artifact-off">'
          +off.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>')
-      : '<br>Nothing on this tab is left off.';
+      : '';
     return h;
   }
   // ---- THE MONEY / WIRE-LETTER PANEL: MOSTLY GAS-ONLY (2026-08-23 seam audit,
@@ -11078,7 +11123,7 @@ document.addEventListener('keydown',function(e){
         monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(wlTabMonthWords(m))+'</option>';}).join('');
         if(selectAfter&&months.indexOf(selectAfter)>-1)monthEl.value=selectAfter;
         renderOpenMonthOffer(months);
-        wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();
+        wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();
       }).catch(function(){
         monthEl.innerHTML='<option value="">Could not load months</option>';
         if(monthTtlEl)monthTtlEl.textContent='Could not load the month tabs';
@@ -11089,8 +11134,8 @@ document.addEventListener('keydown',function(e){
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();};
-    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();renderLetter();};
+    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();};
+    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();renderLetter();runReview();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
@@ -11156,7 +11201,17 @@ document.addEventListener('keydown',function(e){
       };
     })();
     wlRenderNavLine();
-    reviewBtn.onclick=function(){
+    // THE REVIEW RUNS ITSELF (2026-09-10, Noa: "i dont need to click to review",
+    // "make it seamless"). It only READS: dryRun returns before any Drive I/O,
+    // settlement or draft, so there was never a reason to make the operator ask
+    // for it. Making her ask also created the "Review again before generating"
+    // nag on every currency flip, which is the same information arriving as an
+    // obstacle instead of an answer.
+    //
+    // It still arms the gate exactly as before, so Generate is armed only by a
+    // review of the CURRENT inputs, and because the review now re-runs on every
+    // change the two can no longer drift apart.
+    function runReview(){
       var month=(monthEl.value||'').trim();
       if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Choose a month first.</div>','');return;}
       if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
@@ -11178,6 +11233,22 @@ document.addEventListener('keydown',function(e){
         }
         if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
         wlServerBlocking=null;
+        // A ZERO-ROW MONTH NEVER ARMS GENERATE (2026-09-10). The review can
+        // pass cleanly on a month with nothing to wire - there is nothing to
+        // find fault with - and before this the auto-review therefore armed a
+        // settle over an empty batch. The gate note describes the CONTROL
+        // rather than restating the list's own headline.
+        // ARM ONLY ON A POSITIVE ROW COUNT. An ABSENT counts object is not a
+        // reason to arm either: "the server did not say how many rows" is not
+        // "there are rows to settle".
+        if(!(r.counts && r.counts.total > 0)){
+          findEl.innerHTML=wlFindingsHtml([],r.warnings);
+          lastGo=null;
+          wlArmGenerate(false);
+          wlRender();
+          if(gateNoteEl)gateNoteEl.textContent='Generate stays off until a row is ready to wire.';
+          return;
+        }
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=wlInputs();lastGo.counts=r.counts||null;
         wlArmGenerate(true);
@@ -11215,6 +11286,7 @@ document.addEventListener('keydown',function(e){
       confirmEl.hidden=false;
       confirmGoEl.focus();
     };
+    if(reviewBtn)reviewBtn.onclick=runReview;
     if(confirmCancelEl)confirmCancelEl.onclick=function(){wlDisarmConfirm();};
     function wlDoGenerate(){
       if(!lastGo)return;
