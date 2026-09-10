@@ -1263,7 +1263,7 @@ function extractVarObj(name) {
       // Capture the NAME as well as the pid: O3's dedupe check needs a field
       // that differs between the two engines' copies of the same pid, or an
       // arrival-order merge is indistinguishable from a declared-order one.
-      render: (rows) => painted.push(Object.assign(rows.map((r) => r.pid), { names: rows.map((r) => r.name) })),
+      render: (rows) => painted.push(Object.assign(rows.map((r) => r.pid), { names: rows.map((r) => r.name), lanes: rows.map((r) => r.lane) })),
       JU_API: JUU,
       sinceDur: () => '1m',
       esc2: (s) => String(s == null ? '' : s),
@@ -1429,6 +1429,64 @@ function extractVarObj(name) {
     await r.arriveManual();
     ok('O7e the orphan money row lands on the board from ju-service',
       r.painted.length === 1 && r.painted[0].indexOf('manual__c27ed14e-6c41-4df1-8b57-6731289f08d3') !== -1, r.painted);
+  })();
+
+  // O9L: A LANED COPY BEATS A LANE-LESS ONE ACROSS ENGINES (2026-09-10).
+  //
+  // Orphan money rows come off BOTH engines: GAS concats them onto its own
+  // list, and ju-service serves the same rows through ?api=listManualTrackerRows.
+  // GAS is merged FIRST and won unconditionally, and GAS's builder
+  // (CaymanWireLetterManualRow.ts:281) stamps the 'unknown' sentinel with no
+  // way to read a recorded lane. So first-wins silently discarded a lane the
+  // other engine HAD resolved, and the board went on saying "lane not
+  // recorded" about a row whose fund is on record - showing it on both tabs
+  // and attributing its money to neither.
+  //
+  // This is the live shape: גלבוע פאנד אוף פאנדס, 3,000,000 NIS, whose fund is
+  // Israeli on the record (Monday item 3183352512 sits on Israel People
+  // 1606766164). Without this rule ju-service reading the tracker's LANE cell
+  // can never reach the board while ju-cayman still answers.
+  (async () => {
+    const r = makeRig();
+    const PID = 'manual__c27ed14e-6c41-4df1-8b57-6731289f08d3';
+    r.listRows[r.GWU] = [{ processId: PID, currentStage: 'needs_attention', lane: 'unknown', investmentAmount: 3000000 }];
+    r.listRows[r.JUU] = [{ processId: PID, currentStage: 'needs_attention', lane: 'israeli', investmentAmount: 3000000 }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.GWU); await r.arrive(r.JUU); await r.arriveManual();
+    const last = r.painted[r.painted.length - 1] || [];
+    ok('O9L the row appears exactly once, never double-listed', last.filter((p) => p === PID).length === 1, last);
+    ok('O9L the kept copy is the one that knows its lane',
+      last.lanes && last.lanes[last.indexOf(PID)] === 'israeli', last.lanes);
+  })();
+
+  // O9M: the preference is NARROW. It only ever replaces an 'unknown', and it
+  // never lets a lane-less second copy overwrite a laned first one - that would
+  // be the same discard pointed the other way.
+  (async () => {
+    const r = makeRig();
+    const PID = 'manual__c27ed14e-6c41-4df1-8b57-6731289f08d3';
+    r.listRows[r.GWU] = [{ processId: PID, currentStage: 'needs_attention', lane: 'israeli' }];
+    r.listRows[r.JUU] = [{ processId: PID, currentStage: 'needs_attention', lane: 'unknown' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.GWU); await r.arrive(r.JUU); await r.arriveManual();
+    const last = r.painted[r.painted.length - 1] || [];
+    ok('O9M a lane-less later copy never overwrites a laned earlier one',
+      last.lanes && last.lanes[last.indexOf(PID)] === 'israeli', last.lanes);
+  })();
+
+  // O9N: two ordinary rows with real, DIFFERENT lanes are untouched by any of
+  // this - the rule keys on the sentinel, not on disagreement.
+  (async () => {
+    const r = makeRig();
+    r.listRows[r.GWU] = [{ processId: 'ju-a', currentStage: 'signing', lane: 'cayman' }];
+    r.listRows[r.JUU] = [{ processId: 'ju-b', currentStage: 'signing', lane: 'israeli' }];
+    r.load(false);
+    await r.flush();
+    await r.arrive(r.GWU); await r.arrive(r.JUU); await r.arriveManual();
+    const last = r.painted[r.painted.length - 1] || [];
+    ok('O9N distinct pids both survive, lanes intact', last.length === 2 && last.lanes.indexOf('cayman') !== -1 && last.lanes.indexOf('israeli') !== -1, last.lanes);
   })();
 
   // O8x: the orphan leg's own failure posture. GAS answered a dead tracker with
