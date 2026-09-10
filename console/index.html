@@ -7899,6 +7899,13 @@ document.addEventListener('keydown',function(e){
     {field:'snapshotSyncError',note:function(v){return v?('snapshotSyncError: '+v):'';}},
     {field:'signerDataClearError',note:function(v){return v?('signerDataClearError: '+v):'';}},
     {field:'signerLinkRevokeError',note:function(v){return v?('signerLinkRevokeError: '+v):'';}},
+    // domain/generateWireLetter.ts:194,454. A verify-only run returns ok:true
+    // and writes no Drive artifact, and the server already states why in the
+    // field's own value. Surfaced rather than suppressed: "the letter you just
+    // generated produced no file" is exactly the class this table exists for,
+    // and the alternative is an operator who believes a document was written.
+    // The server's sentence is echoed verbatim; no wording is invented here.
+    {field:'driveSkipped',note:function(v){return v?String(v):'';}},
     {field:'auditLogError',note:function(v){return v?('auditLogError: '+v):'';}},
     // routes/opparkrow.ts:465,470. A settled row is SKIPPED, never parked, and
     // that is ok:true whenever some other row did park. alreadyParkedAll is
