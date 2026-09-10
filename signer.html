@@ -550,6 +550,20 @@
       LANE = (l === 'israeli' || l === 'cayman') ? l : '';
     }
     function tHe(en) { return curLang === 'he' && HE_MAP[en] ? HE_MAP[en] : en; }
+    // The fund's calendar day, Asia/Jerusalem, matching ju-service's
+    // ilCalendarDayUtcMs_. Falls back to the UTC day if Intl has no tz data,
+    // which is the old behaviour rather than a broken attribute.
+    function ilTodayIso_() {
+      try {
+        var parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric',
+        }).formatToParts(new Date());
+        var get = function (t) { var p = parts.find(function (x) { return x.type === t; }); return p ? p.value : ''; };
+        var y = get('year'), m = get('month'), d = get('day');
+        if (y && m && d) return y + '-' + m + '-' + d;
+      } catch (e) {}
+      return new Date().toISOString().slice(0, 10);
+    }
     // CTO review finding #11: esc() is used to build double-quoted HTML
     // attributes (value="..."/data-field="..." etc, see controlMarkup below)
     // as well as text content, but only escaped &/</> - a " in a value would
@@ -1422,7 +1436,20 @@
         }
         // L5 (a11y): a date field (e.g. date of birth) caps at today so the native
         // picker cannot offer a future birth date and opens nearer a plausible year.
-        var maxAttr = (def.type === 'date') ? ' max="' + new Date().toISOString().slice(0, 10) + '"' : '';
+        // ONE DEFINITION OF TODAY, MATCHING THE ENGINE (2026-09-10).
+        //
+        // This built max from toISOString(), the UTC day, while the page's own
+        // window check below used the browser-local day and ju-service resolves
+        // the reference day in Asia/Jerusalem (domain/cayman/verificationWindow
+        // .ts ilCalendarDayUtcMs_). Three definitions of "today" for one field.
+        //
+        // Between 00:00 and 03:00 Asia/Jerusalem the UTC day is still yesterday,
+        // so max greyed out the very day both validators accept. The form is
+        // novalidate, so nothing said why: on a phone, where the native picker
+        // is the only way in, an Israeli attester simply could not pick today.
+        // That is the same three-hour window, and the same population, the
+        // server-side fix was written for.
+        var maxAttr = (def.type === 'date') ? ' max="' + ilTodayIso_() + '"' : '';
         return '<input type="' + esc(def.type) + '" id="f-' + nm + '" name="' + nm + '"' + acAttr + imAttr + maxAttr + reqAttr + descAttr + '><span class="signer-note" id="' + msgId + '" hidden></span>';
       }
       // Build the label markup for a field. Required-ness is derived from the
