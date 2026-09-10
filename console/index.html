@@ -10982,7 +10982,15 @@ document.addEventListener('keydown',function(e){
       apiFetch('?api=opParkRow&processId='+encodeURIComponent(rid)+'&reason='+encodeURIComponent(reason), false, JU_API).then(function(r){
         if(!r||!r.ok){go.disabled=false;go.textContent='Park this row';go.title=(r&&r.error)||'Failed, try again';return;}
         form.remove();
-        wlAnnounce('Parked '+who+'. It is off every letter until it is un-parked.');
+        // routes/opparkrow.ts:465,470. A settled row is SKIPPED, never parked,
+        // and that is still ok:true whenever some OTHER leg of the same money
+        // event parked; alreadyParkedAll is ok:true with nothing written at
+        // all. One Master RID is several rows, so "It is off every letter"
+        // could be false for the rows that matter while the click read green.
+        var out_=actionOutcome(r);
+        wlAnnounce(out_.clean
+          ? ('Parked '+who+'. It is off every letter until it is un-parked.')
+          : (who+'.'+actionOutcomeText(r)));
         wlNoteLandingTab(r);
         setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
       }).catch(function(err){
@@ -11039,7 +11047,16 @@ document.addEventListener('keydown',function(e){
       apiFetch('?api=diagCorrectTrackerDate&masterRid='+encodeURIComponent(nrid)+'&month='+encodeURIComponent(target)+'&commit=1',false,JU_API)
         .then(function(res){
           if(!res||res.ok===false){throw new Error((res&&res.error)||'could not set the month');}
-          wlAnnounce('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.');
+          // routes/diagcorrecttrackerdate.ts:198,206-208. The DATE cell can
+          // already hold the target value, in which case NO WRITE IS ISSUED
+          // and the answer is ok:true with unchanged:true and the server's own
+          // sentence in `note`. "The row has left this month" asserted a move
+          // that never happened, on the one control whose whole job is to move
+          // a row between money months.
+          var out_=actionOutcome(res);
+          wlAnnounce(out_.clean
+            ? ('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.')
+            : (who+'.'+actionOutcomeText(res)));
           peekAwaiting();peekRows();renderLetter();
         })
         .catch(function(err){
