@@ -8859,18 +8859,45 @@ document.addEventListener('keydown',function(e){
     // anything). Rendered into dactStatus as a small list rather than a bare
     // sentence; still never a native alert.
     function dMoneyReceivedSummary(r){
-      var t=r.tracker||{};
-      var trackerLine=t.alreadyAdvanced
-        ? ('Wire status already: '+esc2(t.currentStatus||'advanced')+'.')
-        : ('Wire status: Pending -> '+esc2(t.newStatus||'Received in transit')+'.');
-      var mondayLine=(r.monday&&r.monday.ok)?' Mirrored to Monday.':'';
+      // 2026-09-10: this read `r.tracker` and `r.monday`. ju-service returns
+      // NEITHER (domain/markMoneyReceived.ts returns {ok, processId, rows,
+      // drafts, draftsFolderUrl}); only the retired GAS twin ever did. So `t`
+      // was always {} and the line below fell through to its own literal,
+      // printing "Wire status: Pending -> Received in transit." on EVERY press
+      // - including when every tracker write failed, because a failed row comes
+      // back with newStatus undefined and the call still answers ok:true.
+      //
+      // A fabricated status on the money path is worse than no status: it tells
+      // the operator the wire advanced when nothing moved.
+      //
+      // The server has always sent the truth in rows[]. Read that. Same
+      // sentences as before, now carrying real values.
+      var rows=(r.rows||[]);
+      var advanced=rows.filter(function(x){return x.newStatus;});
+      var already=rows.filter(function(x){return x.alreadyAdvanced;});
+      var failed=rows.filter(function(x){return !x.alreadyAdvanced&&!x.newStatus;});
+      var trackerLine;
+      if(advanced.length){
+        trackerLine='Wire status: '+esc2(advanced[0].previousStatus||'Pending')+' -> '+esc2(advanced[0].newStatus)+'.';
+      } else if(already.length){
+        trackerLine='Wire status already: '+esc2(already[0].previousStatus||'advanced')+'.';
+      } else {
+        trackerLine='';
+      }
+      // A row the server could not write is named, with the tab and row an
+      // operator can open. No prose: the failure is the row, not a sentence.
+      var failedLine=failed.length
+        ? ('<div style="margin-top:6px;color:var(--color-danger,#b00)">Not advanced: '
+            +failed.map(function(x){return esc2(x.tab)+' row '+esc2(String(x.row));}).join(', ')+'</div>')
+        : '';
+      var mondayLine='';
       var drafts=r.drafts||[];
       var draftsHtml=drafts.length
         ? ('<div style="margin-top:6px">Draft(s) already waiting in Gmail:<ul style="margin:4px 0 0 18px;padding:0">'
             +drafts.map(function(d){return '<li>'+esc2(d.label)+'</li>';}).join('')
             +'</ul><a href="'+esc2(r.draftsFolderUrl||'https://mail.google.com/mail/u/0/#drafts')+'" target="_blank" rel="noopener">Open Gmail Drafts</a></div>')
         : '<div style="margin-top:6px;color:var(--color-ink-muted)">No draft ids on record for this process (it may predate this feature, or already been sent). Check Gmail Drafts manually.</div>';
-      return trackerLine+mondayLine+draftsHtml;
+      return trackerLine+mondayLine+failedLine+draftsHtml;
     }
     if(goEl)goEl.onclick=function(){
       var act=pendingAct;if(!act)return;

@@ -70,3 +70,4 @@ test/*
 !test/zz-cayman-lp-primary-entity.cjs
 !test/zz-console-reseal-gate.cjs
 !test/lib-mono-source.cjs
+!test/zz-console-money-received-truth.cjs
