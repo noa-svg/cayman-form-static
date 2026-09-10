@@ -237,15 +237,35 @@ const plan = {
   renderBare: false,// when set, opRenderMonthLetter answers with a bodiless {}
   renderEmpty: false,// when set, opRenderMonthLetter answers ok with no rows
   holdRender: null, // when set, opRenderMonthLetter parks here until released
+  peekRowsFail: null,// when set, opPeekMonthTransfers refuses with this sentence
   calls: [],
   writes: [],       // every tracker-write route the console actually called
 };
+// THE WRITE ROUTES, NAMED ONCE. This list is both the rig's stub table and the
+// contract H10's static sweep holds the console to, so a new tracker route
+// cannot be stubbed here without also being required to close the gate.
+const TRACKER_WRITE_ROUTES = [
+  'opParkRow', 'opUnparkRow', 'opMarkMoneyReceived', 'diagCorrectTrackerDate',
+  'opAddManualTransferRow', 'opSetRowAmount', 'opSetRowBankDetails', 'diagOpenMonthTab',
+];
+const DRAWER_PID = 'P-FIXTURE-DRAWER';
 const RID_AWAIT = 'MR-FIXTURE-AWAIT';
 const RID_PARKED = 'MR-FIXTURE-PARKED';
 function answerFor(q) {
   const api = (q.match(/^\?(?:api|admin)=([A-Za-z0-9_]+)/) || [])[1] || '';
   if (api === 'listTrackerMonthTabs') return { ok: true, months: [MONTH, '08/2026'] };
-  if (api === 'opPeekMonthTransfers') return { ok: true, transfers: [{ rowNum: 12, name: 'Test Row', amount: 1000, direction: 'out' }] };
+  if (api === 'opPeekMonthTransfers') {
+    if (plan.peekRowsFail) return { ok: false, error: plan.peekRowsFail };
+    return { ok: true, transfers: [{ rowNum: 12, name: 'Test Row', amount: 1000, direction: 'out' }] };
+  }
+  // THE BOARD DRAWER'S OWN PROCESS (round 5). stage 'complete' is what makes
+  // renderDrawer emit the "Mark money received" button (console/index.html
+  // isCompletedStage -> isComplete -> dactBtns), which is the fifth call site
+  // of the same opMarkMoneyReceived route the worklist button uses. Synthetic
+  // name only.
+  if (api === 'opprocess') {
+    return { ok: true, processId: DRAWER_PID, displayName: 'Fixture Drawer LP', stage: 'complete', lane: 'israeli', fields: {}, signers: [] };
+  }
   // REAL ROW CARDS (round 4). These two answered {rows:[]} for three rounds, so
   // the booted DOM contained no row-action button at all and the four call
   // sites that WRITE the tracker could not be driven. execStatus 'Pending' is
@@ -260,8 +280,15 @@ function answerFor(q) {
   // The four tracker WRITES. ok:true and nothing else: apiFetch throws on every
   // ok:false, and what is under test is what the console does after a write
   // that SUCCEEDED.
-  if (api === 'opParkRow' || api === 'opUnparkRow' || api === 'opMarkMoneyReceived' || api === 'diagCorrectTrackerDate') {
+  // ROUND 5 ADDS THE FOUR THE REVIEWER DROVE NEXT: the manual-row adder, the
+  // two fill-a-cell panels and the board drawer's copy of the money button.
+  // Every one of them writes the same sheet wireLetterFacts.ts digests.
+  if (TRACKER_WRITE_ROUTES.indexOf(api) > -1) {
     plan.writes.push(api);
+    if (api === 'opAddManualTransferRow') return { ok: true, row: 14, masterRid: 'manual__fixture' };
+    if (api === 'opSetRowAmount') return { ok: true, tab: MONTH, row: 12, amount: '1000' };
+    if (api === 'opSetRowBankDetails') return { ok: true, tab: MONTH, row: 12 };
+    if (api === 'opMarkMoneyReceived') return { ok: true, rows: [], drafts: [] };
     return { ok: true };
   }
   if (api === 'opRenderMonthLetter') {
@@ -727,6 +754,360 @@ if (render.length > 0) {
   ok('P3 a click on that month reaches no settle call',
     genQs().length === gensEmpty, 'before=' + gensEmpty + ' after=' + genQs().length);
   plan.renderEmpty = false;
+
+
+  // ================= H9: NO CLOSED GATE STRANDS THE OPERATOR ===============
+  // Round 4 made a bare renderLetter() call fail CLOSED, which is right. A gate
+  // that closes and never reopens is the defect one level down: the operator
+  // cannot generate this month's letter at all, and the copy told her to
+  // "review again" while the Review button is hidden because the review runs
+  // itself. Measured on round 4: typing one character into the Struck-NAV
+  // override left Generate disarmed at 1500ms and disarmed after clicking
+  // around, with nothing on screen that would re-arm it.
+  const GOOD_GEN = { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/doc9/view', counts: { incoming: 0, outgoing: 1, total: 1 }, settled: [] };
+  const dryRuns = () => plan.calls.filter((q) => /dryRun=true/.test(q)).length;
+  const navEl = () => win.document.getElementById('wlNavMonth');
+  function typeNav(v) { const el = navEl(); el.value = v; el.dispatchEvent(new win.Event('input')); }
+
+  plan.renderFail = null; plan.renderBare = false; plan.renderEmpty = false; plan.peekRowsFail = null;
+  plan.letterHash = HASH_APPROVED;
+  plan.generate = GOOD_GEN;
+  await rearm(win);
+  ok('H9 NAV armed before the Struck-NAV override is touched', armed(win), txt(win, 'wlGateNote'));
+  const dryBeforeNav = dryRuns();
+  const rendersBeforeNav = renders();
+  typeNav('2026-08');
+  await settle(80);
+  ok('H9 NAV typing the override closes the gate at the keystroke',
+    !armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+  ok('H9 NAV the note does not name the Review button, which is hidden',
+    !/review again/i.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  // THE MEASURED WINDOW. Round 4 was still disarmed here with no pending work.
+  await settle(1200);
+  ok('H9 NAV THE GATE RE-ARMS ITSELF, with no reload and no button she cannot see',
+    armed(win), txt(win, 'wlGateNote'));
+  ok('H9 NAV the re-review actually carried the month she typed',
+    plan.calls.filter((q) => /dryRun=true/.test(q)).some((q) => q.indexOf('navMonth=2026-08') > 0),
+    plan.calls.filter((q) => /dryRun=true/.test(q)).slice(-2).join(' | '));
+  ok('H9 NAV exactly one re-review was fired, not one per keystroke',
+    dryRuns() === dryBeforeNav + 1, 'before=' + dryBeforeNav + ' after=' + dryRuns());
+  // The letter does not vary with navMonth, so re-rendering it would be a
+  // round trip that buys nothing and would drop the stored hash for the window
+  // it was in flight. Asserted so a later "just call wlRelookAndReview here"
+  // has to argue with this line.
+  ok('H9 NAV and the letter itself was NOT re-rendered, so the approved hash still stands',
+    renders() === rendersBeforeNav, 'renders before=' + rendersBeforeNav + ' after=' + renders());
+  await clickGenerate(win);
+  ok('H9 NAV the click after the re-review still carries the approved letter',
+    (genQs()[genQs().length - 1] || '').indexOf('expectedFactsHash=' + encodeURIComponent(HASH_APPROVED)) > 0,
+    genQs()[genQs().length - 1]);
+  ok('H9 NAV and it carried the override to the settle call too',
+    (genQs()[genQs().length - 1] || '').indexOf('navMonth=2026-08') > 0, genQs()[genQs().length - 1]);
+
+  // A HALF-TYPED OVERRIDE. runReview refuses this state, so firing the timer
+  // into it would only re-close the gate with a worse sentence. It must stay
+  // shut, fire nothing, and say what fixes it - both of which are this field.
+  await rearm(win);
+  // She has a Verification copy and its Drive link on the result line while she
+  // edits the override. That is what the debounce's own invalid-guard is FOR:
+  // runReview refuses a malformed override by writing its refusal over the
+  // result line, so firing the timer into that state would wipe her document
+  // link on a keystroke, which is the H7 clobber in a new place.
+  win.document.getElementById('wlVerifyBtn').click();
+  await settle(300);
+  ok('H9 NAV her verification copy is on the result line before she touches the override',
+    /Verification copy generated/.test(htm(win, 'wlResult')), htm(win, 'wlResult').slice(0, 160));
+  typeNav('2026-13');
+  await settle(80);
+  ok('H9 NAV a malformed override closes the gate', !armed(win));
+  ok('H9 NAV and the note names the field and the two ways out of it',
+    /must be YYYY-MM/.test(txt(win, 'wlGateNote')) && /clear it/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  const dryAtInvalid = dryRuns();
+  await settle(900);
+  ok('H9 NAV a malformed override fires no review at all', dryRuns() === dryAtInvalid,
+    'before=' + dryAtInvalid + ' after=' + dryRuns());
+  ok('H9 NAV AND IT DOES NOT WIPE THE DOCUMENT SHE WAS READING to say so',
+    /Verification copy generated/.test(htm(win, 'wlResult')) && htm(win, 'wlResult').indexOf('verifydoc') > 0,
+    htm(win, 'wlResult').slice(0, 200));
+  ok('H9 NAV and the gate is still shut, still saying how to fix it', !armed(win), txt(win, 'wlGateNote'));
+  typeNav('');
+  await settle(900);
+  ok('H9 NAV CLEARING the override re-arms the gate, so the malformed state is not a trap either',
+    armed(win), txt(win, 'wlGateNote'));
+
+  // A ROWS OUTAGE DRAWS ITS OWN WAY BACK. peekRows is always paired with a
+  // review, so its close is not the strand the NAV one was - but its failure
+  // block was a dead end with no reload, and its copy named the hidden button.
+  plan.peekRowsFail = 'tracker read timed out';
+  await rearm(win);
+  await settle(300);
+  const rowsRetry = win.document.getElementById('wlRowsRetry');
+  ok('H9 ROWS a rows outage draws a retry the operator can reach', !!rowsRetry, htm(win, 'wlRows').slice(0, 200));
+  ok('H9 ROWS and it quotes the server\'s reason rather than a generic line',
+    /tracker read timed out/.test(htm(win, 'wlRows')), htm(win, 'wlRows').slice(0, 200));
+  const peeksBeforeRetry = plan.calls.filter((q) => /opPeekMonthTransfers/.test(q)).length;
+  plan.peekRowsFail = null;
+  if (rowsRetry) rowsRetry.click();
+  await settle(600);
+  ok('H9 ROWS the retry actually re-reads the rows',
+    plan.calls.filter((q) => /opPeekMonthTransfers/.test(q)).length > peeksBeforeRetry);
+  ok('H9 ROWS and the rows are back on screen with the gate armed',
+    armed(win) && !win.document.getElementById('wlRowsRetry'), txt(win, 'wlGateNote'));
+
+  // THE SWEEP, over EVERY close site rather than the two that were reported.
+  // A gate note may not name an action that is not on screen. The Review button
+  // is hidden (the review runs itself), so every one of these sentences that
+  // said "review again" was pointing at nothing.
+  const closeReasons = (function () {
+    const out = []; const re = /wlCloseGate\(([^\n]*?)\);/g; let m;
+    while ((m = re.exec(html))) out.push(m[1]);
+    return out;
+  })();
+  ok('H9 SWEEP every wlCloseGate site was found (empty = the sweep is broken)', closeReasons.length >= 15, closeReasons.length);
+  const namesHiddenButton = closeReasons.filter((r) => /review again|re-review above|Review this month/i.test(r));
+  ok('H9 SWEEP no closed gate tells the operator to click the hidden Review button',
+    namesHiddenButton.length === 0, namesHiddenButton.join(' | '));
+  // The armed note and the row-action result lines go through the same rule.
+  // Comment lines are stripped first: several of them QUOTE the copy this rule
+  // removed, and an assertion that fires on its own changelog is an assertion
+  // people delete.
+  const htmlCode = html.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  ok('H9 SWEEP no other operator-facing copy sends her to the hidden Review button either',
+    htmlCode.indexOf('Review again before generating') < 0
+    && htmlCode.indexOf('Re-review above') < 0
+    && htmlCode.indexOf('Review again to re-run') < 0,
+    [/Review again before generating/, /Re-review above/, /Review again to re-run/]
+      .map((re) => (htmlCode.match(re) || [''])[0]).filter(Boolean).join(' | '));
+
+  // ================= H10: EVERY TRACKER WRITE, NOT THE FOUR REPORTED ========
+  // Round 4 covered the four row actions inside the worklist IIFE. The console
+  // writes the same sheet from three other panels and from the board drawer,
+  // and each left Generate armed against the pre-write letter with a
+  // byte-identical note. Those fail CLOSED at the server, so this is a false
+  // REFUSAL, not a fail-open - a correct generation refused with nothing on
+  // screen saying why.
+  //
+  // The static half first: enumerated from the file, not from the report.
+  const writeSites = (function () {
+    const out = {}; const re = /apiFetch\(\s*(?:'|")\?api=([A-Za-z0-9_]+)/g; let m;
+    while ((m = re.exec(html))) { (out[m[1]] = out[m[1]] || []).push(m.index); }
+    // the two sites that build their query in a variable first
+    const varRe = /\?api=([A-Za-z0-9_]+)&/g; let v;
+    while ((v = varRe.exec(html))) { if (!out[v[1]]) out[v[1]] = []; }
+    return out;
+  })();
+  // Anything write-SHAPED that this file calls must be classified here. A new
+  // route lands in NEITHER list and fails by name, which is the whole point:
+  // the previous four rounds each fixed the reported sites and left the class.
+  const NOT_TRACKER = {
+    opSetRowReview: 'state store, not the tracker Sheet (consoledispatch.ts routes it to deps.stateStore); it records who checked a row and is not a letter fact',
+    opSetConsoleSettings: 'the operator allowlist, GAS-only, nothing to do with the tracker',
+    opCorrectSealedDoc: 'schedules a document re-seal on GAS (console/index.html\'s own note: ju-service has no handler at all); it rewrites a sealed PDF, never a tracker cell, so no letter fact moves',
+  };
+  const writeShaped = Object.keys(writeSites).filter((r) => /^(opSet|opAdd|opPark|opUnpark|opMark|opDelete|opMove|opCorrect|diagCorrect|diagOpen)/.test(r));
+  const unclassified = writeShaped.filter((r) => TRACKER_WRITE_ROUTES.indexOf(r) < 0 && !NOT_TRACKER[r]);
+  ok('H10 STATIC the sweep found the write-shaped routes (empty = the sweep is broken)',
+    writeShaped.length >= 8, writeShaped.join(','));
+  ok('H10 STATIC every write-shaped route this console calls is classified as tracker or not-tracker',
+    unclassified.length === 0, unclassified.join(','));
+  // And every route classified as a tracker write must close the gate at its
+  // own call site. The slice runs from the apiFetch to the NEXT apiFetch, so it
+  // cannot borrow a neighbour's hook call.
+  // Anchored on the WIRE NAME, not on `apiFetch(`: three of these build their
+  // query into a variable first, so an apiFetch-anchored sweep found no call
+  // site for them and would have reported them clean by finding nothing. The
+  // slice runs to the next ?api= literal anywhere in the file, so a site cannot
+  // borrow its neighbour's hook call.
+  // A route named in a COMMENT is not a call site, and must not truncate a real
+  // one's slice either: wlMarkReceived's own header names ?api=opMarkMoneyReceived
+  // nine lines above the call, which reported the live hook below it as missing.
+  const isInComment = (at) => html.slice(html.lastIndexOf('\n', at) + 1, at).indexOf('//') > -1;
+  const apiLiteralOffsets = (function () { const out = []; const re = /\?api=[A-Za-z0-9_]+/g; let m; while ((m = re.exec(html))) { if (!isInComment(m.index)) out.push(m.index); } return out; })();
+  const routeSites = (route) => {
+    const out = []; const re = new RegExp('\\?api=' + route + '(?![A-Za-z0-9_])', 'g'); let m;
+    while ((m = re.exec(html))) { if (!isInComment(m.index)) out.push(m.index); }
+    return out;
+  };
+  // The two fill-a-cell panels are the deliberate exception: their route name
+  // lives in a config object and the write is issued by a SHARED shell, so the
+  // hook cannot sit beside the literal. They are held to the shell instead, and
+  // to every config carrying the sentence the shell will speak.
+  const SHELL_ROUTES = ['opSetRowAmount', 'opSetRowBankDetails'];
+  const shell = (function () {
+    const at = html.indexOf('function wireFillRowCell_(');
+    return at < 0 ? '' : html.slice(at, html.indexOf('function wireFillRowCell_(') + 4000);
+  })();
+  ok('H10 STATIC the shared fill-a-cell shell closes the gate for both panels it drives',
+    /wlNoteTrackerWrite_\(cfg\.wroteWhat\)/.test(shell), shell.slice(0, 80));
+  const configsWithoutWhat = (html.match(/wireFillRowCell_\(\{[\s\S]*?\n\s*\}\);/g) || [])
+    .filter((c) => c.indexOf('wroteWhat:') < 0);
+  ok('H10 STATIC every fill-a-cell config names what it wrote, so the shell has a sentence to speak',
+    configsWithoutWhat.length === 0 && (html.match(/wireFillRowCell_\(\{/g) || []).length === 2,
+    configsWithoutWhat.join(' | '));
+
+  const notHooked = [];
+  TRACKER_WRITE_ROUTES.forEach(function (route) {
+    if (SHELL_ROUTES.indexOf(route) > -1) return; // held to the shell, just above
+    const sites = routeSites(route);
+    if (!sites.length) { notHooked.push(route + ' (no call site found at all)'); return; }
+    sites.forEach(function (at) {
+      let end = html.length;
+      for (const off of apiLiteralOffsets) { if (off > at) { end = off; break; } }
+      const slice = html.slice(at, end);
+      if (!/wlNoteTrackerWrite_\(|wlAfterTrackerWrite\(/.test(slice)) {
+        notHooked.push(route + ' @line ' + html.slice(0, at).split('\n').length);
+      }
+    });
+  });
+  ok('H10 STATIC EVERY tracker-writing call site routes through the gate door',
+    notHooked.length === 0, notHooked.join(' | '));
+  ok('H10 STATIC the door is one function, so a writer cannot half-implement it',
+    (html.match(/function wlNoteTrackerWrite_\(/g) || []).length === 1
+    && (html.match(/wlTrackerWriteHook_=wlAfterTrackerWrite;/g) || []).length === 1);
+
+  // THE EXECUTED HALF. Four more real buttons in the booted DOM, driven the way
+  // the operator drives them.
+  const setVal = (id, v) => { const el = win.document.getElementById(id); el.value = v; };
+  const EXTRA_ACTIONS = [
+    { name: 'add a row by hand', route: 'opAddManualTransferRow', click: () => {
+        setVal('mrName', 'Fixture Manual Row'); setVal('mrAmount', '250');
+        win.document.getElementById('mrAddBtn').click();
+      } },
+    { name: 'fill an amount', route: 'opSetRowAmount', click: () => {
+        setVal('sraRid', 'manual__fixture'); setVal('sraAmount', '250');
+        win.document.getElementById('sraSetBtn').click();
+      } },
+    { name: 'fill bank details', route: 'opSetRowBankDetails', click: () => {
+        setVal('sbdRid', 'manual__fixture'); setVal('sbdBank', 'Bank 12 branch 345 account 67890');
+        win.document.getElementById('sbdSetBtn').click();
+      } },
+    { name: 'money arrived, from the board drawer', route: 'opMarkMoneyReceived', click: () => {
+        win.openDrawer(DRAWER_PID);
+      }, after: async () => {
+        await settle(300);
+        const b = win.document.querySelector('#drawer [data-act="markMoneyReceived"]');
+        if (!b) return false;
+        b.click(); await settle(40);
+        const go = win.document.getElementById('dacGo');
+        if (!go || win.document.getElementById('dactConfirm').hidden) return false;
+        go.click();
+        return true;
+      } },
+  ];
+
+  const genBaselineH10 = genQs().length;
+  for (const a of EXTRA_ACTIONS) {
+    plan.renderFail = null; plan.peekRowsFail = null;
+    plan.letterHash = HASH_APPROVED;
+    plan.generate = GOOD_GEN;
+    await rearm(win);
+    ok('H10 [' + a.name + '] armed off a good render before the write', armed(win), txt(win, 'wlGateNote'));
+    const noteBefore = txt(win, 'wlGateNote');
+    const writesBefore = plan.writes.length;
+    plan.letterHash = HASH_NOW; // the sheet now composes a different letter
+    a.click();
+    if (a.after) { const reached = await a.after(); ok('H10 [' + a.name + '] the real control was reachable and driven', reached !== false); }
+    await settle(120); // the write has landed; the re-read is still 600ms away
+    ok('H10 [' + a.name + '] the write actually reached ' + a.route,
+      plan.writes.length > writesBefore && plan.writes[plan.writes.length - 1] === a.route, plan.writes.slice(-3).join(','));
+    ok('H10 [' + a.name + '] GENERATE IS DISARMED AT THE WRITE',
+      !armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+    ok('H10 [' + a.name + '] the note stops standing byte-identical over a letter that changed',
+      txt(win, 'wlGateNote') !== noteBefore && /changed the tracker/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    const gensMid = genQs().length;
+    win.document.getElementById('wlGenerateBtn').click();
+    await settle(80);
+    ok('H10 [' + a.name + '] a click inside the re-read window reaches no settle call',
+      genQs().length === gensMid && win.document.getElementById('wlConfirm').hidden,
+      'before=' + gensMid + ' after=' + genQs().length);
+    await settle(1000);
+    ok('H10 [' + a.name + '] the gate re-arms itself once the new letter is on screen',
+      armed(win), txt(win, 'wlGateNote'));
+    await clickGenerate(win);
+    const after = genQs()[genQs().length - 1] || '';
+    ok('H10 [' + a.name + '] the click after the write carries the NEW letter, not the one she approved',
+      after.indexOf('expectedFactsHash=' + encodeURIComponent(HASH_NOW)) > 0
+      && after.indexOf(encodeURIComponent(HASH_APPROVED)) < 0, after);
+  }
+  const unhashedH10 = genQs().slice(genBaselineH10).filter((qs) => qs.indexOf('expectedFactsHash=') < 0);
+  ok('H10 AT THE WIRE: no click after any of the four reached the settle route without a hash',
+    unhashedH10.length === 0, unhashedH10.join(' | '));
+  ok('H10 all eight tracker-writing routes were exercised for real',
+    TRACKER_WRITE_ROUTES.filter((r) => r !== 'diagOpenMonthTab').every((r) => plan.writes.indexOf(r) > -1),
+    plan.writes.join(','));
+
+  // ================= H11: THE SCREEN SAYS WHAT THE WIRE ALREADY KNOWS =======
+  // After a row action whose render SUCCEEDS the settle correctly carries the
+  // new hash - and the persistent gate note was byte-identical before and
+  // after, so the operator had no signal at all that what she approved had been
+  // replaced. The wire knew; the screen did not.
+  const noteClass = () => (win.document.getElementById('wlGateNote').className || '');
+  plan.letterHash = HASH_APPROVED;
+  plan.generate = GOOD_GEN;
+  await rearm(win);
+  const cleanNote = txt(win, 'wlGateNote');
+  ok('H11 a plain review arms with the ordinary note and no alarm on it',
+    armed(win) && /Generate will settle/.test(cleanNote) && noteClass() === '', cleanNote + ' :: class=' + noteClass());
+  plan.letterHash = HASH_NOW;
+  q('#wlGroups [data-act="markMoneyReceived"]').click();
+  await settle(1100);
+  const changedNote = txt(win, 'wlGateNote');
+  ok('H11 the gate re-armed after the write', armed(win), changedNote);
+  ok('H11 THE NOTE IS NO LONGER BYTE-IDENTICAL to the one standing before the write',
+    changedNote !== cleanNote, 'before=' + cleanNote + ' after=' + changedNote);
+  ok('H11 and it says in words that this is a different letter',
+    /NEW letter/.test(changedNote) && /not the one you were looking at/.test(changedNote), changedNote);
+  ok('H11 it names WHICH change replaced it, not just that something did',
+    /marked as money arrived/.test(changedNote), changedNote);
+  ok('H11 the note is visually marked, so it does not read as the line that was already there',
+    noteClass() === 'wl-gate-changed', 'class=' + noteClass());
+  ok('H11 the style for that mark actually exists in the sheet',
+    html.indexOf('.wl-gate-changed{') > 0);
+  ok('H11 the replacement is spoken to a screen reader too',
+    /NEW letter/.test(txt(win, 'wlAnnounce')), txt(win, 'wlAnnounce'));
+  ok('H11 it still says what Generate will do, so the alarm did not eat the instruction',
+    /Generate will settle/.test(changedNote), changedNote);
+  // It is a signal about ONE substitution, so it clears once said. A warning
+  // that never goes away is read as decoration by the second month.
+  //
+  // Re-reviewed through the STRUCK-NAV OVERRIDE, not through the month select:
+  // the month and currency handlers clear the flag themselves, so re-arming
+  // through either of them proves nothing about the clear-on-consumption. The
+  // override fires runReview with the flag untouched, which is the only path
+  // where the consumption clear is the thing doing the work.
+  const dryBeforeStick = dryRuns();
+  typeNav('2026-08');
+  await settle(1000);
+  ok('H11 the override re-ran the review with nothing else changed',
+    dryRuns() > dryBeforeStick && armed(win), txt(win, 'wlGateNote'));
+  ok('H11 THE MARK CLEARS once said, rather than sticking on every later review',
+    noteClass() === '' && !/NEW letter/.test(txt(win, 'wlGateNote')),
+    txt(win, 'wlGateNote') + ' :: class=' + noteClass());
+  typeNav('');
+  await settle(900);
+  // A month or currency change is a different letter by her own doing, and must
+  // not be dressed up as a substitution underneath her. The flip has to happen
+  // INSIDE the re-read window, while the flag is still set: after the review has
+  // armed, the flag is already spent and any handler would look correct.
+  // ASSERTED BEFORE THE WRITE'S OWN RE-READ LANDS. wlAfterTrackerWrite schedules
+  // its re-review 600ms out; that later review consumes the flag and arms clean
+  // whatever the handler did, so an assertion taken after it passes on a handler
+  // that clears nothing. Each flip is checked inside its own window.
+  for (const nm of ['wlCurrency', 'wlMonth']) {
+    plan.letterHash = HASH_APPROVED;
+    await rearm(win);
+    plan.letterHash = HASH_NOW;
+    q('#wlGroups [data-act="markMoneyReceived"]').click();
+    await settle(60);
+    ok('H11 [' + nm + '] the write is still unspoken at the moment she uses the select',
+      !armed(win) && /changed the tracker/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    win.document.getElementById(nm).onchange();
+    await settle(300); // the select's own review has landed; the write's has not
+    ok('H11 [' + nm + '] a change she made herself is not dressed up as a letter substituted underneath her',
+      armed(win) && noteClass() === '' && !/NEW letter/.test(txt(win, 'wlGateNote')),
+      txt(win, 'wlGateNote') + ' :: class=' + noteClass());
+    await settle(1000); // let the write's own re-read land before the next case
+  }
 
   win.close();
   console.log('\n' + pass + ' pass, ' + fail + ' fail');

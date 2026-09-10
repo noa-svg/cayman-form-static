@@ -3414,6 +3414,11 @@ body.side-coll .ss-lbl { display: none; }
    carries no empty box. */
 .wl-announce{margin:0 0 var(--space-3);padding:10px 12px;border-radius:var(--radius-md);background:var(--color-info-bg);border:1px solid var(--color-info);font-size:13px;line-height:1.5;color:var(--color-ink)}
 .wl-announce:empty{display:none}
+/* The gate note when the letter on screen REPLACED the one she approved. The
+   sentence changes, but the note is small print at the foot of a busy panel and
+   a changed sentence in the same grey is not a signal; this is the only state
+   where it stops looking like the line that was already there. */
+.wl-gate-changed{padding:8px 10px;border-radius:var(--radius-md);background:var(--color-warning-bg);border:1px solid var(--color-warning);color:var(--color-warning) !important;font-weight:600}
 .wl-done-line{font-size:13px;line-height:1.55;color:var(--color-ink)}
 .wl-done-detail{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--color-ink-sub)}
 .wl-sort-arrow{font-size:9px;opacity:0.5}
@@ -9250,6 +9255,13 @@ document.addEventListener('keydown',function(e){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
+            // THE SAME ROUTE, THE SAME SHEET, THE SAME LETTER (round 5). The
+            // worklist's own "Money arrived" has closed the gate since round 4;
+            // this button calls the identical opMarkMoneyReceived and moves the
+            // identical row onto this month's letter, and the drawer is open on
+            // top of the worklist panel, so an operator could mark money here
+            // and click Generate there against the pre-write letter.
+            wlNoteTrackerWrite_('a row was marked as money arrived');
           }else{
             dStatus('Could not mark money received'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
           }
@@ -10790,6 +10802,24 @@ document.addEventListener('keydown',function(e){
   // op would break a live operator panel on the first click. Verify a route
   // actually exists in routes/consoledispatch.ts before flipping GAS_ONLY_ to
   // JU_API on anything still in this file.
+  //
+  // EVERY TRACKER WRITE ON THIS SCREEN GOES THROUGH ONE DOOR (2026-09-10, round
+  // 5). The worklist panel owns the approved-letter gate, but it does not own
+  // every writer: the board drawer's "Mark money received", the manual-row
+  // adder, and the two fill-a-cell panels are separate IIFEs that write the SAME
+  // sheet the letter is composed from. Each of the four left Generate armed
+  // against the pre-write letter, so the click carried the hash of a letter the
+  // tracker no longer described. That fails CLOSED at ju-service (the stale hash
+  // is refused), so it never settled anything wrong - but a correct generation
+  // got refused with a gate note that was byte-identical to the one standing
+  // before the write, so nothing on screen said why.
+  //
+  // The worklist registers wlAfterTrackerWrite here as it boots; a writer
+  // anywhere on the page calls wlNoteTrackerWrite_ and never has to know the
+  // gate exists. A null hook is a no-op, so a panel that loads without the
+  // worklist (a narrower page, a partial render) still works.
+  var wlTrackerWriteHook_=null;
+  function wlNoteTrackerWrite_(what){ if(wlTrackerWriteHook_)wlTrackerWriteHook_(what); }
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -10935,11 +10965,25 @@ document.addEventListener('keydown',function(e){
     function wlGenerateArmed(){ return !!genBtn && genBtn.getAttribute('aria-disabled')==='false'; }
     // One place that closes the gate, so a new input can never be added without
     // it. Says WHY, because a silently dead button is the defect one level down.
+    // ONE writer for the persistent note, so "this letter replaced the one you
+    // approved" cannot be painted by one path and silently dropped by another.
+    // `changed` is the only thing separating an armed gate over the letter she
+    // reviewed from an armed gate over a letter that replaced it underneath
+    // her: before this the two sentences were byte-identical, so a row action
+    // whose re-render SUCCEEDED left the screen reading exactly as it read
+    // before the write, and the only place the substitution existed was the
+    // hash on the wire.
+    function wlGateNote_(msg,changed){
+      wlGateReason=msg;
+      if(!gateNoteEl)return;
+      gateNoteEl.textContent=msg;
+      gateNoteEl.className=changed?'wl-gate-changed':'';
+    }
     function wlCloseGate(why){
       lastGo=null;
       wlArmGenerate(false);
       wlDisarmConfirm();
-      if(why){wlGateReason=why;if(gateNoteEl)gateNoteEl.textContent=why;}
+      if(why)wlGateNote_(why,false);
     }
     // The click a closed gate answers. It moves focus to the FIRST blocker and
     // says what is missing, rather than doing nothing and letting the operator
@@ -10964,7 +11008,15 @@ document.addEventListener('keydown',function(e){
         msg=msg+' Review this month first.';
         try{reviewBtn.focus();}catch(e){}
       }
-      if(gateNoteEl)gateNoteEl.textContent=msg;
+      // The class is cleared, not the stored reason: this sentence is the
+      // answer to one click, and the "letter replaced" highlight belongs to the
+      // persistent note, not to a refusal. DEFENCE IN DEPTH, not a live path:
+      // every route that disarms the gate today rewrites the note through
+      // wlGateNote_ first, so the class is already gone by the time a refusal
+      // can be clicked. Mutating this line away breaks nothing that can be
+      // reached, which is why no assertion holds it. It stays because leaving a
+      // stale alarm standing on a money screen is the wrong way to be wrong.
+      if(gateNoteEl){gateNoteEl.textContent=msg;gateNoteEl.className='';}
       wlAnnounce(msg);
     }
     // scrollIntoView is guarded: it is absent in jsdom and in some embedded
@@ -10994,7 +11046,9 @@ document.addEventListener('keydown',function(e){
       if(blockersEl)blockersEl.innerHTML=wlBlockersHtml(items);
       // A blocker on screen is a blocker on the gate. Without this the summary
       // could say the letter is stopped while Generate sat armed beside it.
-      if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Fix it, then review again.');
+      // "then review again" named the hidden Review button. Clearing the row IS
+      // a tracker write, and every one of those now re-reads and re-reviews.
+      if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Generate stays off until it clears; clearing it re-runs the review on its own.');
       // THE ORDERING BUG (2026-09-07). The two peeks land in either order, and
       // the letter group's empty state is derived from the AWAITING rows. When
       // awaiting answered second, the letter group had already painted a reason
@@ -11184,7 +11238,13 @@ document.addEventListener('keydown',function(e){
     //
     // The close happens HERE, synchronously with the write, not 600ms later
     // behind the render, so the unhashed window never opens at all.
+    // WHAT THE LAST WRITE WAS, held until the re-review that follows it has
+    // said so on screen. Round 4 closed the gate and re-armed it correctly and
+    // the operator still had no way to tell: the armed note after the re-render
+    // was byte-for-byte the note before the write.
+    var wlWriteNote_=null;
     function wlAfterTrackerWrite(what){
+      wlWriteNote_=what;
       wlCloseGate('You changed the tracker ('+what+'), so the letter you reviewed no longer describes it. Re-reading the month now. Generate arms itself once the new letter is on screen.');
       // The gate state, spoken, appended to the action's own outcome rather
       // than replacing it: an operator who cannot see the button otherwise has
@@ -11195,6 +11255,9 @@ document.addEventListener('keydown',function(e){
       // where the row went, and the re-review must not blank it.
       setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); wlRelookAndReview({keepResult:true}); },600);
     }
+    // Registered for every OTHER panel on this page. See wlNoteTrackerWrite_'s
+    // header above the IIFE for which writers live outside it and why.
+    wlTrackerWriteHook_=wlAfterTrackerWrite;
     function parkRow(rid,reason,form,go,who){
       // Flipped to JU_API 2026-09-03: ju-service's opParkRow now has a
       // verified-console-identity door (consoledispatch.ts), not just the
@@ -11497,6 +11560,17 @@ document.addEventListener('keydown',function(e){
         wlRelookAndReview({keepResult:true});
       });
     })();
+    // A ROWS OUTAGE HAD NO WAY BACK EITHER (2026-09-10, round 5). Both failure
+    // arms below closed the gate saying "Review again before generating", and
+    // the Review button is hidden because the review runs itself - so a single
+    // transient peek failure left the gate shut, the screen naming an action
+    // that does not exist, and the month select the only escape. The failure now
+    // draws its own retry, the same shape the render panel's already has.
+    function wlRowsFailedHtml(why){
+      return '<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2(why)
+        +'<div style="margin-top:6px"><button type="button" id="wlRowsRetry" class="btn btn-quiet">Retry loading the rows</button></div></div></div>';
+    }
+    var WL_ROWS_GATE_NOTE='Rows could not be loaded, so Generate stays off. Retry loading them above; it arms itself once they are back.';
     function peekRows(){
       var month=wlViewMonth();
       if(!wlValidMonth(month)){wlLastTransfers=null;renderWlRows();return;}
@@ -11505,7 +11579,7 @@ document.addEventListener('keydown',function(e){
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;wlCloseGate(WL_ROWS_GATE_NOTE);rowsEl.innerHTML=wlRowsFailedHtml((r&&r.error)||'Could not load rows.');return;}
         wlLastTransfers=r.transfers;
         wlLastExcluded=r.excluded||null;
         wlLastUnresolved=r.unresolvedCurrency||null;
@@ -11515,10 +11589,21 @@ document.addEventListener('keydown',function(e){
       }).catch(function(err){
         if(rid!==peekSeq)return;
         wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;
-        wlCloseGate('Rows could not be loaded. Review again before generating.');
-        rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div></div>';
+        wlCloseGate(WL_ROWS_GATE_NOTE);
+        rowsEl.innerHTML=wlRowsFailedHtml((err&&err.serverError)||'Could not reach the server.');
       });
     }
+    // Wired to the rows panel, not to the node: wlRowsFailedHtml redraws the
+    // button on every failure. rowsEl already carries a click listener for the
+    // sort headers, which returns early on anything that is not [data-sort].
+    rowsEl.addEventListener('click',function(e){
+      var t=e&&e.target;
+      var btn=(t&&t.closest)?t.closest('#wlRowsRetry'):null;
+      if(!btn)return;
+      btn.disabled=true;
+      peekRows();
+      wlRelookAndReview({keepResult:true});
+    });
     // Month tabs (Noa, 2026-08-02: "it should have a dropdown for the month i
     // want to see") - the tracker's REAL month tabs, newest first. Presented as
     // the screen's heading with prev/next since 2026-09-07; the select survives
@@ -11557,6 +11642,13 @@ document.addEventListener('keydown',function(e){
         apiFetch('?api=diagOpenMonthTab&month='+encodeURIComponent(cur)+'&commit=1',false,JU_API)
           .then(function(res){
             if(!res||res.ok===false){throw new Error((res&&res.error)||'could not open the month');}
+            // A tab creation cannot change the letter of a month that already
+            // had a tab, so this is the one tracker write with no way to
+            // invalidate the letter on screen. It goes through the same door
+            // anyway: the rule is "a write closes the gate", and a per-site
+            // judgment about which writes are harmless is how the other four
+            // were missed.
+            wlNoteTrackerWrite_('a new month tab was opened');
             loadMonths(cur);
           })
           .catch(function(err){
@@ -11590,12 +11682,58 @@ document.addEventListener('keydown',function(e){
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
-    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
+    // "Review again before generating" NAMED A BUTTON THAT IS NOT ON SCREEN
+    // (2026-09-10, round 5). The review runs itself and the Review button is
+    // hidden, so all three of these told the operator to click something she
+    // cannot see. Each one already re-reads and re-reviews on the very next
+    // line; the copy now says that instead of asking her for it.
+    // wlWriteNote_ is dropped here on purpose: a different month or currency is
+    // a different letter by her own doing, not a letter substituted underneath
+    // one she had approved.
+    monthEl.onchange=function(){wlWriteNote_=null;wlCloseGate('Month changed. Re-reading it now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
+    ccyEl.onchange=function(){wlWriteNote_=null;wlCloseGate('Currency changed. Re-reading the month now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
-    (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=function(){wlCloseGate('Struck-NAV month changed. Review again before generating.');wlRenderNavLine();};})();
+    //
+    // FAIL-STRANDED, THE ROUND-5 DEFECT. This closed the gate and NOTHING ever
+    // re-opened it: unlike the month and currency selects beside it, no re-read
+    // was fired, so typing one character into the Struck-NAV override left the
+    // operator unable to generate this month's letter at all - and the note
+    // told her to "review again" while the Review button is hidden, so the copy
+    // named the one action she could not take. A closed gate with no path back
+    // is its own defect, whatever it is protecting.
+    //
+    // It is DEBOUNCED, not fired per keystroke: this is a free-text field, so
+    // every prefix of a valid YYYY-MM is typed on the way to it and each one
+    // would otherwise cost a dry-run round trip. renderLetter is deliberately
+    // NOT re-run - the letter does not vary with navMonth (renderLetter sends
+    // no navMonth at all), only the HY-close review does - so this calls
+    // runReview directly and leaves the stored hash, which is still the hash of
+    // the letter on screen, exactly where it is.
+    (function(){
+      var nm=document.getElementById('wlNavMonth');
+      if(!nm)return;
+      var navTimer=null;
+      nm.oninput=function(){
+        wlRenderNavLine();
+        // An unfinished or malformed override gets copy naming the two things
+        // that fix it, both of which are this field. runReview refuses that
+        // state anyway, so firing the timer into it would only re-close the
+        // gate with a less useful sentence.
+        if(wlNavMonthInvalid()){
+          wlCloseGate('Struck-NAV month must be YYYY-MM, month 01 to 12. Fix it, or clear it to use the derived close.');
+        }else{
+          wlCloseGate('Struck-NAV month changed. Re-reading the review now. Generate arms itself once it lands.');
+        }
+        if(navTimer)clearTimeout(navTimer);
+        navTimer=setTimeout(function(){
+          navTimer=null;
+          if(wlNavMonthInvalid())return;
+          runReview({keepResult:true});
+        },600);
+      };
+    })();
     // Letter-template maintenance. Column widths, fonts and the total-row
     // wording are ALL inherited from the template document - docFill only
     // clones protoRow and never sets a width - so a cramped amount column has
@@ -11686,7 +11824,7 @@ document.addEventListener('keydown',function(e){
           // about, so the summary above the list is the ONE place an operator
           // has to look to see what is stopping the letter.
           wlServerBlocking=r.blocking||[];
-          wlCloseGate('Blocking findings. Generate stays off until they clear.');
+          wlCloseGate('Blocking findings. Generate stays off until they clear; fixing a row re-runs the review on its own.');
           wlRender();
           return;
         }
@@ -11721,8 +11859,7 @@ document.addEventListener('keydown',function(e){
               // state is how the same screen comes to say two things.
               ? 'Generate stays off until a row is ready to wire.'
               : 'The letter is still being read, so Generate stays off. It arms itself when the letter lands.';
-          wlGateReason=rfMsg;
-          if(gateNoteEl)gateNoteEl.textContent=rfMsg;
+          wlGateNote_(rfMsg,false);
           wlAnnounce(rfMsg);
           return;
         }
@@ -11739,19 +11876,30 @@ document.addEventListener('keydown',function(e){
           lastGo=null;
           wlArmGenerate(false);
           wlRender();
-          if(gateNoteEl)gateNoteEl.textContent='Generate stays off until a row is ready to wire.';
+          wlGateNote_('Generate stays off until a row is ready to wire.',false);
           return;
         }
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=wlInputs();lastGo.counts=r.counts||null;
         wlArmGenerate(true);
         wlRender();
-        if(gateNoteEl){
-          var c=r.counts;
-          gateNoteEl.textContent='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
-            +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
-            +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
-        }
+        var c=r.counts;
+        var armedMsg='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
+          +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
+          +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
+        // THE SUBSTITUTION, SAID OUT LOUD (2026-09-10, round 5). A row action
+        // whose re-render succeeded produced this exact sentence again, so the
+        // screen was identical before and after and the only record that the
+        // approved letter had been replaced was the hash on the wire. Held
+        // until a review ARMS, because that is the moment there is a new letter
+        // to be replaced BY; cleared as soon as it has been said once, and on a
+        // month or currency change, where "a different letter" is the operator's
+        // own doing and needs no warning.
+        var replaced=wlWriteNote_;
+        wlWriteNote_=null;
+        if(replaced)armedMsg+=' This is a NEW letter, re-read after you changed the tracker ('+replaced+'). It is not the one you were looking at before.';
+        wlGateNote_(armedMsg,!!replaced);
+        if(replaced)wlAnnounce(armedMsg);
       }).catch(function(err){
         reviewBtn.disabled=false;
         findEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
@@ -11768,7 +11916,14 @@ document.addEventListener('keydown',function(e){
       if(!wlGenerateArmed()||!lastGo){wlRefuseGenerate();return;}
       var now=wlInputs();
       if(!wlSameInputs(lastGo,now)){
-        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        // A LAST-DITCH GUARD THAT USED TO STRAND HER. Every input that can move
+        // this needle already closes the gate and re-reviews, so reaching here
+        // means one of them did not - and answering that with a shut gate, a
+        // hidden button named in the copy and no re-read left the operator with
+        // nothing to click. Take the re-read for her, exactly as the refusal
+        // recovery does.
+        wlCloseGate('Inputs changed since the review. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+        wlRelookAndReview({keepResult:true});
         return;
       }
       var c=lastGo.counts;
@@ -11785,7 +11940,10 @@ document.addEventListener('keydown',function(e){
       if(!lastGo)return;
       var snap=lastGo;
       if(!wlSameInputs(snap,wlInputs())){
-        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        // Same reasoning as the arm-time check above: refuse, then re-read, so
+        // the refusal is a step on the way rather than a dead end.
+        wlCloseGate('Inputs changed since the review. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+        wlRelookAndReview({keepResult:true});
         return;
       }
       wlDisarmConfirm();
@@ -11844,7 +12002,11 @@ document.addEventListener('keydown',function(e){
         // a second click returned the identical green message and the operator
         // could not tell a fresh settle from a no-op.
         genBtn.disabled=false;
-        wlCloseGate('Settled '+snap.month+'. Review again to re-run.');
+        // DELIBERATELY TERMINAL, and now it says so. Generate must not re-arm
+        // on the batch it has just settled, so this is the one closed gate with
+        // no path back by design - which is exactly why the copy has to name the
+        // actions that DO exist rather than the hidden Review button.
+        wlCloseGate('Settled '+snap.month+'. Generate stays off so this batch cannot be settled twice. Change the month or the currency to work on another one.');
         var h='<div style="color:var(--color-green)">Rows settled on the tracker. The document itself is still labeled "not for sending" until the parallel diff is verified.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
         if(r.draftId)h+='<div style="margin-top:4px">Draft created in Gmail (id '+esc2(r.draftId)+').</div>';
@@ -11942,7 +12104,11 @@ document.addEventListener('keydown',function(e){
       apiFetch(qs, false, JU_API).then(function(r){
         addBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
-        resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
+        // The new row is ON this month's letter, so the letter reviewed a
+        // moment ago is short of a row and its hash is stale. "Re-review above"
+        // also named the hidden Review button; the write itself now re-reads.
+        resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). The month is being re-read to pick it up.</div>';
+        wlNoteTrackerWrite_('a row was added by hand');
         document.getElementById('mrName').value='';
         document.getElementById('mrAmount').value='';
         document.getElementById('mrBank').value='';
@@ -11989,6 +12155,12 @@ document.addEventListener('keydown',function(e){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
+        // BOTH FILL PANELS WRITE A LETTER FACT. The amount and the bank line are
+        // the two cells wireLetterFacts.ts digests per row, so either write makes
+        // the approved hash describe a sheet that no longer exists. Routed from
+        // the shared shell rather than from each config, so a third fill panel
+        // added to this shape cannot be born without it.
+        wlNoteTrackerWrite_(cfg.wroteWhat);
         ['Rid','Tab','Row','Name',cfg.valueField].concat(cfg.extraFields||[]).forEach(function(f){
           var el=document.getElementById(cfg.prefix+f);
           if(el)el.value='';
@@ -12008,6 +12180,7 @@ document.addEventListener('keydown',function(e){
       extraFields:['Expect'],
       extraQs:function(){var expect=(document.getElementById('sraExpect').value||'').trim();return expect?'&expectCurrent='+encodeURIComponent(expect):'';},
       errorFallback:'Could not write the amount.',
+      wroteWhat:'an amount was filled in',
       successMsg:function(r){return 'Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').';}
     });
   })();
@@ -12018,7 +12191,8 @@ document.addEventListener('keydown',function(e){
     wireFillRowCell_({
       prefix:'sbd', api:'opSetRowBankDetails', valueField:'Bank', valueParam:'bankDetails', valueLabel:'Bank details',
       errorFallback:'Could not write the bank details.',
-      successMsg:function(r){return 'Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.';}
+      wroteWhat:'bank details were filled in',
+      successMsg:function(r){return 'Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. The month is being re-read to pick it up.';}
     });
   })();
 

@@ -867,10 +867,31 @@ function extractVarObj(name) {
     const m = html.indexOf(h);
     ok('K15 ' + h + ' closes the gate', m > 0 && html.slice(m, m + 220).indexOf('wlCloseGate(') > 0);
   });
-  ok('K15 the Struck-NAV override closes the gate',
-    /nm\.oninput=function\(\)\{wlCloseGate\(/.test(html));
+  // Anchored on the HANDLER, not on its first statement (2026-09-10). The old
+  // pattern required wlCloseGate to be the very first thing in the body, which
+  // is the one shape the fail-stranded fix could not keep: the handler now picks
+  // WHICH reason to close with (a malformed override gets copy naming the field)
+  // and then schedules the re-review that re-arms it. Asserting the property
+  // rather than the byte order.
+  const navHandler = (function () {
+    const at = html.indexOf('nm.oninput=function(){');
+    return at < 0 ? '' : html.slice(at, at + 1200);
+  })();
+  ok('K15 the Struck-NAV override closes the gate', /wlCloseGate\(/.test(navHandler), navHandler.slice(0, 120));
+  // AND RE-OPENS IT. A gate this closed and nothing re-armed left the operator
+  // unable to generate the month at all, which is its own defect; the executed
+  // proof is zz-console-approved-hash.cjs's H9.
+  ok('K15 and re-runs the review behind it, so the override is not a one-way door',
+    /runReview\(/.test(navHandler), navHandler.slice(0, 200));
+  // The reason moved into a named constant so both peek arms and the retry copy
+  // cannot drift apart; the property is still "both arms close the gate".
   ok('K15 a failed rows-peek closes the gate (it used to leave Generate live)',
-    (html.match(/wlCloseGate\('Rows could not be loaded/g) || []).length === 2);
+    (html.match(/wlCloseGate\(WL_ROWS_GATE_NOTE\)/g) || []).length === 2,
+    (html.match(/wlCloseGate\([^)]*\)/g) || []).filter((x) => /ROWS|Rows/.test(x)).join(' | '));
+  ok('K15 and that reason says Generate is off without naming the hidden Review button',
+    /var WL_ROWS_GATE_NOTE='[^']*Generate stays off[^']*';/.test(html)
+    && !/var WL_ROWS_GATE_NOTE='[^']*[Rr]eview again/.test(html),
+    (html.match(/var WL_ROWS_GATE_NOTE='[^']*'/) || [''])[0]);
   // The belt to the braces: even if a future input forgets to close the gate,
   // the settle must not be able to use it.
   ok('K15 the settle refuses when the live inputs differ from the reviewed ones',
