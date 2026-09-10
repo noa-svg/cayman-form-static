@@ -8,6 +8,8 @@
 // only proves the browser states the same rule early, so the attester is told
 // on their own pane instead of bounced by a round-trip.
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const { loadSignerPage, makeSignerCtx } = require('./rig-signer.cjs');
 let pass = 0, fail = 0;
 function ok(l, c, x) { if (c) { pass++; console.log('ok   ' + l); } else { fail++; console.log('FAIL ' + l + (x === undefined ? '' : ' :: ' + x)); } }
@@ -79,6 +81,38 @@ const WINDOW_COPY = "That date is outside the 90 days the form allows. Enter the
     const inp = rig.document.querySelector('#signer-form [name="verifiedOn"]');
     ok('V2 and required to the browser and to a screen reader', !!inp && inp.hasAttribute('required') && inp.getAttribute('aria-required') === 'true');
     ok('V3 it is a date control, not a free-text box', inp && inp.getAttribute('type') === 'date', inp && inp.getAttribute('type'));
+    // V3c (2026-09-10): the picker's ceiling must be the FUND's calendar day,
+    // Asia/Jerusalem, the same day ju-service resolves in ilCalendarDayUtcMs_.
+    // It used to be the UTC day, so between 00:00 and 03:00 Israel time the
+    // native picker greyed out the very day both validators accept, silently,
+    // on a novalidate form. On a phone that is the only way in.
+    //
+    // ASSERTED AGAINST A FIXED INSTANT, NOT THE WALL CLOCK. Comparing max to
+    // "today" only fails during the three hours a night the two days differ,
+    // so it would pass on almost every run and catch the regression almost
+    // never. The helper is pulled out of the shipped file and evaluated at
+    // 2026-09-10T00:30Z, which is 03:30 in Jerusalem, and at 2026-09-09T22:30Z,
+    // which is 01:30 NEXT day in Jerusalem: the second is the window, where the
+    // UTC day and the fund day genuinely differ.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'signer.html'), 'utf8');
+    ok('V3c the max attribute is built from the fund-calendar helper, not toISOString',
+       /max="' \+ ilTodayIso_\(\)/.test(src), (src.match(/var maxAttr = [^;]+;/) || [])[0]);
+
+    const helperSrc = (src.match(/function ilTodayIso_\(\) \{[\s\S]*?\n    \}/) || [])[0];
+    ok('V3d the helper exists in the shipped file', !!helperSrc);
+    if (helperSrc) {
+      const at = (iso) => {
+        const Real = Date;
+        // eslint-disable-next-line no-global-assign
+        global.Date = class extends Real { constructor(...a) { return a.length ? new Real(...a) : new Real(iso); } static now() { return new Real(iso).getTime(); } };
+        try { return new Function(helperSrc + '; return ilTodayIso_();')(); }
+        finally { global.Date = Real; }
+      };
+      ok('V3e at 03:30 Jerusalem the fund day is that day', at('2026-09-10T00:30:00Z') === '2026-09-10', at('2026-09-10T00:30:00Z'));
+      ok('V3f at 01:30 Jerusalem, when UTC still says yesterday, the fund day is ALREADY the new day',
+         at('2026-09-09T22:30:00Z') === '2026-09-10',
+         'got ' + at('2026-09-09T22:30:00Z') + ', UTC would say ' + new Date('2026-09-09T22:30:00Z').toISOString().slice(0, 10));
+    }
     // The label must not quote a rule the page does not enforce. It used to read
     // "not older than 90 days from the date of subscription" - counsel's own
     // reference - while the form measures from the SIGNING moment (Noa,
