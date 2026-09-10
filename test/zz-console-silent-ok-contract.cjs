@@ -102,6 +102,41 @@ const sendBody = html.slice(sendIdx, sendIdx + 2000);
 ok('S5b every recovery action routes its ok branch through actionOutcome', /var out_=actionOutcome\(r\);/.test(sendBody), sendBody.slice(0, 200));
 ok('S5c and a result with notes is NOT rendered as an ok status', /out_\.clean\?"ok":"error"/.test(sendBody));
 
+// ---------------------------------------------------- PREVENT, call sites
+// The five call sites that do NOT go through the recovery send() funnel. For
+// each: the success sentence must be unreachable without actionOutcome having
+// answered clean, and the old unconditional form must be gone from the file.
+// Restoring any one of those sentences turns its pair of assertions red.
+const CALL_SITES = [
+  ['S8a pause: the paused status line is no longer a hard ok',
+    "dStatus('Automatic reminders paused. Nothing further will be sent until you resume.'+actionOutcomeText(r),out_.clean?'ok':'error')",
+    "dStatus('Automatic reminders paused. Nothing further will be sent until you resume.','ok')"],
+  ['S8b park: "off every letter" is only claimed on a clean answer',
+    "? ('Parked '+who+'. It is off every letter until it is un-parked.')",
+    "wlAnnounce('Parked '+who+'. It is off every letter until it is un-parked.');"],
+  ['S8c move month: "the row has left this month" is only claimed on a clean answer',
+    "? ('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.')",
+    "wlAnnounce('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.');"],
+  ['S8d peek: the refused rows reach the render context',
+    'refused:wlLastRefused', null],
+  ['S8e wire letter: the settle announcement carries what the server reported',
+    "wlAnnounce('Settled '+snap.month+' on the tracker.'+actionOutcomeText(r));",
+    "wlAnnounce('Settled '+snap.month+' on the tracker.');"],
+];
+for (const [label, present, absent] of CALL_SITES) {
+  ok(label, html.indexOf(present) >= 0, present);
+  if (absent) ok(label.replace(/^S8(\w)/, 'S8$1x') + ' (the unconditional form is gone)', html.indexOf(absent) < 0, absent);
+}
+ok('S8f peek stores r.refused alongside r.excluded', html.indexOf('wlLastRefused=r.refused||null;') >= 0);
+ok('S8g and clears it on every failure path, so a stale finding cannot outlive its fetch',
+  (html.match(/wlLastExcluded=null,?/g) || []).length >= 1 &&
+  (html.match(/wlLastRefused=null/g) || []).length === 3,
+  (html.match(/wlLastRefused=null/g) || []).length);
+ok('S8h the letter panel renders refused rows from the server own reasons',
+  html.indexOf('actionOutcomeText({refused:ctx.refused})') >= 0);
+ok('S8i the wire-letter result panel shows the notes when the answer is not clean',
+  html.indexOf("if(!out_.clean)h+='<div style=\"margin-top:6px\" class=\"t-danger\">'+esc2(actionOutcomeText(r).trim())+'</div>';") >= 0);
+
 // ----------------------------------------------------------------- DETECT
 // Result fields on the routes this console calls that carry a "did nothing /
 // partly failed" meaning. Read from origin/main, never a working tree.
