@@ -11456,7 +11456,18 @@ document.addEventListener('keydown',function(e){
           setResult('<div class="t-danger">Server reported success but returned no document. Nothing was generated.</div>','');
           return;
         }
-        wlAnnounce('Settled '+snap.month+' on the tracker.');
+        // domain/generateWireLetter.ts reports THREE things under ok:true that
+        // this handler never read: a per-row settlement stamp that threw comes
+        // back as settled[].ok===false (:402,:416); a row PRINTED on the letter
+        // with no MASTER_RID is listed in unsettlable (:385-389,:432) and is
+        // never settled; and a draft that threw only attaches draftError (:464)
+        // while the result object built at :420 stays ok:true. So the operator
+        // ticked "create draft", read green, and no draft existed - and a row
+        // whose money was instructed to move could stay Pending with the settle
+        // report simply not mentioning it. That is the live mechanism behind
+        // tracker 08/2026 row 10 (see :370-379).
+        var out_=actionOutcome(r);
+        wlAnnounce('Settled '+snap.month+' on the tracker.'+actionOutcomeText(r));
         // Finding 4: this used to re-enable Generate and leave the gate open, so
         // a second click returned the identical green message and the operator
         // could not tell a fresh settle from a no-op.
@@ -11465,6 +11476,7 @@ document.addEventListener('keydown',function(e){
         var h='<div style="color:var(--color-green)">Rows settled on the tracker. The document itself is still labeled "not for sending" until the parallel diff is verified.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
         if(r.draftId)h+='<div style="margin-top:4px">Draft created in Gmail (id '+esc2(r.draftId)+').</div>';
+        if(!out_.clean)h+='<div style="margin-top:6px" class="t-danger">'+esc2(actionOutcomeText(r).trim())+'</div>';
         if(r.missingBankDetailsMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.missingBankDetailsMessage)+'</div>';
         if(r.overflowMessage)h+='<div style="margin-top:6px;color:var(--color-warning)">'+esc2(r.overflowMessage)+'</div>';
         setResult(h,'');
