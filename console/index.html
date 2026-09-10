@@ -11169,6 +11169,32 @@ document.addEventListener('keydown',function(e){
     // carrying it and report the list back, so the rid alone is the whole
     // instruction. &tab= still exists server-side for a deliberate single-month
     // park; this button is not that.
+    // A TRACKER WRITE INVALIDATES THE REVIEW, not just the render (2026-09-10,
+    // round 4). Park, un-park, move-to-next-month and money-arrived all WRITE
+    // the sheet the letter is composed from. At the instant that write lands,
+    // the letter the operator approved stops describing the tracker, whether or
+    // not the re-render then succeeds. All four used to fire a bare
+    // renderLetter() on a 600ms timer, which cleared the evidence and left the
+    // gate alone: the note still read "Reviewed 09/2026 . NIS . 1 row" beside a
+    // panel that had changed underneath it, and the next click reached
+    // ju-service with no expectedFactsHash. The silent case was the worst of
+    // the three: on a SUCCESSFUL re-render the note was byte-identical before
+    // and after, so nothing on screen said the approved letter had been
+    // repointed.
+    //
+    // The close happens HERE, synchronously with the write, not 600ms later
+    // behind the render, so the unhashed window never opens at all.
+    function wlAfterTrackerWrite(what){
+      wlCloseGate('You changed the tracker ('+what+'), so the letter you reviewed no longer describes it. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+      // The gate state, spoken, appended to the action's own outcome rather
+      // than replacing it: an operator who cannot see the button otherwise has
+      // no signal that Generate just went off.
+      wlAnnounce(((announceEl&&announceEl.textContent)||'')+' Generate is off until the letter is re-read.');
+      // keepResult: the row action's own result line (wlNoteLandingTab's
+      // landing-tab sentence most of all) is the only explanation on screen for
+      // where the row went, and the re-review must not blank it.
+      setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); wlRelookAndReview({keepResult:true}); },600);
+    }
     function parkRow(rid,reason,form,go,who){
       // Flipped to JU_API 2026-09-03: ju-service's opParkRow now has a
       // verified-console-identity door (consoledispatch.ts), not just the
@@ -11188,7 +11214,7 @@ document.addEventListener('keydown',function(e){
           ? ('Parked '+who+'. It is off every letter until it is un-parked.')
           : (who+'.'+actionOutcomeText(r)));
         wlNoteLandingTab(r);
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was parked');
       }).catch(function(err){
         go.disabled=false;go.textContent='Park this row';go.title=(err&&err.serverError)||'Could not reach the server';
       });
@@ -11218,7 +11244,7 @@ document.addEventListener('keydown',function(e){
         btn.textContent='Un-parked';
         wlAnnounce('Un-parked '+who+'. It is back on the needs-you list; this did not say the money arrived.');
         wlNoteLandingTab(r);
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was un-parked');
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Un-park this row';btn.title=(err&&err.serverError)||'Could not reach the server';
       });
@@ -11253,7 +11279,7 @@ document.addEventListener('keydown',function(e){
           wlAnnounce(out_.clean
             ? ('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.')
             : (who+'.'+actionOutcomeText(res)));
-          peekAwaiting();peekRows();renderLetter();
+          wlAfterTrackerWrite('a row moved to another month');
         })
         .catch(function(err){
           nxt.disabled=false;
@@ -11281,7 +11307,7 @@ document.addEventListener('keydown',function(e){
         }
         btn.textContent='Money arrived, recorded';btn.className='wl-primary wl-primary-done';
         wlAnnounce('Recorded the money for '+who+'. It moves onto this month’s letter.');
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was marked as money arrived');
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Money arrived';
         var why=(err&&err.serverError)||'Could not reach the server';
@@ -11374,8 +11400,20 @@ document.addEventListener('keydown',function(e){
     // render is still in flight leaves wlApproved null for that window: the
     // hash would simply not be sent and the money call would run unchecked.
     function renderLetter(){
+      // THE GATE CLOSES HERE (2026-09-10, round 4). Clearing the evidence and
+      // disarming the button are now ONE statement in ONE function, so no call
+      // site can do the first without the second. Before this, four row
+      // actions fired renderLetter() bare after writing the tracker: wlApproved
+      // was nulled, wlRenderState was rewritten, and lastGo was left standing,
+      // so Generate stayed armed against a review of a sheet that no longer
+      // existed and the click reached ju-service with no expectedFactsHash at
+      // all. The server guard is `if (expectedHash)`, so that click generated
+      // AND settled unchecked. A bare call is now fail-CLOSED by construction
+      // rather than fail-open; zz-console-approved-hash.cjs additionally holds
+      // the call sites to one, so a bare call cannot strand the gate either.
       wlApproved=null;
       wlRenderState='pending';
+      wlCloseGate('The letter is being re-read. Generate arms itself once the new letter is on screen.');
       var host=document.getElementById('wlRenderPanel');
       if(!host){wlRenderState='none';return Promise.resolve();}
       var month=wlViewMonth();
@@ -11394,8 +11432,13 @@ document.addEventListener('keydown',function(e){
           body.innerHTML=wlRenderFailedHtml((r&&r.error)||'no answer from the server');
           return;
         }
-        wlRenderState='ok';
         if(!((r.transfers||[]).length)){
+          // ANSWERED, BUT NOTHING RENDERED AND NOTHING STORED. 'ok' used to be
+          // set BEFORE this return, so a month with no rows reported a good
+          // render while holding no hash, and 'ok' is the state that arms the
+          // gate. Its own state, because "the server answered with an empty
+          // letter" is neither a failure nor a letter anyone can be held to.
+          wlRenderState='empty';
           body.innerHTML='<div class="t-muted">No '+esc2(ccy)+' row is on this month&#8217;s letter yet, so there is nothing to render.</div>';
           return;
         }
@@ -11403,6 +11446,9 @@ document.addEventListener('keydown',function(e){
         // older ju-service that returns no factsHash leaves this null, and the
         // generate call then carries nothing.
         if(r.factsHash)wlApproved={month:month,currency:ccy,hash:String(r.factsHash),rowFacts:String(r.rowFacts||'')};
+        // AFTER the store, never before it: 'ok' means a letter was drawn and
+        // whatever hash it carried is now held.
+        wlRenderState='ok';
         // The composer's own HTML carries print CSS. Injected into a sandboxed
         // frame rather than the page, so it cannot restyle every other panel on
         // this screen, and so nothing in it can script against the console.
@@ -11669,7 +11715,12 @@ document.addEventListener('keydown',function(e){
           wlRender();
           var rfMsg=(wlRenderState==='failed')
             ? 'The letter did not render, so Generate stays off and nothing was settled. Retry the render above; Generate arms itself once the letter is back.'
-            : 'The letter is still being read, so Generate stays off. It arms itself when the letter lands.';
+            : (wlRenderState==='empty')
+              // The same sentence the zero-count branch below uses, deliberately:
+              // both mean "there is nothing to settle", and two wordings for one
+              // state is how the same screen comes to say two things.
+              ? 'Generate stays off until a row is ready to wire.'
+              : 'The letter is still being read, so Generate stays off. It arms itself when the letter lands.';
           wlGateReason=rfMsg;
           if(gateNoteEl)gateNoteEl.textContent=rfMsg;
           wlAnnounce(rfMsg);

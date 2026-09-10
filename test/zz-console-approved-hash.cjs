@@ -26,6 +26,19 @@
 //       follows no render at all, and only the second one may run unhashed.
 //   H7  The refusal recovery cannot repaint over something the operator did
 //       while it was in flight.
+//   H8  A TRACKER WRITE INVALIDATES THE REVIEW. Every row action that writes
+//       the sheet (park, un-park, move to next month, money arrived) closes the
+//       gate at the instant of the write, and no click after any of them can
+//       reach opGenerateMonthlyWireLetter without a hash.
+//   P1  The structure that makes H8 hold: renderLetter closes the gate on
+//       entry, and has exactly one call site.
+//
+// WHY ROUND 4 EXISTED (2026-09-10). Rounds 1 to 3 each fixed the named defect
+// and left the class open, because this rig stubbed opPeekAwaitingMoney and
+// opPeekParked as {ok:true, rows:[]}: no row card was ever drawn, so no row
+// action button existed in the booted DOM, so the four call sites that MUTATE
+// the tracker were untestable and untested. The rig now serves real rows and
+// drives the real buttons.
 //
 // H4 IS EXECUTED, NOT GREPPED (rewritten 2026-09-10). The first cut of H4 was
 // ten string-index and regex matches over the HTML source. All ten passed over
@@ -70,8 +83,41 @@ function esc2Src() { return (html.match(/function esc2\(s\)\{[^\n]*\}/) || [''])
 // ---- H1: the render owns the facts, and clears them first -----------------
 const renderFn = rawFn('renderLetter');
 ok('H1 renderLetter is present', renderFn.length > 0);
+// Comments are stripped first: the entry block carries the reasoning for the
+// three statements it opens with, and an assertion that breaks when someone
+// documents the code is an assertion people delete.
+const renderFnCode = renderFn.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
 ok('H1 renderLetter clears the stored facts before anything else',
-  /^function renderLetter\(\)\{\s*wlApproved=null;/.test(renderFn), renderFn.slice(0, 120));
+  /^function renderLetter\(\)\{\s*wlApproved=null;/.test(renderFnCode), renderFnCode.slice(0, 120));
+// ---- P1: THE STRUCTURE, not another patched call site ----------------------
+// Round 3 routed 3 of 7 entry points through wlRelookAndReview and left the
+// four that write the tracker firing renderLetter() bare. Two properties make a
+// fifth round of the same defect unrepresentable rather than merely unshipped:
+// the gate closes INSIDE renderLetter (so a bare call fails closed instead of
+// leaving a stale arm), and there is exactly ONE call site (so a bare call
+// cannot strand the gate closed either).
+ok('P1 renderLetter DISARMS THE GATE on entry, in the same block that clears the facts',
+  /^function renderLetter\(\)\{\s*wlApproved=null;\s*wlRenderState='pending';\s*wlCloseGate\(/.test(renderFnCode),
+  renderFnCode.slice(0, 200));
+// THE ROUND-5 TRIPWIRE. Any new `renderLetter(...)` call anywhere in the file
+// fails this by name, with the offending line quoted. Comment lines are
+// excluded: they describe the call, they cannot make one.
+const renderCallSites = (function () {
+  const out = [];
+  const lines = html.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*\/\//.test(lines[i])) continue;
+    const re = /renderLetter\s*\(/g; let m;
+    while ((m = re.exec(lines[i]))) {
+      if (/function\s+$/.test(lines[i].slice(0, m.index))) continue; // the definition
+      out.push((i + 1) + ': ' + lines[i].trim());
+    }
+  }
+  return out;
+})();
+ok('P1 renderLetter has exactly ONE call site, and it is wlRelookAndReview',
+  renderCallSites.length === 1 && /return renderLetter\(\)\.then\(after,after\);$/.test(renderCallSites[0]),
+  renderCallSites.join(' | ') || 'no call site at all');
 ok('H1 the stored facts come from the render response, never from the page',
   /if\(r\.factsHash\)wlApproved=\{month:month,currency:ccy,hash:String\(r\.factsHash\),rowFacts:String\(r\.rowFacts\|\|''\)\}/.test(renderFn),
   renderFn.slice(renderFn.indexOf('factsHash') - 80, renderFn.indexOf('factsHash') + 200));
@@ -82,11 +128,30 @@ ok('H1 a render that answers with no hash leaves nothing stored',
 // The shipped expression itself is pulled out and RUN against fabricated
 // state. Asserting on the source text alone would pass on an expression that
 // reads the wrong field.
-const qsSrc = (html.match(/var facts=\(wlApproved[\s\S]*?:'';/) || [''])[0];
+// EXTRACTED BY BOUNDARY, NOT BY A NON-GREEDY TAIL. The old pattern ended at the
+// first `:'';` after `var facts=`, so a builder that grew a second conditional
+// was sliced mid-statement and `new Function` threw `SyntaxError: Unexpected
+// token if` from inside the rig. A harness that reds by crashing reports the
+// same exit code for "the guard changed shape" and "the rig is broken", which
+// is not a test. The slice now runs to the apiFetch call that consumes it, and
+// a source that will not compile is a NAMED failure.
+const qsSrc = (function () {
+  const start = html.indexOf('var facts=(wlApproved');
+  if (start < 0) return '';
+  const end = html.indexOf('apiFetch(', start);
+  return end < 0 ? '' : html.slice(start, end).trim();
+})();
 ok('H2 the generate handler builds a facts query', qsSrc.length > 0);
-// Absent = the wiring is gone, which is exactly what this file exists to
-// catch; every case below then FAILS by name instead of the rig throwing.
-const buildQs = qsSrc ? new Function('wlApproved', 'snap', qsSrc + ' return factsQs;') : function () { return null; };
+// Absent or uncompilable = the wiring changed shape, which is exactly what this
+// file exists to catch; every case below then FAILS by name, not by a stack.
+let buildQs = function () { return null; };
+let qsCompileErr = '';
+if (qsSrc) {
+  try { buildQs = new Function('wlApproved', 'snap', qsSrc + ' return factsQs;'); }
+  catch (e) { qsCompileErr = String((e && e.message) || e); }
+}
+ok('H2 the extracted facts-query source compiles (a rig that throws is not a rig that reds)',
+  qsSrc.length > 0 && !qsCompileErr, qsCompileErr || qsSrc.slice(0, 200));
 const RENDERED = { month: '09/2026', currency: 'NIS', hash: 'abc123hash', rowFacts: 'MR-1:aaaaaaaaaaaa,row12:bbbbbbbbbbbb' };
 
 const sent = buildQs(RENDERED, { month: '09/2026', currency: 'NIS' }) || '';
@@ -170,14 +235,35 @@ const plan = {
   verify: { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/verifydoc/view', docId: 'verifydoc' },
   renderFail: null, // when set, opRenderMonthLetter refuses with this sentence
   renderBare: false,// when set, opRenderMonthLetter answers with a bodiless {}
+  renderEmpty: false,// when set, opRenderMonthLetter answers ok with no rows
   holdRender: null, // when set, opRenderMonthLetter parks here until released
   calls: [],
+  writes: [],       // every tracker-write route the console actually called
 };
+const RID_AWAIT = 'MR-FIXTURE-AWAIT';
+const RID_PARKED = 'MR-FIXTURE-PARKED';
 function answerFor(q) {
   const api = (q.match(/^\?(?:api|admin)=([A-Za-z0-9_]+)/) || [])[1] || '';
   if (api === 'listTrackerMonthTabs') return { ok: true, months: [MONTH, '08/2026'] };
   if (api === 'opPeekMonthTransfers') return { ok: true, transfers: [{ rowNum: 12, name: 'Test Row', amount: 1000, direction: 'out' }] };
-  if (api === 'opPeekAwaitingMoney' || api === 'opPeekParked') return { ok: true, rows: [] };
+  // REAL ROW CARDS (round 4). These two answered {rows:[]} for three rounds, so
+  // the booted DOM contained no row-action button at all and the four call
+  // sites that WRITE the tracker could not be driven. execStatus 'Pending' is
+  // required: anything else lands the row in Blocked, which closes the gate on
+  // its own and would mask everything H8 asserts. Synthetic names only.
+  if (api === 'opPeekAwaitingMoney') {
+    return { ok: true, rows: [{ masterRid: RID_AWAIT, name: 'Fixture Row One', nameEn: 'Fixture Row One', type: 'Increase', amount: 1000, currency: 'NIS', execStatus: 'Pending', ageDays: 3 }] };
+  }
+  if (api === 'opPeekParked') {
+    return { ok: true, rows: [{ masterRid: RID_PARKED, name: 'Fixture Row Two', nameEn: 'Fixture Row Two', type: 'Join', amount: 500, currency: 'NIS', reason: 'fixture park' }] };
+  }
+  // The four tracker WRITES. ok:true and nothing else: apiFetch throws on every
+  // ok:false, and what is under test is what the console does after a write
+  // that SUCCEEDED.
+  if (api === 'opParkRow' || api === 'opUnparkRow' || api === 'opMarkMoneyReceived' || api === 'diagCorrectTrackerDate') {
+    plan.writes.push(api);
+    return { ok: true };
+  }
   if (api === 'opRenderMonthLetter') {
     // ok:false, the shape ju-service actually sends. apiFetch throws on every
     // ok:false (console/index.html:5335), so this lands in renderLetter's
@@ -187,6 +273,11 @@ function answerFor(q) {
     // straight through (undefined !== false), so this is the one way
     // renderLetter's `!r.ok` branch is actually reached in production.
     if (plan.renderBare) return {};
+    // The render route answering ok with NO rows on the letter. The peek and
+    // the dry run still report a row, which is the disagreement that makes this
+    // worth a case: 'ok' used to be recorded before this early return, so a
+    // render that stored no hash reported a good render, and 'ok' is what arms.
+    if (plan.renderEmpty) return { ok: true, transfers: [], html: '', factsHash: plan.letterHash, rowFacts: ROWFACTS_APPROVED };
     return { ok: true, transfers: [{ rowNum: 12 }], html: '<p>the letter</p>', factsHash: plan.letterHash, rowFacts: ROWFACTS_APPROVED };
   }
   if (api === 'opGenerateMonthlyWireLetter') {
@@ -511,6 +602,131 @@ if (render.length > 0) {
     unhashed.indexOf('expectedFactsHash') < 0, unhashed);
   ok('H1 EXECUTED and specifically not the previous render\'s hash',
     unhashed.indexOf(encodeURIComponent(HASH_APPROVED)) < 0 && unhashed.indexOf(HASH_APPROVED) < 0, unhashed);
+
+  // ================= H8: A TRACKER WRITE INVALIDATES THE REVIEW =============
+  // The four call sites round 3 missed. Each writes the sheet the letter is
+  // composed from, so the letter the operator approved stops describing the
+  // tracker at the instant the write lands. Driven through the REAL buttons in
+  // the booted DOM, which is only possible because the peeks now serve rows.
+  const q = (sel) => win.document.querySelector(sel);
+  plan.renderFail = null; plan.renderBare = false; plan.renderEmpty = false;
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  ok('H8 the rig draws a real needs-you row card with its money button',
+    !!q('#wlGroups [data-act="markMoneyReceived"]'), htm(win, 'wlAwaiting').slice(0, 200));
+  ok('H8 the rig draws the row menu carrying both writing actions',
+    !!q('#wlGroups [data-act="rowNextMonth"]') && !!q('#wlGroups [data-act="parkRow"]'));
+  ok('H8 the rig draws a real parked row card with its un-park button',
+    !!q('#wlParked [data-act="unparkRow"]'), htm(win, 'wlParked').slice(0, 200));
+  ok('H8 no blocking row is on the fixture month, so the gate is armed on its own merits',
+    armed(win), txt(win, 'wlGateNote'));
+
+  const ACTIONS = [
+    { name: 'money arrived', click: () => q('#wlGroups [data-act="markMoneyReceived"]').click() },
+    { name: 'move to next month', click: () => q('#wlGroups [data-act="rowNextMonth"]').click() },
+    { name: 'park', click: () => {
+        q('#wlGroups [data-act="parkRow"]').click();
+        const inp = q('.wl-park-in');
+        inp.value = 'fixture reason';
+        inp.dispatchEvent(new win.Event('input'));
+        q('[data-park-go]').click();
+      } },
+    { name: 'un-park', click: () => q('#wlParked [data-act="unparkRow"]').click() },
+  ];
+
+  const genBaselineH8 = genQs().length;
+  for (const a of ACTIONS) {
+    plan.renderFail = null;
+    plan.letterHash = HASH_APPROVED;
+    plan.generate = { ok: true, go: true, docUrl: 'https://drive.google.com/file/d/doc8/view', counts: { incoming: 0, outgoing: 1, total: 1 }, settled: [] };
+    await rearm(win);
+    ok('H8 [' + a.name + '] armed off a good render before the write', armed(win), txt(win, 'wlGateNote'));
+    const noteBefore = txt(win, 'wlGateNote');
+    const writesBefore = plan.writes.length;
+    // The tracker changes because SHE changed it. From here the letter she
+    // approved and the letter the sheet would now produce are different
+    // letters, which is exactly the case the server guard exists to refuse.
+    plan.letterHash = HASH_NOW;
+    a.click();
+    await settle(80); // the write has landed; the re-read is still 600ms away
+    ok('H8 [' + a.name + '] the write actually reached its tracker route',
+      plan.writes.length > writesBefore, plan.writes.join(','));
+    ok('H8 [' + a.name + '] GENERATE IS DISARMED AT THE WRITE, not a render later',
+      !armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+    ok('H8 [' + a.name + '] the note tells her the tracker changed, instead of standing byte-identical',
+      txt(win, 'wlGateNote') !== noteBefore && /changed the tracker/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    ok('H8 [' + a.name + '] the note no longer announces a row count it cannot stand behind',
+      !/will settle/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    ok('H8 [' + a.name + '] the closed gate is spoken to a screen reader too',
+      /Generate is off/.test(txt(win, 'wlAnnounce')), txt(win, 'wlAnnounce'));
+    // THE IN-FLIGHT WINDOW, proved at the wire. Generate stays clickable on
+    // purpose, so "off" is only true if the click reaches no settle call.
+    const gensMid = genQs().length;
+    win.document.getElementById('wlGenerateBtn').click();
+    await settle(80);
+    ok('H8 [' + a.name + '] a click inside the re-read window opens no confirm',
+      win.document.getElementById('wlConfirm').hidden);
+    ok('H8 [' + a.name + '] and reaches no settle call at all',
+      genQs().length === gensMid, 'before=' + gensMid + ' after=' + genQs().length);
+    await settle(900);
+    ok('H8 [' + a.name + '] the gate re-arms itself once the new letter is on screen, with no reload',
+      armed(win), txt(win, 'wlGateNote'));
+    await clickGenerate(win);
+    const afterQs = genQs()[genQs().length - 1] || '';
+    ok('H8 [' + a.name + '] the click after the write carries the NEW letter, not the one she approved',
+      afterQs.indexOf('expectedFactsHash=' + encodeURIComponent(HASH_NOW)) > 0
+      && afterQs.indexOf(encodeURIComponent(HASH_APPROVED)) < 0, afterQs);
+  }
+
+  // ROW ACTION THEN FAILED RENDER, for every one of the four. The re-render is
+  // the thing that would have re-stored a hash; when it fails there is none, and
+  // the gate must stay shut rather than falling back to the pre-write review.
+  for (const a of ACTIONS) {
+    plan.renderFail = null;
+    plan.letterHash = HASH_APPROVED;
+    await rearm(win);
+    ok('H8 FAILED RENDER [' + a.name + '] armed before the write', armed(win), txt(win, 'wlGateNote'));
+    plan.renderFail = 'render backend down';
+    const gensBefore = genQs().length;
+    a.click();
+    await settle(1000);
+    ok('H8 FAILED RENDER [' + a.name + '] GENERATE STAYS DISARMED',
+      !armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+    ok('H8 FAILED RENDER [' + a.name + '] the operator sees the failure in the letter panel',
+      /could not be rendered/.test(htm(win, 'wlRenderPanel')), htm(win, 'wlRenderPanel').slice(0, 160));
+    ok('H8 FAILED RENDER [' + a.name + '] the note names the render, not a row count',
+      /did not render/.test(txt(win, 'wlGateNote')) && !/will settle/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    win.document.getElementById('wlGenerateBtn').click();
+    await settle(80);
+    ok('H8 FAILED RENDER [' + a.name + '] a click reaches no settle call at all',
+      genQs().length === gensBefore, 'before=' + gensBefore + ' after=' + genQs().length);
+  }
+  plan.renderFail = null;
+
+  // THE WHOLE POINT, stated once at the wire: everything this section sent.
+  const unhashedAfterWrites = genQs().slice(genBaselineH8).filter((qs) => qs.indexOf('expectedFactsHash=') < 0);
+  ok('H8 AT THE WIRE: no click after any row action reached opGenerateMonthlyWireLetter without a hash',
+    unhashedAfterWrites.length === 0, unhashedAfterWrites.join(' | '));
+  ok('H8 all four writing routes were actually exercised',
+    ['opMarkMoneyReceived', 'diagCorrectTrackerDate', 'opParkRow', 'opUnparkRow'].every((r) => plan.writes.indexOf(r) > -1),
+    plan.writes.join(','));
+
+  // ---- P3: 'ok' is recorded only for a render that stored something --------
+  plan.letterHash = HASH_APPROVED;
+  plan.renderEmpty = true;
+  await rearm(win);
+  ok('P3 a render that answers with no rows does NOT arm Generate',
+    !armed(win), txt(win, 'wlGateNote'));
+  ok('P3 and it reads as nothing to wire, not as a failed render and not as a row count',
+    /until a row is ready to wire/.test(txt(win, 'wlGateNote'))
+    && !/did not render/.test(txt(win, 'wlGateNote'))
+    && !/will settle/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  const gensEmpty = genQs().length;
+  win.document.getElementById('wlGenerateBtn').click();
+  await settle(80);
+  ok('P3 a click on that month reaches no settle call',
+    genQs().length === gensEmpty, 'before=' + gensEmpty + ' after=' + genQs().length);
+  plan.renderEmpty = false;
 
   win.close();
   console.log('\n' + pass + ' pass, ' + fail + ' fail');
