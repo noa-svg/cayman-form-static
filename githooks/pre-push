@@ -142,6 +142,8 @@ HARNESSES=(
   zz-console-wire-letter-refusal
 
   zz-console-silent-ok-contract
+
+  zz-console-approved-hash
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

@@ -75,3 +75,5 @@ test/*
 !test/zz-console-wire-letter-refusal.cjs
 
 !test/zz-console-silent-ok-contract.cjs
+
+!test/zz-console-approved-hash.cjs

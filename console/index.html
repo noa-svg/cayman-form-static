@@ -10259,6 +10259,36 @@ document.addEventListener('keydown',function(e){
     if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
     return h;
   }
+  // A REFUSED GENERATE, said in the operator's words (ju-service
+  // domain/wireLetterFacts.ts's diffWireLetterFacts). The server can only name
+  // rows by MASTER_RID, or by `row<n>` for a row that carries none, because no
+  // name and no amount is allowed to cross the wire. Neither of those reads as
+  // a sentence, so they are spoken as a reference and a row number here, and
+  // the reason is built from the three lists rather than printing the JSON.
+  function wlRowKeyWords(key){
+    var m=/^row(\d+)$/.exec(String(key==null?'':key));
+    return m?('row '+m[1]+' on the tab'):('reference '+String(key));
+  }
+  function wlFactsMismatchList(label,keys){
+    if(!keys||!keys.length)return '';
+    return '<div style="margin-top:6px"><strong>'+esc2(label)+'</strong> '
+      +keys.map(function(k){return esc2(wlRowKeyWords(k));}).join(', ')+'</div>';
+  }
+  function wlFactsMismatchHtml(m){
+    var mm=m||{};
+    var named=((mm.changed||[]).length+(mm.removed||[]).length+(mm.added||[]).length)>0;
+    var h='<div class="t-danger"><strong>Nothing was generated and nothing was settled.</strong>'
+      +'<br>This month changed on the tracker after the letter you reviewed was rendered.</div>';
+    h+=wlFactsMismatchList('Edited since you looked:',mm.changed);
+    h+=wlFactsMismatchList('Gone since you looked:',mm.removed);
+    h+=wlFactsMismatchList('Added since you looked:',mm.added);
+    if(!named){
+      h+='<div style="margin-top:6px">'+esc2((mm.reasons||[]).join('; ')
+        ||'The letter no longer matches the one you reviewed.')+'</div>';
+    }
+    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above have been re-read from the tracker as it stands now. Review them, then generate again.</div>';
+    return h;
+  }
   // ---- THE MONTH WORKLIST render layer (rebuilt 2026-09-07, design approved
   // by Noa) --------------------------------------------------------------
   // Rows are grouped by the JOB they need, not by the tracker token they
@@ -11292,7 +11322,15 @@ document.addEventListener('keydown',function(e){
     // in place and leaves every other panel exactly as it was, because this is
     // a reading aid on a money screen, not a precondition for one.
     var renderSeq=0;
+    // WHAT THE OPERATOR IS APPROVING, kept so the generate click can carry it
+    // back (ju-service domain/wireLetterFacts.ts). Ids and digests only: a
+    // name, an amount and a bank line never ride in a query string. Null
+    // whenever the panel is not showing a finished render of the CURRENT month
+    // and currency, and generate then runs unchecked exactly as it did before
+    // this existed rather than being blocked by a hash nobody can produce.
+    var wlApproved=null;
     function renderLetter(){
+      wlApproved=null;
       var host=document.getElementById('wlRenderPanel');
       if(!host)return;
       var month=wlViewMonth();
@@ -11315,6 +11353,10 @@ document.addEventListener('keydown',function(e){
           body.innerHTML='<div class="t-muted">No '+esc2(ccy)+' row is on this month&#8217;s letter yet, so there is nothing to render.</div>';
           return;
         }
+        // The letter about to be drawn IS the one generate will be held to. An
+        // older ju-service that returns no factsHash leaves this null, and the
+        // generate call then carries nothing.
+        if(r.factsHash)wlApproved={month:month,currency:ccy,hash:String(r.factsHash),rowFacts:String(r.rowFacts||'')};
         // The composer's own HTML carries print CSS. Injected into a sandboxed
         // frame rather than the page, so it cannot restyle every other panel on
         // this screen, and so nothing in it can script against the console.
@@ -11593,8 +11635,27 @@ document.addEventListener('keydown',function(e){
       genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
       setResult('<div class="t-muted">Generating and settling...</div>','');
       var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
+      // THE LETTER ON SCREEN, echoed back so the server can refuse a batch the
+      // sheet changed underneath it (routes/consoledispatch.ts reads
+      // expectedFactsHash and expectedRowFacts). Sent only when the rendered
+      // letter is this exact month and currency; with no render behind it
+      // nothing is sent and the server generates unchecked, as before.
+      var facts=(wlApproved&&wlApproved.hash&&wlApproved.month===snap.month&&wlApproved.currency===snap.currency)?wlApproved:null;
+      var factsQs=facts?('&expectedFactsHash='+encodeURIComponent(facts.hash)
+        +'&expectedRowFacts='+encodeURIComponent(facts.rowFacts)):'';
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+factsQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
+        // The approved-letter refusal, BEFORE the generic error line: the
+        // server's own sentence names row keys, and a key is not something an
+        // operator can act on until it is turned back into a row.
+        if(r&&r.factsMismatch){
+          genBtn.disabled=false;
+          wlCloseGate('This month changed since the letter you reviewed. Review again before generating.');
+          setResult(wlFactsMismatchHtml(r.factsMismatch),'');
+          wlAnnounce('Nothing was settled: this month changed since the letter you reviewed.');
+          peekRows();renderLetter();
+          return;
+        }
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         // THE SAME GUARD THE VERIFY PATH HAS HAD SINCE THE FIRST LIVE RUN, which
         // this path never got (2026-09-10). The server returns ok:true with
