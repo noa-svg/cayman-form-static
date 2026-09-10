@@ -8951,7 +8951,20 @@ document.addEventListener('keydown',function(e){
             rpGo.disabled=true;rpGo.textContent='Pausing...';
             dStatus('Pausing reminders...','');
             apiFetch('?api=opPauseReminders&processId='+encodeURIComponent(currentPid)+'&reason='+encodeURIComponent(why),false,currentEngine).then(function(r){
-              if(r&&r.ok){rpForm.remove();dStatus('Automatic reminders paused. Nothing further will be sent until you resume.','ok');setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);}
+              if(r&&r.ok){
+                rpForm.remove();
+                // routes/reminderpause.ts:83. A re-pause is IDEMPOTENT: the
+                // session keeps its original reason and timestamp, so the
+                // reason just typed is discarded and the answer comes back
+                // ok:true with alreadyPaused. This line said "paused" over
+                // that, so a pause re-stated for a new reason silently kept
+                // the old one and the paused-list carried a reason nobody had
+                // chosen. actionOutcome names the reason the server actually
+                // holds, in the drawer's own rp-note wording.
+                var out_=actionOutcome(r);
+                dStatus('Automatic reminders paused. Nothing further will be sent until you resume.'+actionOutcomeText(r),out_.clean?'ok':'error');
+                setTimeout(function(){if(currentPid)openDrawer(currentPid);},600);
+              }
               else{rpGo.disabled=false;rpGo.textContent='Pause';dStatus('Could not pause'+((r&&r.error)?(': '+r.error):'.'),'error');}
             }).catch(function(err){
               rpGo.disabled=false;rpGo.textContent='Pause';
