@@ -7777,6 +7777,153 @@ document.addEventListener('keydown',function(e){
   // apiFetch's base so an action on a ju-service-born process reaches
   // ju-service, not GAS.
   var currentEngine=GW;
+  // ====================================================================
+  // THE SILENT-OK CLASS (2026-09-10).
+  //
+  // A route answers ok:true and says in a SUB-FIELD that it did nothing, or
+  // that part of it failed. apiFetch throws on any {ok:false} (2026-07-17),
+  // so this console is well defended against a refusal and was, until this
+  // change, completely blind to a no-op: 32 of its 33 action call sites
+  // branched on `ok` alone. companyStamp was the single exception, and it had
+  // to know about `requeue.requeued` by hand at its own call site.
+  //
+  // SILENT_OK_FIELDS is the ONE declaration of those fields. actionOutcome()
+  // reads it and every action funnels through it, so a route that grows a new
+  // "did nothing" field is one table entry rather than 33 edits, and
+  // test/zz-console-silent-ok-contract.cjs FAILS when such a field exists on a
+  // route this console calls and is not declared here.
+  //
+  // WORDING RULE, the same one the wire-letter and money-received fixes
+  // followed: the server already knows the answer. Where it sends a sentence
+  // (draftError, `note`, a per-row `reason`/`detail`) that sentence is what
+  // the operator reads. Where it does not, the FIELD and the ROW are NAMED
+  // rather than described, because the useful thing is the row she can open.
+  // No operator-facing prose is invented in this table.
+  var SILENT_OK_FIELDS=[
+    // routes/reminderpause.ts:83. A re-pause is idempotent and KEEPS the
+    // original reason and timestamp, so the reason just typed is discarded.
+    // The sentence is the one the drawer's own rp-note already renders for a
+    // paused process (see the isPaused block above).
+    {field:'alreadyPaused',note:function(v,r){
+      if(!v)return '';
+      return 'Automatic reminders paused'
+        +(r&&r.reason?': '+r.reason:'')
+        +(r&&r.pausedAt?' since '+String(r.pausedAt).slice(0,10):'');
+    }},
+    // domain/recordSignature.ts:903-907. The leg was already signed (or the
+    // request already completed), so the function returns BEFORE applying
+    // uploads: an attached hand-signed PDF is not stored.
+    {field:'replay',note:function(v,r){
+      if(!v)return '';
+      return 'replay: true'+(r&&r.signerXofY?'; signerXofY: '+r.signerXofY:'');
+    }},
+    // domain/updateSignerContact.ts:463,465,467,469 and the GAS twin
+    // CaymanOperatorApi.ts:528,530,532,534. Four independent legs of a
+    // reassign, each of which can fail with the reassign still ok:true. A
+    // stale sealed-doc identity or an unrevoked SIGN link read clean.
+    {field:'snapshotSyncError',note:function(v){return v?('snapshotSyncError: '+v):'';}},
+    {field:'signerDataClearError',note:function(v){return v?('signerDataClearError: '+v):'';}},
+    {field:'signerLinkRevokeError',note:function(v){return v?('signerLinkRevokeError: '+v):'';}},
+    {field:'auditLogError',note:function(v){return v?('auditLogError: '+v):'';}},
+    // routes/opparkrow.ts:465,470. A settled row is SKIPPED, never parked, and
+    // that is ok:true whenever some other row did park. alreadyParkedAll is
+    // ok:true with nothing written at all.
+    {field:'refusedSettled',note:function(v){
+      if(!v||!v.length)return '';
+      return 'refusedSettled: '+v.map(function(x){
+        return String(x.tab)+' row '+String(x.row)+' ('+String(x.execStatus||'')+')';
+      }).join(', ');
+    }},
+    {field:'alreadyParkedAll',note:function(v){return v?'alreadyParkedAll: true':'';}},
+    // routes/opparkrow.ts:410,469. The PARTIAL of the line above: some legs of
+    // one money event parked, others were already parked. Reported only in
+    // that partial case, because alreadyParkedAll already covers "none of it
+    // was written" and two notes for one fact is noise on a money screen.
+    {field:'alreadyParked',note:function(v,r){
+      if(!v||!v.length)return '';
+      if(!(r&&r.parked&&r.parked.length))return '';
+      return 'alreadyParked: '+v.map(function(x){
+        return String(x.tab)+' row '+String(x.row);
+      }).join(', ');
+    }},
+    {field:'writeErrors',note:function(v){
+      if(!v||!v.length)return '';
+      return 'writeErrors: '+v.map(function(x){
+        return String(x.tab)+' row '+String(x.row)+' ('+String(x.error||'')+')';
+      }).join(', ');
+    }},
+    // routes/diagcorrecttrackerdate.ts:198,207. The DATE cell already held the
+    // target value, so no write was issued. The server sends its own sentence
+    // in `note`; that is what is shown.
+    {field:'unchanged',note:function(v,r){
+      if(!v)return '';
+      return (r&&r.note)?String(r.note):'unchanged: true';
+    }},
+    // routes/transferformpeek.ts:341. Rows the eligibility gate refused
+    // because a cell could not be read. Never blocking, always a finding: an
+    // operator reviewing this list must not be handed a population one row
+    // short of the one on the tab.
+    {field:'refused',note:function(v){
+      if(!v||!v.length)return '';
+      return 'refused: '+v.map(function(x){
+        return 'row '+String(x.rowNum)+(x.name?' '+String(x.name):'')+' ('+String(x.reason||'')+')';
+      }).join(', ');
+    }},
+    // domain/generateWireLetter.ts:402,416. Per-row settlement stamps. A row
+    // whose stamp threw comes back ok:false INSIDE settled[] while the call
+    // itself is ok:true, so the letter printed money that never got settled.
+    {field:'settled',note:function(v){
+      if(!v||!v.length)return '';
+      var bad=v.filter(function(x){return x&&x.ok===false;});
+      if(!bad.length)return '';
+      return 'settled: '+bad.map(function(x){
+        return String(x.masterRid||'')+(x.name?' '+String(x.name):'')+' ('+String(x.detail||'')+')';
+      }).join(', ');
+    }},
+    // domain/generateWireLetter.ts:385-389,432. A row with no MASTER_RID is
+    // PRINTED on the letter and then not settled. Present only when non-empty,
+    // so its presence is always a finding.
+    {field:'unsettlable',note:function(v){
+      if(!v||!v.length)return '';
+      return 'unsettlable: '+v.map(function(x){
+        return 'row '+String(x.rowNum)+(x.name?' '+String(x.name):'')+' ('+String(x.reason||'')+')';
+      }).join(', ');
+    }},
+    // domain/generateWireLetter.ts:464,467. The draft is built AFTER the
+    // result object and a throw only attaches draftError - the call stays
+    // ok:true. The operator ticks "create draft", sees green, and no draft
+    // exists.
+    {field:'draftError',note:function(v){return v?('draftError: '+v):'';}},
+    {field:'draftSkipped',note:function(v){return v?('draftSkipped: '+v):'';}},
+    // domain/generateWireLetter.ts:299-309. The archetype of this whole class:
+    // ok:true, go:false, no document, nothing settled.
+    {field:'go',note:function(v,r){
+      if(v!==false)return '';
+      return 'go: false'+(r&&r.verdict?'; verdict: '+r.verdict:'');
+    }}
+  ];
+  // Every "the server did less than you asked" note carried by one result.
+  // clean===true means the answer had none of them, which is the ONLY reading
+  // under which a green status line is true.
+  function actionOutcome(r){
+    var notes=[];
+    if(r&&typeof r==='object'){
+      for(var i=0;i<SILENT_OK_FIELDS.length;i++){
+        var f=SILENT_OK_FIELDS[i];
+        if(!(f.field in r))continue;
+        var n='';
+        try{n=f.note(r[f.field],r)||'';}catch(e){n=f.field+': unreadable';}
+        if(n)notes.push(n);
+      }
+    }
+    return {clean:notes.length===0,notes:notes};
+  }
+  // One line, for a plain-text status element. ONE new phrase, deliberately
+  // flat: everything after it is the server's own words or a row id.
+  function actionOutcomeText(r){
+    var o=actionOutcome(r);
+    return o.clean?'':(' Server also reported: '+o.notes.join('; ')+'.');
+  }
   // CTO review finding (2026-08-02): esc2 is used to build double-quoted HTML
   // attributes (value=/data-note=/data-c=/href= etc) as well as text content,
   // but only escaped &/</> - a " in a name/email typed by an LP or
@@ -8616,7 +8763,15 @@ document.addEventListener('keydown',function(e){
           apiFetch(opt.q,false,opt.base).then(function(r){
             settle();
             if(r&&r.ok){
-              status(opt.ok?opt.ok(r):"Done.","ok");
+              // THE SILENT-OK FUNNEL (2026-09-10). Every RECOVERY_ACTIONS row
+              // lands here, so the class is closed for all of them at once
+              // rather than one call site at a time - which is how reassign
+              // (four independent legs, each able to fail under ok:true) and
+              // paperQualification (replay DISCARDS the uploaded scan) both
+              // read clean for months. A result carrying any declared no-op
+              // field is not an "ok" status: the row still needs the operator.
+              var out_=actionOutcome(r);
+              status((opt.ok?opt.ok(r):"Done.")+actionOutcomeText(r),out_.clean?"ok":"error");
               setTimeout(function(){if(currentPid)openDrawer(currentPid);},opt.reloadMs||900);
             }else{
               busy(false);

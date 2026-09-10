@@ -140,6 +140,8 @@ HARNESSES=(
   zz-console-money-received-truth
 
   zz-console-wire-letter-refusal
+
+  zz-console-silent-ok-contract
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure

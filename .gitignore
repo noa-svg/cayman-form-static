@@ -73,3 +73,5 @@ test/*
 !test/zz-console-money-received-truth.cjs
 
 !test/zz-console-wire-letter-refusal.cjs
+
+!test/zz-console-silent-ok-contract.cjs
