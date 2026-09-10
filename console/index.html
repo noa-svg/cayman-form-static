@@ -10442,6 +10442,14 @@ document.addEventListener('keydown',function(e){
     return '<strong>No '+ccy+' row is ready to wire.</strong><br>'+out.join('<br>');
   }
   function wlLetterHtml(transfers, ctx){
+    ctx = ctx || {};
+    // A refused row is a finding on a FULL list too, not only an empty one.
+    // Rendered from the server's own reason strings via the SILENT_OK_FIELDS
+    // table, so this panel and the operator read the same words the route
+    // wrote. Never blocking: transferformpeek.ts's own header says so.
+    var refusedHtml=(ctx.refused&&ctx.refused.length)
+      ? ('<div class="t-danger" style="padding:8px 12px">'+esc2(actionOutcomeText({refused:ctx.refused}).trim())+'</div>')
+      : '';
     var sortHd='<button type="button" data-sort="name">Name '+wlSortIcon('name')+'</button>'
       +'<button type="button" data-sort="type">Type '+wlSortIcon('type')+'</button>'
       +'<button type="button" data-sort="amount">Amount '+wlSortIcon('amount')+'</button>';
@@ -10456,8 +10464,8 @@ document.addEventListener('keydown',function(e){
       title:'Goes on a letter'+(rows.length?(' · '+rows.length):''),
       job:'these rows, in this currency, on this month’s letter',
       extra:rows.length?('<span style="margin-left:auto">'+sortHd+'</span>'):'',
-      body:body,
-      empty:wlLetterEmptyHtml_(ctx)
+      body:body?(refusedHtml+body):'',
+      empty:wlLetterEmptyHtml_(ctx)+refusedHtml
     });
   }
   // DONE was removed 2026-09-09 (Noa: "no thats shit"). It could only ever
@@ -10705,7 +10713,13 @@ document.addEventListener('keydown',function(e){
     // Additive fields from the 2026-09-07 ju-service currency fix. Defaulted,
     // never assumed: an older deployed service omits them and the empty state
     // falls back to the reasons it can still prove.
-    var wlLastExcluded=null,wlLastUnresolved=null;
+    // wlLastRefused (2026-09-10): routes/transferformpeek.ts:341 reports the
+    // rows the eligibility gate REFUSED because a cell could not be read. The
+    // peek stored `excluded` and `unresolvedCurrency` and dropped this one, so
+    // the pre-Generate review list could be short of rows that are physically
+    // on the tab, with nothing on screen saying so - the exact reading that
+    // route's own comment says must never happen.
+    var wlLastExcluded=null,wlLastUnresolved=null,wlLastRefused=null;
     // Everything the four groups are rendered from lives here, so one render
     // pass reads one set of facts. Three independently-writing peeks is how the
     // blocker summary and the artifact line would otherwise disagree with the
@@ -11099,7 +11113,8 @@ document.addEventListener('keydown',function(e){
         currency:(ccyEl&&ccyEl.value)||'NIS',
         needs:split.needs,
         excluded:wlLastExcluded,
-        unresolved:wlLastUnresolved
+        unresolved:wlLastUnresolved,
+        refused:wlLastRefused
       });
       wlRenderArtifact(split);
     }
@@ -11190,15 +11205,16 @@ document.addEventListener('keydown',function(e){
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
         wlLastTransfers=r.transfers;
         wlLastExcluded=r.excluded||null;
         wlLastUnresolved=r.unresolvedCurrency||null;
+        wlLastRefused=r.refused||null;
         renderWlRows();
         wlApplyEmptyBatchState(r.transfers);
       }).catch(function(err){
         if(rid!==peekSeq)return;
-        wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;
+        wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;
         wlCloseGate('Rows could not be loaded. Review again before generating.');
         rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div></div>';
       });
