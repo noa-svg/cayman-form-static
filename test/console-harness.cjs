@@ -128,9 +128,9 @@ function extractVarObj(name) {
 (function () {
   // CCY_ALIASES added 928c28c (Hebrew currency words); fmtAmount depends on it.
   const src = extractVar('CCY_SYMBOL') + ';' + extractVar('CCY_ALIASES') + ';' + extractFn('fmtAmount') + ';'
-    + extractFn('isTerminalStage') + ';' + extractFn('inflightTotals')
-    + '; return { fmtAmount: fmtAmount, inflightTotals: inflightTotals };';
-  const { fmtAmount, inflightTotals } = new Function(src)();
+    + extractFn('isTerminalStage') + ';' + extractFn('inflightTotals') + ';' + extractFn('unattributedTotals')
+    + '; return { fmtAmount: fmtAmount, inflightTotals: inflightTotals, unattributedTotals: unattributedTotals };';
+  const { fmtAmount, inflightTotals, unattributedTotals } = new Function(src)();
   ok('K2 Hebrew ccy word normalizes', fmtAmount(250000, 'שקל') === '₪250,000', fmtAmount(250000, 'שקל'));
   ok('K2 ILS symbol', fmtAmount(250000, 'ILS') === '₪250,000', fmtAmount(250000, 'ILS'));
   ok('K2 USD symbol', fmtAmount(50000, 'USD') === '$50,000', fmtAmount(50000, 'USD'));
@@ -146,6 +146,56 @@ function extractVarObj(name) {
   ]);
   ok('K2 totals per currency', t.ILS === 150000 && t.USD === 25000, JSON.stringify(t));
   ok('K2 empty rows -> empty totals', Object.keys(inflightTotals([])).length === 0);
+
+  // A LANE-LESS ROW IS NEVER THIS FUND'S MONEY (2026-09-10).
+  //
+  // Noa opened the Cayman board and it read "3,000,000 IN FLIGHT" in SHEKELS.
+  // The whole figure was one Israeli limited partnership's manual transfer row
+  // (manual__c27ed14e...), which carries ju-service's 'unknown' lane sentinel
+  // and is therefore shown on BOTH fund tabs so neither operator loses it. The
+  // Cayman fund's money is USD and it has no in-flight money at all, and the
+  // same 3,000,000 was simultaneously absent from Israel's total.
+  //
+  // Showing the row on both tabs is correct. Summing it into a tab's total is a
+  // separate act and it states something nobody can state: which fund's money
+  // it is. opAddManualTransferRow takes no lane and writes no registry row.
+  const laneless = [
+    { stage: 'needs_attention', amountNum: 3000000, ccy: 'ILS', lane: 'unknown' },
+    { stage: 'signing', amountNum: 100000, ccy: 'ILS', lane: 'israeli' },
+  ];
+  const lt = inflightTotals(laneless);
+  ok('K2 a lane-unknown row is NOT counted in a fund total', lt.ILS === 100000, JSON.stringify(lt));
+  const ut = unattributedTotals(laneless);
+  ok('K2 it is reported on its own, so the money is never simply lost', ut.ILS === 3000000, JSON.stringify(ut));
+  ok('K2 the two are disjoint: a laned row never appears as unattributed',
+    Object.keys(unattributedTotals([{ stage: 'signing', amountNum: 5, ccy: 'USD', lane: 'cayman' }])).length === 0);
+  // The sentinel is the literal string 'unknown', not emptiness. A row with no
+  // lane at all is an ordinary row of the tab it was fetched for, and folding
+  // the two together would silently drop every normal row out of the total.
+  ok('K2 a blank lane is NOT the unknown sentinel',
+    inflightTotals([{ stage: 'signing', amountNum: 7, ccy: 'USD', lane: '' }]).USD === 7);
+  ok('K2 a missing lane field is NOT the unknown sentinel',
+    inflightTotals([{ stage: 'signing', amountNum: 7, ccy: 'USD' }]).USD === 7);
+  // Terminal and figure-less rows stay excluded from BOTH, same as before.
+  ok('K2 unattributed still excludes terminal and figure-less rows',
+    Object.keys(unattributedTotals([
+      { stage: 'complete', amountNum: 1, ccy: 'ILS', lane: 'unknown' },
+      { stage: 'needs_attention', amountNum: null, ccy: 'ILS', lane: 'unknown' },
+    ])).length === 0);
+})();
+
+// ---- K2b: the lane-less row explains itself on the board ---------------------
+(function () {
+  // ju-service's routes/consolemanualrows.ts appends ' (lane not recorded)' to
+  // nextActionPhrase for this row, and its own comment states the reason: "a
+  // row appearing on both fund tabs with no explanation reads as a bug rather
+  // than as the honest statement it is". renderRows substitutes its own
+  // two-line manual copy and dropped that half, so Noa got an Israeli
+  // partnership sitting on the Cayman board with nothing saying why.
+  ok('K2b the manual row carries the lane-not-recorded marker',
+    /Tracked in the transfer form'\+\(laneless\?' &middot; lane not recorded':''\)/.test(html));
+  ok('K2b the marker is driven by the lane sentinel, not by the manual flag',
+    /var laneless=String\(\(r&&r\.lane\)\|\|''\)==='unknown';/.test(html));
 })();
 
 // ---- K3: silent-refresh scheduling -------------------------------------------

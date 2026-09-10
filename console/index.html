@@ -1321,6 +1321,10 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    the sidebar is collapsed to its icon rail (no room for a sum). */
 .ss-row.ss-total .ss-n { font-size: 13px; letter-spacing: 0.01em; }
 body.side-coll .ss-row.ss-total { display: none; }
+/* Money that belongs to neither fund's total. Quiet, never alarming: an
+   unattributed row is a fact about what was recorded, not a fault. */
+.ss-row.ss-total.ss-unattr .ss-n,
+.ss-row.ss-total.ss-unattr .ss-lbl { color: var(--color-sidebar-ink-sub); }
 
 /* Drawer: current-signer block (item 2) + per-signer timestamps (item 1). */
 .cursig {
@@ -6090,10 +6094,40 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   }
   // In-flight totals by currency for the sidebar. Terminal rows excluded; rows
   // with no captured amount contribute nothing.
+  // A row whose lane is the 'unknown' sentinel (ju-service
+  // routes/consolemanualrows.ts) is shown on BOTH fund tabs on purpose, so
+  // neither operator can lose it. SUMMING it into a tab's money total is a
+  // different act, and it says something false: on 2026-09-10 the Cayman
+  // sidebar read "3,000,000 IN FLIGHT" in SHEKELS for one Israeli limited
+  // partnership's manual transfer row, on a fund whose money is USD and which
+  // has no in-flight money at all. The same figure was simultaneously absent
+  // from Israel's total, where it belongs.
+  //
+  // The row is real and belongs on both tabs. What nobody can make is the
+  // ATTRIBUTION of its money to a fund: opAddManualTransferRow takes no lane
+  // and writes no registry row, so there is nothing to read one back from. So
+  // the money is reported on its own line, named, instead of being folded into
+  // a fund's number where it cannot be told apart.
+  //
+  // Both functions are self-contained on purpose: console-harness extracts them
+  // by a FIXED name list, so a shared lane_unknown_() helper would be invisible
+  // inside the extract and throw.
   function inflightTotals(rows){
     var t={};
     (rows||[]).forEach(function(r){
       if(isTerminalStage(r.stage))return;
+      if(String((r&&r.lane)||'')==='unknown')return;
+      if(r.amountNum==null||r.amountNum===''||isNaN(Number(r.amountNum)))return;
+      var c=String(r.ccy||'?').toUpperCase();
+      t[c]=(t[c]||0)+Number(r.amountNum);
+    });
+    return t;
+  }
+  function unattributedTotals(rows){
+    var t={};
+    (rows||[]).forEach(function(r){
+      if(isTerminalStage(r.stage))return;
+      if(String((r&&r.lane)||'')!=='unknown')return;
       if(r.amountNum==null||r.amountNum===''||isNaN(Number(r.amountNum)))return;
       var c=String(r.ccy||'?').toUpperCase();
       t[c]=(t[c]||0)+Number(r.amountNum);
@@ -6260,7 +6294,16 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // rather than repeated.
     var cleared=!!reviewedLine&&isAttnStage(st);
     var wordCls=manual?' muted':(attn?' warn':((dead||isCompletedStage(st)||cleared)?' muted':''));
-    var statSecond=manual?'<span class="rwait">Tracked in the transfer form</span>'
+    // ju-service appends ' (lane not recorded)' to nextActionPhrase for exactly
+    // this row, and its own comment says why: "a row appearing on both fund
+    // tabs with no explanation reads as a bug rather than as the honest
+    // statement it is". This branch substitutes its own copy and dropped that
+    // half on the floor, so the operator got an Israeli partnership on the
+    // Cayman board with nothing saying why. The marker is put back here rather
+    // than by rendering the server phrase, because the two-line manual copy is
+    // the shipped wording and only the missing half is the defect.
+    var laneless=String((r&&r.lane)||'')==='unknown';
+    var statSecond=manual?('<span class="rwait">Tracked in the transfer form'+(laneless?' &middot; lane not recorded':'')+'</span>')
       :(attn?attnBadgeHtml(r,folded):(cleared?'':(reviewedLine?('<span class="rwait">'+esc2(reviewedLine)+'</span>'):waitLineHtml(r))));
     return '<div class="row'+done+dead+(attn?' attn':'')+'" data-pid="'+(r.pid||'')+'" data-base="'+esc2(r._engine||GW)+'" tabindex="0" role="button">'
       +'<span class="rn">'+nameCellHtml(r)+'</span>'
@@ -6770,9 +6813,12 @@ document.addEventListener('keydown',function(e){
     var tot=document.getElementById("ssTotals");
     if(tot){
       var t=inflightTotals(rows);
+      var u=unattributedTotals(rows);
       tot.innerHTML=Object.keys(t).sort().map(function(c){
         return '<div class="ss-row ss-total" title="In flight - '+esc2(c)+'"><span class="ss-n">'+esc2(fmtAmount(t[c],c))+'</span><span class="ss-lbl">In flight</span></div>';
-      }).join('');
+      }).concat(Object.keys(u).sort().map(function(c){
+        return '<div class="ss-row ss-total ss-unattr" title="No lane is recorded on this row, so it is shown on both fund tabs and counted as neither fund\'s money"><span class="ss-n">'+esc2(fmtAmount(u[c],c))+'</span><span class="ss-lbl">Lane not recorded</span></div>';
+      })).join('');
     }
     el.hidden=false;
   }
@@ -7853,6 +7899,13 @@ document.addEventListener('keydown',function(e){
     {field:'snapshotSyncError',note:function(v){return v?('snapshotSyncError: '+v):'';}},
     {field:'signerDataClearError',note:function(v){return v?('signerDataClearError: '+v):'';}},
     {field:'signerLinkRevokeError',note:function(v){return v?('signerLinkRevokeError: '+v):'';}},
+    // domain/generateWireLetter.ts:194,454. A verify-only run returns ok:true
+    // and writes no Drive artifact, and the server already states why in the
+    // field's own value. Surfaced rather than suppressed: "the letter you just
+    // generated produced no file" is exactly the class this table exists for,
+    // and the alternative is an operator who believes a document was written.
+    // The server's sentence is echoed verbatim; no wording is invented here.
+    {field:'driveSkipped',note:function(v){return v?String(v):'';}},
     {field:'auditLogError',note:function(v){return v?('auditLogError: '+v):'';}},
     // routes/opparkrow.ts:465,470. A settled row is SKIPPED, never parked, and
     // that is ok:true whenever some other row did park. alreadyParkedAll is
