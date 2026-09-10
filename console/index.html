@@ -11238,13 +11238,31 @@ document.addEventListener('keydown',function(e){
     //
     // The close happens HERE, synchronously with the write, not 600ms later
     // behind the render, so the unhashed window never opens at all.
-    // WHAT THE LAST WRITE WAS, held until the re-review that follows it has
-    // said so on screen. Round 4 closed the gate and re-armed it correctly and
-    // the operator still had no way to tell: the armed note after the re-render
-    // was byte-for-byte the note before the write.
-    var wlWriteNote_=null;
+    // EVERY WRITE SINCE THE OPERATOR LAST SAW A LETTER, held until she has
+    // actually seen the letter that replaced the one she approved. Round 4
+    // closed the gate and re-armed it correctly and the operator still had no
+    // way to tell: the armed note after the re-render was byte-for-byte the
+    // note before the write.
+    //
+    // ROUND 5 SAID IT AND THEN WIPED IT (2026-09-10, round 6). The flag was
+    // consumed by the first review that ARMED, so the warning lived exactly
+    // until the next review overwrote the note. Two row clicks less than 600ms
+    // apart is enough: the first re-review consumes the flag and paints the
+    // warning, the second re-review lands ~600ms later with nothing to say and
+    // repaints the note byte-identical to the pre-write one. The operator is
+    // then holding a screen that states nothing happened. A warning that erases
+    // itself is not a warning, so this is now a LIST that survives every
+    // re-review and is emptied only where she has been shown the substitution
+    // and acted on it (the Generate confirm), or where the different letter is
+    // her own doing (the month and currency selects).
+    var wlWriteNotes_=[],wlWriteSaid_='';
+    function wlWritePending_(){ return wlWriteNotes_.join(', '); }
+    function wlWritesSeen_(){ wlWriteNotes_=[];wlWriteSaid_=''; }
     function wlAfterTrackerWrite(what){
-      wlWriteNote_=what;
+      // Every write since she last saw a letter, not just the newest: two
+      // actions inside one re-read window are two facts, and naming only the
+      // second under-reports what moved underneath her.
+      if(wlWriteNotes_.indexOf(what)<0)wlWriteNotes_.push(what);
       wlCloseGate('You changed the tracker ('+what+'), so the letter you reviewed no longer describes it. Re-reading the month now. Generate arms itself once the new letter is on screen.');
       // The gate state, spoken, appended to the action's own outcome rather
       // than replacing it: an operator who cannot see the button otherwise has
@@ -11687,11 +11705,11 @@ document.addEventListener('keydown',function(e){
     // hidden, so all three of these told the operator to click something she
     // cannot see. Each one already re-reads and re-reviews on the very next
     // line; the copy now says that instead of asking her for it.
-    // wlWriteNote_ is dropped here on purpose: a different month or currency is
-    // a different letter by her own doing, not a letter substituted underneath
-    // one she had approved.
-    monthEl.onchange=function(){wlWriteNote_=null;wlCloseGate('Month changed. Re-reading it now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
-    ccyEl.onchange=function(){wlWriteNote_=null;wlCloseGate('Currency changed. Re-reading the month now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
+    // The pending writes are dropped here on purpose: a different month or
+    // currency is a different letter by her own doing, not a letter substituted
+    // underneath one she had approved.
+    monthEl.onchange=function(){wlWritesSeen_();wlCloseGate('Month changed. Re-reading it now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
+    ccyEl.onchange=function(){wlWritesSeen_();wlCloseGate('Currency changed. Re-reading the month now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
@@ -11805,19 +11823,64 @@ document.addEventListener('keydown',function(e){
     // It still arms the gate exactly as before, so Generate is armed only by a
     // review of the CURRENT inputs, and because the review now re-runs on every
     // change the two can no longer drift apart.
+    // A PERMANENT FALSE PROMISE, FIXED AS A CLASS (2026-09-10, round 6). Every
+    // path into runReview arrives behind a TRANSIENT note: "the letter is being
+    // re-read", "re-reading the month now", each one promising that Generate
+    // arms itself once the new letter is on screen. Those sentences are only
+    // true if the review that follows writes a note of its own. Every early
+    // return below wrote none, so the transient promise stayed on screen
+    // forever, naming an event that would never happen and no way out.
+    //
+    // The reported instance: with the Struck-NAV override in an invalid state,
+    // ANY other re-read (a month change, a tracker write) reached the invalid
+    // return above and stranded "The letter is being re-read. Generate arms
+    // itself once the new letter is on screen." permanently. It is not the only
+    // one - a null body, an ok:false review and an unreachable server stranded
+    // exactly the same sentence - so all five now end on a reason and a
+    // control, through one door.
+    function wlReviewStop_(why){ wlCloseGate(why); wlAnnounce(why); }
+    // The review's own way back, the shape the render panel and the rows panel
+    // already have: the Review button is hidden (the review runs itself), so a
+    // failed review that names no control names nothing.
+    function wlReviewFailedHtml(why){
+      return '<div class="t-danger">'+esc2(why)+'</div>'
+        +'<div style="margin-top:6px"><button type="button" id="wlReviewRetry" class="btn btn-quiet">Retry the review</button></div>';
+    }
+    var WL_REVIEW_GATE_NOTE_='The review did not complete, so Generate stays off. Retry the review above; it arms itself once the review lands.';
+    // Wired to the panel, not to the node: wlReviewFailedHtml redraws the button
+    // on every failure.
+    if(findEl)findEl.addEventListener('click',function(e){
+      var t=e&&e.target;
+      var btn=(t&&t.closest)?t.closest('#wlReviewRetry'):null;
+      if(!btn)return;
+      btn.disabled=true;
+      wlRelookAndReview({keepResult:true});
+    });
     function runReview(opts){
       // Tolerant of any argument: this is reached through .then(after,after) and
       // through DOM handlers, so it can be handed an Error or an Event.
       var keepResult=!!(opts&&opts.keepResult===true);
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Choose a month first.</div>','');return;}
-      if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){
+        if(!keepResult)setResult('<div class="t-danger">Choose a month first.</div>','');
+        wlReviewStop_('No month is selected, so there is nothing to review. Pick a month above; Generate arms itself once its letter is on screen.');
+        return;
+      }
+      if(wlNavMonthInvalid()){
+        // The gate note, not just the result line: this is the state the
+        // operator is LEFT in, and the result line is hers (a Verification copy
+        // and its Drive link live there) whenever a re-read reached this
+        // through .then rather than through her own click.
+        if(!keepResult)setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');
+        wlReviewStop_('Struck-NAV month must be YYYY-MM, month 01 to 12. Fix the Struck NAV month (override) field above, or clear it to use the derived close. Generate stays off until it is valid.');
+        return;
+      }
       reviewBtn.disabled=true;wlCloseGate('');
       findEl.innerHTML='<div class="t-muted">Reviewing...</div>';
       if(!keepResult)setResult('','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, JU_API).then(function(r){
         reviewBtn.disabled=false;
-        if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
+        if(!r){findEl.innerHTML=wlReviewFailedHtml('No response.');wlReviewStop_(WL_REVIEW_GATE_NOTE_);return;}
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
           // The server's blockers join the ones this screen already knows
@@ -11828,7 +11891,7 @@ document.addEventListener('keydown',function(e){
           wlRender();
           return;
         }
-        if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
+        if(!r.ok){findEl.innerHTML=wlReviewFailedHtml(r.error||'Review failed.');wlReviewStop_(WL_REVIEW_GATE_NOTE_);return;}
         wlServerBlocking=null;
         // FAIL CLOSED ON A FAILED RENDER (2026-09-10). The review and the render
         // are two different calls, so the review can pass cleanly while the
@@ -11887,22 +11950,28 @@ document.addEventListener('keydown',function(e){
         var armedMsg='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
           +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
           +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
-        // THE SUBSTITUTION, SAID OUT LOUD (2026-09-10, round 5). A row action
-        // whose re-render succeeded produced this exact sentence again, so the
-        // screen was identical before and after and the only record that the
-        // approved letter had been replaced was the hash on the wire. Held
-        // until a review ARMS, because that is the moment there is a new letter
-        // to be replaced BY; cleared as soon as it has been said once, and on a
-        // month or currency change, where "a different letter" is the operator's
-        // own doing and needs no warning.
-        var replaced=wlWriteNote_;
-        wlWriteNote_=null;
+        // THE SUBSTITUTION, SAID OUT LOUD AND KEPT THERE (round 5, corrected in
+        // round 6). A row action whose re-render succeeded produced this exact
+        // sentence again, so the screen was identical before and after and the
+        // only record that the approved letter had been replaced was the hash
+        // on the wire. Round 5's warning was then consumed by the review that
+        // said it, so the NEXT review repainted the pre-write sentence and the
+        // operator was left holding a screen that says nothing happened.
+        //
+        // Not consumed here. The list stands on every armed note until the
+        // confirm restates it (genBtn.onclick), which is the point she has both
+        // seen the new letter and acted on it.
+        var replaced=wlWritePending_();
         if(replaced)armedMsg+=' This is a NEW letter, re-read after you changed the tracker ('+replaced+'). It is not the one you were looking at before.';
         wlGateNote_(armedMsg,!!replaced);
-        if(replaced)wlAnnounce(armedMsg);
+        // Spoken once per distinct set of writes: the note is persistent, the
+        // live region is not, and re-reading the same sentence on every later
+        // review is how a screen reader teaches its user to ignore it.
+        if(replaced&&replaced!==wlWriteSaid_){wlWriteSaid_=replaced;wlAnnounce(armedMsg);}
       }).catch(function(err){
         reviewBtn.disabled=false;
-        findEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        findEl.innerHTML=wlReviewFailedHtml((err&&err.serverError)||'Could not reach the server.');
+        wlReviewStop_(WL_REVIEW_GATE_NOTE_);
       });
     };
     // Generate ARMS a confirm; it no longer commits on the first click. The
@@ -11927,11 +11996,20 @@ document.addEventListener('keydown',function(e){
         return;
       }
       var c=lastGo.counts;
+      // THE SUBSTITUTION RIDES ALL THE WAY TO THE LAST SCREEN BEFORE THE MONEY
+      // MOVES. The persistent note has carried it since the write; this is the
+      // step she has to read to settle, so it says it once more here rather
+      // than relying on her having read the small print behind the dialog.
+      var replaced_=wlWritePending_();
       confirmMsgEl.innerHTML='<strong>Settle '+(c?(c.total+' row'+(c.total===1?'':'s')):'this batch')+' on '+esc2(lastGo.month)+' ('+esc2(lastGo.currency)+')?</strong>'
         +(c?('<br>Incoming '+c.incoming+', outgoing '+c.outgoing+'.'):'')
+        +(replaced_?('<br>This letter was re-read after you changed the tracker ('+esc2(replaced_)+'). It is not the one you were looking at before.'):'')
         +'<br>This stamps SETTLED_AT and moves each row to a terminal execution status on the tracker. It cannot be undone from here.'
         +(draftEl.checked?'<br>A covering email will also be drafted in Gmail (drafted, never sent).':'');
       confirmEl.hidden=false;
+      // SEEN. Not on the arm, not on a timer: the warning is spent only once it
+      // has been put in front of her at the point of decision.
+      wlWritesSeen_();
       confirmGoEl.focus();
     };
     if(reviewBtn)reviewBtn.onclick=wlRelookAndReview;
@@ -12155,9 +12233,15 @@ document.addEventListener('keydown',function(e){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
-        // BOTH FILL PANELS WRITE A LETTER FACT. The amount and the bank line are
-        // the two cells wireLetterFacts.ts digests per row, so either write makes
-        // the approved hash describe a sheet that no longer exists. Routed from
+        // BOTH FILL PANELS CHANGE THE LETTER, by two different routes. The
+        // amount is one of the cells wireLetterFacts.ts digests per row, so an
+        // amount write makes the approved hash describe a sheet that no longer
+        // exists. The bank line is deliberately NOT hashed (that file's own
+        // header: "Deliberately NOT hashed: dates, generation ids, bank-detail
+        // formatting, HTML, ordering") - but it is PRINTED on the letter the
+        // operator approved, so a bank write leaves the letter on screen
+        // describing a tracker that has moved, with the hash still matching.
+        // The hash catches the first; the gate has to catch both. Routed from
         // the shared shell rather than from each config, so a third fill panel
         // added to this shape cannot be born without it.
         wlNoteTrackerWrite_(cfg.wroteWhat);

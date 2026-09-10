@@ -238,6 +238,12 @@ const plan = {
   renderEmpty: false,// when set, opRenderMonthLetter answers ok with no rows
   holdRender: null, // when set, opRenderMonthLetter parks here until released
   peekRowsFail: null,// when set, opPeekMonthTransfers refuses with this sentence
+  // The three ways the REVIEW itself ends without a verdict. Each one used to
+  // return out of runReview writing nothing, leaving the transient "the letter
+  // is being re-read" promise standing forever (H13).
+  reviewFail: null, // an ok:false dry run, which apiFetch turns into a throw
+  reviewBare: false,// a body with no ok field at all, the `!r.ok` arm
+  reviewNull: false,// no body at all, the `!r` arm
   calls: [],
   writes: [],       // every tracker-write route the console actually called
 };
@@ -308,7 +314,12 @@ function answerFor(q) {
     return { ok: true, transfers: [{ rowNum: 12 }], html: '<p>the letter</p>', factsHash: plan.letterHash, rowFacts: ROWFACTS_APPROVED };
   }
   if (api === 'opGenerateMonthlyWireLetter') {
-    if (/dryRun=true/.test(q)) return { ok: true, go: true, counts: { incoming: 0, outgoing: 1, total: 1 } };
+    if (/dryRun=true/.test(q)) {
+      if (plan.reviewFail) return { ok: false, error: plan.reviewFail };
+      if (plan.reviewBare) return {};
+      if (plan.reviewNull) return null;
+      return { ok: true, go: true, counts: { incoming: 0, outgoing: 1, total: 1 } };
+    }
     if (/verifyOnly=true/.test(q)) return plan.verify;
     return plan.generate;
   }
@@ -1067,21 +1078,74 @@ if (render.length > 0) {
     /NEW letter/.test(txt(win, 'wlAnnounce')), txt(win, 'wlAnnounce'));
   ok('H11 it still says what Generate will do, so the alarm did not eat the instruction',
     /Generate will settle/.test(changedNote), changedNote);
-  // It is a signal about ONE substitution, so it clears once said. A warning
-  // that never goes away is read as decoration by the second month.
+  // ---- H12: THE WARNING DOES NOT ERASE ITSELF ------------------------------
+  // Round 5 consumed the flag in the review that SAID it, so the warning lived
+  // exactly until the next review repainted the note - measured at ~600ms, and
+  // the note it was replaced by was byte-identical to the pre-write one. The
+  // state the operator was left holding therefore said nothing had happened.
   //
   // Re-reviewed through the STRUCK-NAV OVERRIDE, not through the month select:
-  // the month and currency handlers clear the flag themselves, so re-arming
-  // through either of them proves nothing about the clear-on-consumption. The
-  // override fires runReview with the flag untouched, which is the only path
-  // where the consumption clear is the thing doing the work.
+  // the month and currency handlers clear the pending writes themselves (a
+  // different letter by her own doing), so re-arming through either of them
+  // proves nothing about persistence. The override fires runReview with the
+  // list untouched, which is the path the wipe actually happened on.
   const dryBeforeStick = dryRuns();
   typeNav('2026-08');
   await settle(1000);
-  ok('H11 the override re-ran the review with nothing else changed',
+  ok('H12 the override re-ran the review with nothing else changed',
     dryRuns() > dryBeforeStick && armed(win), txt(win, 'wlGateNote'));
-  ok('H11 THE MARK CLEARS once said, rather than sticking on every later review',
-    noteClass() === '' && !/NEW letter/.test(txt(win, 'wlGateNote')),
+  ok('H12 THE WARNING SURVIVES the next review instead of being wiped by it',
+    /NEW letter/.test(txt(win, 'wlGateNote')) && noteClass() === 'wl-gate-changed',
+    txt(win, 'wlGateNote') + ' :: class=' + noteClass());
+  typeNav('');
+  await settle(900);
+  ok('H12 and it survives the review after that one too',
+    armed(win) && /NEW letter/.test(txt(win, 'wlGateNote')) && noteClass() === 'wl-gate-changed',
+    txt(win, 'wlGateNote') + ' :: class=' + noteClass());
+
+  // THE REPORTED REPRODUCTION: two row actions less than 600ms apart. The first
+  // re-review painted the warning; the second landed behind it with nothing
+  // left to say and repainted the pre-write sentence over it.
+  plan.letterHash = HASH_APPROVED;
+  await rearm(win);
+  const cleanNote2 = txt(win, 'wlGateNote');
+  ok('H12 RAPID armed clean before the two clicks',
+    armed(win) && noteClass() === '' && !/NEW letter/.test(cleanNote2), cleanNote2 + ' :: class=' + noteClass());
+  plan.letterHash = HASH_NOW;
+  q('#wlGroups [data-act="markMoneyReceived"]').click();
+  await settle(300);   // inside the first write's own 600ms re-read window
+  q('#wlParked [data-act="unparkRow"]').click();
+  await settle(700);   // the first re-review has landed and said it
+  ok('H12 RAPID the warning is on the note after the first re-review',
+    /NEW letter/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  await settle(1400);  // the second write's re-review has landed too
+  const afterBoth = txt(win, 'wlGateNote');
+  ok('H12 RAPID THE SECOND RE-REVIEW DOES NOT WIPE IT',
+    /NEW letter/.test(afterBoth) && noteClass() === 'wl-gate-changed', afterBoth + ' :: class=' + noteClass());
+  ok('H12 RAPID so the note she is left holding is not byte-identical to the pre-write one',
+    afterBoth !== cleanNote2, afterBoth);
+  ok('H12 RAPID and it names BOTH changes, not only the one that spoke last',
+    /money arrived/.test(afterBoth) && /un-parked/.test(afterBoth), afterBoth);
+  ok('H12 RAPID the gate is armed while it says so, so this is a warning and not a block',
+    armed(win), 'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+
+  // SPENT ONLY WHERE SHE HAS SEEN IT AT THE POINT OF DECISION. The confirm is
+  // the last screen before rows are settled, so the substitution is restated
+  // there and only then does the note stop carrying it.
+  win.document.getElementById('wlGenerateBtn').click();
+  await settle(60);
+  const cm = htm(win, 'wlConfirmMsg');
+  ok('H12 SEEN the confirm step restates the substitution before anything settles',
+    /re-read after you changed the tracker/.test(cm) && /money arrived/.test(cm), cm.slice(0, 400));
+  ok('H12 SEEN and it still states the batch it is settling',
+    /Settle 1 row/.test(cm), cm.slice(0, 200));
+  win.document.getElementById('wlConfirmCancel').click();
+  await settle(60);
+  const dryBeforeSeen = dryRuns();
+  typeNav('2026-08');
+  await settle(1000);
+  ok('H12 SEEN the next review then arms clean, so the alarm is not decoration by the second month',
+    dryRuns() > dryBeforeSeen && armed(win) && noteClass() === '' && !/NEW letter/.test(txt(win, 'wlGateNote')),
     txt(win, 'wlGateNote') + ' :: class=' + noteClass());
   typeNav('');
   await settle(900);
@@ -1108,6 +1172,147 @@ if (render.length > 0) {
       txt(win, 'wlGateNote') + ' :: class=' + noteClass());
     await settle(1000); // let the write's own re-read land before the next case
   }
+
+  // ============ H13: NO EARLY RETURN LEAVES A PERMANENT FALSE PROMISE =======
+  // Every path into runReview arrives behind a TRANSIENT note: "the letter is
+  // being re-read", "re-reading the month now", each promising that Generate
+  // arms itself once the new letter is on screen. That promise is only true if
+  // the review that follows writes a note of its own. Five early returns wrote
+  // none, so the sentence stood forever over a shut gate, naming an event that
+  // would never happen and no control that would cause it.
+  //
+  // THE FALSE PROMISE IS THE THING ASSERTED ON, not a wording. A note claiming
+  // the letter is IN FLIGHT while nothing is in flight is the defect: it
+  // promises an arrival, requires nothing of the operator, and never resolves.
+  // A note that says the gate arms itself once SHE does the named thing is not
+  // that, which is why the control is asserted beside every one of these.
+  const claimsInFlight = () => /being re-read|Re-reading|still being read/.test(txt(win, 'wlGateNote'));
+  plan.renderFail = null; plan.renderBare = false; plan.renderEmpty = false; plan.peekRowsFail = null;
+  plan.reviewFail = null; plan.reviewBare = false; plan.reviewNull = false;
+  plan.letterHash = HASH_APPROVED;
+  plan.generate = GOOD_GEN;
+
+  // --- THE REPORTED INSTANCE: an invalid override, then any other re-read ----
+  await rearm(win);
+  ok('H13 armed before the override is made invalid', armed(win), txt(win, 'wlGateNote'));
+  typeNav('2026-13');
+  await settle(900);
+  ok('H13 the malformed override alone still names the field and the two ways out',
+    /must be YYYY-MM/.test(txt(win, 'wlGateNote')) && /clear it/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  // A TRACKER WRITE while the override is invalid. This is the re-read that
+  // reached the invalid-override return before it could write a real reason.
+  q('#wlGroups [data-act="markMoneyReceived"]').click();
+  await settle(1400);
+  const strandedA = txt(win, 'wlGateNote');
+  ok('H13 WRITE the gate is shut and stays shut, which is correct on an invalid override', !armed(win), strandedA);
+  ok('H13 WRITE THE NOTE CLAIMS NO RE-READ THAT IS NOT HAPPENING',
+    !claimsInFlight(), strandedA);
+  ok('H13 WRITE it says what is actually wrong', /must be YYYY-MM/.test(strandedA), strandedA);
+  ok('H13 WRITE and it names the field that fixes it, not "the letter"',
+    /Struck NAV month/.test(strandedA) && /clear it/.test(strandedA), strandedA);
+  await settle(1200);
+  ok('H13 WRITE the note is terminal: nothing lands later to correct it',
+    txt(win, 'wlGateNote') === strandedA, txt(win, 'wlGateNote'));
+  // --- the same stranding through the MONTH select --------------------------
+  win.document.getElementById('wlMonth').onchange();
+  await settle(1200);
+  ok('H13 MONTH a month change with the override invalid strands no in-flight claim either',
+    !claimsInFlight() && /must be YYYY-MM/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+  // AND THE WAY OUT WORKS: the field it names is the field that re-arms it.
+  typeNav('');
+  await settle(1200);
+  ok('H13 clearing the field the note names re-arms the gate', armed(win), txt(win, 'wlGateNote'));
+
+  // --- NO MONTH AT ALL, the other pre-flight return -------------------------
+  const monthSel = win.document.getElementById('wlMonth');
+  const keepMonth = monthSel.value;
+  monthSel.value = '';
+  monthSel.onchange();
+  await settle(900);
+  ok('H13 NO MONTH the gate note claims no letter that is not coming',
+    !claimsInFlight(), txt(win, 'wlGateNote'));
+  ok('H13 NO MONTH it says what is missing and where to fix it',
+    /No month is selected/.test(txt(win, 'wlGateNote')) && /Pick a month above/.test(txt(win, 'wlGateNote')),
+    txt(win, 'wlGateNote'));
+  monthSel.value = keepMonth;
+  monthSel.onchange();
+  await settle(900);
+  ok('H13 NO MONTH picking one again re-arms the gate', armed(win), txt(win, 'wlGateNote'));
+
+  // --- THE THREE WAYS THE REVIEW CALL ITSELF ENDS WITHOUT A VERDICT ---------
+  const REVIEW_OUTAGES = [
+    { name: 'ok:false', set: () => { plan.reviewFail = 'dry run backend down'; }, quote: /dry run backend down/ },
+    { name: 'a body with no ok field', set: () => { plan.reviewBare = true; }, quote: /Review failed/ },
+    { name: 'no body at all', set: () => { plan.reviewNull = true; }, quote: /No response/ },
+  ];
+  for (const o of REVIEW_OUTAGES) {
+    plan.reviewFail = null; plan.reviewBare = false; plan.reviewNull = false;
+    plan.letterHash = HASH_APPROVED;
+    await rearm(win);
+    ok('H13 REVIEW [' + o.name + '] armed before the outage', armed(win), txt(win, 'wlGateNote'));
+    o.set();
+    const gensBefore = genQs().length;
+    win.document.getElementById('wlMonth').onchange();
+    await settle(900);
+    ok('H13 REVIEW [' + o.name + '] GENERATE IS DISARMED', !armed(win),
+      'aria-disabled=' + win.document.getElementById('wlGenerateBtn').getAttribute('aria-disabled'));
+    ok('H13 REVIEW [' + o.name + '] the note claims no re-read that is not happening',
+      !claimsInFlight(), txt(win, 'wlGateNote'));
+    ok('H13 REVIEW [' + o.name + '] and it names the control that re-runs it',
+      /Retry the review above/.test(txt(win, 'wlGateNote')), txt(win, 'wlGateNote'));
+    ok('H13 REVIEW [' + o.name + '] the failure quotes the server rather than a generic line',
+      o.quote.test(htm(win, 'wlFindings')), htm(win, 'wlFindings').slice(0, 200));
+    win.document.getElementById('wlGenerateBtn').click();
+    await settle(80);
+    ok('H13 REVIEW [' + o.name + '] a click reaches no settle call at all',
+      genQs().length === gensBefore && win.document.getElementById('wlConfirm').hidden,
+      'before=' + gensBefore + ' after=' + genQs().length);
+    // THE CONTROL THE NOTE NAMES EXISTS AND WORKS.
+    const rr = win.document.getElementById('wlReviewRetry');
+    ok('H13 REVIEW [' + o.name + '] the failed review draws the retry it names', !!rr, htm(win, 'wlFindings').slice(0, 200));
+    plan.reviewFail = null; plan.reviewBare = false; plan.reviewNull = false;
+    if (rr) rr.click();
+    await settle(900);
+    ok('H13 REVIEW [' + o.name + '] the retry re-arms the gate with no reload and no hidden button',
+      armed(win), txt(win, 'wlGateNote'));
+  }
+
+  // --- THE CLASS, held structurally ----------------------------------------
+  // The PREVENT half. Every `return;` inside runReview must be preceded, since
+  // the previous return, by a call that writes the persistent note. A sixth
+  // early return added later fails here by name rather than shipping another
+  // permanent false promise.
+  const reviewSrc = rawFn('runReview');
+  ok('H13 CLASS runReview was found (empty = the sweep is broken)', reviewSrc.length > 0);
+  const silentReturns = (function () {
+    const out = [];
+    // wlCloseGate('') is NOT a note-writer: it disarms and leaves whatever
+    // sentence is standing. Counting it let a silent return borrow the
+    // pre-flight disarm and report clean, which is this sweep failing the same
+    // way the code did.
+    const stripped = reviewSrc.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')
+      .split("wlCloseGate('')").join('wlDisarmOnly_()');
+    let last = 0; const re = /\breturn;/g; let m;
+    while ((m = re.exec(stripped))) {
+      const window_ = stripped.slice(last, m.index);
+      if (!/wlReviewStop_\(|wlCloseGate\(|wlGateNote_\(/.test(window_)) {
+        out.push(stripped.slice(Math.max(0, m.index - 90), m.index + 8).replace(/\s+/g, ' '));
+      }
+      last = m.index;
+    }
+    return out;
+  })();
+  ok('H13 CLASS the sweep found runReview\'s returns (empty = the sweep is broken)',
+    (reviewSrc.match(/\breturn;/g) || []).length >= 5, (reviewSrc.match(/\breturn;/g) || []).length);
+  ok('H13 CLASS EVERY early return in runReview writes the note it leaves the operator with',
+    silentReturns.length === 0, silentReturns.join(' | '));
+  // The .catch arm has no `return;` to sweep, and it is an exit like any other.
+  const catchArm = (function () {
+    const at = reviewSrc.indexOf('}).catch(function(err){');
+    return at < 0 ? '' : reviewSrc.slice(at);
+  })();
+  ok('H13 CLASS the unreachable-server exit writes a note too', /wlReviewStop_\(/.test(catchArm),
+    catchArm.replace(/\s+/g, ' ').slice(0, 200));
 
   win.close();
   console.log('\n' + pass + ' pass, ' + fail + ' fail');
