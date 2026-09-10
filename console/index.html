@@ -4497,7 +4497,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-3-name-cell-id-shape';
+  window.__BUILD_TAG = 'console-2026-09-10-4-reassign-follows-engine';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -7911,7 +7911,15 @@ document.addEventListener('keydown',function(e){
           q:'?api=opUpdateSignerContact&processId='+encodeURIComponent(currentPid)
             +'&role='+encodeURIComponent(ctx.role)+'&firstName='+encodeURIComponent(v.firstName)
             +'&lastName='+encodeURIComponent(v.lastName)+'&email='+encodeURIComponent(v.email),
-          base:GAS_ONLY_,
+          // FOLLOWS THE ROW'S ENGINE (2026-09-09). This was pinned GAS_ONLY_,
+          // which made it a DEAD BUTTON on every ju-service-born process: GAS
+          // has no signing record for one, so the operator got
+          // "Could not reassign: no signing record for <pid>". The logic had
+          // been ported and tested on ju-service the whole time, under a
+          // different wire name (?admin=updateSignerContact); ju-service now
+          // answers this api name too, so the pin is what was left to remove.
+          // currentEngine is set from the row's own data-base in openDrawer.
+          base:currentEngine,
           errPrefix:'Could not reassign',
           ok:function(r){
             var oldLbl=(r.old&&(r.old.name||r.old.email))?((r.old.name||'')+(r.old.email?(' <'+r.old.email+'>'):'')):'(none)';
