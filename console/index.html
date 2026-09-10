@@ -1530,8 +1530,12 @@ body.side-coll .ss-row.ss-total { display: none; }
    behind an affordance macOS does not draw, and the operator's job here is to
    scan DOWN a list for money that needs attention, which a hidden column
    quietly breaks. Stacking costs vertical space, which the operator can see
-   and scroll with the page, and costs nothing else - every column that exists
-   at 1440 is still on screen at 320.
+   and scroll with the page, and costs nothing else that this band takes: every
+   column the 640px set carries is still on screen at 320, stacked rather than
+   dropped. The flow chip is not one of them. It is dropped from 800px down by
+   the band above, for the reason stated there (the stage word already says what
+   kind of process a row is), and the `.rflow { display: none }` below re-states
+   that rather than inheriting it, since the 640px band no longer applies here.
 
    Line 1 is the name, alone, across the whole card: that is what makes the
    clamp safe at the narrowest widths, since the name track stops being a
@@ -3397,8 +3401,10 @@ body.side-coll .ss-lbl { display: none; }
      to do it, which is the worst version of the trade: an operator on a phone
      could not see how much money a row was for. A phone is now just a narrow
      card, so it gets the stacked row from the @container band beside
-     --board-cols - every column that exists at 1440 is on screen at 320,
-     stacked rather than dropped. What stays here is the phone's own spacing,
+     --board-cols - the amount and the age are stacked rather than dropped. The
+     flow chip is still dropped below 800px of card, deliberately and for the
+     reason the 640px band states; the money figure is what a phone must not
+     lose, and it does not. What stays here is the phone's own spacing,
      which is a touch-density decision and has nothing to do with fitting. */
   .row { gap: 10px; padding: 10px; }
   .bhead { gap: 10px; padding: 8px 10px; }

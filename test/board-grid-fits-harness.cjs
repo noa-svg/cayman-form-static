@@ -154,7 +154,12 @@ const MEASURE = `(function(){
   for (var j=0;j<names.length;j++){
     var n = names[j], ns = getComputedStyle(n);
     if (ns.display === 'none') continue;
-    if (n.scrollHeight - n.clientHeight > 1) clipped.push(n.textContent.slice(0,20) + ' [' + n.clientHeight + ' of ' + n.scrollHeight + 'px]');
+    if (n.scrollHeight - n.clientHeight > 1) clipped.push(n.textContent.slice(0,20) + ' [' + n.clientHeight + ' of ' + n.scrollHeight + 'px tall]');
+    // AND ON THE OTHER AXIS. Reading height alone measured only the clamped,
+    // wrapping shape: a name set back to nowrap + text-overflow:ellipsis is
+    // clipped SIDEWAYS, its scrollHeight equals its clientHeight, and this
+    // whole file stayed green over the exact state 1a5e735 was written to fix.
+    if (n.scrollWidth - n.clientWidth > 1) clipped.push(n.textContent.slice(0,20) + ' [ellipsised: ' + n.clientWidth + ' of ' + n.scrollWidth + 'px wide]');
     var lh = parseFloat(ns.lineHeight), bound = parseInt(ns.webkitLineClamp, 10);
     if (lh && bound) { var used = Math.round(n.scrollHeight / lh); if (bound - used < 1) tight.push(n.textContent.slice(0,20) + ' uses ' + used + ' of ' + bound + ' clamp lines'); }
   }
