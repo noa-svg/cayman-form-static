@@ -941,11 +941,33 @@ function extractVarObj(name) {
   // the pane, unreachable (findings 1, 5 and 9). The existing drop rule is
   // keyed on the VIEWPORT and cannot see a pane, so the drop has to be keyed on
   // the docked state itself, with a scroll container as the backstop.
-  ok('K16 docking below ~1650px drops the flow column instead of hiding it under the pane',
+  // The docked pane used to carry its own board rules here: a --board-cols
+  // override, a `body:has(...dock.on) .rflow` drop, a clamp of 3, and at one
+  // point an #list scroller. All four were the same workaround for a board too
+  // narrow for its columns inside a viewport too wide for any @media query to
+  // notice. Since the q60 rework (2026-09-10) #board-card is a SIZE CONTAINER,
+  // so a docked pane simply makes the card narrower and the card picks the
+  // column set that fits, exactly as a tablet or a phone does. The docked rules
+  // are gone because the general mechanism covers them, not because the
+  // guarantee went away, so assert the general mechanism.
+  //
+  // What the docked band legitimately still owns is --panel-w: how much width
+  // to GIVE the board is a real decision about this viewport range, and it is
+  // the half that is not about fitting.
+  ok('K16 the docked band still gives the board width back, and no longer tries to lay it out',
     /@media \(min-width: 1400px\) and \(max-width: 1649px\)/.test(html)
-    && /body:has\(\.panel#drawer\.dock\.on\) \.rflow/.test(html));
-  ok('K16 a docked board scrolls its overflow instead of losing it',
-    /body:has\(\.panel#drawer\.dock\.on\) #list \{ overflow-x: auto; \}/.test(html));
+    && /body:has\(\.panel#drawer\.dock\.on\) \{ --panel-w: 420px; \}/.test(html)
+    && !/body:has\(\.panel#drawer\.dock\.on\)[^\n]*--board-cols/.test(html)
+    && !/body:has\(\.panel#drawer\.dock\.on\)[^\n]*line-clamp/.test(html));
+  // A docked board must not need a scroller, and must not be given one: a
+  // horizontal scroll on this card hides money columns behind a macOS overlay
+  // scrollbar that draws nothing at all. board-grid-fits-harness.cjs measures
+  // the result in a real browser; this asserts the mechanism it relies on.
+  ok('K16 a docked board fits by measuring itself, never by scrolling',
+    /#board-card \{[^}]*container: board \/ inline-size;/.test(html)
+    && /#board-card \{[^}]*overflow: visible;/.test(html)
+    && !/#board-card \{[^}]*overflow-x: auto;/.test(html)
+    && /@container board \(max-width: 639\.98px\)/.test(html));
   ok('K16 a side pane is NOT modal: it drops aria-modal and never marks the shell inert',
     /if\(side\)\{\s*drawer\.removeAttribute\("aria-modal"\);/.test(html));
   ok('K16 dclose clears the side class too, so a resize cannot strand it',
