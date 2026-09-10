@@ -1671,6 +1671,15 @@ body.side-coll .ss-row.ss-total { display: none; }
   body:has(.panel#drawer.dock.on) { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
   body:has(.panel#drawer.dock.on) .rflow,
   body:has(.panel#drawer.dock.on) .bhead .h-flow { display: none; }
+  /* A docked board is a NARROW board at a wide viewport, which is the case the
+     phone clamp already exists for, so it gets the same treatment one step
+     smaller. Measured 2026-09-10 with the record docked: the name track is
+     182.84px and `גלבוע פאנד אוף פאנדס, שותפות מוגבלת` lands on exactly 2 lines
+     against a clamp of 2, i.e. zero headroom, so the next slightly longer
+     Hebrew entity name would clip HERE and nowhere else on the board. The
+     clamp is the guarantee that the name is readable; a track width is only
+     the width at which it stops being one. */
+  body:has(.panel#drawer.dock.on) .rn-name { -webkit-line-clamp: 3; }
 }
 
 .panel h2 {
@@ -4530,7 +4539,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-4-reassign-follows-engine';
+  window.__BUILD_TAG = 'console-2026-09-10-5-docked-name-clamp';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
