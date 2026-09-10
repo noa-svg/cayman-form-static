@@ -138,6 +138,8 @@ HARNESSES=(
   terminal-vocab-harness
   zz-console-reseal-gate
   zz-console-money-received-truth
+
+  zz-console-wire-letter-refusal
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
