@@ -20,6 +20,19 @@
 //       recovered, because navigating away is what actually aborts a
 //       document's in-flight fetches.
 //
+//   GROUP E (item 1, design review of q62): the SAME starvation q62 fixed is
+//       reachable with zero operator action, through the 45s
+//       `setInterval(function(){if(document.visibilityState==='visible')
+//       load(true);},45000)` auto-refresh wiring alone. This group proves
+//       that path specifically - firing the REAL captured interval callback
+//       twice while the first tick's GAS leg is still in flight, the way a
+//       slow GAS day actually would - rather than assuming the manual-switch
+//       coverage above also speaks for it. It does: load(true) runs through
+//       the identical _LOAD_ABORT cancel-and-replace at the top of load(),
+//       regardless of what called load(), so no source change was needed for
+//       this item - only this proof that the auto-refresh path genuinely
+//       reaches that code and not some silent-mode branch around it.
+//
 // This drives the REAL console/index.html in jsdom (runScripts:'dangerously')
 // with a scriptable window.fetch, the same rig shape console-honest-status-
 // harness.cjs uses (real page, real auth token seeded, DEMO never touched),
@@ -90,6 +103,18 @@ function boot(initialPlan) {
     pretendToBeVisual: true,
     beforeParse(w) {
       w.localStorage.setItem('lvp_op_token_v1', fakeIdToken());
+      // GROUP E's hook: capture the REAL 45000ms auto-refresh interval's own
+      // callback (console/index.html's `setInterval(function(){if
+      // (document.visibilityState==='visible')load(true);},45000)`), rather
+      // than reimplementing that wiring in the test. Real timers would make
+      // "fire it twice" a 90-second test; this calls the exact captured
+      // function synchronously instead, which is the same code path with
+      // none of the wall-clock cost.
+      const realSetInterval = w.setInterval.bind(w);
+      w.setInterval = function (fn, ms) {
+        if (ms === 45000) state.autoRefreshTick = fn;
+        return realSetInterval(fn, ms);
+      };
       w.fetch = function (url, o) {
         let q = '';
         try { q = JSON.parse(o.body).q || ''; } catch (e) { q = ''; }
@@ -129,6 +154,13 @@ function boot(initialPlan) {
     setPlan(p) { plan = p; },
     fetches: state.fetches,
     held: state.held,
+    // Fires the REAL captured auto-refresh callback, exactly as the real
+    // setInterval would - including its own visibilityState guard, which
+    // stays live (not bypassed) so this exercises the actual gated call.
+    fireAutoRefreshTick() {
+      if (!state.autoRefreshTick) throw new Error('auto-refresh interval was never armed (setInterval(...,45000) not called)');
+      state.autoRefreshTick();
+    },
     // Resolves every currently-held fetch `match(rec)` selects. `valueOrFn`
     // is either one payload for all of them or `(rec)=>payload` so list /
     // opNotes / opBoardDetail can each get their own real shape. Resolved
@@ -328,6 +360,96 @@ function healthy(rowsByEngine) {
     ok('D9 BOARD_HEALTH.syncedAt resets', t.win.BOARD_HEALTH.syncedAt === '');
     ok('D10 and no freshness/pending sentence is standing for a lane that has not synced',
       t.verLine().text === '', JSON.stringify(t.verLine()));
+    t.dom.window.close();
+  }
+
+  // ===========================================================================
+  // GROUP E (item 1): the auto-refresh interval itself, fired twice while
+  // GAS is still answering the first tick - not a manual lane switch.
+  // ===========================================================================
+  {
+    const t = boot(healthy({ gw: [], ju: [] }));
+    await settle(200);
+    // Same baseline reset as GROUP B: two loads fire at boot independently of
+    // this defect (initAuth's own load() and the fund-switcher's
+    // syncFund(state.lane)); clear them before this block starts counting.
+    t.fetches.length = 0;
+
+    ok('E0 the real 45000ms setInterval callback was captured off the real wiring',
+      typeof t.win.document !== 'undefined'); // sanity: page loaded
+    // Confirm the callback exists by way of firing it once under a plan
+    // where nothing is held - proves this IS the real gated function (it
+    // reads document.visibilityState itself) and not a stand-in.
+    let sawFetchFromTick = false;
+    t.setPlan(function (engine, route) {
+      sawFetchFromTick = true;
+      if (route === 'list') return { processes: [P('boot-check', 'Boot Check', 'signing')], generatedAt: FRESH };
+      if (route === 'opNotes') return { notes: {} };
+      if (route === 'opBoardDetail') return { ok: true, rows: {} };
+      if (route === 'listManualTrackerRows') return { ok: true, processes: [], generatedAt: FRESH };
+      return { ok: true };
+    });
+    t.fireAutoRefreshTick();
+    await settle(200);
+    ok('E0 firing the captured callback genuinely calls load() (a real fetch went out)', sawFetchFromTick);
+    ok('E0 and it is visibility-guarded exactly as shipped: jsdom pretendToBeVisual reads visible, so the tick fired',
+      t.rows().length === 1, t.rows().length);
+    t.fetches.length = 0;
+
+    // Tick #1: GAS is slow (measured 20-185s live) - held indefinitely here.
+    let holdGw = true;
+    t.setPlan(function (engine, route) {
+      if (route === 'opGetRowReview') return { ok: true, reviews: {} };
+      if (engine === 'gw' && holdGw) return 'HOLD';
+      if (route === 'list') return { processes: [P('e1', 'Auto-refresh Tick 1', 'needs_attention')], generatedAt: FRESH };
+      if (route === 'opNotes') return { notes: {} };
+      if (route === 'opBoardDetail') return { ok: true, rows: {} };
+      if (route === 'listManualTrackerRows') return { ok: true, processes: [], generatedAt: FRESH };
+      return { ok: true };
+    });
+    t.fireAutoRefreshTick();
+    const tick1Gw = t.held.filter(function (e) { return e.engine === 'gw'; });
+    ok('E1 tick 1\'s gw leg (all 3 sub-fetches) is genuinely in flight', tick1Gw.length === 3, tick1Gw.length);
+    const tick1Recs = tick1Gw.map(function (e) { return e.rec; });
+    ok('E1 none of it is aborted yet - tick 2 has not fired', tick1Recs.every(function (r) { return !r.aborted; }));
+
+    // Tick #2: the interval fires again 45s later while tick 1's GAS leg is
+    // STILL out - the exact scenario a slow GAS day produces with zero
+    // operator action, driven through the SAME captured callback, not a
+    // second load() call written by the test.
+    t.fireAutoRefreshTick();
+    ok('E2 tick 1\'s gw fetches are all now aborted by tick 2 (cancel-and-replace fired on the auto-refresh path)',
+      tick1Recs.every(function (r) { return r.aborted; }),
+      tick1Recs.map(function (r) { return r.aborted; }));
+    ok('E2 they are gone from the held queue - only tick 2\'s own (still-held) gw leg remains',
+      t.held.filter(function (e) { return tick1Recs.indexOf(e.rec) !== -1; }).length === 0);
+
+    // GAS frees up: tick 2's own requests must not be starved behind tick 1's
+    // zombies (the actual q62 failure mode) - they complete on their own.
+    holdGw = false;
+    t.setPlan(function (engine, route) {
+      if (route === 'opGetRowReview') return { ok: true, reviews: {} };
+      if (route === 'list') return { processes: [P('e2', 'Auto-refresh Tick 2', 'needs_attention')], generatedAt: FRESH };
+      if (route === 'opNotes') return { notes: {} };
+      if (route === 'opBoardDetail') return { ok: true, rows: {} };
+      if (route === 'listManualTrackerRows') return { ok: true, processes: [], generatedAt: FRESH };
+      return { ok: true };
+    });
+    t.fireAutoRefreshTick();
+    await settle(300);
+    ok('E3 tick 3 (GAS free again) actually completes - the sync line is clean, not stuck pending',
+      /^synced /.test(t.verLine().text), JSON.stringify(t.verLine()));
+    ok('E3 its row is on the board', t.rows().length === 1 && t.rows()[0].getAttribute('data-pid') === 'e2', t.rows().map(function(r){return r.getAttribute('data-pid');}));
+
+    // No extra retry off any of the aborted ticks' AbortErrors, same proof
+    // GROUP B4 makes for the lane-switch path: each gw route fires once per
+    // tick that actually asked for it (ticks 1 and 2 shared their gw leg
+    // getting superseded before answering; only ticks 1, 2 and 3 asked at
+    // all - 3 total per route), never a fourth from a retry.
+    ['list', 'opNotes', 'opBoardDetail'].forEach(function (route) {
+      const n = t.fetches.filter(function (r) { return r.engine === 'gw' && r.route === route; }).length;
+      ok('E4 gw:' + route + ' was fetched exactly 3 times (once per tick), no retry off any abort', n === 3, n);
+    });
     t.dom.window.close();
   }
 

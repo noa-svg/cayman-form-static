@@ -57,6 +57,7 @@ test/*
 !test/israel-cp-english-address-fatca-gate.cjs
 !test/console-honest-status-harness.cjs
 !test/console-board-load-race-harness.cjs
+!test/render-letter-abort-harness.cjs
 !test/console-transfer-one-mint.cjs
 !test/prepush-marker-contract.cjs
 !test/transfer-in-review-gate-harness.cjs

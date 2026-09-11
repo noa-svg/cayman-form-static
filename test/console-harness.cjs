@@ -39,7 +39,9 @@ const VOCAB_DEPENDENTS = ['isTerminalStage', 'isCompletedStage', 'isCanceledStag
 // retired row became a lookup instead of an equality chain, so the chain could
 // not drift from the vocabulary that decides which rows are retired at all.
 const LABEL_DEPENDENTS = ['stageMilestone'];
-// paintVerLine_ composes sinceDur's output through agoPhrase. Carrying it here
+// paintVerLine_ composes sinceDur's output through agoPhrase, and (q62 item 3,
+// 2026-09-11) also calls verLineAnnounce_ on every branch to write the spoken
+// half of the sync line (see console/index.html:6722). Carrying both here
 // rather than at each call site is the same bargain the two lists above make:
 // a rig that pulled the painter alone got a ReferenceError, and load()'s catch
 // swallowed it into an unrelated board-error path.
@@ -52,7 +54,7 @@ const NAMECELL_DEPENDENTS = ['rowHtml'];
 function extractFn(name) {
   if (VOCAB_DEPENDENTS.includes(name)) return extractVarObj('BOARD_TERMINAL_') + rawFn(name);
   if (LABEL_DEPENDENTS.includes(name)) return extractVarObj('RETIRED_LABEL') + rawFn(name);
-  if (AGO_DEPENDENTS.includes(name)) return rawFn('agoPhrase') + ';' + rawFn(name);
+  if (AGO_DEPENDENTS.includes(name)) return rawFn('agoPhrase') + ';' + rawFn('verLineAnnounce_') + ';' + rawFn(name);
   if (NAMECELL_DEPENDENTS.includes(name)) return rawFn('nameCellHtml') + ';' + rawFn(name);
   return rawFn(name);
 }
