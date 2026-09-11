@@ -1314,7 +1314,12 @@ function extractVarObj(name) {
       setInterval: () => 0,
     };
     const names = Object.keys(scope);
-    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true;'
+    // _LOAD_ABORT (q62, 2026-09-11): load() now reads/writes this module-level
+    // var same as LOAD_SEQ; extractFn only grabs the function body, so the
+    // synthetic scope needs its own copy same as every other module-level var
+    // load() closes over. AbortController itself needs no stubbing - it is a
+    // real global in this realm, same as Promise.
+    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true,_LOAD_ABORT=null;'
       + 'var showDone=false,showCanceled=false,showTest=false;';
     const built = (new Function(...names, prelude + src))(...names.map((n) => scope[n]));
     // newestFirst resolves the LATER paint's overlay before the earlier one's,
@@ -1758,7 +1763,8 @@ function extractVarObj(name) {
     // applySearch. The badges are stubbed (not what this block asserts); the
     // REAL applySearch is composed in, so the search branch of the guard is
     // exercised by the same code path the operator's typing goes through.
-    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true;'
+    // _LOAD_ABORT (q62, 2026-09-11): same reason as makeRig's prelude above.
+    const prelude = 'var LOAD_SEQ=0,PAINT_SEQ=0,doneLoaded=false,_autoRefreshArmed=true,_w8BadgeArmed=true,_LOAD_ABORT=null;'
       + 'var showDone=false,showCanceled=false,showTest=false,allRows=[];'
       + 'function render(rows){allRows=rows;applySearch();}';
     // 2026-09-07: renderRows now asks boardDegraded_ whether the empty state is
