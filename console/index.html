@@ -912,22 +912,82 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    where it stands in plain words, WHO it is waiting on and for how long,
    and an attention badge carrying the actual reason. Same palette
    (atrium-palette-sync.cjs enforced), new information hierarchy. */
-/* The name track carries the row's primary job - WHO this money belongs to -
-   so it takes the larger share of whatever free width exists. Its MINIMUM is
-   deliberately unchanged (190px here, 160px in the <=1250 band): raising a
-   minimum is how the grid overflowed the card in the first place (finding 19
-   below). Names that outrun the track wrap to a second line instead, see
-   .rn-name. 1.4fr -> 1.8fr only moves slack, and minmax() keeps the status
-   track above its own 250px floor. */
-:root { --board-cols: minmax(190px, 1.8fr) 92px 116px minmax(250px, 2fr) 52px 76px; }
+/* THE TRACK SYSTEM (rewritten 2026-09-10, defect q60).
+
+   TWO THINGS CAUSED THIS DEFECT AND BOTH ARE REMOVED HERE.
+
+   (1) The board was laid out against the VIEWPORT. Every band was a @media
+   query, and no media query can see the 210px sidebar, the content gutters or
+   a docked record pane, so the width the CSS was reasoning about was never the
+   width the board actually had. At a 1024px viewport the card is 766px; with
+   the record docked at 1440 it is narrower still. That gap is the whole defect
+   class: the 2026-08-26 review answered it by ADDING the 1250px band, which
+   only chose a different viewport number to be wrong at, and the same overflow
+   was back at 601-800 nine days later.
+   So the bands below are @container queries on #board-card. The board now asks
+   the box it is drawn in how wide it is. A docked pane, a collapsed sidebar and
+   a phone are the same question with different answers, which is why the
+   docked-pane --board-cols override that used to live at 1400-1649px is gone
+   rather than rewritten.
+
+   (2) Below the width where the columns fit, the board had to either overflow
+   or scroll, and a scroll is not an answer on a money board: on macOS overlay
+   scrollbars there is nothing on screen saying a column exists, so an operator
+   scanning for money that needs attention silently scans a partial row.
+   So there is no scroll. Below 640px of CARD the row stops being one grid line
+   and becomes three: the name on its own full-width line, the status on its
+   own, then amount / age / actions as a footer strip. Nothing is hidden,
+   nothing is clipped, nothing is off-screen, and #board-card goes back to
+   overflow: visible.
+
+   WHERE THE TWO THRESHOLDS COME FROM. They are content measurements, not
+   layout guesses. A 60-character English partnership name needs 3 rendered
+   lines at a 166px name track and 4 at 139px (measured in Chrome 2026-09-10),
+   and .rn-name clamps at 4, so a name track below ~166px spends the clamp's
+   whole budget on an ordinary name and the next one clips. Inverting the fr
+   split for each column set gives the card width at which the name track is
+   166px: 636px for the 5-column set, 795px for the 6-column set. Rounded to
+   640 and 800. Above them the single-line grid always has room for a real
+   name; below 640 the stacked row gives the name the entire card.
+
+   The FIXED cells are sized to what they hold and never negotiate: 62px is
+   exactly the copy+note button pair (two 30px targets and the 2px gap), 34px
+   holds "365d" under the AGE label, and the AMOUNT track keeps 116/106 because
+   the widest live figure measures 92.41px and .ramt ellipsises, so a narrower
+   money column renders a different, smaller number. The two TEXT columns carry
+   all the flex and all the shrink, and their minimums are readability floors
+   (120px of name, 140px of status), not layout targets.
+
+   --board-cols lives on #list, not :root, because a @container rule can only
+   style the container's DESCENDANTS. .bhead and .row are both children of
+   #list, so they inherit it. */
+#list {
+  display: block;
+  /* The stacked row is the DEFAULT, and the single-line grids are the
+     enhancement. A browser that does not understand @container therefore gets
+     the layout that cannot overflow, rather than the one that can. */
+  --board-cols: minmax(0, 1fr) auto auto;
+}
 #board-card {
   border: var(--bw) solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-card);
+  /* The board measures ITSELF. This is the line that makes the guarantee
+     width-independent: every band below is a question about this box, so the
+     sidebar, the gutters and a docked pane are already subtracted by the time
+     the grid is chosen. */
+  container: board / inline-size;
+  /* Deliberately visible. An earlier cut of this fix made the card a
+     horizontal scroller, which removed the painted overflow and replaced it
+     with something worse: macOS overlay scrollbars leave card.offsetHeight -
+     clientHeight at 0, so 14 to 213px of board sat hidden with NO affordance
+     saying so, .rnote-pop is body-appended position:fixed and did not follow
+     its anchor when the card scrolled, and overflow-x:auto forces overflow-y
+     to auto per spec, so the card silently gained a vertical clip too. The
+     stacked row below means there is nothing left to scroll. */
   overflow: visible;
 }
-#list { display: block; }
 .bhead {
   display: grid;
   grid-template-columns: var(--board-cols);
@@ -1148,13 +1208,23 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   gap: 1px;
 }
 /* nowrap + ellipsis with no title meant a long name was simply UNREADABLE: no
-   hover, no widening, no recourse (2026-09-09). At the 160px track minimum a
-   35-character Hebrew partnership name measures 246px, and the widest case on
-   main had 14px of headroom left, i.e. two more characters would have clipped
-   it. Two lines of the 160px track hold 320px of text, so wrapping - not a
-   wider column - is what actually guarantees the name is readable at EVERY
-   width. The clamp keeps a pathological name from growing the row without
-   bound; rowHtml adds a title on every name as the floor under that. */
+   hover, no widening, no recourse (2026-09-09). Wrapping - not a wider column -
+   is what guarantees the name is readable at every width.
+
+   ONE CLAMP, EVERYWHERE, and that is the point of this number (q60 rework,
+   2026-09-10). The clamp used to be a per-context guess: 2 as the base, 4 in
+   the phone band, then 3 added for a docked board on 2026-09-10 because a
+   Hebrew partnership name landed on exactly 2 lines there with zero headroom.
+   Each of those was the same discovery made again in a narrower box, because a
+   line count is only meaningful against a track width and CSS cannot derive
+   one from the other. So the track widths are now guaranteed instead (see THE
+   TRACK SYSTEM above): no band ever gives the name less than ~166px, and the
+   stacked row gives it the whole card. Measured in Chrome 2026-09-10, the
+   longest names on this board - a 60-character English partnership name and a
+   44-character Hebrew one - need 3 lines and 2 lines at 166px. 4 is that worst
+   case plus a spare line, and it is all this rule is for: bounding a
+   pathological name from running the row away. rowHtml puts a title on every
+   name under that. */
 .rn-name {
   font-size: var(--text-md);
   font-weight: var(--weight-semi);
@@ -1165,7 +1235,7 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   white-space: normal;
   overflow-wrap: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
 }
 /* A row that reached the board with no investor name at all. Muted, so it
@@ -1178,6 +1248,18 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 /* The pid stem stands in for the second name line on a nameless row: without
    it the operator can see that a row has no name but not WHICH row it is. */
 .rhe.rn-pid { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.02em; }
+/* The SECOND name line, and it wraps for the same reason the first one does
+   (q60 rework, 2026-09-10). It was nowrap + ellipsis, so a 44-character Hebrew
+   partnership name under an English one measured 266px against a 188px cell
+   and lost its tail at every width from 960 to 1250 - a clipped name on a
+   money board, just one line lower than the one that was being fixed. It wraps
+   now, matching .rn-name's shape.
+   3, not 2, and the reason is the whole lesson of aa426b4: at a clamp of 2 that
+   same name rendered on EXACTLY 2 lines from 960 to 1250, which measures as
+   "not clipped" and is really "one character from clipping". A bound with no
+   spare line is a clip waiting for a slightly longer name. The measured worst
+   case is 2 lines, so the bound is 3. The title nameCellHtml puts on this line
+   stays the floor under that. */
 .rhe {
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
@@ -1185,7 +1267,11 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* Amount column (2026-07-15 console wiring item 4): the board rows now carry
@@ -1413,6 +1499,78 @@ body.side-coll .ss-row.ss-total { display: none; }
   color: var(--color-ink-muted);
   text-align: right;
   white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- THE BANDS
+   Three column sets, chosen by the CARD's width, never the viewport's. They
+   read widest-last so the cascade lands on the widest one that fits; the
+   stacked set is #list's own declaration above, i.e. the default. */
+
+/* 5 columns: the flow chip is the one column a narrow board can lose without
+   losing meaning, because the stage word already says what kind of process
+   this is. 640px is where this set's name track reaches 166px, the width a
+   real partnership name needs to stay inside 3 of the clamp's 4 lines. */
+@container board (min-width: 640px) {
+  #list { --board-cols: minmax(120px, 1.7fr) 106px minmax(140px, 1.8fr) 34px 62px; }
+  .rflow, .bhead .h-flow { display: none; }
+}
+
+/* 6 columns: the full board. 800px is the same name-track calculation for this
+   set's fr split. Its floor - every track minimum, five 16px gaps and the
+   row's 14px padding - is 704px, so the set never has to shrink below the
+   width it is switched on at. */
+@container board (min-width: 800px) {
+  #list { --board-cols: minmax(120px, 1.8fr) 92px 116px minmax(140px, 2fr) 52px 76px; }
+  .rflow, .bhead .h-flow { display: revert; }
+}
+
+/* ------------------------------------------------------- THE STACKED ROW
+   Below 640px of card the row is three lines instead of one. This is what
+   replaced the horizontal scroller: a scroll on a money board hides columns
+   behind an affordance macOS does not draw, and the operator's job here is to
+   scan DOWN a list for money that needs attention, which a hidden column
+   quietly breaks. Stacking costs vertical space, which the operator can see
+   and scroll with the page, and costs nothing else that this band takes: every
+   column the 640px set carries is still on screen at 320, stacked rather than
+   dropped. The flow chip is not one of them. It is dropped from 800px down by
+   the band above, for the reason stated there (the stage word already says what
+   kind of process a row is), and the `.rflow { display: none }` below re-states
+   that rather than inheriting it, since the 640px band no longer applies here.
+
+   Line 1 is the name, alone, across the whole card: that is what makes the
+   clamp safe at the narrowest widths, since the name track stops being a
+   fraction of a grid and becomes the card itself.
+   Line 2 is the status and what it is waiting on, wrapping rather than
+   ellipsising, because the waiting line is the reason the row is on screen.
+   Line 3 is the footer strip: amount, age, actions. */
+@container board (max-width: 639.98px) {
+  .bhead {
+    /* A column header cannot label a stacked row. The cells name themselves
+       here - a figure, an age, two buttons - so the header is dropped rather
+       than left pointing at columns that are no longer under it. */
+    display: none;
+  }
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name name name"
+      "stat stat stat"
+      "amt  age  act";
+    align-items: center;
+    row-gap: 6px;
+  }
+  .rn   { grid-area: name; }
+  .rstat{ grid-area: stat; }
+  .ramt { grid-area: amt; text-align: left; }
+  .rage { grid-area: age; }
+  .ract { grid-area: act; }
+  .rflow { display: none; }
+  /* The waiting line is the row's reason for existing; an ellipsis on the one
+     full-width line the row has left would be gratuitous. */
+  .rwait { white-space: normal; }
+  /* The footer strip is supporting detail under two lines that are not, so it
+     reads one step quieter than they do. */
+  .ramt, .rage { color: var(--color-ink-sub); }
 }
 
 /* Quiet sync line under the board */
@@ -1654,8 +1812,11 @@ body.side-coll .ss-row.ss-total { display: none; }
      a pane the viewport cannot see. So drop the flow column on the same terms
      the tablet rule uses, keyed on the pane instead: while the record is docked,
      below the ~1650px at which the full grid genuinely fits beside it. */
-  #list { overflow-x: visible; }
-  body:has(.panel#drawer.dock.on) #list { overflow-x: auto; }
+  /* The docked pane used to be given its own #list scroller here. #board-card
+     is the scroll container for every width now (see its rule above), and #list
+     carries min-width:min-content, so a scroller on #list could never have
+     anything to scroll. Removed rather than left as a no-op rule for the next
+     session to reason about. */
 }
 
 @media (min-width: 1400px) and (max-width: 1649px) {
@@ -1668,18 +1829,19 @@ body.side-coll .ss-row.ss-total { display: none; }
      250px band where the two genuinely compete for width. Both halves read
      --panel-w, so the panel and the shell inset stay in step by construction. */
   body:has(.panel#drawer.dock.on) { --panel-w: 420px; }
-  body:has(.panel#drawer.dock.on) { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
-  body:has(.panel#drawer.dock.on) .rflow,
-  body:has(.panel#drawer.dock.on) .bhead .h-flow { display: none; }
-  /* A docked board is a NARROW board at a wide viewport, which is the case the
-     phone clamp already exists for, so it gets the same treatment one step
-     smaller. Measured 2026-09-10 with the record docked: the name track is
-     182.84px and `גלבוע פאנד אוף פאנדס, שותפות מוגבלת` lands on exactly 2 lines
-     against a clamp of 2, i.e. zero headroom, so the next slightly longer
-     Hebrew entity name would clip HERE and nowhere else on the board. The
-     clamp is the guarantee that the name is readable; a track width is only
-     the width at which it stops being one. */
-  body:has(.panel#drawer.dock.on) .rn-name { -webkit-line-clamp: 3; }
+  /* The board's own share of this rule is GONE, and nothing replaced it here.
+     It used to carry a --board-cols override and a flow-column drop, and
+     aa426b4 added a third piece on 2026-09-10: a -webkit-line-clamp of 3,
+     because with the record docked the name track measured 182.84px and a
+     Hebrew partnership name landed on exactly 2 lines against a clamp of 2.
+     All three were the same workaround - a board too narrow for its columns,
+     inside a viewport wide enough that no @media query could tell. That is now
+     structural rather than special-cased: #board-card is a size container, so
+     a docked pane simply makes the card narrower and the card picks the column
+     set that fits, exactly as a tablet or a phone does. The clamp is a single
+     value of 4 with the name track guaranteed above ~166px in every band.
+     Only --panel-w stays: how much width to GIVE the board is a real decision
+     about this viewport range, and the board's job is to fit whatever it gets. */
 }
 
 .panel h2 {
@@ -3055,16 +3217,13 @@ body.side-coll .side-stats { padding: 0; }
 body.side-coll .ss-row { justify-content: center; padding: 6px 0; }
 body.side-coll .ss-lbl { display: none; }
 
-/* Tablet-width board: drop the flow column first, keep money + status. */
-/* Was max-width:980px, keyed on the VIEWPORT and never subtracting the 210px
-   sidebar plus gutters. At a 1024 viewport the content pane is ~764px against a
-   ~776px grid, so the board overflowed and the per-row copy/note buttons
-   rendered past the card's right edge, on a laptop, daily (2026-08-26 review,
-   finding 19). 1250 is the width at which the pane can actually hold the grid. */
-@media (max-width: 1250px) and (min-width: 601px) {
-  :root { --board-cols: minmax(160px, 1.7fr) 106px minmax(210px, 1.8fr) 46px 76px; }
-  .rflow, .bhead .h-flow { display: none; }
-}
+/* The tablet band that used to live here is GONE. It set --board-cols and
+   dropped the flow column at max-width:1250px, a VIEWPORT number picked in the
+   2026-08-26 review as "the width at which the pane can hold the grid" - and
+   picking a viewport number is what put the same overflow back at 601-800 nine
+   days later (q60), because the pane is not the viewport. Both jobs moved into
+   the @container bands beside --board-cols, where the question is asked of the
+   card instead. */
 
 /* ============================================================
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
@@ -3237,21 +3396,16 @@ body.side-coll .ss-lbl { display: none; }
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
 
-  /* Board table at phone width (2026-08-06 grid era): collapse to the two
-     columns that matter on a phone - who, and where it stands - and let the
-     waiting-on line wrap. Type folds into the status cell visually via the
-     stage word; amount/age/actions rejoin on wider screens. */
-  :root { --board-cols: minmax(110px, 1fr) minmax(150px, 1.6fr) 60px; }
-  .rflow, .ramt, .rage, .bhead .h-flow, .bhead .h-amt, .bhead .h-age { display: none; }
-  .rwait { white-space: normal; }
-  /* The two-line clamp is a desktop bound and it is WRONG here: at the 110px
-     phone track a 35-character Hebrew partnership name needs three lines, and
-     two clipped it mid-word (pixel pass 2026-09-10, 371px). Phone is also
-     where the title floor does not exist - there is no hover on touch - and
-     where the name carries most of the row, since the amount and age columns
-     are hidden above. Four lines hold ~440px of text against the 246px real
-     case, and still bound a pathological name from running the row away. */
-  .rn-name { -webkit-line-clamp: 4; }
+  /* The board's phone layout is NOT here any more. This block used to squeeze
+     the row into three viewport-chosen tracks and HIDE the amount and the age
+     to do it, which is the worst version of the trade: an operator on a phone
+     could not see how much money a row was for. A phone is now just a narrow
+     card, so it gets the stacked row from the @container band beside
+     --board-cols - the amount and the age are stacked rather than dropped. The
+     flow chip is still dropped below 800px of card, deliberately and for the
+     reason the 640px band states; the money figure is what a phone must not
+     lose, and it does not. What stays here is the phone's own spacing,
+     which is a touch-density decision and has nothing to do with fitting. */
   .row { gap: 10px; padding: 10px; }
   .bhead { gap: 10px; padding: 8px 10px; }
   /* Filter row tracks the table's text column, which tightens to 10px here. */
@@ -3414,6 +3568,11 @@ body.side-coll .ss-lbl { display: none; }
    carries no empty box. */
 .wl-announce{margin:0 0 var(--space-3);padding:10px 12px;border-radius:var(--radius-md);background:var(--color-info-bg);border:1px solid var(--color-info);font-size:13px;line-height:1.5;color:var(--color-ink)}
 .wl-announce:empty{display:none}
+/* The gate note when the letter on screen REPLACED the one she approved. The
+   sentence changes, but the note is small print at the foot of a busy panel and
+   a changed sentence in the same grey is not a signal; this is the only state
+   where it stops looking like the line that was already there. */
+.wl-gate-changed{padding:8px 10px;border-radius:var(--radius-md);background:var(--color-warning-bg);border:1px solid var(--color-warning);color:var(--color-warning) !important;font-weight:600}
 .wl-done-line{font-size:13px;line-height:1.55;color:var(--color-ink)}
 .wl-done-detail{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--color-ink-sub)}
 .wl-sort-arrow{font-size:9px;opacity:0.5}
@@ -4539,7 +4698,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-5-docked-name-clamp';
+  window.__BUILD_TAG = 'console-2026-09-10-6-board-fits-its-container';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a
@@ -5337,7 +5496,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
       // opSetRowAmount's placeholder guard - was rendering the bare word
       // "unknown" and throwing away the sentence explaining WHY the write was
       // refused. Every caller renders e.serverError, so this fixes them all.
-      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||d.reason||'unknown'; throw e; }
+      // 2026-09-10: the WHOLE envelope rides along on `body`. An ok:false is not
+      // always just a sentence: opGenerateMonthlyWireLetter's approved-letter
+      // refusal carries a structured `factsMismatch` (ju-service
+      // domain/generateWireLetter.ts:345) that the console has to render in the
+      // operator's words, and throwing only `serverError` threw that away, which
+      // made the whole refusal branch unreachable. Additive: every existing
+      // caller reads err.serverError / err.message and nothing enumerates the
+      // error, so no other call site can see this.
+      if(d&&d.ok===false){ var e=new Error('server_error'); e.serverError=d.error||d.reason||'unknown'; e.body=d; throw e; }
       return d;
     });
   }
@@ -9242,6 +9409,13 @@ document.addEventListener('keydown',function(e){
           dactBusy=false;dHideConfirm();
           if(r&&r.ok){
             if(statusEl){statusEl.hidden=false;statusEl.className='dact-status ok';statusEl.innerHTML=dMoneyReceivedSummary(r);}
+            // THE SAME ROUTE, THE SAME SHEET, THE SAME LETTER (round 5). The
+            // worklist's own "Money arrived" has closed the gate since round 4;
+            // this button calls the identical opMarkMoneyReceived and moves the
+            // identical row onto this month's letter, and the drawer is open on
+            // top of the worklist panel, so an operator could mark money here
+            // and click Generate there against the pre-write letter.
+            wlNoteTrackerWrite_('a row was marked as money arrived');
           }else{
             dStatus('Could not mark money received'+((r&&r.error)?(': '+r.error):'. Refresh and try again.'),'error');
           }
@@ -10259,6 +10433,40 @@ document.addEventListener('keydown',function(e){
     if(!h)h='<div style="margin-top:8px;color:var(--color-ink-muted)">No findings.</div>';
     return h;
   }
+  // A REFUSED GENERATE, said in the operator's words (ju-service
+  // domain/wireLetterFacts.ts's diffWireLetterFacts). The server can only name
+  // rows by MASTER_RID, or by `row<n>` for a row that carries none, because no
+  // name and no amount is allowed to cross the wire. Neither of those reads as
+  // a sentence, so they are spoken as a reference and a row number here, and
+  // the reason is built from the three lists rather than printing the JSON.
+  function wlRowKeyWords(key){
+    var m=/^row(\d+)$/.exec(String(key==null?'':key));
+    return m?('row '+m[1]+' on the tab'):('reference '+String(key));
+  }
+  function wlFactsMismatchList(label,keys){
+    if(!keys||!keys.length)return '';
+    return '<div style="margin-top:6px"><strong>'+esc2(label)+'</strong> '
+      +keys.map(function(k){return esc2(wlRowKeyWords(k));}).join(', ')+'</div>';
+  }
+  function wlFactsMismatchHtml(m){
+    var mm=m||{};
+    var named=((mm.changed||[]).length+(mm.removed||[]).length+(mm.added||[]).length)>0;
+    var h='<div class="t-danger"><strong>Nothing was generated and nothing was settled.</strong>'
+      +'<br>This month changed on the tracker after the letter you reviewed was rendered.</div>';
+    h+=wlFactsMismatchList('Edited since you looked:',mm.changed);
+    h+=wlFactsMismatchList('Gone since you looked:',mm.removed);
+    h+=wlFactsMismatchList('Added since you looked:',mm.added);
+    if(!named){
+      h+='<div style="margin-top:6px">'+esc2((mm.reasons||[]).join('; ')
+        ||'The letter no longer matches the one you reviewed.')+'</div>';
+    }
+    // NO PROMISE ABOUT THE GATE. The re-read can itself fail, and this line then
+    // sat beside a failed render telling the operator Generate was about to arm
+    // when the honest answer was that it would stay off. The gate note under the
+    // button is the one place that says what the gate actually did.
+    h+='<div style="margin-top:6px;color:var(--color-ink-muted)">The rows and the letter above are being re-read from the tracker as it stands now. Check them. The line under Generate says whether it re-armed.</div>';
+    return h;
+  }
   // ---- THE MONTH WORKLIST render layer (rebuilt 2026-09-07, design approved
   // by Noa) --------------------------------------------------------------
   // Rows are grouped by the JOB they need, not by the tracker token they
@@ -10748,6 +10956,24 @@ document.addEventListener('keydown',function(e){
   // op would break a live operator panel on the first click. Verify a route
   // actually exists in routes/consoledispatch.ts before flipping GAS_ONLY_ to
   // JU_API on anything still in this file.
+  //
+  // EVERY TRACKER WRITE ON THIS SCREEN GOES THROUGH ONE DOOR (2026-09-10, round
+  // 5). The worklist panel owns the approved-letter gate, but it does not own
+  // every writer: the board drawer's "Mark money received", the manual-row
+  // adder, and the two fill-a-cell panels are separate IIFEs that write the SAME
+  // sheet the letter is composed from. Each of the four left Generate armed
+  // against the pre-write letter, so the click carried the hash of a letter the
+  // tracker no longer described. That fails CLOSED at ju-service (the stale hash
+  // is refused), so it never settled anything wrong - but a correct generation
+  // got refused with a gate note that was byte-identical to the one standing
+  // before the write, so nothing on screen said why.
+  //
+  // The worklist registers wlAfterTrackerWrite here as it boots; a writer
+  // anywhere on the page calls wlNoteTrackerWrite_ and never has to know the
+  // gate exists. A null hook is a no-op, so a panel that loads without the
+  // worklist (a narrower page, a partial render) still works.
+  var wlTrackerWriteHook_=null;
+  function wlNoteTrackerWrite_(what){ if(wlTrackerWriteHook_)wlTrackerWriteHook_(what); }
   (function(){
     var monthEl=document.getElementById('wlMonth'),ccyEl=document.getElementById('wlCurrency'),
         reviewBtn=document.getElementById('wlReviewBtn'),genBtn=document.getElementById('wlGenerateBtn'),
@@ -10893,11 +11119,25 @@ document.addEventListener('keydown',function(e){
     function wlGenerateArmed(){ return !!genBtn && genBtn.getAttribute('aria-disabled')==='false'; }
     // One place that closes the gate, so a new input can never be added without
     // it. Says WHY, because a silently dead button is the defect one level down.
+    // ONE writer for the persistent note, so "this letter replaced the one you
+    // approved" cannot be painted by one path and silently dropped by another.
+    // `changed` is the only thing separating an armed gate over the letter she
+    // reviewed from an armed gate over a letter that replaced it underneath
+    // her: before this the two sentences were byte-identical, so a row action
+    // whose re-render SUCCEEDED left the screen reading exactly as it read
+    // before the write, and the only place the substitution existed was the
+    // hash on the wire.
+    function wlGateNote_(msg,changed){
+      wlGateReason=msg;
+      if(!gateNoteEl)return;
+      gateNoteEl.textContent=msg;
+      gateNoteEl.className=changed?'wl-gate-changed':'';
+    }
     function wlCloseGate(why){
       lastGo=null;
       wlArmGenerate(false);
       wlDisarmConfirm();
-      if(why){wlGateReason=why;if(gateNoteEl)gateNoteEl.textContent=why;}
+      if(why)wlGateNote_(why,false);
     }
     // The click a closed gate answers. It moves focus to the FIRST blocker and
     // says what is missing, rather than doing nothing and letting the operator
@@ -10914,11 +11154,23 @@ document.addEventListener('keydown',function(e){
         var link=li.querySelector('[data-wl-focus]');
         if(link)wlFocusRow(link.getAttribute('data-wl-focus'));
         else{var box=blockersEl.querySelector('.wl-blockers');if(box){try{box.focus();}catch(e){}}}
-      }else if(!lastGo&&reviewBtn&&!reviewBtn.disabled){
+      }else if(!lastGo&&reviewBtn&&!reviewBtn.disabled&&!reviewBtn.hidden){
+        // Only while the button is actually on screen. The review runs itself
+        // now and the button is hidden, so this sentence was telling the
+        // operator to click something she cannot see, appended to a gate note
+        // that had already told her the real reason.
         msg=msg+' Review this month first.';
         try{reviewBtn.focus();}catch(e){}
       }
-      if(gateNoteEl)gateNoteEl.textContent=msg;
+      // The class is cleared, not the stored reason: this sentence is the
+      // answer to one click, and the "letter replaced" highlight belongs to the
+      // persistent note, not to a refusal. DEFENCE IN DEPTH, not a live path:
+      // every route that disarms the gate today rewrites the note through
+      // wlGateNote_ first, so the class is already gone by the time a refusal
+      // can be clicked. Mutating this line away breaks nothing that can be
+      // reached, which is why no assertion holds it. It stays because leaving a
+      // stale alarm standing on a money screen is the wrong way to be wrong.
+      if(gateNoteEl){gateNoteEl.textContent=msg;gateNoteEl.className='';}
       wlAnnounce(msg);
     }
     // scrollIntoView is guarded: it is absent in jsdom and in some embedded
@@ -10948,7 +11200,9 @@ document.addEventListener('keydown',function(e){
       if(blockersEl)blockersEl.innerHTML=wlBlockersHtml(items);
       // A blocker on screen is a blocker on the gate. Without this the summary
       // could say the letter is stopped while Generate sat armed beside it.
-      if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Fix it, then review again.');
+      // "then review again" named the hidden Review button. Clearing the row IS
+      // a tracker write, and every one of those now re-reads and re-reviews.
+      if(items.length&&wlGenerateArmed())wlCloseGate('A blocking row is on this month. Generate stays off until it clears; clearing it re-runs the review on its own.');
       // THE ORDERING BUG (2026-09-07). The two peeks land in either order, and
       // the letter group's empty state is derived from the AWAITING rows. When
       // awaiting answered second, the letter group had already painted a reason
@@ -11123,6 +11377,59 @@ document.addEventListener('keydown',function(e){
     // carrying it and report the list back, so the rid alone is the whole
     // instruction. &tab= still exists server-side for a deliberate single-month
     // park; this button is not that.
+    // A TRACKER WRITE INVALIDATES THE REVIEW, not just the render (2026-09-10,
+    // round 4). Park, un-park, move-to-next-month and money-arrived all WRITE
+    // the sheet the letter is composed from. At the instant that write lands,
+    // the letter the operator approved stops describing the tracker, whether or
+    // not the re-render then succeeds. All four used to fire a bare
+    // renderLetter() on a 600ms timer, which cleared the evidence and left the
+    // gate alone: the note still read "Reviewed 09/2026 . NIS . 1 row" beside a
+    // panel that had changed underneath it, and the next click reached
+    // ju-service with no expectedFactsHash. The silent case was the worst of
+    // the three: on a SUCCESSFUL re-render the note was byte-identical before
+    // and after, so nothing on screen said the approved letter had been
+    // repointed.
+    //
+    // The close happens HERE, synchronously with the write, not 600ms later
+    // behind the render, so the unhashed window never opens at all.
+    // EVERY WRITE SINCE THE OPERATOR LAST SAW A LETTER, held until she has
+    // actually seen the letter that replaced the one she approved. Round 4
+    // closed the gate and re-armed it correctly and the operator still had no
+    // way to tell: the armed note after the re-render was byte-for-byte the
+    // note before the write.
+    //
+    // ROUND 5 SAID IT AND THEN WIPED IT (2026-09-10, round 6). The flag was
+    // consumed by the first review that ARMED, so the warning lived exactly
+    // until the next review overwrote the note. Two row clicks less than 600ms
+    // apart is enough: the first re-review consumes the flag and paints the
+    // warning, the second re-review lands ~600ms later with nothing to say and
+    // repaints the note byte-identical to the pre-write one. The operator is
+    // then holding a screen that states nothing happened. A warning that erases
+    // itself is not a warning, so this is now a LIST that survives every
+    // re-review and is emptied only where she has been shown the substitution
+    // and acted on it (the Generate confirm), or where the different letter is
+    // her own doing (the month and currency selects).
+    var wlWriteNotes_=[],wlWriteSaid_='';
+    function wlWritePending_(){ return wlWriteNotes_.join(', '); }
+    function wlWritesSeen_(){ wlWriteNotes_=[];wlWriteSaid_=''; }
+    function wlAfterTrackerWrite(what){
+      // Every write since she last saw a letter, not just the newest: two
+      // actions inside one re-read window are two facts, and naming only the
+      // second under-reports what moved underneath her.
+      if(wlWriteNotes_.indexOf(what)<0)wlWriteNotes_.push(what);
+      wlCloseGate('You changed the tracker ('+what+'), so the letter you reviewed no longer describes it. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+      // The gate state, spoken, appended to the action's own outcome rather
+      // than replacing it: an operator who cannot see the button otherwise has
+      // no signal that Generate just went off.
+      wlAnnounce(((announceEl&&announceEl.textContent)||'')+' Generate is off until the letter is re-read.');
+      // keepResult: the row action's own result line (wlNoteLandingTab's
+      // landing-tab sentence most of all) is the only explanation on screen for
+      // where the row went, and the re-review must not blank it.
+      setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); wlRelookAndReview({keepResult:true}); },600);
+    }
+    // Registered for every OTHER panel on this page. See wlNoteTrackerWrite_'s
+    // header above the IIFE for which writers live outside it and why.
+    wlTrackerWriteHook_=wlAfterTrackerWrite;
     function parkRow(rid,reason,form,go,who){
       // Flipped to JU_API 2026-09-03: ju-service's opParkRow now has a
       // verified-console-identity door (consoledispatch.ts), not just the
@@ -11142,7 +11449,7 @@ document.addEventListener('keydown',function(e){
           ? ('Parked '+who+'. It is off every letter until it is un-parked.')
           : (who+'.'+actionOutcomeText(r)));
         wlNoteLandingTab(r);
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was parked');
       }).catch(function(err){
         go.disabled=false;go.textContent='Park this row';go.title=(err&&err.serverError)||'Could not reach the server';
       });
@@ -11172,7 +11479,7 @@ document.addEventListener('keydown',function(e){
         btn.textContent='Un-parked';
         wlAnnounce('Un-parked '+who+'. It is back on the needs-you list; this did not say the money arrived.');
         wlNoteLandingTab(r);
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was un-parked');
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Un-park this row';btn.title=(err&&err.serverError)||'Could not reach the server';
       });
@@ -11207,7 +11514,7 @@ document.addEventListener('keydown',function(e){
           wlAnnounce(out_.clean
             ? ('Moved '+who+' to '+wlTabMonthWords(target)+'. The row has left this month.')
             : (who+'.'+actionOutcomeText(res)));
-          peekAwaiting();peekRows();renderLetter();
+          wlAfterTrackerWrite('a row moved to another month');
         })
         .catch(function(err){
           nxt.disabled=false;
@@ -11235,7 +11542,7 @@ document.addEventListener('keydown',function(e){
         }
         btn.textContent='Money arrived, recorded';btn.className='wl-primary wl-primary-done';
         wlAnnounce('Recorded the money for '+who+'. It moves onto this month’s letter.');
-        setTimeout(function(){ peekAwaiting(); peekParked(); peekRows(); renderLetter(); },600);
+        wlAfterTrackerWrite('a row was marked as money arrived');
       }).catch(function(err){
         btn.disabled=false;btn.textContent='Money arrived';
         var why=(err&&err.serverError)||'Could not reach the server';
@@ -11292,29 +11599,91 @@ document.addEventListener('keydown',function(e){
     // in place and leaves every other panel exactly as it was, because this is
     // a reading aid on a money screen, not a precondition for one.
     var renderSeq=0;
+    // WHAT THE OPERATOR IS APPROVING, kept so the generate click can carry it
+    // back (ju-service domain/wireLetterFacts.ts). Ids and digests only: a
+    // name, an amount and a bank line never ride in a query string. Null
+    // whenever the panel is not showing a finished render of the CURRENT month
+    // and currency, and generate then runs unchecked exactly as it did before
+    // this existed rather than being blocked by a hash nobody can produce.
+    var wlApproved=null;
+    // WHAT THE LAST RENDER ACTUALLY DID, which is not the same question as
+    // "is there a hash". 'none' = no render was called for (no month yet);
+    // 'ok' = the server answered, whether or not that answer carried a hash;
+    // 'failed' = the render errored or could not be reached.
+    //
+    // The distinction is the whole fail-closed rule (2026-09-10). An arm with
+    // wlApproved===null after a render that SUCCEEDED is the deliberate
+    // unhashed path: a first-time generate, or an older ju-service that returns
+    // no factsHash, and both must keep working. An arm with wlApproved===null
+    // after a render that FAILED is a different thing entirely: the letter on
+    // screen is an error message, the hash the money call would have been held
+    // to does not exist, and the server guard is `if (expectedHash)`, so the
+    // click would generate AND settle unchecked on the very sheet whose change
+    // caused the refusal. Only that case is refused. runReview reads this,
+    // never wlApproved, to decide.
+    var wlRenderState='none';
+    // The way out of a failed render is drawn INTO the failure itself: the
+    // Review button is hidden now that the review runs itself, so the month and
+    // currency selects were the only retry left.
+    function wlRenderFailedHtml(why){
+      return '<div class="t-danger">The letter could not be rendered: '+esc2(why)
+        +'. The rows above are unaffected.</div>'
+        +'<div style="margin-top:6px"><button type="button" id="wlRenderRetry" class="btn btn-quiet">Retry the render</button></div>';
+    }
+    // RETURNS A PROMISE that always resolves, never rejects, so a caller can
+    // sequence behind it. runReview arms Generate, and arming it while this
+    // render is still in flight leaves wlApproved null for that window: the
+    // hash would simply not be sent and the money call would run unchecked.
     function renderLetter(){
+      // THE GATE CLOSES HERE (2026-09-10, round 4). Clearing the evidence and
+      // disarming the button are now ONE statement in ONE function, so no call
+      // site can do the first without the second. Before this, four row
+      // actions fired renderLetter() bare after writing the tracker: wlApproved
+      // was nulled, wlRenderState was rewritten, and lastGo was left standing,
+      // so Generate stayed armed against a review of a sheet that no longer
+      // existed and the click reached ju-service with no expectedFactsHash at
+      // all. The server guard is `if (expectedHash)`, so that click generated
+      // AND settled unchecked. A bare call is now fail-CLOSED by construction
+      // rather than fail-open; zz-console-approved-hash.cjs additionally holds
+      // the call sites to one, so a bare call cannot strand the gate either.
+      wlApproved=null;
+      wlRenderState='pending';
+      wlCloseGate('The letter is being re-read. Generate arms itself once the new letter is on screen.');
       var host=document.getElementById('wlRenderPanel');
-      if(!host)return;
+      if(!host){wlRenderState='none';return Promise.resolve();}
       var month=wlViewMonth();
-      if(!wlValidMonth(month)){host.innerHTML='';return;}
+      if(!wlValidMonth(month)){wlRenderState='none';host.innerHTML='';return Promise.resolve();}
       var ccy=ccyEl.value;
       var rid=++renderSeq;
       host.innerHTML='<div class="wl-render-hd"><span class="wl-render-ttl">The letter</span>'
         +'<span class="wl-render-job">'+esc2(ccy)+' &middot; '+esc2(wlTabMonthWords(month))+'</span></div>'
         +'<div class="wl-render-body t-muted">Rendering&#8230;</div>';
-      apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API).then(function(r){
+      return apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API).then(function(r){
         if(rid!==renderSeq)return;
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
         if(!r||!r.ok){
-          body.innerHTML='<div class="t-danger">The letter could not be rendered: '
-            +esc2((r&&r.error)||'no answer from the server')+'. The rows above are unaffected.</div>';
+          wlRenderState='failed';
+          body.innerHTML=wlRenderFailedHtml((r&&r.error)||'no answer from the server');
           return;
         }
         if(!((r.transfers||[]).length)){
+          // ANSWERED, BUT NOTHING RENDERED AND NOTHING STORED. 'ok' used to be
+          // set BEFORE this return, so a month with no rows reported a good
+          // render while holding no hash, and 'ok' is the state that arms the
+          // gate. Its own state, because "the server answered with an empty
+          // letter" is neither a failure nor a letter anyone can be held to.
+          wlRenderState='empty';
           body.innerHTML='<div class="t-muted">No '+esc2(ccy)+' row is on this month&#8217;s letter yet, so there is nothing to render.</div>';
           return;
         }
+        // The letter about to be drawn IS the one generate will be held to. An
+        // older ju-service that returns no factsHash leaves this null, and the
+        // generate call then carries nothing.
+        if(r.factsHash)wlApproved={month:month,currency:ccy,hash:String(r.factsHash),rowFacts:String(r.rowFacts||'')};
+        // AFTER the store, never before it: 'ok' means a letter was drawn and
+        // whatever hash it carried is now held.
+        wlRenderState='ok';
         // The composer's own HTML carries print CSS. Injected into a sandboxed
         // frame rather than the page, so it cannot restyle every other panel on
         // this screen, and so nothing in it can script against the console.
@@ -11327,12 +11696,53 @@ document.addEventListener('keydown',function(e){
         f.srcdoc=String(r.html||'');
       }).catch(function(err){
         if(rid!==renderSeq)return;
+        wlRenderState='failed';
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
-        body.innerHTML='<div class="t-danger">The letter could not be rendered: '
-          +esc2((err&&err.serverError)||'could not reach the server')+'. The rows above are unaffected.</div>';
+        body.innerHTML=wlRenderFailedHtml((err&&err.serverError)||'could not reach the server');
       });
     }
+    // THE ONE WAY BACK IN. Review arms Generate against a letter, so the letter
+    // has to be re-read FIRST and the review has to run behind it. Before this
+    // the two were fired side by side and Review never re-rendered at all,
+    // which is what turned a correct refusal into a loop: the refused letter
+    // stayed on screen with its refused hash, and the only escapes were the
+    // currency select, the month, or a reload.
+    // keepResult: the recovery after a refusal must NOT blank the result line,
+    // because the refusal is the only explanation the operator has for why
+    // nothing settled. It used to be repainted back afterwards, unconditionally,
+    // which silently erased whatever she had done in the meantime, a
+    // Verification copy and its Drive link most of all. Not clearing it in the
+    // first place removes the race instead of re-running it.
+    function wlRelookAndReview(opts){
+      var keep=!!(opts&&opts.keepResult===true);
+      function after(){ return runReview({keepResult:keep}); }
+      return renderLetter().then(after,after);
+    }
+    // Retry wired to the panel, not to the node: wlRenderFailedHtml redraws the
+    // button on every render.
+    (function(){
+      var host=document.getElementById('wlRenderPanel');
+      if(!host)return;
+      host.addEventListener('click',function(e){
+        var t=e&&e.target;
+        var btn=(t&&t.closest)?t.closest('#wlRenderRetry'):null;
+        if(!btn)return;
+        btn.disabled=true;
+        wlRelookAndReview({keepResult:true});
+      });
+    })();
+    // A ROWS OUTAGE HAD NO WAY BACK EITHER (2026-09-10, round 5). Both failure
+    // arms below closed the gate saying "Review again before generating", and
+    // the Review button is hidden because the review runs itself - so a single
+    // transient peek failure left the gate shut, the screen naming an action
+    // that does not exist, and the month select the only escape. The failure now
+    // draws its own retry, the same shape the render panel's already has.
+    function wlRowsFailedHtml(why){
+      return '<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2(why)
+        +'<div style="margin-top:6px"><button type="button" id="wlRowsRetry" class="btn btn-quiet">Retry loading the rows</button></div></div></div>';
+    }
+    var WL_ROWS_GATE_NOTE='Rows could not be loaded, so Generate stays off. Retry loading them above; it arms itself once they are back.';
     function peekRows(){
       var month=wlViewMonth();
       if(!wlValidMonth(month)){wlLastTransfers=null;renderWlRows();return;}
@@ -11341,7 +11751,7 @@ document.addEventListener('keydown',function(e){
       // Flipped to JU_API 2026-09-03, same reasoning as peekAwaiting() above.
       apiFetch('?api=opPeekMonthTransfers&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value), false, JU_API).then(function(r){
         if(rid!==peekSeq)return;
-        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;wlCloseGate('Rows could not be loaded. Review again before generating.');rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((r&&r.error)||'Could not load rows.')+'</div></div>';return;}
+        if(!r||!r.ok){wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;wlCloseGate(WL_ROWS_GATE_NOTE);rowsEl.innerHTML=wlRowsFailedHtml((r&&r.error)||'Could not load rows.');return;}
         wlLastTransfers=r.transfers;
         wlLastExcluded=r.excluded||null;
         wlLastUnresolved=r.unresolvedCurrency||null;
@@ -11351,10 +11761,21 @@ document.addEventListener('keydown',function(e){
       }).catch(function(err){
         if(rid!==peekSeq)return;
         wlLastTransfers=null;wlLastExcluded=null;wlLastUnresolved=null;wlLastRefused=null;
-        wlCloseGate('Rows could not be loaded. Review again before generating.');
-        rowsEl.innerHTML='<div class="wl-group"><div class="wl-group-empty t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div></div>';
+        wlCloseGate(WL_ROWS_GATE_NOTE);
+        rowsEl.innerHTML=wlRowsFailedHtml((err&&err.serverError)||'Could not reach the server.');
       });
     }
+    // Wired to the rows panel, not to the node: wlRowsFailedHtml redraws the
+    // button on every failure. rowsEl already carries a click listener for the
+    // sort headers, which returns early on anything that is not [data-sort].
+    rowsEl.addEventListener('click',function(e){
+      var t=e&&e.target;
+      var btn=(t&&t.closest)?t.closest('#wlRowsRetry'):null;
+      if(!btn)return;
+      btn.disabled=true;
+      peekRows();
+      wlRelookAndReview({keepResult:true});
+    });
     // Month tabs (Noa, 2026-08-02: "it should have a dropdown for the month i
     // want to see") - the tracker's REAL month tabs, newest first. Presented as
     // the screen's heading with prev/next since 2026-09-07; the select survives
@@ -11393,6 +11814,13 @@ document.addEventListener('keydown',function(e){
         apiFetch('?api=diagOpenMonthTab&month='+encodeURIComponent(cur)+'&commit=1',false,JU_API)
           .then(function(res){
             if(!res||res.ok===false){throw new Error((res&&res.error)||'could not open the month');}
+            // A tab creation cannot change the letter of a month that already
+            // had a tab, so this is the one tracker write with no way to
+            // invalidate the letter on screen. It goes through the same door
+            // anyway: the rule is "a write closes the gate", and a per-site
+            // judgment about which writes are harmless is how the other four
+            // were missed.
+            wlNoteTrackerWrite_('a new month tab was opened');
             loadMonths(cur);
           })
           .catch(function(err){
@@ -11415,7 +11843,7 @@ document.addEventListener('keydown',function(e){
         monthEl.innerHTML=months.map(function(m){return '<option value="'+esc2(m)+'">'+esc2(wlTabMonthWords(m))+'</option>';}).join('');
         if(selectAfter&&months.indexOf(selectAfter)>-1)monthEl.value=selectAfter;
         renderOpenMonthOffer(months);
-        wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();
+        wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();
       }).catch(function(){
         monthEl.innerHTML='<option value="">Could not load months</option>';
         if(monthTtlEl)monthTtlEl.textContent='Could not load the month tabs';
@@ -11426,12 +11854,58 @@ document.addEventListener('keydown',function(e){
     // Every input that feeds the letter closes the gate. peekRows() alone did
     // NOT: it only reset the gate when the newly picked month was empty, which
     // is the one case where no money moves.
-    monthEl.onchange=function(){wlCloseGate('Month changed. Review again before generating.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();renderLetter();runReview();};
-    ccyEl.onchange=function(){wlCloseGate('Currency changed. Review again before generating.');wlServerBlocking=null;peekRows();renderLetter();runReview();};
+    // "Review again before generating" NAMED A BUTTON THAT IS NOT ON SCREEN
+    // (2026-09-10, round 5). The review runs itself and the Review button is
+    // hidden, so all three of these told the operator to click something she
+    // cannot see. Each one already re-reads and re-reviews on the very next
+    // line; the copy now says that instead of asking her for it.
+    // The pending writes are dropped here on purpose: a different month or
+    // currency is a different letter by her own doing, not a letter substituted
+    // underneath one she had approved.
+    monthEl.onchange=function(){wlWritesSeen_();wlCloseGate('Month changed. Re-reading it now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;wlRenderNavLine();peekRows();peekAwaiting();peekParked();wlRelookAndReview();};
+    ccyEl.onchange=function(){wlWritesSeen_();wlCloseGate('Currency changed. Re-reading the month now. Generate arms itself once the new letter is on screen.');wlServerBlocking=null;peekRows();wlRelookAndReview();};
     // The override re-states itself as you type, so the month the gate will
     // actually use is never a guess - the operator reads it back in words
     // before committing, rather than discovering it in a blocking finding.
-    (function(){var nm=document.getElementById('wlNavMonth');if(nm)nm.oninput=function(){wlCloseGate('Struck-NAV month changed. Review again before generating.');wlRenderNavLine();};})();
+    //
+    // FAIL-STRANDED, THE ROUND-5 DEFECT. This closed the gate and NOTHING ever
+    // re-opened it: unlike the month and currency selects beside it, no re-read
+    // was fired, so typing one character into the Struck-NAV override left the
+    // operator unable to generate this month's letter at all - and the note
+    // told her to "review again" while the Review button is hidden, so the copy
+    // named the one action she could not take. A closed gate with no path back
+    // is its own defect, whatever it is protecting.
+    //
+    // It is DEBOUNCED, not fired per keystroke: this is a free-text field, so
+    // every prefix of a valid YYYY-MM is typed on the way to it and each one
+    // would otherwise cost a dry-run round trip. renderLetter is deliberately
+    // NOT re-run - the letter does not vary with navMonth (renderLetter sends
+    // no navMonth at all), only the HY-close review does - so this calls
+    // runReview directly and leaves the stored hash, which is still the hash of
+    // the letter on screen, exactly where it is.
+    (function(){
+      var nm=document.getElementById('wlNavMonth');
+      if(!nm)return;
+      var navTimer=null;
+      nm.oninput=function(){
+        wlRenderNavLine();
+        // An unfinished or malformed override gets copy naming the two things
+        // that fix it, both of which are this field. runReview refuses that
+        // state anyway, so firing the timer into it would only re-close the
+        // gate with a less useful sentence.
+        if(wlNavMonthInvalid()){
+          wlCloseGate('Struck-NAV month must be YYYY-MM, month 01 to 12. Fix it, or clear it to use the derived close.');
+        }else{
+          wlCloseGate('Struck-NAV month changed. Re-reading the review now. Generate arms itself once it lands.');
+        }
+        if(navTimer)clearTimeout(navTimer);
+        navTimer=setTimeout(function(){
+          navTimer=null;
+          if(wlNavMonthInvalid())return;
+          runReview({keepResult:true});
+        },600);
+      };
+    })();
     // Letter-template maintenance. Column widths, fonts and the total-row
     // wording are ALL inherited from the template document - docFill only
     // clones protoRow and never sets a width - so a cramped amount column has
@@ -11503,28 +11977,109 @@ document.addEventListener('keydown',function(e){
     // It still arms the gate exactly as before, so Generate is armed only by a
     // review of the CURRENT inputs, and because the review now re-runs on every
     // change the two can no longer drift apart.
-    function runReview(){
+    // A PERMANENT FALSE PROMISE, FIXED AS A CLASS (2026-09-10, round 6). Every
+    // path into runReview arrives behind a TRANSIENT note: "the letter is being
+    // re-read", "re-reading the month now", each one promising that Generate
+    // arms itself once the new letter is on screen. Those sentences are only
+    // true if the review that follows writes a note of its own. Every early
+    // return below wrote none, so the transient promise stayed on screen
+    // forever, naming an event that would never happen and no way out.
+    //
+    // The reported instance: with the Struck-NAV override in an invalid state,
+    // ANY other re-read (a month change, a tracker write) reached the invalid
+    // return above and stranded "The letter is being re-read. Generate arms
+    // itself once the new letter is on screen." permanently. It is not the only
+    // one - a null body, an ok:false review and an unreachable server stranded
+    // exactly the same sentence - so all five now end on a reason and a
+    // control, through one door.
+    function wlReviewStop_(why){ wlCloseGate(why); wlAnnounce(why); }
+    // The review's own way back, the shape the render panel and the rows panel
+    // already have: the Review button is hidden (the review runs itself), so a
+    // failed review that names no control names nothing.
+    function wlReviewFailedHtml(why){
+      return '<div class="t-danger">'+esc2(why)+'</div>'
+        +'<div style="margin-top:6px"><button type="button" id="wlReviewRetry" class="btn btn-quiet">Retry the review</button></div>';
+    }
+    var WL_REVIEW_GATE_NOTE_='The review did not complete, so Generate stays off. Retry the review above; it arms itself once the review lands.';
+    // Wired to the panel, not to the node: wlReviewFailedHtml redraws the button
+    // on every failure.
+    if(findEl)findEl.addEventListener('click',function(e){
+      var t=e&&e.target;
+      var btn=(t&&t.closest)?t.closest('#wlReviewRetry'):null;
+      if(!btn)return;
+      btn.disabled=true;
+      wlRelookAndReview({keepResult:true});
+    });
+    function runReview(opts){
+      // Tolerant of any argument: this is reached through .then(after,after) and
+      // through DOM handlers, so it can be handed an Error or an Event.
+      var keepResult=!!(opts&&opts.keepResult===true);
       var month=(monthEl.value||'').trim();
-      if(!/^\d{2}\/\d{4}$/.test(month)){setResult('<div class="t-danger">Choose a month first.</div>','');return;}
-      if(wlNavMonthInvalid()){setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');return;}
+      if(!/^\d{2}\/\d{4}$/.test(month)){
+        if(!keepResult)setResult('<div class="t-danger">Choose a month first.</div>','');
+        wlReviewStop_('No month is selected, so there is nothing to review. Pick a month above; Generate arms itself once its letter is on screen.');
+        return;
+      }
+      if(wlNavMonthInvalid()){
+        // The gate note, not just the result line: this is the state the
+        // operator is LEFT in, and the result line is hers (a Verification copy
+        // and its Drive link live there) whenever a re-read reached this
+        // through .then rather than through her own click.
+        if(!keepResult)setResult('<div class="t-danger">Struck-NAV month must be YYYY-MM, month 01 to 12. Clear it to use the derived close.</div>','');
+        wlReviewStop_('Struck-NAV month must be YYYY-MM, month 01 to 12. Fix the Struck NAV month (override) field above, or clear it to use the derived close. Generate stays off until it is valid.');
+        return;
+      }
       reviewBtn.disabled=true;wlCloseGate('');
       findEl.innerHTML='<div class="t-muted">Reviewing...</div>';
-      setResult('','');
+      if(!keepResult)setResult('','');
       apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccyEl.value)+wlNavMonthQs()+'&dryRun=true', false, JU_API).then(function(r){
         reviewBtn.disabled=false;
-        if(!r){findEl.innerHTML='<div class="t-danger">No response.</div>';return;}
+        if(!r){findEl.innerHTML=wlReviewFailedHtml('No response.');wlReviewStop_(WL_REVIEW_GATE_NOTE_);return;}
         if(r.go===false){
           findEl.innerHTML=wlFindingsHtml(r.blocking,r.warnings);
           // The server's blockers join the ones this screen already knows
           // about, so the summary above the list is the ONE place an operator
           // has to look to see what is stopping the letter.
           wlServerBlocking=r.blocking||[];
-          wlCloseGate('Blocking findings. Generate stays off until they clear.');
+          wlCloseGate('Blocking findings. Generate stays off until they clear; fixing a row re-runs the review on its own.');
           wlRender();
           return;
         }
-        if(!r.ok){findEl.innerHTML='<div class="t-danger">'+esc2(r.error||'Review failed.')+'</div>';return;}
+        if(!r.ok){findEl.innerHTML=wlReviewFailedHtml(r.error||'Review failed.');wlReviewStop_(WL_REVIEW_GATE_NOTE_);return;}
         wlServerBlocking=null;
+        // FAIL CLOSED ON A FAILED RENDER (2026-09-10). The review and the render
+        // are two different calls, so the review can pass cleanly while the
+        // panel beside it holds an error message. Arming there left the operator
+        // looking at "The letter could not be rendered" next to a live Generate
+        // whose gate note announced a row count, and that click carried no
+        // expectedFactsHash, so ju-service generated AND settled unchecked on
+        // the very sheet whose change caused the refusal. The refusal recovery
+        // is the exact path that reaches this.
+        // Positive test, not a blocklist: arm only on a render that FINISHED
+        // ('ok'), or where no render was ever called for ('none', the panel is
+        // not on this page at all). 'pending' is refused for the reason
+        // renderLetter's own comment names: a review that lands while a render
+        // is in flight arms Generate with wlApproved null, and the click then
+        // runs unchecked. It is reachable, not theoretical: a month flip starts
+        // render B, render A's chain resolves behind it, and A's review arms the
+        // gate against a letter B has not finished drawing.
+        if(wlRenderState!=='ok'&&wlRenderState!=='none'){
+          findEl.innerHTML=wlFindingsHtml([],r.warnings);
+          lastGo=null;
+          wlArmGenerate(false);
+          wlRender();
+          var rfMsg=(wlRenderState==='failed')
+            ? 'The letter did not render, so Generate stays off and nothing was settled. Retry the render above; Generate arms itself once the letter is back.'
+            : (wlRenderState==='empty')
+              // The same sentence the zero-count branch below uses, deliberately:
+              // both mean "there is nothing to settle", and two wordings for one
+              // state is how the same screen comes to say two things.
+              ? 'Generate stays off until a row is ready to wire.'
+              : 'The letter is still being read, so Generate stays off. It arms itself when the letter lands.';
+          wlGateNote_(rfMsg,false);
+          wlAnnounce(rfMsg);
+          return;
+        }
         // A ZERO-ROW MONTH NEVER ARMS GENERATE (2026-09-10). The review can
         // pass cleanly on a month with nothing to wire - there is nothing to
         // find fault with - and before this the auto-review therefore armed a
@@ -11538,22 +12093,39 @@ document.addEventListener('keydown',function(e){
           lastGo=null;
           wlArmGenerate(false);
           wlRender();
-          if(gateNoteEl)gateNoteEl.textContent='Generate stays off until a row is ready to wire.';
+          wlGateNote_('Generate stays off until a row is ready to wire.',false);
           return;
         }
         findEl.innerHTML=wlFindingsHtml([],r.warnings)+'<div style="margin-top:8px;color:var(--color-ink-muted)">'+(r.counts?('Incoming '+r.counts.incoming+', outgoing '+r.counts.outgoing+', total '+r.counts.total):'')+'</div>';
         lastGo=wlInputs();lastGo.counts=r.counts||null;
         wlArmGenerate(true);
         wlRender();
-        if(gateNoteEl){
-          var c=r.counts;
-          gateNoteEl.textContent='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
-            +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
-            +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
-        }
+        var c=r.counts;
+        var armedMsg='Reviewed '+lastGo.month+' \u00b7 '+lastGo.currency
+          +(c?(' \u00b7 '+c.total+' row'+(c.total===1?'':'s')):'')
+          +'. Generate will settle '+(c?('these '+c.total):'them')+' on the tracker.';
+        // THE SUBSTITUTION, SAID OUT LOUD AND KEPT THERE (round 5, corrected in
+        // round 6). A row action whose re-render succeeded produced this exact
+        // sentence again, so the screen was identical before and after and the
+        // only record that the approved letter had been replaced was the hash
+        // on the wire. Round 5's warning was then consumed by the review that
+        // said it, so the NEXT review repainted the pre-write sentence and the
+        // operator was left holding a screen that says nothing happened.
+        //
+        // Not consumed here. The list stands on every armed note until the
+        // confirm restates it (genBtn.onclick), which is the point she has both
+        // seen the new letter and acted on it.
+        var replaced=wlWritePending_();
+        if(replaced)armedMsg+=' This is a NEW letter, re-read after you changed the tracker ('+replaced+'). It is not the one you were looking at before.';
+        wlGateNote_(armedMsg,!!replaced);
+        // Spoken once per distinct set of writes: the note is persistent, the
+        // live region is not, and re-reading the same sentence on every later
+        // review is how a screen reader teaches its user to ignore it.
+        if(replaced&&replaced!==wlWriteSaid_){wlWriteSaid_=replaced;wlAnnounce(armedMsg);}
       }).catch(function(err){
         reviewBtn.disabled=false;
-        findEl.innerHTML='<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>';
+        findEl.innerHTML=wlReviewFailedHtml((err&&err.serverError)||'Could not reach the server.');
+        wlReviewStop_(WL_REVIEW_GATE_NOTE_);
       });
     };
     // Generate ARMS a confirm; it no longer commits on the first click. The
@@ -11567,24 +12139,43 @@ document.addEventListener('keydown',function(e){
       if(!wlGenerateArmed()||!lastGo){wlRefuseGenerate();return;}
       var now=wlInputs();
       if(!wlSameInputs(lastGo,now)){
-        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        // A LAST-DITCH GUARD THAT USED TO STRAND HER. Every input that can move
+        // this needle already closes the gate and re-reviews, so reaching here
+        // means one of them did not - and answering that with a shut gate, a
+        // hidden button named in the copy and no re-read left the operator with
+        // nothing to click. Take the re-read for her, exactly as the refusal
+        // recovery does.
+        wlCloseGate('Inputs changed since the review. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+        wlRelookAndReview({keepResult:true});
         return;
       }
       var c=lastGo.counts;
+      // THE SUBSTITUTION RIDES ALL THE WAY TO THE LAST SCREEN BEFORE THE MONEY
+      // MOVES. The persistent note has carried it since the write; this is the
+      // step she has to read to settle, so it says it once more here rather
+      // than relying on her having read the small print behind the dialog.
+      var replaced_=wlWritePending_();
       confirmMsgEl.innerHTML='<strong>Settle '+(c?(c.total+' row'+(c.total===1?'':'s')):'this batch')+' on '+esc2(lastGo.month)+' ('+esc2(lastGo.currency)+')?</strong>'
         +(c?('<br>Incoming '+c.incoming+', outgoing '+c.outgoing+'.'):'')
+        +(replaced_?('<br>This letter was re-read after you changed the tracker ('+esc2(replaced_)+'). It is not the one you were looking at before.'):'')
         +'<br>This stamps SETTLED_AT and moves each row to a terminal execution status on the tracker. It cannot be undone from here.'
         +(draftEl.checked?'<br>A covering email will also be drafted in Gmail (drafted, never sent).':'');
       confirmEl.hidden=false;
+      // SEEN. Not on the arm, not on a timer: the warning is spent only once it
+      // has been put in front of her at the point of decision.
+      wlWritesSeen_();
       confirmGoEl.focus();
     };
-    if(reviewBtn)reviewBtn.onclick=runReview;
+    if(reviewBtn)reviewBtn.onclick=wlRelookAndReview;
     if(confirmCancelEl)confirmCancelEl.onclick=function(){wlDisarmConfirm();};
     function wlDoGenerate(){
       if(!lastGo)return;
       var snap=lastGo;
       if(!wlSameInputs(snap,wlInputs())){
-        wlCloseGate('Inputs changed since the review. Review again before generating.');
+        // Same reasoning as the arm-time check above: refuse, then re-read, so
+        // the refusal is a step on the way rather than a dead end.
+        wlCloseGate('Inputs changed since the review. Re-reading the month now. Generate arms itself once the new letter is on screen.');
+        wlRelookAndReview({keepResult:true});
         return;
       }
       wlDisarmConfirm();
@@ -11593,7 +12184,15 @@ document.addEventListener('keydown',function(e){
       genBtn.disabled=true;reviewBtn.disabled=true;confirmGoEl.disabled=true;
       setResult('<div class="t-muted">Generating and settling...</div>','');
       var navQs=snap.navMonth?('&navMonth='+encodeURIComponent(snap.navMonth)):'';
-      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
+      // THE LETTER ON SCREEN, echoed back so the server can refuse a batch the
+      // sheet changed underneath it (routes/consoledispatch.ts reads
+      // expectedFactsHash and expectedRowFacts). Sent only when the rendered
+      // letter is this exact month and currency; with no render behind it
+      // nothing is sent and the server generates unchecked, as before.
+      var facts=(wlApproved&&wlApproved.hash&&wlApproved.month===snap.month&&wlApproved.currency===snap.currency)?wlApproved:null;
+      var factsQs=facts?('&expectedFactsHash='+encodeURIComponent(facts.hash)
+        +'&expectedRowFacts='+encodeURIComponent(facts.rowFacts)):'';
+      apiFetch('?api=opGenerateMonthlyWireLetter&monthTab='+encodeURIComponent(snap.month)+'&currency='+encodeURIComponent(snap.currency)+navQs+factsQs+'&createDraft='+(draftEl.checked?'true':'false'), false, JU_API).then(function(r){
         reviewBtn.disabled=false;confirmGoEl.disabled=false;
         if(!r||!r.ok){genBtn.disabled=false;setResult('<div class="t-danger">'+esc2((r&&r.error)||'Generation failed.')+'</div>','');return;}
         // THE SAME GUARD THE VERIFY PATH HAS HAD SINCE THE FIRST LIVE RUN, which
@@ -11635,7 +12234,11 @@ document.addEventListener('keydown',function(e){
         // a second click returned the identical green message and the operator
         // could not tell a fresh settle from a no-op.
         genBtn.disabled=false;
-        wlCloseGate('Settled '+snap.month+'. Review again to re-run.');
+        // DELIBERATELY TERMINAL, and now it says so. Generate must not re-arm
+        // on the batch it has just settled, so this is the one closed gate with
+        // no path back by design - which is exactly why the copy has to name the
+        // actions that DO exist rather than the hidden Review button.
+        wlCloseGate('Settled '+snap.month+'. Generate stays off so this batch cannot be settled twice. Change the month or the currency to work on another one.');
         var h='<div style="color:var(--color-green)">Rows settled on the tracker. The document itself is still labeled "not for sending" until the parallel diff is verified.</div>'
           +'<div style="margin-top:6px"><a href="'+esc2(r.docUrl)+'" target="_blank" rel="noopener">Open the doc</a></div>';
         if(r.draftId)h+='<div style="margin-top:4px">Draft created in Gmail (id '+esc2(r.draftId)+').</div>';
@@ -11645,6 +12248,31 @@ document.addEventListener('keydown',function(e){
         setResult(h,'');
       }).catch(function(err){
         genBtn.disabled=false;reviewBtn.disabled=false;confirmGoEl.disabled=false;
+        // THE APPROVED-LETTER REFUSAL ARRIVES HERE, not in the .then above. The
+        // server refuses with {ok:false, error:<sentence>, factsMismatch:{...}}
+        // (domain/generateWireLetter.ts:345) and apiFetch throws on EVERY
+        // ok:false, so the first cut of this guard sat in the resolve path and
+        // could not run: the operator got the raw sentence naming row KEYS,
+        // Generate stayed armed, and the refused letter stayed on screen with
+        // the refused hash still stored behind it.
+        var mm=err&&err.body&&err.body.factsMismatch;
+        if(mm){
+          var refusalHtml=wlFactsMismatchHtml(mm);
+          wlCloseGate('This month changed since the letter you reviewed. Re-reading it now.');
+          setResult(refusalHtml,'');
+          wlAnnounce('Nothing was settled: this month changed since the letter you reviewed. The rows and the letter are being re-read.');
+          // The way out, taken FOR her. Re-read the rows, re-read the letter,
+          // and only once the new letter is stored re-run the review that arms
+          // Generate - so the next click carries the hash of the letter now on
+          // screen instead of refusing on the same stale one forever.
+          // keepResult, NOT a repaint afterwards: the review leaves the refusal
+          // where it is. The repaint this replaces fired unconditionally, so a
+          // Verification copy run during the re-read window had its success line
+          // and its Drive link overwritten by the stale refusal, with nothing on
+          // screen saying why the link had gone.
+          peekRows();wlRelookAndReview({keepResult:true});
+          return;
+        }
         setResult('<div class="t-danger">'+esc2((err&&err.serverError)||'Could not reach the server.')+'</div>','');
       });
     }
@@ -11708,7 +12336,11 @@ document.addEventListener('keydown',function(e){
       apiFetch(qs, false, JU_API).then(function(r){
         addBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&r.error)||'Could not add the row.')+'</div>';return;}
-        resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). Re-review above to include it.</div>';
+        // The new row is ON this month's letter, so the letter reviewed a
+        // moment ago is short of a row and its hash is stale. "Re-review above"
+        // also named the hidden Review button; the write itself now re-reads.
+        resEl.innerHTML='<div style="color:var(--color-green)">Row added (row '+esc2(String(r.row))+', RID '+esc2(r.masterRid)+'). The month is being re-read to pick it up.</div>';
+        wlNoteTrackerWrite_('a row was added by hand');
         document.getElementById('mrName').value='';
         document.getElementById('mrAmount').value='';
         document.getElementById('mrBank').value='';
@@ -11755,6 +12387,18 @@ document.addEventListener('keydown',function(e){
         setBtn.disabled=false;
         if(!r||!r.ok){resEl.innerHTML='<div class="t-danger">'+esc2((r&&(r.reason||r.error))||cfg.errorFallback)+'</div>';return;}
         resEl.innerHTML='<div style="color:var(--color-green)">'+cfg.successMsg(r)+'</div>';
+        // BOTH FILL PANELS CHANGE THE LETTER, by two different routes. The
+        // amount is one of the cells wireLetterFacts.ts digests per row, so an
+        // amount write makes the approved hash describe a sheet that no longer
+        // exists. The bank line is deliberately NOT hashed (that file's own
+        // header: "Deliberately NOT hashed: dates, generation ids, bank-detail
+        // formatting, HTML, ordering") - but it is PRINTED on the letter the
+        // operator approved, so a bank write leaves the letter on screen
+        // describing a tracker that has moved, with the hash still matching.
+        // The hash catches the first; the gate has to catch both. Routed from
+        // the shared shell rather than from each config, so a third fill panel
+        // added to this shape cannot be born without it.
+        wlNoteTrackerWrite_(cfg.wroteWhat);
         ['Rid','Tab','Row','Name',cfg.valueField].concat(cfg.extraFields||[]).forEach(function(f){
           var el=document.getElementById(cfg.prefix+f);
           if(el)el.value='';
@@ -11774,6 +12418,7 @@ document.addEventListener('keydown',function(e){
       extraFields:['Expect'],
       extraQs:function(){var expect=(document.getElementById('sraExpect').value||'').trim();return expect?'&expectCurrent='+encodeURIComponent(expect):'';},
       errorFallback:'Could not write the amount.',
+      wroteWhat:'an amount was filled in',
       successMsg:function(r){return 'Amount written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+' ('+esc2(String(r.amount))+').';}
     });
   })();
@@ -11784,7 +12429,8 @@ document.addEventListener('keydown',function(e){
     wireFillRowCell_({
       prefix:'sbd', api:'opSetRowBankDetails', valueField:'Bank', valueParam:'bankDetails', valueLabel:'Bank details',
       errorFallback:'Could not write the bank details.',
-      successMsg:function(r){return 'Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. Re-review above to pick it up.';}
+      wroteWhat:'bank details were filled in',
+      successMsg:function(r){return 'Bank details written to '+esc2(String(r.tab||''))+' row '+esc2(String(r.row||''))+'. The month is being re-read to pick it up.';}
     });
   })();
 

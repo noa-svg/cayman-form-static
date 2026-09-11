@@ -159,6 +159,15 @@ function planOf(awaiting, transfers, parked, extra) {
     }
     if (route === 'opPeekParked') return { ok: true, rows: parked };
     if (extra && extra[route] !== undefined) return extra[route];
+    // THE RENDER (added 2026-09-10). Left to the {ok:true} fallback this route
+    // answered with no letter at all, which is now a fail-closed state: every
+    // scenario in this file was reviewing a month whose letter had never been
+    // drawn, and W2b's armed gate was only reachable because the gate did not
+    // yet read the render. Mirrors the peek, so the letter carries the rows the
+    // tab carries.
+    if (route === 'opRenderMonthLetter') {
+      return { ok: true, transfers: transfers, html: '<p>the letter</p>', factsHash: 'wl-harness-hash', rowFacts: 'row12:aaaaaaaaaaaa' };
+    }
     return { ok: true };
   };
 }

@@ -867,10 +867,31 @@ function extractVarObj(name) {
     const m = html.indexOf(h);
     ok('K15 ' + h + ' closes the gate', m > 0 && html.slice(m, m + 220).indexOf('wlCloseGate(') > 0);
   });
-  ok('K15 the Struck-NAV override closes the gate',
-    /nm\.oninput=function\(\)\{wlCloseGate\(/.test(html));
+  // Anchored on the HANDLER, not on its first statement (2026-09-10). The old
+  // pattern required wlCloseGate to be the very first thing in the body, which
+  // is the one shape the fail-stranded fix could not keep: the handler now picks
+  // WHICH reason to close with (a malformed override gets copy naming the field)
+  // and then schedules the re-review that re-arms it. Asserting the property
+  // rather than the byte order.
+  const navHandler = (function () {
+    const at = html.indexOf('nm.oninput=function(){');
+    return at < 0 ? '' : html.slice(at, at + 1200);
+  })();
+  ok('K15 the Struck-NAV override closes the gate', /wlCloseGate\(/.test(navHandler), navHandler.slice(0, 120));
+  // AND RE-OPENS IT. A gate this closed and nothing re-armed left the operator
+  // unable to generate the month at all, which is its own defect; the executed
+  // proof is zz-console-approved-hash.cjs's H9.
+  ok('K15 and re-runs the review behind it, so the override is not a one-way door',
+    /runReview\(/.test(navHandler), navHandler.slice(0, 200));
+  // The reason moved into a named constant so both peek arms and the retry copy
+  // cannot drift apart; the property is still "both arms close the gate".
   ok('K15 a failed rows-peek closes the gate (it used to leave Generate live)',
-    (html.match(/wlCloseGate\('Rows could not be loaded/g) || []).length === 2);
+    (html.match(/wlCloseGate\(WL_ROWS_GATE_NOTE\)/g) || []).length === 2,
+    (html.match(/wlCloseGate\([^)]*\)/g) || []).filter((x) => /ROWS|Rows/.test(x)).join(' | '));
+  ok('K15 and that reason says Generate is off without naming the hidden Review button',
+    /var WL_ROWS_GATE_NOTE='[^']*Generate stays off[^']*';/.test(html)
+    && !/var WL_ROWS_GATE_NOTE='[^']*[Rr]eview again/.test(html),
+    (html.match(/var WL_ROWS_GATE_NOTE='[^']*'/) || [''])[0]);
   // The belt to the braces: even if a future input forgets to close the gate,
   // the settle must not be able to use it.
   ok('K15 the settle refuses when the live inputs differ from the reviewed ones',
@@ -941,11 +962,33 @@ function extractVarObj(name) {
   // the pane, unreachable (findings 1, 5 and 9). The existing drop rule is
   // keyed on the VIEWPORT and cannot see a pane, so the drop has to be keyed on
   // the docked state itself, with a scroll container as the backstop.
-  ok('K16 docking below ~1650px drops the flow column instead of hiding it under the pane',
+  // The docked pane used to carry its own board rules here: a --board-cols
+  // override, a `body:has(...dock.on) .rflow` drop, a clamp of 3, and at one
+  // point an #list scroller. All four were the same workaround for a board too
+  // narrow for its columns inside a viewport too wide for any @media query to
+  // notice. Since the q60 rework (2026-09-10) #board-card is a SIZE CONTAINER,
+  // so a docked pane simply makes the card narrower and the card picks the
+  // column set that fits, exactly as a tablet or a phone does. The docked rules
+  // are gone because the general mechanism covers them, not because the
+  // guarantee went away, so assert the general mechanism.
+  //
+  // What the docked band legitimately still owns is --panel-w: how much width
+  // to GIVE the board is a real decision about this viewport range, and it is
+  // the half that is not about fitting.
+  ok('K16 the docked band still gives the board width back, and no longer tries to lay it out',
     /@media \(min-width: 1400px\) and \(max-width: 1649px\)/.test(html)
-    && /body:has\(\.panel#drawer\.dock\.on\) \.rflow/.test(html));
-  ok('K16 a docked board scrolls its overflow instead of losing it',
-    /body:has\(\.panel#drawer\.dock\.on\) #list \{ overflow-x: auto; \}/.test(html));
+    && /body:has\(\.panel#drawer\.dock\.on\) \{ --panel-w: 420px; \}/.test(html)
+    && !/body:has\(\.panel#drawer\.dock\.on\)[^\n]*--board-cols/.test(html)
+    && !/body:has\(\.panel#drawer\.dock\.on\)[^\n]*line-clamp/.test(html));
+  // A docked board must not need a scroller, and must not be given one: a
+  // horizontal scroll on this card hides money columns behind a macOS overlay
+  // scrollbar that draws nothing at all. board-grid-fits-harness.cjs measures
+  // the result in a real browser; this asserts the mechanism it relies on.
+  ok('K16 a docked board fits by measuring itself, never by scrolling',
+    /#board-card \{[^}]*container: board \/ inline-size;/.test(html)
+    && /#board-card \{[^}]*overflow: visible;/.test(html)
+    && !/#board-card \{[^}]*overflow-x: auto;/.test(html)
+    && /@container board \(max-width: 639\.98px\)/.test(html));
   ok('K16 a side pane is NOT modal: it drops aria-modal and never marks the shell inert',
     /if\(side\)\{\s*drawer\.removeAttribute\("aria-modal"\);/.test(html));
   ok('K16 dclose clears the side class too, so a resize cannot strand it',

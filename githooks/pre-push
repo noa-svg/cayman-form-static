@@ -108,6 +108,7 @@ HARNESSES=(
   console-action-contract
   console-recovery-contract
   board-search-lp-directory-harness
+  board-grid-fits-harness
   pilot-fallback-harness
   signer-sticky-token-key-harness
   flow-account-normalise-harness
@@ -142,6 +143,8 @@ HARNESSES=(
   zz-console-wire-letter-refusal
 
   zz-console-silent-ok-contract
+
+  zz-console-approved-hash
 )
 
 # `set -e` is deliberately relaxed for the fan-out: we want EVERY failure
