@@ -912,22 +912,82 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
    where it stands in plain words, WHO it is waiting on and for how long,
    and an attention badge carrying the actual reason. Same palette
    (atrium-palette-sync.cjs enforced), new information hierarchy. */
-/* The name track carries the row's primary job - WHO this money belongs to -
-   so it takes the larger share of whatever free width exists. Its MINIMUM is
-   deliberately unchanged (190px here, 160px in the <=1250 band): raising a
-   minimum is how the grid overflowed the card in the first place (finding 19
-   below). Names that outrun the track wrap to a second line instead, see
-   .rn-name. 1.4fr -> 1.8fr only moves slack, and minmax() keeps the status
-   track above its own 250px floor. */
-:root { --board-cols: minmax(190px, 1.8fr) 92px 116px minmax(250px, 2fr) 52px 76px; }
+/* THE TRACK SYSTEM (rewritten 2026-09-10, defect q60).
+
+   TWO THINGS CAUSED THIS DEFECT AND BOTH ARE REMOVED HERE.
+
+   (1) The board was laid out against the VIEWPORT. Every band was a @media
+   query, and no media query can see the 210px sidebar, the content gutters or
+   a docked record pane, so the width the CSS was reasoning about was never the
+   width the board actually had. At a 1024px viewport the card is 766px; with
+   the record docked at 1440 it is narrower still. That gap is the whole defect
+   class: the 2026-08-26 review answered it by ADDING the 1250px band, which
+   only chose a different viewport number to be wrong at, and the same overflow
+   was back at 601-800 nine days later.
+   So the bands below are @container queries on #board-card. The board now asks
+   the box it is drawn in how wide it is. A docked pane, a collapsed sidebar and
+   a phone are the same question with different answers, which is why the
+   docked-pane --board-cols override that used to live at 1400-1649px is gone
+   rather than rewritten.
+
+   (2) Below the width where the columns fit, the board had to either overflow
+   or scroll, and a scroll is not an answer on a money board: on macOS overlay
+   scrollbars there is nothing on screen saying a column exists, so an operator
+   scanning for money that needs attention silently scans a partial row.
+   So there is no scroll. Below 640px of CARD the row stops being one grid line
+   and becomes three: the name on its own full-width line, the status on its
+   own, then amount / age / actions as a footer strip. Nothing is hidden,
+   nothing is clipped, nothing is off-screen, and #board-card goes back to
+   overflow: visible.
+
+   WHERE THE TWO THRESHOLDS COME FROM. They are content measurements, not
+   layout guesses. A 60-character English partnership name needs 3 rendered
+   lines at a 166px name track and 4 at 139px (measured in Chrome 2026-09-10),
+   and .rn-name clamps at 4, so a name track below ~166px spends the clamp's
+   whole budget on an ordinary name and the next one clips. Inverting the fr
+   split for each column set gives the card width at which the name track is
+   166px: 636px for the 5-column set, 795px for the 6-column set. Rounded to
+   640 and 800. Above them the single-line grid always has room for a real
+   name; below 640 the stacked row gives the name the entire card.
+
+   The FIXED cells are sized to what they hold and never negotiate: 62px is
+   exactly the copy+note button pair (two 30px targets and the 2px gap), 34px
+   holds "365d" under the AGE label, and the AMOUNT track keeps 116/106 because
+   the widest live figure measures 92.41px and .ramt ellipsises, so a narrower
+   money column renders a different, smaller number. The two TEXT columns carry
+   all the flex and all the shrink, and their minimums are readability floors
+   (120px of name, 140px of status), not layout targets.
+
+   --board-cols lives on #list, not :root, because a @container rule can only
+   style the container's DESCENDANTS. .bhead and .row are both children of
+   #list, so they inherit it. */
+#list {
+  display: block;
+  /* The stacked row is the DEFAULT, and the single-line grids are the
+     enhancement. A browser that does not understand @container therefore gets
+     the layout that cannot overflow, rather than the one that can. */
+  --board-cols: minmax(0, 1fr) auto auto;
+}
 #board-card {
   border: var(--bw) solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-card);
+  /* The board measures ITSELF. This is the line that makes the guarantee
+     width-independent: every band below is a question about this box, so the
+     sidebar, the gutters and a docked pane are already subtracted by the time
+     the grid is chosen. */
+  container: board / inline-size;
+  /* Deliberately visible. An earlier cut of this fix made the card a
+     horizontal scroller, which removed the painted overflow and replaced it
+     with something worse: macOS overlay scrollbars leave card.offsetHeight -
+     clientHeight at 0, so 14 to 213px of board sat hidden with NO affordance
+     saying so, .rnote-pop is body-appended position:fixed and did not follow
+     its anchor when the card scrolled, and overflow-x:auto forces overflow-y
+     to auto per spec, so the card silently gained a vertical clip too. The
+     stacked row below means there is nothing left to scroll. */
   overflow: visible;
 }
-#list { display: block; }
 .bhead {
   display: grid;
   grid-template-columns: var(--board-cols);
@@ -1148,13 +1208,23 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   gap: 1px;
 }
 /* nowrap + ellipsis with no title meant a long name was simply UNREADABLE: no
-   hover, no widening, no recourse (2026-09-09). At the 160px track minimum a
-   35-character Hebrew partnership name measures 246px, and the widest case on
-   main had 14px of headroom left, i.e. two more characters would have clipped
-   it. Two lines of the 160px track hold 320px of text, so wrapping - not a
-   wider column - is what actually guarantees the name is readable at EVERY
-   width. The clamp keeps a pathological name from growing the row without
-   bound; rowHtml adds a title on every name as the floor under that. */
+   hover, no widening, no recourse (2026-09-09). Wrapping - not a wider column -
+   is what guarantees the name is readable at every width.
+
+   ONE CLAMP, EVERYWHERE, and that is the point of this number (q60 rework,
+   2026-09-10). The clamp used to be a per-context guess: 2 as the base, 4 in
+   the phone band, then 3 added for a docked board on 2026-09-10 because a
+   Hebrew partnership name landed on exactly 2 lines there with zero headroom.
+   Each of those was the same discovery made again in a narrower box, because a
+   line count is only meaningful against a track width and CSS cannot derive
+   one from the other. So the track widths are now guaranteed instead (see THE
+   TRACK SYSTEM above): no band ever gives the name less than ~166px, and the
+   stacked row gives it the whole card. Measured in Chrome 2026-09-10, the
+   longest names on this board - a 60-character English partnership name and a
+   44-character Hebrew one - need 3 lines and 2 lines at 166px. 4 is that worst
+   case plus a spare line, and it is all this rule is for: bounding a
+   pathological name from running the row away. rowHtml puts a title on every
+   name under that. */
 .rn-name {
   font-size: var(--text-md);
   font-weight: var(--weight-semi);
@@ -1165,7 +1235,7 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   white-space: normal;
   overflow-wrap: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
 }
 /* A row that reached the board with no investor name at all. Muted, so it
@@ -1178,6 +1248,18 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
 /* The pid stem stands in for the second name line on a nameless row: without
    it the operator can see that a row has no name but not WHICH row it is. */
 .rhe.rn-pid { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: 0.02em; }
+/* The SECOND name line, and it wraps for the same reason the first one does
+   (q60 rework, 2026-09-10). It was nowrap + ellipsis, so a 44-character Hebrew
+   partnership name under an English one measured 266px against a 188px cell
+   and lost its tail at every width from 960 to 1250 - a clipped name on a
+   money board, just one line lower than the one that was being fixed. It wraps
+   now, matching .rn-name's shape.
+   3, not 2, and the reason is the whole lesson of aa426b4: at a clamp of 2 that
+   same name rendered on EXACTLY 2 lines from 960 to 1250, which measures as
+   "not clipped" and is really "one character from clipping". A bound with no
+   spare line is a clip waiting for a slightly longer name. The measured worst
+   case is 2 lines, so the bound is 3. The title nameCellHtml puts on this line
+   stays the floor under that. */
 .rhe {
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
@@ -1185,7 +1267,11 @@ body[data-lane="israel"]:not(.il-onb) .dd-onboarding { display: none; }
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* Amount column (2026-07-15 console wiring item 4): the board rows now carry
@@ -1413,6 +1499,78 @@ body.side-coll .ss-row.ss-total { display: none; }
   color: var(--color-ink-muted);
   text-align: right;
   white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- THE BANDS
+   Three column sets, chosen by the CARD's width, never the viewport's. They
+   read widest-last so the cascade lands on the widest one that fits; the
+   stacked set is #list's own declaration above, i.e. the default. */
+
+/* 5 columns: the flow chip is the one column a narrow board can lose without
+   losing meaning, because the stage word already says what kind of process
+   this is. 640px is where this set's name track reaches 166px, the width a
+   real partnership name needs to stay inside 3 of the clamp's 4 lines. */
+@container board (min-width: 640px) {
+  #list { --board-cols: minmax(120px, 1.7fr) 106px minmax(140px, 1.8fr) 34px 62px; }
+  .rflow, .bhead .h-flow { display: none; }
+}
+
+/* 6 columns: the full board. 800px is the same name-track calculation for this
+   set's fr split. Its floor - every track minimum, five 16px gaps and the
+   row's 14px padding - is 704px, so the set never has to shrink below the
+   width it is switched on at. */
+@container board (min-width: 800px) {
+  #list { --board-cols: minmax(120px, 1.8fr) 92px 116px minmax(140px, 2fr) 52px 76px; }
+  .rflow, .bhead .h-flow { display: revert; }
+}
+
+/* ------------------------------------------------------- THE STACKED ROW
+   Below 640px of card the row is three lines instead of one. This is what
+   replaced the horizontal scroller: a scroll on a money board hides columns
+   behind an affordance macOS does not draw, and the operator's job here is to
+   scan DOWN a list for money that needs attention, which a hidden column
+   quietly breaks. Stacking costs vertical space, which the operator can see
+   and scroll with the page, and costs nothing else that this band takes: every
+   column the 640px set carries is still on screen at 320, stacked rather than
+   dropped. The flow chip is not one of them. It is dropped from 800px down by
+   the band above, for the reason stated there (the stage word already says what
+   kind of process a row is), and the `.rflow { display: none }` below re-states
+   that rather than inheriting it, since the 640px band no longer applies here.
+
+   Line 1 is the name, alone, across the whole card: that is what makes the
+   clamp safe at the narrowest widths, since the name track stops being a
+   fraction of a grid and becomes the card itself.
+   Line 2 is the status and what it is waiting on, wrapping rather than
+   ellipsising, because the waiting line is the reason the row is on screen.
+   Line 3 is the footer strip: amount, age, actions. */
+@container board (max-width: 639.98px) {
+  .bhead {
+    /* A column header cannot label a stacked row. The cells name themselves
+       here - a figure, an age, two buttons - so the header is dropped rather
+       than left pointing at columns that are no longer under it. */
+    display: none;
+  }
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name name name"
+      "stat stat stat"
+      "amt  age  act";
+    align-items: center;
+    row-gap: 6px;
+  }
+  .rn   { grid-area: name; }
+  .rstat{ grid-area: stat; }
+  .ramt { grid-area: amt; text-align: left; }
+  .rage { grid-area: age; }
+  .ract { grid-area: act; }
+  .rflow { display: none; }
+  /* The waiting line is the row's reason for existing; an ellipsis on the one
+     full-width line the row has left would be gratuitous. */
+  .rwait { white-space: normal; }
+  /* The footer strip is supporting detail under two lines that are not, so it
+     reads one step quieter than they do. */
+  .ramt, .rage { color: var(--color-ink-sub); }
 }
 
 /* Quiet sync line under the board */
@@ -1654,8 +1812,11 @@ body.side-coll .ss-row.ss-total { display: none; }
      a pane the viewport cannot see. So drop the flow column on the same terms
      the tablet rule uses, keyed on the pane instead: while the record is docked,
      below the ~1650px at which the full grid genuinely fits beside it. */
-  #list { overflow-x: visible; }
-  body:has(.panel#drawer.dock.on) #list { overflow-x: auto; }
+  /* The docked pane used to be given its own #list scroller here. #board-card
+     is the scroll container for every width now (see its rule above), and #list
+     carries min-width:min-content, so a scroller on #list could never have
+     anything to scroll. Removed rather than left as a no-op rule for the next
+     session to reason about. */
 }
 
 @media (min-width: 1400px) and (max-width: 1649px) {
@@ -1668,18 +1829,19 @@ body.side-coll .ss-row.ss-total { display: none; }
      250px band where the two genuinely compete for width. Both halves read
      --panel-w, so the panel and the shell inset stay in step by construction. */
   body:has(.panel#drawer.dock.on) { --panel-w: 420px; }
-  body:has(.panel#drawer.dock.on) { --board-cols: minmax(160px, 1.3fr) 106px minmax(210px, 1.8fr) 46px 76px; }
-  body:has(.panel#drawer.dock.on) .rflow,
-  body:has(.panel#drawer.dock.on) .bhead .h-flow { display: none; }
-  /* A docked board is a NARROW board at a wide viewport, which is the case the
-     phone clamp already exists for, so it gets the same treatment one step
-     smaller. Measured 2026-09-10 with the record docked: the name track is
-     182.84px and `גלבוע פאנד אוף פאנדס, שותפות מוגבלת` lands on exactly 2 lines
-     against a clamp of 2, i.e. zero headroom, so the next slightly longer
-     Hebrew entity name would clip HERE and nowhere else on the board. The
-     clamp is the guarantee that the name is readable; a track width is only
-     the width at which it stops being one. */
-  body:has(.panel#drawer.dock.on) .rn-name { -webkit-line-clamp: 3; }
+  /* The board's own share of this rule is GONE, and nothing replaced it here.
+     It used to carry a --board-cols override and a flow-column drop, and
+     aa426b4 added a third piece on 2026-09-10: a -webkit-line-clamp of 3,
+     because with the record docked the name track measured 182.84px and a
+     Hebrew partnership name landed on exactly 2 lines against a clamp of 2.
+     All three were the same workaround - a board too narrow for its columns,
+     inside a viewport wide enough that no @media query could tell. That is now
+     structural rather than special-cased: #board-card is a size container, so
+     a docked pane simply makes the card narrower and the card picks the column
+     set that fits, exactly as a tablet or a phone does. The clamp is a single
+     value of 4 with the name track guaranteed above ~166px in every band.
+     Only --panel-w stays: how much width to GIVE the board is a real decision
+     about this viewport range, and the board's job is to fit whatever it gets. */
 }
 
 .panel h2 {
@@ -3055,16 +3217,13 @@ body.side-coll .side-stats { padding: 0; }
 body.side-coll .ss-row { justify-content: center; padding: 6px 0; }
 body.side-coll .ss-lbl { display: none; }
 
-/* Tablet-width board: drop the flow column first, keep money + status. */
-/* Was max-width:980px, keyed on the VIEWPORT and never subtracting the 210px
-   sidebar plus gutters. At a 1024 viewport the content pane is ~764px against a
-   ~776px grid, so the board overflowed and the per-row copy/note buttons
-   rendered past the card's right edge, on a laptop, daily (2026-08-26 review,
-   finding 19). 1250 is the width at which the pane can actually hold the grid. */
-@media (max-width: 1250px) and (min-width: 601px) {
-  :root { --board-cols: minmax(160px, 1.7fr) 106px minmax(210px, 1.8fr) 46px 76px; }
-  .rflow, .bhead .h-flow { display: none; }
-}
+/* The tablet band that used to live here is GONE. It set --board-cols and
+   dropped the flow column at max-width:1250px, a VIEWPORT number picked in the
+   2026-08-26 review as "the width at which the pane can hold the grid" - and
+   picking a viewport number is what put the same overflow back at 601-800 nine
+   days later (q60), because the pane is not the viewport. Both jobs moved into
+   the @container bands beside --board-cols, where the question is asked of the
+   card instead. */
 
 /* ============================================================
    MOBILE TAB BAR + FUND SWITCHER (hidden on desktop)
@@ -3237,21 +3396,16 @@ body.side-coll .ss-lbl { display: none; }
   .listhead { flex-direction: column; align-items: stretch; gap: var(--space-2); }
   .listhead .lh-right { justify-content: flex-end; }
 
-  /* Board table at phone width (2026-08-06 grid era): collapse to the two
-     columns that matter on a phone - who, and where it stands - and let the
-     waiting-on line wrap. Type folds into the status cell visually via the
-     stage word; amount/age/actions rejoin on wider screens. */
-  :root { --board-cols: minmax(110px, 1fr) minmax(150px, 1.6fr) 60px; }
-  .rflow, .ramt, .rage, .bhead .h-flow, .bhead .h-amt, .bhead .h-age { display: none; }
-  .rwait { white-space: normal; }
-  /* The two-line clamp is a desktop bound and it is WRONG here: at the 110px
-     phone track a 35-character Hebrew partnership name needs three lines, and
-     two clipped it mid-word (pixel pass 2026-09-10, 371px). Phone is also
-     where the title floor does not exist - there is no hover on touch - and
-     where the name carries most of the row, since the amount and age columns
-     are hidden above. Four lines hold ~440px of text against the 246px real
-     case, and still bound a pathological name from running the row away. */
-  .rn-name { -webkit-line-clamp: 4; }
+  /* The board's phone layout is NOT here any more. This block used to squeeze
+     the row into three viewport-chosen tracks and HIDE the amount and the age
+     to do it, which is the worst version of the trade: an operator on a phone
+     could not see how much money a row was for. A phone is now just a narrow
+     card, so it gets the stacked row from the @container band beside
+     --board-cols - the amount and the age are stacked rather than dropped. The
+     flow chip is still dropped below 800px of card, deliberately and for the
+     reason the 640px band states; the money figure is what a phone must not
+     lose, and it does not. What stays here is the phone's own spacing,
+     which is a touch-density decision and has nothing to do with fitting. */
   .row { gap: 10px; padding: 10px; }
   .bhead { gap: 10px; padding: 8px 10px; }
   /* Filter row tracks the table's text column, which tightens to 10px here. */
@@ -4544,7 +4698,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // this file. Observability + test/coupling-check.cjs only: the console gets
   // NO stale-tab reload guard on purpose (operators keep long-lived tabs open
   // deliberately; a forced reload mid-operation would be worse than staleness).
-  window.__BUILD_TAG = 'console-2026-09-10-5-docked-name-clamp';
+  window.__BUILD_TAG = 'console-2026-09-10-6-board-fits-its-container';
 
   // An "existing LP" flow: the operator picks a live LP rather than typing a
   // new one, so the applicant toggle is hidden, the LP picker is shown, and a

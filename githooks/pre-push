@@ -108,6 +108,7 @@ HARNESSES=(
   console-action-contract
   console-recovery-contract
   board-search-lp-directory-harness
+  board-grid-fits-harness
   pilot-fallback-harness
   signer-sticky-token-key-harness
   flow-account-normalise-harness

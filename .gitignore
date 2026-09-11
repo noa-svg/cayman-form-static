@@ -39,6 +39,7 @@ test/*
 !test/popstate-navigation-harness.cjs
 !test/signer-lane-gate-bypass-harness.cjs
 !test/board-search-lp-directory-harness.cjs
+!test/board-grid-fits-harness.cjs
 !test/api-fetch-nonjson-harness.cjs
 !test/pilot-fallback-harness.cjs
 !test/required-note-harness.cjs
