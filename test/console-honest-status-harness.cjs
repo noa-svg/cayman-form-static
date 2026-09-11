@@ -22,6 +22,10 @@
 //       alarm rail, while an unapproved one beside it still wears both.
 //   H8  A FAILED opGetRowReview fetch is not a state change: the approved row
 //       does not oscillate back into the alarm on one unlucky refresh.
+//   H9  #ver-line-sr (item 3, q62 follow-up) speaks the three sync states to
+//       a screen reader, and does NOT re-announce an unchanged state merely
+//       because the visible line's relative age redrew (the 45s auto-refresh
+//       tick landing on the same state, most of all).
 //
 // This drives the REAL console/index.html in jsdom (runScripts:'dangerously')
 // with a scriptable window.fetch, rather than extracting functions into a
@@ -108,6 +112,7 @@ function boot(plan) {
     setPlan(p) { state.plan = p; },
     fetches: state.fetches,
     verLine() { const v = doc.getElementById('ver-line'); return { text: v.textContent, color: v.style.color }; },
+    verLineSr() { const v = doc.getElementById('ver-line-sr'); return v ? v.textContent : null; },
     listHtml() { return doc.getElementById('list').innerHTML; },
     rows() { return Array.prototype.slice.call(doc.querySelectorAll('#list .row')); },
     rowFor(pid) { return doc.querySelector('#list .row[data-pid="' + pid + '"]'); },
@@ -307,6 +312,52 @@ function breaking(base, broken) {
     ok('H8 and the operator is told the overlay did not answer',
       /danger/.test(t.verLine().color), JSON.stringify(t.verLine()));
     t.dom.window.close();
+  }
+
+  // ---- H9: the spoken sync line (item 3) speaks state, not age. ----
+  {
+    ok('H9 the markup ships the announcer as a genuine live region',
+      /<span id="ver-line-sr" class="wl-vh" role="status" aria-live="polite" aria-atomic="true"><\/span>/.test(html),
+      (html.match(/<span id="ver-line-sr"[^>]*><\/span>/) || ['(not found)'])[0]);
+
+    // Never synced + a dead leg: the same sentence the visible line carries,
+    // since there is no volatile age to strip yet.
+    const tDead = boot(function () { return 'FAIL'; });
+    await settle(400);
+    ok('H9 a console that never synced speaks the same refusal it shows',
+      tDead.verLineSr() === 'Could not load the board.', tDead.verLineSr());
+    tDead.dom.window.close();
+
+    // A clean sync speaks the state word, not the age.
+    const rows = [P('i1', 'Michael Stern', 'signing')];
+    const t = boot(healthy({ ju: rows, gw: [] }));
+    await settle(400);
+    ok('H9 a clean sync speaks "Board synced." with no age in it',
+      t.verLineSr() === 'Board synced.', t.verLineSr());
+    ok('H9 the VISIBLE line carries an age digit the spoken line does not',
+      /^synced /.test(t.verLine().text) && /\d/.test(t.verLine().text) && !/\d/.test(t.verLineSr()),
+      JSON.stringify(t.verLine()) + ' / ' + t.verLineSr());
+
+    // A second clean load, later, lands on the SAME state (synced). The
+    // announcer must write the identical string again - a same-value write
+    // announces nothing new to a screen reader - which is the whole point on
+    // a 45s auto-refresh tick that finds nothing wrong.
+    const before = t.verLineSr();
+    t.doc.getElementById('showTestToggle').click();
+    t.doc.getElementById('showTestToggle').click();
+    await settle(400);
+    ok('H9 back-to-back clean syncs write the IDENTICAL announcer string (no re-announce on an unchanged state)',
+      t.verLineSr() === before && t.verLineSr() === 'Board synced.', t.verLineSr());
+    t.dom.window.close();
+
+    // A degraded leg speaks the state sentence plus which engine is down,
+    // not the elapsed time since the last good sync.
+    const t2 = boot(breaking(healthy({ ju: rows, gw: [] }), ['gw:list']));
+    await settle(400);
+    ok('H9 a degraded board speaks the danger sentence with the dead engine named, no age',
+      /^The board may be stale\./.test(t2.verLineSr()) && !/synced \d/.test(t2.verLineSr()),
+      t2.verLineSr());
+    t2.dom.window.close();
   }
 
   console.log('\n' + (fail ? 'CONSOLE HONEST-STATUS HARNESS FAILED: ' : 'CONSOLE HONEST-STATUS HARNESS PASSED: ')

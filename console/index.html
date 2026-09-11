@@ -4215,6 +4215,17 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
              paintVerLine_ owns every word in here now, and it writes on every
              paint including the failures. -->
         <div class="syncline" id="statusbar"><span id="ver-line"></span></div>
+        <!-- ver-line-sr carries the spoken half of the sync line, separately
+             from the visible span above: ver-line's own text includes a
+             relative age ("synced 45s ago") that legitimately changes on
+             every render even when the underlying state (synced/pending/
+             degraded) has not, and an aria-live region that fires on every
+             one of those redraws trains a screen-reader operator to ignore
+             it (item 3, q62 follow-up). paintVerLine_ writes this element
+             only with the state-level sentence, stripped of age, so an
+             identical write on an unchanged state is a no-op assignment and
+             announces nothing. -->
+        <span id="ver-line-sr" class="wl-vh" role="status" aria-live="polite" aria-atomic="true"></span>
       </div>
     </div>
 
@@ -6708,6 +6719,17 @@ document.addEventListener('keydown',function(e){
   // Every string below is one this file already shipped ("synced X ago",
   // "last synced X ago . the board may be stale", "Could not load the board.").
   // No new operator wording was invented here.
+  // ver-line-sr (item 3, q62 follow-up): the spoken counterpart to
+  // vl.textContent, deliberately NOT the same string. vl's text carries a
+  // relative age that redraws every render even on an unchanged state (most
+  // of all on the 45s auto-refresh tick), and announcing that every time
+  // trains a screen-reader operator to tune it out. This writes only the
+  // state-level sentence; an identical write on the next unchanged-state
+  // paint is a same-value assignment, so nothing new is announced.
+  function verLineAnnounce_(text){
+    var sr=document.getElementById('ver-line-sr');
+    if(sr)sr.textContent=text||'';
+  }
   function paintVerLine_(){
     var vl=document.getElementById('ver-line');
     if(!vl)return;
@@ -6718,6 +6740,7 @@ document.addEventListener('keydown',function(e){
       vl.textContent=deg?'Could not load the board.':'';
       vl.title=vl.textContent;
       vl.style.color=deg?'var(--color-danger)':'';
+      verLineAnnounce_(vl.textContent);
       return;
     }
     var t=at.replace('T',' ').slice(0,16);
@@ -6744,6 +6767,9 @@ document.addEventListener('keydown',function(e){
       var who=dead.length?(' · '+dead.join(' and ')+' did not answer'):'';
       vl.textContent=(age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale')+who;
       vl.style.color='var(--color-danger)';
+      // Age dropped: which engines are down is the real state, the elapsed
+      // seconds since the last good sync are not.
+      verLineAnnounce_('The board may be stale.'+who);
     }else if(BOARD_HEALTH.pending){
       // PARTIAL PAINT, q62 (2026-09-11). A board with SOME of this load's legs
       // landed and some still outstanding is neither of the other two states:
@@ -6758,9 +6784,17 @@ document.addEventListener('keydown',function(e){
       // second pixel.
       vl.textContent='loading the rest of the board'+(engTxt?(' · '+engTxt):'')+'…';
       vl.style.color='var(--color-info)';
+      // engTxt dropped: per-engine millisecond timing changes on every
+      // render of the SAME pending state, which is exactly the spam this
+      // element exists to avoid.
+      verLineAnnounce_('Loading the rest of the board.');
     }else{
       vl.textContent='synced '+(age?agoPhrase(age):('· '+t));
       vl.style.color='';
+      // Age dropped: "synced 45s ago" vs "synced 90s ago" is the SAME state
+      // (synced), and re-announcing it every 45s auto-refresh tick is the
+      // exact training-to-ignore-it failure this element exists to avoid.
+      verLineAnnounce_('Board synced.');
     }
   }
   // The board's own error state. It existed already, but was reachable ONLY if
@@ -11661,6 +11695,13 @@ document.addEventListener('keydown',function(e){
     // in place and leaves every other panel exactly as it was, because this is
     // a reading aid on a money screen, not a precondition for one.
     var renderSeq=0;
+    // _RENDER_LETTER_ABORT (q62 pattern, 2026-09-11): renderLetter had the SAME
+    // shape the board had before q62 - renderSeq discards a stale PAINT but
+    // never cancelled the underlying fetch. Silent today only because this
+    // function exclusively calls JU_API (~0.4s), never the slow GW origin; the
+    // same one-controller-per-call, abort-the-predecessor mechanism load()
+    // already carries, so a future slow origin here does not reopen q62.
+    var _renderLetterAbort=null;
     // WHAT THE OPERATOR IS APPROVING, kept so the generate click can carry it
     // back (ju-service domain/wireLetterFacts.ts). Ids and digests only: a
     // name, an amount and a bank line never ride in a query string. Null
@@ -11716,11 +11757,14 @@ document.addEventListener('keydown',function(e){
       var month=wlViewMonth();
       if(!wlValidMonth(month)){wlRenderState='none';host.innerHTML='';return Promise.resolve();}
       var ccy=ccyEl.value;
+      if(_renderLetterAbort)_renderLetterAbort.abort();
+      _renderLetterAbort=new AbortController();
+      var abortSignal=_renderLetterAbort.signal;
       var rid=++renderSeq;
       host.innerHTML='<div class="wl-render-hd"><span class="wl-render-ttl">The letter</span>'
         +'<span class="wl-render-job">'+esc2(ccy)+' &middot; '+esc2(wlTabMonthWords(month))+'</span></div>'
         +'<div class="wl-render-body t-muted">Rendering&#8230;</div>';
-      return apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API).then(function(r){
+      return apiFetch('?api=opRenderMonthLetter&monthTab='+encodeURIComponent(month)+'&currency='+encodeURIComponent(ccy), false, JU_API, abortSignal).then(function(r){
         if(rid!==renderSeq)return;
         var body=host.querySelector('.wl-render-body'); if(!body)return;
         body.classList.remove('t-muted');
