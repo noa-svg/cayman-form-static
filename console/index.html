@@ -8503,7 +8503,12 @@ document.addEventListener('keydown',function(e){
         if(v.idNumber)q+='&idNumber='+encodeURIComponent(v.idNumber);
         ctx.send({
           q:q,
-          base:GAS_ONLY_,
+          // FOLLOWS THE ROW'S ENGINE (2026-09-11, ju-cayman retirement gate 3).
+          // Was pinned GAS_ONLY_, a dead button on every ju-service-born
+          // process. domain/fixSecondaryAddress.ts patches data only, no
+          // auto-reseal (same shape the GAS original has), so the success
+          // copy is unchanged across engines.
+          base:currentEngine,
           errPrefix:'Could not fix',
           ok:function(){return "Fixed. Run 'Correct this doc' on the affected document(s) to re-seal with it.";}
         });
