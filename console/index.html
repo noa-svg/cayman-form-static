@@ -5440,7 +5440,15 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // The argument ORDER is unchanged (qs, _retried, base) because
   // test/coupling-check.cjs's C1c asserts the retry line verbatim as
   // apiFetch(qs, true, base); reordering would silently defeat that assertion.
-  function apiFetch(qs, _retried, base){
+  // `signal` (q62, 2026-09-11) is optional and comes from load()'s per-load
+  // AbortController. It is NOT threaded into the retry recursion below - the
+  // retry line is asserted VERBATIM by test/coupling-check.cjs's C1c
+  // (`apiFetch(qs, true, base)`), and an aborted fetch() rejects the promise
+  // itself before that .then runs, so a retry after abort can never happen
+  // anyway (proved in test/console-board-load-race-harness.cjs). A call site
+  // with no signal (nothing outside load()'s 3 legs passes one yet) behaves
+  // exactly as before: fetch() with signal:undefined is an ordinary fetch.
+  function apiFetch(qs, _retried, base, signal){
     if(base!==GW&&base!==JU_API){
       throw new Error('apiFetch: base is required and must be GW or JU_API. Every call site names its gateway; this one did not. Route: '+String(qs).slice(0,120));
     }
@@ -5452,7 +5460,7 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
     // the guard above). It rides through the retry recursion so a retried ju-api
     // call can never silently land on GAS.
     var body=JSON.stringify({q:qs,idToken:ID_TOKEN||'',op:OP_FALLBACK||''});
-    return fetch(base+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){
+    return fetch(base+'?source=op',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,signal:signal}).then(function(r){
       // Read as TEXT first. r.json() throws a parser message the operator cannot
       // act on and, worse, destroys the body that says what actually happened.
       return r.text().then(function(txt){
@@ -6679,7 +6687,14 @@ document.addEventListener('keydown',function(e){
   //   syncedAt    the newest generatedAt any list leg has actually returned.
   //               '' means no list leg has ever answered - which is exactly
   //               when no freshness may be asserted (defect 2).
-  var BOARD_HEALTH={legFail:false,overlayFail:false,syncedAt:'',engines:[]};
+  // `pending` (q62, 2026-09-11): true while THIS load still has legs
+  // outstanding. Deliberately its own field, not folded into legFail/degraded -
+  // a leg still in flight and a leg that died are different facts, and
+  // BOARD_HEALTH used to have no way to say the first one. Recomputed from
+  // scratch on every paint (perEngine.length<legs.length), same as legFail, so
+  // it clears itself the moment the load actually completes with no flag
+  // anyone has to remember to reset.
+  var BOARD_HEALTH={legFail:false,overlayFail:false,pending:false,syncedAt:'',engines:[]};
   function boardDegraded_(){return !!(BOARD_HEALTH.legFail||BOARD_HEALTH.overlayFail);}
   // The sync line is the console's only always-visible claim about how fresh
   // the board is, so it is also where "this board is INCOMPLETE" belongs.
@@ -6729,6 +6744,20 @@ document.addEventListener('keydown',function(e){
       var who=dead.length?(' · '+dead.join(' and ')+' did not answer'):'';
       vl.textContent=(age?('last synced '+agoPhrase(age)+' · the board may be stale'):'the board may be stale')+who;
       vl.style.color='var(--color-danger)';
+    }else if(BOARD_HEALTH.pending){
+      // PARTIAL PAINT, q62 (2026-09-11). A board with SOME of this load's legs
+      // landed and some still outstanding is neither of the other two states:
+      // it is not "synced" (that claims every leg answered, and this is what
+      // let a 1-of-6-row board read clean) and it is not "the board may be
+      // stale" (nothing failed, GAS is simply inside its normal 20-185s
+      // window - painting the danger sentence here would cry wolf on every
+      // ordinary load and train the operator to ignore the real one). One
+      // honest sentence, not new vocabulary: this file already uses
+      // "engTxt" per-engine timing in the title, promoted into the line so
+      // the operator can see which leg is still out without spending a
+      // second pixel.
+      vl.textContent='loading the rest of the board'+(engTxt?(' · '+engTxt):'')+'…';
+      vl.style.color='var(--color-info)';
     }else{
       vl.textContent='synced '+(age?agoPhrase(age):('· '+t));
       vl.style.color='';
@@ -7237,7 +7266,13 @@ document.addEventListener('keydown',function(e){
   // caller can tell a dead leg from an empty answer. Before this they were the
   // same value - `{processes:[]}` - and a whole engine could vanish in silence,
   // taking every manual/orphan money row with it.
-  function fetchEngineBoard_(base, lane, wantDone, wantTest){
+  // `signal` (q62): load()'s per-load AbortController. Threaded straight into
+  // apiFetch and nothing else changes here - an aborted sub-fetch REJECTS
+  // (AbortError), which the .catch below already turns into the same
+  // failed:true shape a dead engine produces, so a superseded load's legs
+  // degrade through the exact path a genuinely dead engine already used. The
+  // rid check in load() was already about to discard this result anyway.
+  function fetchEngineBoard_(base, lane, wantDone, wantTest, signal){
     var failed={list:false,notes:false,extras:false};
     // PER-LEG TIMING (2026-09-09). The board reads two engines whose physics
     // differ by two orders of magnitude: ju-service answers in milliseconds,
@@ -7247,9 +7282,9 @@ document.addEventListener('keydown',function(e){
     // failed named no engine. An operating console has to say which instrument
     // is slow and which stopped answering.
     var t0=Date.now();
-    var notesFetch=apiFetch('?api=opNotes',false,base).catch(function(){failed.notes=true;return {notes:{}};});
-    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base).catch(function(){failed.extras=true;return {rows:{}};});
-    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base).catch(function(){failed.list=true;return {processes:[]};});
+    var notesFetch=apiFetch('?api=opNotes',false,base,signal).catch(function(){failed.notes=true;return {notes:{}};});
+    var extrasFetch=apiFetch('?api=opBoardDetail&lane='+lane,false,base,signal).catch(function(){failed.extras=true;return {rows:{}};});
+    var listFetch=apiFetch('?api=list&lane='+lane+'&includeDone='+(wantDone?'1':'0')+'&includeTest='+(wantTest?'1':'0'),false,base,signal).catch(function(){failed.list=true;return {processes:[]};});
     return Promise.all([listFetch,notesFetch,extrasFetch]).then(function(r){
       return {base:base,list:r[0],notes:r[1],extras:r[2],failed:failed,ms:Date.now()-t0};
     });
@@ -7271,9 +7306,9 @@ document.addEventListener('keydown',function(e){
   // tracker unwired, tab enumeration failed) and a rejected fetch are treated
   // identically here, and `partial:true` - some tabs read, some did not - counts
   // as failed too, because a half-read tracker must not look settled.
-  function fetchManualRowsLeg_(base,lane,wantDone){
+  function fetchManualRowsLeg_(base,lane,wantDone,signal){
     var failed={list:false,notes:false,extras:false};
-    return apiFetch('?api=listManualTrackerRows&lane='+lane+'&includeDone='+(wantDone?'1':'0'),false,base)
+    return apiFetch('?api=listManualTrackerRows&lane='+lane+'&includeDone='+(wantDone?'1':'0'),false,base,signal)
       .catch(function(){failed.list=true;return {processes:[]};})
       .then(function(d){
         if(!d||d.ok===false||d.partial){
@@ -7283,7 +7318,22 @@ document.addEventListener('keydown',function(e){
         return {base:base,list:{processes:(d&&d.processes)||[],generatedAt:(d&&d.generatedAt)||''},notes:{notes:{}},extras:{rows:{}},failed:failed};
       });
   }
+  // _LOAD_ABORT (q62, 2026-09-11): one AbortController per load(), aborted at
+  // the top of the NEXT load() before any new fetch goes out. This is the fix
+  // for the deterministic lane-switch bug: GAS is one fixed origin used by
+  // both lanes, apiFetch had no AbortController anywhere, and a superseded
+  // load's GAS requests sat occupying a connection slot for up to GAS's own
+  // 185s ceiling because nothing ever cancelled them - three lane switches
+  // inside that window queued up to 9 POSTs to one origin, past Chrome's
+  // ~6-connections-per-origin cap, and the newest load's own requests queued
+  // behind zombies that were already discarded by the rid check. Aborting the
+  // PREVIOUS controller frees the connection slot the instant a load is
+  // superseded instead of whenever GAS eventually answers it.
+  var _LOAD_ABORT=null;
   function load(silent){
+    if(_LOAD_ABORT)_LOAD_ABORT.abort();
+    _LOAD_ABORT=new AbortController();
+    var abortSignal=_LOAD_ABORT.signal;
     var rid=++LOAD_SEQ;
     // Per-load overlay health (2026-09-07 audit, defect 4). legFail is
     // recomputed from the engine results on every paint; this one has no such
@@ -7363,8 +7413,8 @@ document.addEventListener('keydown',function(e){
       // settles and the fail-open posture is unchanged: a dead leg contributes
       // an empty triple and the board renders the other legs' rows.
       var p=(leg.kind==='manual')
-        ? fetchManualRowsLeg_(leg.base,state.lane,wantDone)
-        : fetchEngineBoard_(leg.base,state.lane,wantDone,showTest);
+        ? fetchManualRowsLeg_(leg.base,state.lane,wantDone,abortSignal)
+        : fetchEngineBoard_(leg.base,state.lane,wantDone,showTest,abortSignal);
       p.then(function(res){
         if(rid!==LOAD_SEQ)return;
         slots[slotIx]=res;
@@ -7438,6 +7488,15 @@ document.addEventListener('keydown',function(e){
       BOARD_HEALTH.legFail=perEngine.some(function(e){
         var f=e.failed||{}; return !!(f.list||f.notes||f.extras);
       });
+      // PENDING (q62, 2026-09-11): THIS load still has legs outstanding. Read
+      // against `legs.length` (the load()-closure count of legs THIS load
+      // expects), never a fixed number, so a manual-leg-less lane or a future
+      // fourth leg cannot silently make this always true or always false.
+      // This is the fix for the tier-1 half of q62: legFail alone answered
+      // "did anything fail", never "has everything answered", so a board with
+      // 1 of 3 legs landed - all of them healthy so far - reported legFail:
+      // false and read exactly like a fully-synced clean board.
+      BOARD_HEALTH.pending=perEngine.length<legs.length;
       // NAME the engine, and how long it took (2026-09-09). legFail was a
       // boolean, so a degraded board could say "the board may be stale" without
       // saying WHICH engine stopped answering - and on a board that reads two,
@@ -9649,8 +9708,11 @@ document.addEventListener('keydown',function(e){
       // stray applySearch cannot repaint the prior lane's rows either.
       allRows=[];setSideStats(allRows);setBoardBadge(allRows);
       // Same rule for the sync stamp: the new lane has not synced, so nothing
-      // about its freshness may be asserted until it does (defect 2).
-      BOARD_HEALTH.legFail=false;BOARD_HEALTH.overlayFail=false;BOARD_HEALTH.syncedAt='';
+      // about its freshness may be asserted until it does (defect 2). pending
+      // resets too (q62): load() below recomputes it on its own first paint,
+      // but between here and that paint the board must not still be showing
+      // the OLD lane's "loading the rest of the board" sentence either.
+      BOARD_HEALTH.legFail=false;BOARD_HEALTH.overlayFail=false;BOARD_HEALTH.pending=false;BOARD_HEALTH.syncedAt='';
       paintVerLine_();
       W8=null;MSGS=null;curMsg=null;
       var wl=document.getElementById('w8list');if(wl)wl.innerHTML='';
