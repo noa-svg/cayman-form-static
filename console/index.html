@@ -9238,18 +9238,24 @@ document.addEventListener('keydown',function(e){
       if(goEl)goEl.onclick=function(){
         if(!docKey||!currentPid){dcstatus("Missing processId/docKey - reload the drawer and try again.","error");return;}
         goEl.disabled=true;dcstatus("Scheduling...",null);
-        var q="?api=opCorrectSealedDoc&processId="+encodeURIComponent(currentPid)+"&docKey="+encodeURIComponent(docKey);
-        // GAS-PINNED (2026-08-23 seam audit). ju-service has NO handler for
-        // ?api=opCorrectSealedDoc: routes/consoledispatch.ts dispatches on
-        // params.api / params.admin and the string never appears in src/. Repointing this
-        // would return {ok:false,error:'unknown route'} on every click, so it
-        // stays on GAS and now SAYS so instead of inheriting GAS by omission.
-        // KNOWN CONSEQUENCE, unchanged by this edit: currentEngine is NOT
-        // threaded here, so this recovery action is unusable for a
-        // ju-service-born process either way. Fixing that needs the route
-        // ported server-side, not a client base change.
-        apiFetch(q, false, GAS_ONLY_).then(function(r){
-          if(r&&r.ok){
+        // FOLLOWS THE ROW'S ENGINE (2026-09-11, ju-cayman retirement gate 3).
+        // ju-service now has a handler (routes/consoledispatch.ts's
+        // admin===/api==='opCorrectSealedDoc', domain/resealCompleted.ts
+        // generalized). &apply=1 because this button IS the operator's
+        // deliberate confirmation (already gated behind the toggle-then-
+        // confirm click above) - there is no separate preview step in this
+        // UI, matching GAS's own one-click-schedules-the-real-fix semantics.
+        // TWO DIFFERENT RESPONSE SHAPES, do not conflate them: GAS schedules
+        // an async trigger and returns {ok:true} immediately with no result
+        // yet ("Scheduled..."); ju-service performs the correction
+        // SYNCHRONOUSLY and returns the finished result in this same call
+        // (r.applied / r.docs present). ok() below branches on that.
+        var q="?api=opCorrectSealedDoc&processId="+encodeURIComponent(currentPid)+"&docKey="+encodeURIComponent(docKey)+"&apply=1";
+        apiFetch(q, false, currentEngine).then(function(r){
+          if(r&&r.ok&&r.applied!==undefined){
+            var newId=(r.docs&&r.docs[0]&&r.docs[0].newDriveId)?r.docs[0].newDriveId:"";
+            dcstatus(r.applied?("Corrected."+(newId?(" New document id "+newId+"."):"")+" Reopen this drawer to see it."):"Nothing to correct (dry run reported no write).","ok");
+          }else if(r&&r.ok){
             dcstatus("Scheduled - runs within about a minute. Reopen this drawer shortly to see the result (or check the process's attention feed).","ok");
           }else{
             goEl.disabled=false;
