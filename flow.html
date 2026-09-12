@@ -448,6 +448,30 @@
             <span class="lvp-field__error" id="err-companyStamp"></span>
           </div>
 
+          <!-- Transfer (fund migration) only: a fresh identity document + proof
+               of address for the Cayman entity's own KYC record. Labels reuse
+               index.html's already-approved Cayman onboarding copy verbatim
+               (Passport / Proof of residential address); Hebrew keys below are
+               plain factual field labels (matching this file's existing
+               unremarkable field-label register, e.g. "בנק"/"סניף"), never
+               shown in practice since a transfer is always lane=cayman. -->
+          <div class="lvp-upload" id="upload-idDocument-wrap" data-field="idDocument" hidden>
+            <div class="lvp-upload__label"><label for="file-idDocument">דרכון<span class="lvp-req" aria-hidden="true">*</span></label></div>
+            <input type="file" class="lvp-upload__input" id="file-idDocument" data-upload="idDocument" accept="image/*,application/pdf" aria-describedby="err-idDocument">
+            <label for="file-idDocument" class="lvp-upload__btn">צירוף קובץ</label>
+            <span class="lvp-upload__name" data-upload-name aria-live="polite"></span>
+            <span class="lvp-field__error" id="err-idDocument"></span>
+          </div>
+
+          <div class="lvp-upload" id="upload-proofOfAddress-wrap" data-field="proofOfAddress" hidden>
+            <div class="lvp-upload__label"><label for="file-proofOfAddress">אסמכתא לכתובת מגורים<span class="lvp-req" aria-hidden="true">*</span></label></div>
+            <div class="lvp-upload__hint" id="hint-proofOfAddress">מסמך מהחודשים האחרונים: חשבון מים, חשמל, גז, טלפון, אינטרנט או טלוויזיה, ארנונה, דף חשבון כרטיס אשראי, מכתב מהבנק, או מכתב ממשלתי אחר.</div>
+            <input type="file" class="lvp-upload__input" id="file-proofOfAddress" data-upload="proofOfAddress" accept="image/*,application/pdf" aria-describedby="hint-proofOfAddress err-proofOfAddress">
+            <label for="file-proofOfAddress" class="lvp-upload__btn">צירוף קובץ</label>
+            <span class="lvp-upload__name" data-upload-name aria-live="polite"></span>
+            <span class="lvp-field__error" id="err-proofOfAddress"></span>
+          </div>
+
           <div class="lvp-nav">
             <button type="button" class="lvp-btn lvp-btn--ghost" data-go="request">הקודם</button>
             <button type="button" class="lvp-btn lvp-btn--primary" id="lvp-submit-btn">סיום ושליחה</button>
@@ -540,6 +564,11 @@
         'שם מלא': 'Full name',
         'מספר תעודת זהות': 'ID number',
         'מספר תעודת הזהות אינו תקין.': 'The ID number is not valid.',
+        '9 ספרות, כולל ספרת ביקורת': '9 digits, including the check digit',
+        'דרכון': 'Passport',
+        'אסמכתא לכתובת מגורים': 'Proof of residential address',
+        'מסמך מהחודשים האחרונים: חשבון מים, חשמל, גז, טלפון, אינטרנט או טלוויזיה, ארנונה, דף חשבון כרטיס אשראי, מכתב מהבנק, או מכתב ממשלתי אחר.':
+          'A document dated within the last 3 months: utility bill (water, electricity, gas, phone, internet, TV), property tax bill, credit card statement, bank letter, or other government-issued letter.',
         'מספר חשבון': 'Account number',
         'הקודם': 'Back',
         'הבא': 'Continue',
@@ -623,6 +652,8 @@
         'סכום הפדיון (ברוטו)': 'Redemption amount (gross)',
         'מטבע פדיון': 'Redemption currency',
         'צירוף קובץ': 'Attach file',
+        'נא להעלות קובץ.': 'Please upload a file.',
+        'נא להעלות קובץ עד 10MB.': 'Please upload a file up to 10MB.',
         'סכום לא תקין.': 'Amount must be a positive number.',
         'נא להזין ספרות בלבד.': 'Please enter digits only.',
         'לא ניתן לקרוא את הקובץ. נא להעלות מחדש.': 'The file could not be read. Please upload it again.',
@@ -1256,6 +1287,13 @@
 
         // Entity stamp upload only for entity.
         document.getElementById('upload-stamp-wrap').hidden = (applicantType !== 'entity');
+
+        // Transfer (fund migration) only: fresh identity documents for the
+        // Cayman entity's own KYC record - see fieldsForPage('uploads') below
+        // for the matching required-field wiring.
+        var isTransferMint = isTransferFlow();
+        document.getElementById('upload-idDocument-wrap').hidden = !isTransferMint;
+        document.getElementById('upload-proofOfAddress-wrap').hidden = !isTransferMint;
 
         // Account-management-approval upload: ISRAELI LANE ONLY. The shipped
         // domain/money/{increase,withdrawal}.ts validators gate this required
@@ -2088,6 +2126,13 @@
         if (!IS_CAYMAN) return 'נא להזין סכום.';
         return (kind === 'increase') ? 'A positive additional investment amount is required.' : 'Enter a redemption amount.';
       }
+      // Same reasoning as amountRequiredMsg_: a duplicate-currency row error
+      // needs the already-English currency label spliced into an English
+      // sentence on the Cayman lane, not re-run through the Hebrew T() lookup.
+      function duplicateCurrencyMsg_(kind) {
+        if (!IS_CAYMAN) return 'יש לבחור ' + T((kind === 'increase') ? 'מטבע השקעה' : 'מטבע פדיון') + ' שונה.';
+        return 'Please choose a different currency.';
+      }
       // Error-summary box title. Hebrew grammar needs a singular/plural split
       // ('יש לתקן שגיאה אחת:' vs 'יש לתקן N שגיאות:'), which a flat EN_MAP
       // string-for-string lookup can't reproduce (the plural key embeds the
@@ -2228,6 +2273,10 @@
             return pendingUploads.accountManagementApproval ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
           case 'companyStamp':
             return pendingUploads.companyStamp ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
+          case 'idDocument':
+            return pendingUploads.idDocument ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
+          case 'proofOfAddress':
+            return pendingUploads.proofOfAddress ? { ok: true } : { ok: false, msg: 'נא להעלות קובץ.' };
         }
         return { ok: true };
       }
@@ -2258,6 +2307,7 @@
           // domain/money validators' isIsraeli gate on this exact upload).
           var f2 = IS_CAYMAN ? [] : ['accountManagementApproval'];
           if (applicantType === 'entity') f2.push('companyStamp');
+          if (isTransferFlow()) f2.push('idDocument', 'proofOfAddress');
           return f2;
         }
         return [];
@@ -2301,9 +2351,16 @@
           }
           if (seen[c]) {
             rows[i].classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = T('יש לבחור ' + curLabel + ' שונה.');
+            // NOT T('יש לבחור ' + curLabel + ' שונה.'): curLabel is ALREADY
+            // English on the Cayman lane (T() ran on it above), so splicing it
+            // into a Hebrew template and re-running T() on the mixed result
+            // can never match an EN_MAP key - it rendered as a garbled
+            // half-Hebrew/half-English string. duplicateCurrencyMsg_ below
+            // returns pure text in the right language directly instead.
+            var dupMsg = duplicateCurrencyMsg_(kind);
+            if (errSpan) errSpan.textContent = dupMsg;
             curSel.setAttribute('aria-invalid', 'true');
-            errs.push({ name: '__rows-' + kind, msg: T('יש לבחור ' + curLabel + ' שונה.'), label: curLabel + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: curSel });
+            errs.push({ name: '__rows-' + kind, msg: dupMsg, label: curLabel + ' (' + T('שורה') + ' ' + (i + 1) + ')', anchor: curSel });
             continue;
           }
           // Mirror the server ILS partial-redemption floor (CaymanWithdrawal.js:201): shekel min
