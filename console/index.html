@@ -8474,9 +8474,22 @@ document.addEventListener('keydown',function(e){
       run:function(v,ctx){
         ctx.send({
           q:'?api=opAttachLawyerStamp&processId='+encodeURIComponent(currentPid)+'&driveId='+encodeURIComponent(v.driveId),
-          base:GAS_ONLY_,
+          // FOLLOWS THE ROW'S ENGINE (2026-09-11, ju-cayman retirement gate 3).
+          // Was pinned GAS_ONLY_, which made it a dead button on every
+          // ju-service-born process, the same class of bug opUpdateSignerContact
+          // and opAttachCompanyStamp were already fixed for beside this one.
+          // ju-service's domain/attachLawyerStamp.ts attaches AND requeues the
+          // seal in one round trip (see its header for why, same shape as
+          // attachCompanyStamp.ts) rather than GAS's separate "Correct this doc"
+          // second step, so the two engines' success copy differs below.
+          base:currentEngine,
           errPrefix:'Could not attach',
-          ok:function(){return "Attached. Run 'Correct this doc' on the affected document to re-seal with it.";}
+          ok:function(r){
+            if(r&&r.requeue&&r.requeue.requeued&&r.requeue.requeued.length){
+              return "Attached and requeued - the worker picks it up on its next tick.";
+            }
+            return "Attached. Run 'Correct this doc' on the affected document to re-seal with it.";
+          }
         });
       }
     },
