@@ -4068,8 +4068,21 @@
       // LVPGateway.retryOnTimeout helper (timeout-only, same 2x5s contract);
       // attempt routing + all copy stay here.
       var idemKey = caymanSubmitIdemKey_();
+      // BUG FIX (2026-09-12): collectAll() sets data.__uploads = pendingUploads
+      // on the object it returns (used above as `snapshot`), so the driveIds
+      // upload_file already stored server-side rode inside
+      // payload.submission.__uploads. ju-service's handleSubmit reads
+      // payload.__uploads - a SIBLING of submission, not nested inside it
+      // (domain/submit.ts's mergeMoneyUploads(deps, processId, rawSubmission,
+      // payload.__uploads, session.uploads) - the same top-level contract the
+      // money-flow client already uses). The mismatch meant every uploaded
+      // document's driveId was invisible to the submit-time validator: an LP
+      // who uploaded every required file and signed still got rejected with
+      // "these documents are required" on the final step. Found by actually
+      // driving a Cayman individual onboarding through Documents -> Review &
+      // Sign -> Sign and submit, not by reading the code.
       var runAttempt = function () {
-        return gateway('submit', { submission: snapshot, signaturePng: sigPadPng || '', idempotencyKey: idemKey }).then(function (res) {
+        return gateway('submit', { submission: snapshot, __uploads: snapshot.__uploads, signaturePng: sigPadPng || '', idempotencyKey: idemKey }).then(function (res) {
           // Proof-of-progress gate (2026-07-16): ok:true alone must never paint
           // the success card. Require an allowlisted stage AND a concrete
           // progress marker (submitShowsProgress_ above). A bare replay answer
