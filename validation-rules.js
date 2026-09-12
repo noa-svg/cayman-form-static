@@ -27,7 +27,16 @@
   // such harness exists yet (2026-08-09 duplication audit), which is exactly
   // how this copy drifted from the fix in the first place.
   var HE_RE       = /^[א-ת׳״\s'".\-]+$/;
-  var EN_RE       = /^[A-Za-z\s'"\-]+$/;
+  // 2026-09-12: EN_RE itself had drifted from the same 2026-08-09 fix - HE_RE
+  // got the period (for "Ltd." / abbreviated company names), EN_RE never did,
+  // even though the server (packages/ju-israeli-domain/src/validate.ts's
+  // ISRAELI_EN_RE_) and israel.html's own inline copy (line ~4075) both
+  // already allow it. Not reachable from any live form today (no HTML wires
+  // validateFormat('english-name'/'company-num' via this specific regex,
+  // per an audit of every LVPRules call site) - the contract harness in
+  // ju-cayman/test/validation-contract-harness.cjs is what actually exercises
+  // this export directly against the server. Fixed for parity regardless.
+  var EN_RE       = /^[A-Za-z\s'".\-]+$/;
   var DIGITS_RE   = /^\d+$/;
   // 2026-08-09: added, mirroring IsraeliValidation.ts's ISRAELI_ACCOUNT_RE_.
   // The il-account case below used to be DIGITS_RE (digits-only), which
