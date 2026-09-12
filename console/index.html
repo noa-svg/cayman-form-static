@@ -4342,13 +4342,14 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
             </div>
           </div>
           <div id="wlDraftTo" style="display:none;font-size:var(--text-xs);color:var(--color-ink-muted);margin-top:6px;line-height:1.6"></div>
-            <details style="margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-ink-muted)">
-              <summary style="cursor:pointer;list-style:none">Letter template</summary>
-              &nbsp;<button id="tplMeasureBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Measure</button>
-              &nbsp;<label for="tplWidths" style="color:var(--color-ink-muted)">widths</label>
-              &nbsp;<input id="tplWidths" type="text" inputmode="numeric" value="402, 90, 36" style="width:120px;padding:4px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-input);color:var(--color-ink)">&nbsp;<button id="tplCandidateBtn" class="btn" style="padding:4px 10px;font-size:var(--text-xs)">Build candidate</button>
-              <div id="tplResult" style="margin-top:6px;line-height:1.6"></div>
-          </details>
+          <!-- Letter-template maintenance (Measure / Build candidate) REMOVED
+               2026-09-12, ju-cayman retirement gate 3, item 7. It edited the
+               REAL GAS Docs template opGenerateMonthlyWireLetter used to
+               render from; now that render+settle runs on ju-service instead
+               (docFill has no Docs-template artifact in its HTML/PDF
+               pipeline), the button edited a template the live generator no
+               longer reads - confirmed genuinely inert, not just disclosed
+               as such, before deleting rather than porting. -->
           <div id="wlResult" role="status" aria-live="polite" aria-label="Transfer form result" style="margin-top:12px"></div>
         </div>
 
@@ -11061,16 +11062,13 @@ document.addEventListener('keydown',function(e){
   //     any Drive I/O, a totals gate on the exact bytes saved (the Chaya
   //     Tzarfati fix), settlement only after a real save, draft (never send)
   //     only when requested. Reviewed line-by-line before asking for the go.
-  //   PORTED but deliberately STILL GAS_ONLY_: opLetterTemplateGeometry.
-  //     ju-service's version (routes/letterTemplateGeometry.ts) is disclosed
-  //     as NOT a faithful port - there is no Docs-template artifact in the
-  //     HTML/PDF pipeline, so its "measure" answer is fake-empty widths for a
-  //     different engine entirely and its "apply" always refuses. This
-  //     button adjusts the REAL GAS template opGenerateMonthlyWireLetter used
-  //     to render from - now that render+settle runs on ju-service instead,
-  //     this button edits a template the live generator no longer reads, so
-  //     it stays on GAS_ONLY_ as a now-inert legacy control rather than being
-  //     silently repointed to an engine that would misreport it as working.
+  //   DELETED 2026-09-12 (ju-cayman retirement gate 3, item 7):
+  //     opLetterTemplateGeometry. Confirmed genuinely inert - it adjusted the
+  //     REAL GAS Docs template opGenerateMonthlyWireLetter used to render
+  //     from, and render+settle has run on ju-service instead since
+  //     2026-09-05 (no Docs-template artifact in that pipeline at all). The
+  //     control edited a template the live generator no longer reads.
+  //     Removed rather than left as a dead GAS_ONLY_ button.
   // An unknown api at the dispatcher returns {ok:false,error:'unknown route'},
   // which apiFetch turns into a thrown server_error, so repointing an unported
   // op would break a live operator panel on the first click. Verify a route
@@ -12036,46 +12034,6 @@ document.addEventListener('keydown',function(e){
         },600);
       };
     })();
-    // Letter-template maintenance. Column widths, fonts and the total-row
-    // wording are ALL inherited from the template document - docFill only
-    // clones protoRow and never sets a width - so a cramped amount column has
-    // no fix in code. Measure is read-only; Build candidate edits a COPY and
-    // hands back a link, so the live template only ever changes when a human
-    // promotes a reviewed candidate.
-    (function(){
-      var mBtn=document.getElementById('tplMeasureBtn'),cBtn=document.getElementById('tplCandidateBtn'),out=document.getElementById('tplResult');
-      if(!mBtn||!cBtn||!out)return;
-      function show(r){
-        if(!r||!r.ok){out.innerHTML='<span class="t-danger">'+esc2((r&&r.error)||'failed')+'</span>';return;}
-        var h='columns '+r.columns+' &middot; widths '+esc2((r.widthsBefore||[]).join(', '));
-        if(r.applied){
-          h+='<br>after '+esc2((r.widthsAfter||[]).join(', '));
-          if(r.totalsRenamed&&r.totalsRenamed.length)h+='<br>renamed '+r.totalsRenamed.length+' total row(s)';
-          if(r.candidateUrl)h+='<br><a href="'+esc2(r.candidateUrl)+'" target="_blank" rel="noopener">open candidate</a>';
-        }
-        out.innerHTML=h;
-      }
-      function call(q,btn){
-        btn.disabled=true;out.textContent='Working...';
-        apiFetch('?api=opLetterTemplateGeometry'+q, false, GAS_ONLY_).then(function(r){btn.disabled=false;show(r);})
-          .catch(function(e){btn.disabled=false;out.innerHTML='<span class="t-danger">'+esc2(String(e))+'</span>';});
-      }
-      mBtn.onclick=function(){call('',mBtn);};
-      // An inline field, not a prompt(). A native dialog blocks the renderer,
-      // which makes the control unusable to anything driving the page and
-      // makes a human type three numbers blind into a modal. The field shows
-      // the values before they are sent and stays on screen next to the
-      // measurement they are derived from.
-      cBtn.onclick=function(){
-        var el=document.getElementById('tplWidths');
-        var w=((el&&el.value)||'').trim();
-        if(!/^[0-9.,\s]+$/.test(w)||!w){
-          out.innerHTML='<span class="t-danger">Widths must be numbers in points, comma separated.</span>';
-          return;
-        }
-        call('&apply=true&widths='+encodeURIComponent(w),cBtn);
-      };
-    })();
     // The recipient list is shown BEFORE generating, not discovered in the
     // sent folder afterwards. July's letter went out missing two signatories
     // and needed a chase the next morning; the operator's stated fear on
@@ -12565,22 +12523,22 @@ document.addEventListener('keydown',function(e){
   })();
 
   // Settings
-  // ---- THE SETTINGS PANEL STAYS GAS-ONLY, AS A SET (2026-08-23 seam audit) --
-  // Two of its three routes DO have ju-service handlers (consoledispatch.ts
-  // admin==='getConsoleSettings' and admin==='setConsoleSettings'), but the
-  // third does NOT: ?admin=getSettingsHealth appears nowhere under
-  // ju-service/src, so it cannot move. Moving the other two on their own splits
-  // one panel across two engines, and this particular panel must not split:
-  //   - the health card would report GAS's configuration while the allowlist
-  //     box beside it showed ju-service's, with nothing on screen saying so;
-  //   - worse, the allowlist is an AUTH store, and the two engines keep their
-  //     own. GAS still serves the whole money/wire-letter panel above, so an
-  //     operator who edited the list on ju-service alone would believe they had
-  //     granted or revoked access that GAS still decides by its old copy. A
-  //     revocation that does not revoke is the failure that matters here.
-  // So all three pass GAS_ONLY_ and this is the reason. Moving the panel needs
-  // getSettingsHealth ported AND a decision about which engine owns the
-  // allowlist; it is not a client-side flip.
+  // ---- ALL THREE FLIPPED TO currentEngine (2026-09-12, ju-cayman retirement
+  // gate 3, item 2). ---------------------------------------------------------
+  // Was GAS-ONLY-as-a-set: getSettingsHealth had no ju-service handler at
+  // all (fixed 2026-09-09, routes/consolesettingshealth.ts - it now reads
+  // ju-service's OWN native heartbeat stamps, domain/scheduledJobHeartbeat.ts,
+  // not a remote read of GAS's), so splitting the panel across engines would
+  // have shown one engine's config next to the other's health with nothing
+  // on screen saying so.
+  // NOA'S CALL (2026-09-12): flip now, accept that GAS keeps its own
+  // separate CONSOLE_ALLOWED_EMAILS copy going forward. GAS's installable
+  // triggers are confirmed dead (?api=pulse: all 4 scheduled jobs
+  // trigger_dead, 154-191h), and full retirement is the direction - a
+  // revoke on this (now ju-service) panel will not reach GAS's own copy for
+  // as long as GAS's web app endpoint remains reachable at all, which is the
+  // exact residual risk the prior GAS-ONLY-as-a-set posture existed to avoid.
+  // Accepted as part of getting off ju-cayman, not silently dropped.
   // Guard against the allowlist-wipe hazard: if the current allowlist never
   // loaded (fetch failed, auth lapsed), the textarea reads empty, and a blind
   // Save would push an empty allowlist and lock every operator out. Save is
@@ -12589,7 +12547,7 @@ document.addEventListener('keydown',function(e){
   function loadSettings(){
     ALLOWLIST_LOADED=false;
     var st=document.getElementById('allowlist-status');
-    apiFetch('?admin=getConsoleSettings', false, GAS_ONLY_).then(function(d){
+    apiFetch('?admin=getConsoleSettings', false, currentEngine).then(function(d){
       if(d&&d.ok){
         document.getElementById('allowlist-input').value=(d.allowedEmails||[]).join('\n');
         ALLOWLIST_LOADED=true;
@@ -12611,7 +12569,7 @@ document.addEventListener('keydown',function(e){
   function loadSettingsHealth(){
     var cadenceEl=document.getElementById('set-reminder-cadence');
     var armedEl=document.getElementById('set-armed-state');
-    apiFetch('?admin=getSettingsHealth', false, GAS_ONLY_).then(function(d){
+    apiFetch('?admin=getSettingsHealth', false, currentEngine).then(function(d){
       if(!d||!d.ok){
         if(cadenceEl)cadenceEl.textContent='Could not load.';
         if(armedEl)armedEl.textContent='Could not load.';
@@ -12670,7 +12628,7 @@ document.addEventListener('keydown',function(e){
       return;
     }
     st.textContent='Saving...';st.style.color='var(--color-ink-muted)';
-    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw), false, GAS_ONLY_).then(function(d){
+    apiFetch('?admin=setConsoleSettings&allowedEmails='+encodeURIComponent(raw), false, currentEngine).then(function(d){
       if(d&&d.ok){st.textContent='Saved';st.style.color='var(--color-success)';}
       else{st.textContent=(d&&d.error)||'Error';st.style.color='var(--color-danger)';}
     }).catch(function(){st.textContent='Error';st.style.color='var(--color-danger)';});

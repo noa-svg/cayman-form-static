@@ -175,6 +175,18 @@ const CROSS_ENGINE_REQUIRED = [
   // because it asks whether EITHER engine handles the route. Listing it here is
   // what converts that into BOTH, so the two names cannot drift apart again.
   'api:opUpdateSignerContact',
+  // Repointed from GAS_ONLY_ to currentEngine 2026-09-11 (gate 3 items 4/5/6):
+  // opAttachLawyerStamp, opFixSecondaryAddress, opCorrectSealedDoc. Each now
+  // has a real ju-service handler (domain/attachLawyerStamp.ts,
+  // domain/fixSecondaryAddress.ts, domain/resealCompleted.ts's general/docKey
+  // opt-ins) - listing them here is what keeps A5 from silently degrading
+  // back to A1's either-engine check if one side's wire name ever drifts.
+  'api:opAttachLawyerStamp', 'api:opFixSecondaryAddress', 'api:opCorrectSealedDoc',
+  // (all three confirmed called as ?api=, not ?admin=, at their console call sites)
+  // Repointed from GAS_ONLY_ to currentEngine 2026-09-12 (gate 3 item 2, the
+  // settings trio, flipped together per NOA'S CALL - see the panel's own
+  // header comment for the accepted allowlist-copy residual risk).
+  'admin:getConsoleSettings', 'admin:getSettingsHealth', 'admin:setConsoleSettings',
 ];
 CROSS_ENGINE_REQUIRED.forEach((ref) => {
   const cov = engineCoverage[ref];
