@@ -26,8 +26,13 @@
   // header claims a contract harness keeps it in sync with the server - no
   // such harness exists yet (2026-08-09 duplication audit), which is exactly
   // how this copy drifted from the fix in the first place.
+  //
+  // ITEM 25 (field-content-validation audit, 2026-09-05): EN_RE itself had
+  // drifted from the same fix - HE_RE got the period, EN_RE never did, so
+  // this module (unlike the server's ISRAELI_EN_RE_) rejected a valid
+  // English name/company containing "Ltd." until now.
   var HE_RE       = /^[א-ת׳״\s'".\-]+$/;
-  var EN_RE       = /^[A-Za-z\s'"\-]+$/;
+  var EN_RE       = /^[A-Za-z\s'".\-]+$/;
   var DIGITS_RE   = /^\d+$/;
   // 2026-08-09: added, mirroring IsraeliValidation.ts's ISRAELI_ACCOUNT_RE_.
   // The il-account case below used to be DIGITS_RE (digits-only), which
