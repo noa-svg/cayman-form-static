@@ -65,9 +65,10 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const FILES = ['index.html', 'israel.html', 'signer.html', 'flow.html', 'console/index.html', 'sign.html'];
 // Files that MUST carry the gateway URL (sign.html is a redirect stub: zero is
-// correct; israel.html and index.html are the ju-api-only pages and are
-// asserted separately in C1p below, see the header note).
-const GATEWAY_REQUIRED = ['signer.html', 'flow.html', 'console/index.html'];
+// correct; israel.html, index.html and signer.html are ju-api-only pages,
+// asserted separately in C1p/C1s below, see the header notes; flow.html
+// keeps exactly one /exec occurrence for its ?mock= dev-tool constant only).
+const GATEWAY_REQUIRED = ['flow.html', 'console/index.html'];
 // israel.html's pilot PRIMARY gateway (ju-service behind ju-api).
 const PILOT_PRIMARY_URL = 'https://ju-api.legacyvpartners.com';
 // Files that MUST bake a filename-prefixed build tag.
@@ -172,55 +173,43 @@ for (const f of ['israel.html', 'index.html']) {
   ok('C1j console still carries the GAS /exec gateway for everything else (C1 not weakened)',
     idsByFile['console/index.html'].length >= 1);
 }
-// ---- C1f: MONEY-FLOW pilot wiring, flow.html (2026-08-08, agent/money-flow-juapi) ----
-// flow.html now carries the same dual-gateway seam as israel.html: JU_API
-// primary + the legacy /exec fallback, session-sticky, token-unknown-gated.
-// Unlike israel.html (whose console mint flag is already true), console/
-// index.html's MONEY_MINT_ON_JU_API stays false, so this primary is UNPROVEN
-// for real traffic today - this block proves the WIRING is present and
-// correctly shaped, not that it is live. Positive assertions, not a
-// weakening of C1: flow.html's one /exec occurrence (its LEGACY_GATEWAY
-// constant) still feeds allIds above exactly as before.
+// ---- C1f: flow.html, ju-api ONLY for real traffic (legacy fallback removed
+// 2026-09-12, ju-cayman retirement gate 3 item 6, Noa's explicit go) --------
+// Was the MONEY-FLOW dual-gateway seam (2026-08-08). Removed without a live
+// TTL confirmation that zero pre-flip money-flow tokens remain (parked, see
+// DECISIONS-PARKED.md). ONE /exec occurrence deliberately remains: the
+// render-verify (?mock=) local dev/design tool, which never hits the network
+// for config and stays pinned to GAS on purpose (unchanged by this removal).
 {
   const juCount = html['flow.html'].split(PILOT_PRIMARY_URL).length - 1;
   ok('C1f flow.html carries the ju-api primary URL exactly once', juCount === 1,
     'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
-  ok('C1f flow.html carries exactly ONE legacy /exec URL (GAS fallback)',
+  ok('C1f flow.html carries exactly ONE legacy /exec URL (the ?mock= dev-tool constant, not a production fallback)',
     idsByFile['flow.html'].length === 1, 'found ' + idsByFile['flow.html'].length + ' occurrences');
-  ok('C1f flow.html legacy fallback id matches the id the other pages carry',
+  ok('C1f flow.html legacy id matches the id the other pages carry',
     idsByFile['flow.html'].length === 1 && idsByFile['console/index.html'].length >= 1
       && idsByFile['flow.html'][0] === idsByFile['console/index.html'][0]);
-  ok('C1f flow.html carries the token-unknown fallback probe (cfgTokenUnknown_ + probeLegacyGateway_)',
-    html['flow.html'].indexOf('function cfgTokenUnknown_(') !== -1
-      && html['flow.html'].indexOf('function probeLegacyGateway_(') !== -1);
-  ok('C1f render-verify (?mock=) stays pinned to GAS, untouched by the seam',
-    html['flow.html'].indexOf("GW = qs.get('mock') ? LEGACY_GATEWAY : activeGatewayUrl_();") !== -1);
+  ok('C1f flow.html carries no leftover PRODUCTION fallback plumbing',
+    !/useLegacyGateway|activeGatewayUrl_|probeLegacyGateway_|cfgTokenUnknown_|stickToLegacyGateway_|flStickKey/.test(html['flow.html']));
+  ok('C1f render-verify (?mock=) stays pinned to GAS; every other load is the bare ju-api primary',
+    html['flow.html'].indexOf("GW = qs.get('mock') ? LEGACY_GATEWAY : JU_API;") !== -1);
 }
-// ---- C1s: SIGNER dual-gateway seam, signer.html (2026-08-17) --------------
-// Added after a REAL LP was blocked. Since the 2026-08-08 flip israel.html
-// mints on ju-service, so the sign token it hands signer.html is signed by
-// ju-service - but this page still POSTed it to GAS, which correctly answers
-// invalid_sig, giving the LP a "Link unavailable" dead end at the signing step.
-// Verified live 2026-08-17 on a real ju-service sign token: ju-service ok:true,
-// GAS invalid_sig, same token. Nothing caught it because the canary and every
-// synthetic walk hit ju-service's API directly and never load this page.
-// Same positive-assertion shape as C1p/C1f; signer.html's one /exec occurrence
-// (its LEGACY_GATEWAY constant) still feeds allIds exactly as before.
+// ---- C1s: signer.html, ju-api ONLY (legacy fallback removed 2026-09-12) ---
+// Was the SIGNER dual-gateway seam (2026-08-17), added after a real LP was
+// blocked by a GAS/ju-service token mismatch. Removed as ju-cayman
+// retirement gate 3 item 6 (Noa's explicit go, accepted without a live TTL
+// confirmation that zero pre-flip tokens remain - see DECISIONS-PARKED.md).
+// Positive replacement for the former presence check, same shape as C1p.
 {
   const juCount = html['signer.html'].split(PILOT_PRIMARY_URL).length - 1;
   ok('C1s signer.html carries the ju-api primary URL exactly once', juCount === 1,
     'found ' + juCount + ' occurrences of ' + PILOT_PRIMARY_URL);
-  ok('C1s signer.html carries exactly ONE legacy /exec URL (GAS fallback)',
-    idsByFile['signer.html'].length === 1, 'found ' + idsByFile['signer.html'].length + ' occurrences');
-  ok('C1s signer.html legacy fallback id matches the id the other pages carry',
-    idsByFile['signer.html'].length === 1 && idsByFile['console/index.html'].length >= 1
-      && idsByFile['signer.html'][0] === idsByFile['console/index.html'][0]);
-  ok('C1s signer.html carries the one-shot legacy probe (probeLegacySigner_)',
-    html['signer.html'].indexOf('function probeLegacySigner_(') !== -1);
-  ok('C1s signer.html defaults to the ju-api primary, legacy only when sticky',
-    html['signer.html'].indexOf('var GW = useLegacyGateway ? LEGACY_GATEWAY : JU_API;') !== -1);
-  ok('C1s signer.html probes legacy ONLY on a 200 + signature-vocabulary reason (an outage must never reroute)',
-    html['signer.html'].indexOf('x.status === 200 && !useLegacyGateway && !ctx.ok') !== -1);
+  ok('C1s signer.html carries ZERO /exec URLs (no legacy fallback)',
+    idsByFile['signer.html'].length === 0, 'found ' + idsByFile['signer.html'].length + ' occurrences');
+  ok('C1s signer.html carries no leftover legacy-gateway plumbing',
+    !/LEGACY_GATEWAY|useLegacyGateway|probeLegacySigner_|signerStickKey/.test(html['signer.html']));
+  ok('C1s signer.html\'s GW is the bare ju-api primary, unconditionally',
+    html['signer.html'].indexOf('var GW = JU_API;') !== -1);
 }
 // ---- C1m: console's MONEY-FLOW mint seam (2026-08-08, agent/money-flow-juapi) ----
 // The sibling of C1c, for increase/withdrawal. Deliberately checked as its OWN
