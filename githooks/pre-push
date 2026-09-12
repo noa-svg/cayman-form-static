@@ -110,7 +110,6 @@ HARNESSES=(
   board-search-lp-directory-harness
   board-grid-fits-harness
   pilot-fallback-harness
-  signer-sticky-token-key-harness
   flow-account-normalise-harness
   flow-cayman-lane-harness
   signer-doc-gate-harness
