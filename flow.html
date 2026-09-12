@@ -1295,14 +1295,14 @@
         document.getElementById('upload-idDocument-wrap').hidden = !isTransferMint;
         document.getElementById('upload-proofOfAddress-wrap').hidden = !isTransferMint;
 
-        // Account-management-approval upload: ISRAELI LANE ONLY. The shipped
-        // domain/money/{increase,withdrawal}.ts validators gate this required
-        // upload behind isIsraeli - "the Cayman lane never asked for it" (both
-        // files' own comment, verbatim) - so showing it to a Cayman LP would ask
-        // for a document the server does not require and never even reads for
-        // this lane. fieldsForPage/validateField below match this same gate.
+        // Account-management-approval upload: every increase/withdrawal LP on
+        // BOTH lanes (CTO review, 2026-09-12 - Noa's call: the invite email's
+        // own approved copy, emailCopy.ts's invite_increase/invite_redemption,
+        // has always promised this document to a Cayman LP too; the server
+        // validator's isIsraeli-only gate was the bug, not the email). Transfer
+        // carries no wire at all, so it alone never shows this upload.
         var amaWrap = document.getElementById('upload-accountManagementApproval-wrap');
-        if (amaWrap) amaWrap.hidden = IS_CAYMAN;
+        if (amaWrap) amaWrap.hidden = isTransferFlow();
 
         // Cayman lane: bank-name/branch/account are free text (no Bank-of-
         // Israel registry, no format constraint - see vBank/vBranch/vAccount
@@ -2302,10 +2302,11 @@
           return ['__rows-increase'].concat(bank);
         }
         if (page === 'uploads') {
-          // Cayman lane: never required (never even shown - see bootstrapForm's
-          // upload-accountManagementApproval-wrap hide, matching the shipped
-          // domain/money validators' isIsraeli gate on this exact upload).
-          var f2 = IS_CAYMAN ? [] : ['accountManagementApproval'];
+          // Every increase/withdrawal invite (both lanes) promises this upload
+          // (emailCopy.ts's invite_increase/invite_redemption, Noa-approved
+          // 2026-09-04) - transfer carries no wire at all, so it alone skips
+          // this one (it has its own idDocument/proofOfAddress pair instead).
+          var f2 = isTransferFlow() ? [] : ['accountManagementApproval'];
           if (applicantType === 'entity') f2.push('companyStamp');
           if (isTransferFlow()) f2.push('idDocument', 'proofOfAddress');
           return f2;
