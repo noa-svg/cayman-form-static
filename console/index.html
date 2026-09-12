@@ -5080,27 +5080,24 @@ label{text-transform:uppercase;letter-spacing:0.11em;font-weight:800;font-size:1
   // GAS's, and the operator's edit would appear to vanish. They move together or
   // not at all.
   //
-  // DEFAULT false, and this one is NOT mine to flip. This panel is the LP-facing
-  // email copy. GAS still SENDS from its own copy store for the whole pre-flip
-  // back catalogue of GAS-born processes, which can still be nudged and resent.
-  // Arming this would let an operator edit copy that the engine actually sending
-  // to those LPs never reads, i.e. a silent two-version divergence in LP-facing
-  // wording. That is a Noa decision about LP copy, not a routing decision.
+  // FLIPPED 2026-09-12, NOA'S CALL. She confirmed the gate's condition 1
+  // (this panel becoming ju-service-only) is not a live decision: ju-service's
+  // copy store is a byte-identical copy of GAS's own defaults
+  // (domain/emailCopy.ts's header comment, verified live by the passing
+  // emailcopy-gas-parity.test.mjs), so there is no divergent wording to choose
+  // between.
   //
-  // CORRECTED 2026-09-07: this used to name "Cayman money, whose mint is still
-  // GAS (moneyMintBaseForLane_ is isIsrael-gated)" as a second reason. That is
-  // no longer true - CAYMAN_MONEY_MINT_ON_JU_API above moved it - so the
-  // reason is struck rather than left contradicting the dispatcher. The
-  // remaining reason (the back catalogue) is untouched and still holds, so the
-  // flag's value does not change.
+  // RESIDUAL RISK, accepted, not closed: condition 2 (GAS no longer sends any
+  // LP mail, or the two copy stores stay reconciled) is not independently
+  // re-verified here. GAS can still nudge/resend its own pre-flip back
+  // catalogue using ITS OWN copy store; an operator edit made on this
+  // ju-service-routed panel from now on will not reach that GAS-side store.
+  // Accepted as part of getting off ju-cayman, same shape as the settings
+  // trio's allowlist-copy risk above and the signer/flow sticky-fallback
+  // removal. See DECISIONS-PARKED.md.
   //
-  // GATE, do not flip before both hold:
-  //   1. Noa approves that the console's copy editor becomes ju-service-only.
-  //   2. Either GAS no longer sends any LP mail (no GAS-born process can still
-  //      be nudged/resent - the mints have all moved, the back catalogue has
-  //      not), or the two copy stores have been reconciled and a check exists
-  //      that keeps them so.
-  var CONSOLE_MESSAGES_ON_JU_API = false;
+  // ROLLBACK: set this back to false. Nothing else changes.
+  var CONSOLE_MESSAGES_ON_JU_API = true;
   function consoleMessagesBase_() {
     return CONSOLE_MESSAGES_ON_JU_API ? JU_API : GW;
   }
